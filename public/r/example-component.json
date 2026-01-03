@@ -1,0 +1,14 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "example-component",
+  "title": "Example Component",
+  "description": "An example component to demonstrate the registry setup.",
+  "files": [
+    {
+      "path": "registry/components/example-component/example-component.tsx",
+      "content": "import * as React from \"react\"\n\nexport function ExampleComponent() {\n  return (\n    <div className=\"rounded-lg border bg-card p-6\">\n      <h2 className=\"text-2xl font-semibold\">Example Component</h2>\n      <p className=\"text-muted-foreground mt-2\">\n        This is an example component in your shadcn registry.\n      </p>\n    </div>\n  )\n}\n\n",
+      "type": "registry:component"
+    }
+  ],
+  "type": "registry:component"
+}

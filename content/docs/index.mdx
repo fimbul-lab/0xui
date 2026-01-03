@@ -1,31 +1,141 @@
 ---
-title: Hello World
-description: Your favourite docs framework.
-icon: Rocket
+title: Introduction
+description: Beautiful, accessible web3 components built with viem, wagmi, and modern UI libraries.
+icon: Sparkles
 ---
 
-Hey there! Fumadocs is the docs framework that also works on Tanstack Start!
+# Web3 Component Registry
 
-## Heading
+A beautifully-designed, accessible component library for web3 applications. Built with modern tools and following the shadcn/ui registry pattern, making it easy to copy, customize, and integrate web3 components into your projects.
 
-Hello World!
+## What is this?
+
+This is a registry of **production-ready web3 components** that you can copy and paste into your apps. Similar to [shadcn/ui](https://ui.shadcn.com), but specifically designed for web3 use cases.
+
+Each component is:
+
+- **Beautifully designed** with attention to detail and modern aesthetics
+- **Fully accessible** following WCAG guidelines
+- **Customizable** - copy the code and modify to your needs
+- **Type-safe** with full TypeScript support
+- **Framework agnostic** - works with React and modern frameworks
+
+## Built with Modern Tools
+
+Our components are built using the best-in-class web3 and UI libraries:
 
 <Cards>
-  <Card title="Learn more about Tanstack Start" href="https://tanstack.com/start" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card
+    title="viem"
+    description="TypeScript interface for Ethereum"
+    href="https://viem.sh"
+  />
+  <Card
+    title="wagmi"
+    description="React Hooks for Ethereum"
+    href="https://wagmi.sh"
+  />
+  <Card
+    title="Radix UI"
+    description="Unstyled, accessible components"
+    href="https://www.radix-ui.com"
+  />
+  <Card
+    title="Tailwind CSS"
+    description="Utility-first CSS framework"
+    href="https://tailwindcss.com"
+  />
+  <Card
+    title="Motion"
+    description="Production-ready motion library"
+    href="https://motion.dev"
+  />
 </Cards>
 
-### CodeBlock
+## Why a Registry?
 
-```ts
-console.log('Hello World');
+Unlike traditional component libraries, this registry gives you:
+
+- **Ownership** - Components live in your codebase, not in `node_modules`
+- **Customization** - Modify components to fit your exact needs
+- **No dependencies** - Only install what you need
+- **Learning** - See exactly how components work under the hood
+
+## Getting Started
+
+### Installation
+
+Install the required dependencies:
+
+```bash
+npm install viem wagmi @tanstack/react-query
+npm install @radix-ui/react-dialog @radix-ui/react-dropdown-menu
+npm install motion
+npm install tailwindcss
 ```
 
-#### Table
+### Add a Component
 
-| Head                            | Description                         |
-| ------------------------------- | ----------------------------------- |
-| `hello`                         | Hello World                         |
-| very **important**              | Hey                                 |
-| _Surprisingly_                  | Fumadocs                            |
-| very long text that looks weird | hello world hello world hello world |
+1. Browse the [components](/docs/components) section
+2. Copy the component code
+3. Paste it into your project
+4. Customize as needed
+
+### Configure Your Provider
+
+Set up wagmi and viem in your app:
+
+```tsx
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { mainnet, sepolia } from "wagmi/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const config = createConfig({
+  chains: [mainnet, sepolia],
+  transports: {
+    [mainnet.id]: http(),
+    [sepolia.id]: http(),
+  },
+});
+
+const queryClient = new QueryClient();
+
+function App() {
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        {/* Your app */}
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+```
+
+## Component Categories
+
+Our components are organized by use case:
+
+- **Wallet Connection** - Connect buttons, wallet selectors, and connection flows
+- **Transaction UI** - Transaction modals, status indicators, and confirmations
+- **NFT Display** - Image galleries, metadata displays, and collection views
+- **Token Management** - Balance displays, transfer forms, and token lists
+- **Network Switchers** - Chain selectors and network indicators
+- **Forms & Inputs** - Web3-specific form components and validators
+
+## Design Principles
+
+Every component follows these principles:
+
+1. **Accessibility First** - Built with ARIA attributes and keyboard navigation
+2. **Mobile Responsive** - Works beautifully on all screen sizes
+3. **Dark Mode Ready** - Includes dark mode variants out of the box
+4. **Performance** - Optimized for fast load times and smooth interactions
+5. **Type Safety** - Full TypeScript support with comprehensive types
+
+## Contributing
+
+This is an open registry. Contributions, suggestions, and improvements are welcome! Each component is designed to be a starting point that you can adapt to your specific needs.
+
+---
+
+Ready to build? Start exploring our [components](/docs/components) or check out the [installation guide](/docs/installation).

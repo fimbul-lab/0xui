@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "web3-cn",
+  "homepage": "https://github.com/webfluential/web3-cn",
+  "items": [
+    {
+      "name": "example-component",
+      "type": "registry:component",
+      "title": "Example Component",
+      "description": "An example component to demonstrate the registry setup.",
+      "files": [
+        {
+          "path": "registry/components/example-component/example-component.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
+}
+

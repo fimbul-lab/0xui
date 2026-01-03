@@ -8,7 +8,10 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "types:check": "fumadocs-mdx && tsc --noEmit",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "registry:build": "shadcn build"
   },
   "dependencies": {
     "@tanstack/react-router": "1.144.0",
@@ -30,6 +33,10 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
+    "class-variance-authority": "^0.7.1",
+    "oxfmt": "^0.21.0",
+    "oxlint": "^1.36.0",
+    "shadcn": "^3.6.2",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^6.0.3"
