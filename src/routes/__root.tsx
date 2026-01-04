@@ -22,9 +22,13 @@ export const Route = createRootRoute({
         title: "0xui",
         description:
           "Beautiful, accessible web3 components built with viem, wagmi, and modern UI libraries.",
+        favicon: "/favicon.svg",
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+    ],
   }),
   component: RootComponent,
 });
