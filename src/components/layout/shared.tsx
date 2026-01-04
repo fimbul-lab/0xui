@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from "react";
 import type { I18nConfig } from "fumadocs-core/i18n";
 import type { LinkItemType } from "./link-item";
 import Link from "fumadocs-core/link";
+import { FullLogo } from "@/assets/logos";
 
 export interface NavOptions {
   enabled: boolean;
@@ -94,11 +95,7 @@ export function renderTitleNav(
   if (typeof title === "function") return title({ href: url, ...props });
   return (
     <Link href={url} {...props}>
-      <img
-        src="/img/logos/0xui-logo-full-icon.svg"
-        alt="0xui"
-        className="w-20"
-      />
+      <FullLogo className="w-20 h-auto" />
     </Link>
   );
 }
