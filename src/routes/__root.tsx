@@ -19,7 +19,9 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Fimbul ui",
+        title: "0xui",
+        description:
+          "Beautiful, accessible web3 components built with viem, wagmi, and modern UI libraries.",
       },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
