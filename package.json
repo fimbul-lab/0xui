@@ -1,5 +1,5 @@
 {
-  "name": "web3-cn",
+  "name": "0xui-docs",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -19,6 +19,7 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-presence": "^1.1.5",
     "@radix-ui/react-scroll-area": "^1.2.10",
+    "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-router": "1.144.0",
     "@tanstack/react-router-devtools": "1.144.0",
     "@tanstack/react-start": "1.145.3",
@@ -31,7 +32,9 @@
     "react-dom": "^19.2.3",
     "scroll-into-view-if-needed": "^3.1.0",
     "tailwind-merge": "^3.4.0",
-    "vite": "^7.3.0"
+    "viem": "2.x",
+    "vite": "^7.3.0",
+    "wagmi": "^3.1.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -40,6 +43,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
+    "@wagmi/cli": "^2.8.0",
     "class-variance-authority": "^0.7.1",
     "oxfmt": "^0.21.0",
     "oxlint": "^1.36.0",

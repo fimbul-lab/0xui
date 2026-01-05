@@ -7,6 +7,8 @@ import {
 import * as React from "react";
 import appCss from "@/styles/app.css?url";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
+import { config } from "@/config/config";
+import { WagmiProvider } from "wagmi";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -36,7 +38,9 @@ export const Route = createRootRoute({
 function RootComponent() {
   return (
     <RootDocument>
-      <Outlet />
+      <WagmiProvider config={config}>
+        <Outlet />
+      </WagmiProvider>
     </RootDocument>
   );
 }
