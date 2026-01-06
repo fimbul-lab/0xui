@@ -27,7 +27,7 @@ function Home() {
           >
             Open Docs
           </Link>
-          <ChainSelector />
+          <ChainSelector variant="branded" />
         </div>
       </div>
     </HomeLayout>

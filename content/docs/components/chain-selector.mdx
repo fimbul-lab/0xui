@@ -8,14 +8,35 @@ Displays the current connected chain and allows users to switch between availabl
 ## Preview
 
 <Card className="w-full flex flex-col items-center gap-8 py-10">
-  <div className="flex flex-col items-center gap-2">
-    <p className="text-sm text-muted-foreground">Default</p>
+
     <ChainSelector />
-  </div>
+
+</Card>
+
+### Icon Only
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
   <div className="flex flex-col items-center gap-2">
-    <p className="text-sm text-muted-foreground">Icon Only</p>
     <ChainSelector iconOnly />
   </div>
+</Card>
+
+### With Llamao.fi Icons
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+  <ChainSelectorWithCustomIcon />
+</Card>
+
+### Dialog Version
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+  <ChainSelectorDialog />
+</Card>
+
+### With Network Tabs
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+  <ChainSelector groupByNetwork />
 </Card>
 
 ## Installation
@@ -30,78 +51,189 @@ registry/components/chain-selector/chain-selector.tsx
 
 ```bash
 npm install wagmi viem @web3icons/react
-npm install @radix-ui/react-popover lucide-react
+npm install @radix-ui/react-popover @radix-ui/react-dialog @radix-ui/react-tabs lucide-react
 ```
 
 ## Usage
 
-### Basic Usage
-
 ```tsx
-import { ChainSelector } from "@/registry/components/chain-selector/chain-selector";
+import { ChainSelector, ChainSelectorDialog } from "@/registry/components/chain-selector/chain-selector";
 
-export function App() {
-  return <ChainSelector />;
-}
-```
+// Basic usage (Popover version)
+<ChainSelector />
 
-### Icon-Only Mode
+// Dialog version (opens as a modal)
+<ChainSelectorDialog />
 
-Display only icons without visible labels. The label remains accessible via tooltip and screen readers:
-
-```tsx
+// Icon-only mode (label accessible via tooltip and screen readers)
 <ChainSelector iconOnly />
-```
+<ChainSelectorDialog iconOnly />
 
-### Custom Icons
+// Custom icons
+<ChainSelector chainIcon={MyChainIcon} chevronIcon={ChevronDown} />
 
-Bring your own icon components:
-
-```tsx
-import { ChainSelector } from "@/registry/components/chain-selector/chain-selector";
-import { MyChainIcon } from "./my-icons";
-import { ChevronDown } from "lucide-react";
-
-export function App() {
-  return <ChainSelector chainIcon={MyChainIcon} chevronIcon={ChevronDown} />;
-}
-```
-
-### Disable Icons
-
-Disable specific icons or all icons:
-
-```tsx
-// Disable only chain icons
+// Disable icons
 <ChainSelector chainIcon={false} />
-
-// Disable all icons
 <ChainSelector disableIcons />
 
-// Disable specific icons
-<ChainSelector
-  chainIcon={false}
-  chevronIcon={false}
-/>
+// Group chains by network type (mainnet/testnet) with tabs
+<ChainSelector groupByNetwork />
+<ChainSelectorDialog groupByNetwork />
 ```
 
-### Combining Options
+## Icon styles
 
-Combine multiple options:
+The component default iconset supports the following icon styles:
+
+- `branded`
+- `mono`
+- `background`
+
+The default style is `branded`.
+
+### Branded
+
+<Card>
+  <div className="flex flex-col items-center gap-2">
+
+    <ChainSelector variant="branded" />
+
+  </div>
+</Card>
+
+### Mono
+
+<Card>
+  <div className="flex flex-col items-center gap-2">
+
+    <ChainSelector variant="mono" />
+
+  </div>
+</Card>
+
+You can also pass a color to the mono variant, by default the color is the currentColor:
 
 ```tsx
-// Icon-only with custom chain icon
-<ChainSelector
-  iconOnly
-  chainIcon={MyCustomChainIcon}
-/>
+// Example: Red mono variant
+<ChainSelector variant="mono" monoColor="red" />
 
-// Icon-only without chevron
-<ChainSelector
-  iconOnly
-  chevronIcon={false}
-/>
+// Example: hex color
+<ChainSelector variant="mono" monoColor="#ff0000" />
+
+// Example: rgb color
+<ChainSelector variant="mono" monoColor="rgb(255, 0, 0)" />
+
+// Example: hsl color
+<ChainSelector variant="mono" monoColor="hsl(0, 100%, 50%)" />
+
+// Example: hsla color
+<ChainSelector variant="mono" monoColor="hsla(0, 100%, 50%, 0.5)" />
 ```
+
+<Card>
+  <div className="flex flex-col items-center gap-2">
+
+    <ChainSelector variant="mono" monoColor="red" />
+
+  </div>
+</Card>
+
+### Background
+
+<Card>
+  <div className="flex flex-col items-center gap-2">
+
+    <ChainSelector variant="background" />
+
+  </div>
+</Card>
+
+## Examples
+
+### Custom Icon Using Chain Name
+
+Some icon APIs use chain names instead of chain IDs. You can use wagmi hooks to access chain data:
+
+```tsx
+import { ChainSelector } from "@/registry/components/chain-selector/chain-selector";
+import { useChains } from "wagmi";
+import { cn } from "@/lib/utils";
+
+function ChainNameIcon({ chainId, className }: ChainIconProps) {
+  const chains = useChains();
+  const chain = chains.find((c) => c.id === chainId);
+
+  if (!chain) return null;
+
+  // Example: Use chain name for icon API
+  return (
+    <img
+      src={`https://api.example.com/icons/${chain.name.toLowerCase()}.svg`}
+      alt={chain.name}
+      className={cn("size-6 rounded-full", className)}
+    />
+  );
+}
+
+export function App() {
+  return <ChainSelector chainIcon={ChainNameIcon} />;
+}
+```
+
+### Chain Name Badge Instead of Icon
+
+Display chain name abbreviation as a badge:
+
+```tsx
+function ChainNameBadge({ chainId, className }: ChainIconProps) {
+  const chains = useChains();
+  const chain = chains.find((c) => c.id === chainId);
+
+  if (!chain) return null;
+
+  const abbreviation = chain.name
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
+
+  return (
+    <div
+      className={cn(
+        "size-6 rounded-full border flex items-center justify-center text-xs font-medium bg-muted",
+        className
+      )}
+    >
+      {abbreviation}
+    </div>
+  );
+}
+```
+
+### Using Llamao.fi Icons
+
+Example using [Llamao.fi chain icons](https://icons.llamao.fi/icons/chains/rsz_pulsechain.jpg):
+
+```tsx
+import { ChainSelector } from "@/registry/components/chain-selector/chain-selector";
+import { LlamaoChainIcon } from "@/components/example/llamao-chain-icon";
+
+export function App() {
+  return <ChainSelector chainIcon={LlamaoChainIcon} />;
+}
+```
+
+The `LlamaoChainIcon` component uses wagmi's `useChains()` hook to look up chain data by ID and formats the chain name for the Llamao.fi API URL pattern.
+
+### Dialog vs Popover
+
+The component comes in two variants:
+
+- **`ChainSelector`** - Uses a Popover (dropdown) that appears near the trigger button. Best for compact UIs and when you want the selector to appear inline.
+- **`ChainSelectorDialog`** - Uses a Dialog (modal) that appears centered on the screen. Best for mobile experiences and when you want a more prominent selection experience.
+
+Both components share the same props and functionality - choose based on your UI needs.
 
 ## Setup
 
@@ -125,22 +257,13 @@ The component automatically reads from your wagmi configuration and displays all
 
 ## Props
 
-| Prop           | Type                                             | Default     | Description                                                                                                 |
-| -------------- | ------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------- |
-| `chainIcon`    | `ComponentType<ChainIconProps> \| false`         | `undefined` | Custom chain icon component. Receives `chainId`, `className`, and `variant` props. Pass `false` to disable. |
-| `chevronIcon`  | `ComponentType<{ className?: string }> \| false` | `undefined` | Custom chevron dropdown icon component. Receives `className` prop. Pass `false` to disable.                 |
-| `loaderIcon`   | `ComponentType<{ className?: string }> \| false` | `undefined` | Custom loading spinner icon component. Receives `className` prop. Pass `false` to disable.                  |
-| `disableIcons` | `boolean`                                        | `false`     | Disable all icons. Overrides individual icon props.                                                         |
-| `iconOnly`     | `boolean`                                        | `false`     | Show only icons without visible labels. Label remains accessible via tooltip and screen readers.            |
+| Prop             | Type                                             | Default     | Description                                               |
+| ---------------- | ------------------------------------------------ | ----------- | --------------------------------------------------------- |
+| `chainIcon`      | `ComponentType<ChainIconProps> \| false`         | `undefined` | Custom chain icon. Pass `false` to disable.               |
+| `chevronIcon`    | `ComponentType<{ className?: string }> \| false` | `undefined` | Custom chevron icon. Pass `false` to disable.             |
+| `loaderIcon`     | `ComponentType<{ className?: string }> \| false` | `undefined` | Custom loader icon. Pass `false` to disable.              |
+| `disableIcons`   | `boolean`                                        | `false`     | Disable all icons.                                        |
+| `iconOnly`       | `boolean`                                        | `false`     | Hide label (accessible via tooltip and screen readers).   |
+| `groupByNetwork` | `boolean`                                        | `false`     | Group chains by network type (mainnet/testnet) with tabs. |
 
-### ChainIconProps
-
-When providing a custom `chainIcon`, your component will receive:
-
-```tsx
-type ChainIconProps = {
-  chainId: number;
-  className?: string;
-  variant?: "branded" | "mono" | "background";
-};
-```
+`chainIcon` receives: `{ chainId: number; className?: string; variant?: "branded" | "mono" | "background" }`

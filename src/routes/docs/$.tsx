@@ -12,7 +12,11 @@ import {
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { baseOptions } from "@/lib/layout.shared";
 import SwapInput from "../../../registry/components/swap-input/swap-input";
-import { ChainSelector } from "../../../registry/components/chain-selector/chain-selector";
+import {
+  ChainSelector,
+  ChainSelectorDialog,
+} from "../../../registry/components/chain-selector/chain-selector";
+import { ChainSelectorWithCustomIcon } from "@/components/example/llamao-chain-icon";
 import { useFumadocsLoader } from "fumadocs-core/source/client";
 
 export const Route = createFileRoute("/docs/$")({
@@ -51,6 +55,8 @@ const clientLoader = browserCollections.docs.createClientLoader({
               ...defaultMdxComponents,
               SwapInput,
               ChainSelector,
+              ChainSelectorDialog,
+              ChainSelectorWithCustomIcon,
             }}
           />
         </DocsBody>
