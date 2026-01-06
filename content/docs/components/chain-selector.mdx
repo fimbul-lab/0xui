@@ -1,0 +1,146 @@
+---
+title: Chain Selector
+description: A chain selector component with network icons and seamless chain switching
+---
+
+Displays the current connected chain and allows users to switch between available chains. Features network icons with fallbacks and full wagmi integration.
+
+## Preview
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+  <div className="flex flex-col items-center gap-2">
+    <p className="text-sm text-muted-foreground">Default</p>
+    <ChainSelector />
+  </div>
+  <div className="flex flex-col items-center gap-2">
+    <p className="text-sm text-muted-foreground">Icon Only</p>
+    <ChainSelector iconOnly />
+  </div>
+</Card>
+
+## Installation
+
+Copy the component into your project:
+
+```bash
+registry/components/chain-selector/chain-selector.tsx
+```
+
+## Dependencies
+
+```bash
+npm install wagmi viem @web3icons/react
+npm install @radix-ui/react-popover lucide-react
+```
+
+## Usage
+
+### Basic Usage
+
+```tsx
+import { ChainSelector } from "@/registry/components/chain-selector/chain-selector";
+
+export function App() {
+  return <ChainSelector />;
+}
+```
+
+### Icon-Only Mode
+
+Display only icons without visible labels. The label remains accessible via tooltip and screen readers:
+
+```tsx
+<ChainSelector iconOnly />
+```
+
+### Custom Icons
+
+Bring your own icon components:
+
+```tsx
+import { ChainSelector } from "@/registry/components/chain-selector/chain-selector";
+import { MyChainIcon } from "./my-icons";
+import { ChevronDown } from "lucide-react";
+
+export function App() {
+  return <ChainSelector chainIcon={MyChainIcon} chevronIcon={ChevronDown} />;
+}
+```
+
+### Disable Icons
+
+Disable specific icons or all icons:
+
+```tsx
+// Disable only chain icons
+<ChainSelector chainIcon={false} />
+
+// Disable all icons
+<ChainSelector disableIcons />
+
+// Disable specific icons
+<ChainSelector
+  chainIcon={false}
+  chevronIcon={false}
+/>
+```
+
+### Combining Options
+
+Combine multiple options:
+
+```tsx
+// Icon-only with custom chain icon
+<ChainSelector
+  iconOnly
+  chainIcon={MyCustomChainIcon}
+/>
+
+// Icon-only without chevron
+<ChainSelector
+  iconOnly
+  chevronIcon={false}
+/>
+```
+
+## Setup
+
+Ensure your wagmi config includes the chains you want to display:
+
+```tsx
+import { createConfig, http } from "wagmi";
+import { mainnet, sepolia, base } from "wagmi/chains";
+
+const config = createConfig({
+  chains: [mainnet, sepolia, base],
+  transports: {
+    [mainnet.id]: http(),
+    [sepolia.id]: http(),
+    [base.id]: http(),
+  },
+});
+```
+
+The component automatically reads from your wagmi configuration and displays all configured chains.
+
+## Props
+
+| Prop           | Type                                             | Default     | Description                                                                                                 |
+| -------------- | ------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `chainIcon`    | `ComponentType<ChainIconProps> \| false`         | `undefined` | Custom chain icon component. Receives `chainId`, `className`, and `variant` props. Pass `false` to disable. |
+| `chevronIcon`  | `ComponentType<{ className?: string }> \| false` | `undefined` | Custom chevron dropdown icon component. Receives `className` prop. Pass `false` to disable.                 |
+| `loaderIcon`   | `ComponentType<{ className?: string }> \| false` | `undefined` | Custom loading spinner icon component. Receives `className` prop. Pass `false` to disable.                  |
+| `disableIcons` | `boolean`                                        | `false`     | Disable all icons. Overrides individual icon props.                                                         |
+| `iconOnly`     | `boolean`                                        | `false`     | Show only icons without visible labels. Label remains accessible via tooltip and screen readers.            |
+
+### ChainIconProps
+
+When providing a custom `chainIcon`, your component will receive:
+
+```tsx
+type ChainIconProps = {
+  chainId: number;
+  className?: string;
+  variant?: "branded" | "mono" | "background";
+};
+```

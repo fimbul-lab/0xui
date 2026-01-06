@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { HomeLayout } from "@/components/layout/home";
 import { baseOptions } from "@/lib/layout.shared";
+import { ChainSelector } from "../../registry/components/chain-selector/chain-selector";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -26,6 +27,7 @@ function Home() {
           >
             Open Docs
           </Link>
+          <ChainSelector />
         </div>
       </div>
     </HomeLayout>

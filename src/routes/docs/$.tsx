@@ -11,6 +11,8 @@ import {
 } from "@/components/layout/notebook/page";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { baseOptions } from "@/lib/layout.shared";
+import SwapInput from "../../../registry/components/swap-input/swap-input";
+import { ChainSelector } from "../../../registry/components/chain-selector/chain-selector";
 import { useFumadocsLoader } from "fumadocs-core/source/client";
 
 export const Route = createFileRoute("/docs/$")({
@@ -47,6 +49,8 @@ const clientLoader = browserCollections.docs.createClientLoader({
           <MDX
             components={{
               ...defaultMdxComponents,
+              SwapInput,
+              ChainSelector,
             }}
           />
         </DocsBody>
