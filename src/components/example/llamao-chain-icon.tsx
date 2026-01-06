@@ -1,7 +1,7 @@
 import { useChains } from "wagmi";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChainSelector } from "registry/components/chain-selector/chain-selector";
+import { ChainSelector } from "registry/default/chain-selector/chain-selector";
 
 type ChainIconProps = {
   chainId: number;

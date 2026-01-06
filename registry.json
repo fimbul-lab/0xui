@@ -4,17 +4,30 @@
   "homepage": "https://github.com/webfluential/web3-cn",
   "items": [
     {
-      "name": "example-component",
+      "name": "chain-selector",
       "type": "registry:component",
-      "title": "Example Component",
-      "description": "An example component to demonstrate the registry setup.",
+      "title": "Chain Selector",
+      "description": "A chain selector component with network icons and seamless chain switching. Displays the current connected chain and allows users to switch between available chains.",
       "files": [
         {
-          "path": "registry/components/example-component/example-component.tsx",
+          "path": "registry/default/chain-selector/chain-selector.tsx",
           "type": "registry:component"
         }
-      ]
+      ],
+      "dependencies": ["wagmi", "viem", "@web3icons/react", "lucide-react"],
+      "registryDependencies": ["button", "popover", "dialog", "tabs", "avatar"]
+    },
+    {
+      "name": "wagmi-config",
+      "type": "registry:file",
+      "files": [
+        {
+          "path": "registry/default/config/config.ts",
+          "type": "registry:file",
+          "target": "config/config.ts"
+        }
+      ],
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query"]
     }
   ]
 }
-

@@ -11,11 +11,11 @@ import {
 } from "@/components/layout/notebook/page";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { baseOptions } from "@/lib/layout.shared";
-import SwapInput from "../../../registry/components/swap-input/swap-input";
+import SwapInput from "../../../registry/default/swap-input/swap-input";
 import {
   ChainSelector,
   ChainSelectorDialog,
-} from "../../../registry/components/chain-selector/chain-selector";
+} from "../../../registry/default/chain-selector/chain-selector";
 import { ChainSelectorWithCustomIcon } from "@/components/example/llamao-chain-icon";
 import { useFumadocsLoader } from "fumadocs-core/source/client";
 

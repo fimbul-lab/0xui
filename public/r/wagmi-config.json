@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "wagmi-config",
+  "dependencies": [
+    "wagmi",
+    "viem",
+    "@tanstack/react-query"
+  ],
+  "files": [
+    {
+      "path": "registry/default/config/config.ts",
+      "content": "import { createConfig, http } from \"wagmi\";\nimport { mainnet, sepolia } from \"wagmi/chains\";\n\nexport const config = createConfig({\n  chains: [mainnet, sepolia],\n  transports: {\n    [mainnet.id]: http(),\n    [sepolia.id]: http(),\n  },\n});\n",
+      "type": "registry:file",
+      "target": "config/config.ts"
+    }
+  ],
+  "type": "registry:file"
+}

@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ChevronDownIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useState, type ComponentType } from "react";
-import { Chain } from "viem";
+import { type Chain } from "viem";
 import { useChainId, useChains, useSwitchChain } from "wagmi";
 import { NetworkIcon } from "@web3icons/react/dynamic";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
