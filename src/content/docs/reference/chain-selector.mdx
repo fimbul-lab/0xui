@@ -1,0 +1,113 @@
+---
+title: Chain Selector
+description: A chain selector component with network icons and seamless chain switching
+---
+
+Displays the current connected chain and allows users to switch between available chains. Features network icons with fallbacks and full wagmi integration.
+
+## Preview
+
+import { Card } from "@astrojs/starlight/components";
+import ChainSelector from "@/components/chain-selector-wrapper.astro";
+import ChainSelectorDialog from "@/components/chain-selector-dialog-wrapper.astro";
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+
+    <ChainSelector />
+
+</Card>
+
+### Icon Only
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+  <div className="flex flex-col items-center gap-2">
+    <ChainSelector iconOnly />
+  </div>
+</Card>
+
+### Dialog Version
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+  <ChainSelectorDialog />
+</Card>
+
+### With Network Tabs
+
+<Card className="w-full flex flex-col items-center gap-8 py-10">
+  <ChainSelector groupByNetwork />
+</Card>
+
+## Installation
+
+Copy the component into your project:
+
+```bash
+registry/components/chain-selector/chain-selector.tsx
+```
+
+## Dependencies
+
+```bash
+npm install wagmi viem @web3icons/react
+npm install @radix-ui/react-popover @radix-ui/react-dialog @radix-ui/react-tabs lucide-react
+```
+
+## Usage
+
+```tsx
+import { ChainSelector, ChainSelectorDialog } from "@/registry/components/chain-selector/chain-selector";
+
+// Basic usage (Popover version)
+<ChainSelector />
+
+// Dialog version (opens as a modal)
+<ChainSelectorDialog />
+
+// Icon-only mode (label accessible via tooltip and screen readers)
+<ChainSelector iconOnly />
+<ChainSelectorDialog iconOnly />
+
+// Disable icons
+<ChainSelector disableIcons />
+
+// Group chains by network type (mainnet/testnet) with tabs
+<ChainSelector groupByNetwork />
+<ChainSelectorDialog groupByNetwork />
+```
+
+### Dialog vs Popover
+
+The component comes in two variants:
+
+- **`ChainSelector`** - Uses a Popover (dropdown) that appears near the trigger button. Best for compact UIs and when you want the selector to appear inline.
+- **`ChainSelectorDialog`** - Uses a Dialog (modal) that appears centered on the screen. Best for mobile experiences and when you want a more prominent selection experience.
+
+Both components share the same props and functionality - choose based on your UI needs.
+
+## Setup
+
+Ensure your wagmi config includes the chains you want to display:
+
+```tsx
+import { createConfig, http } from "wagmi";
+import { mainnet, sepolia, base } from "wagmi/chains";
+
+const config = createConfig({
+  chains: [mainnet, sepolia, base],
+  transports: {
+    [mainnet.id]: http(),
+    [sepolia.id]: http(),
+    [base.id]: http(),
+  },
+});
+```
+
+The component automatically reads from your wagmi configuration and displays all configured chains.
+
+## Props
+
+| Prop             | Type      | Default | Description                                               |
+| ---------------- | --------- | ------- | --------------------------------------------------------- |
+| `disableIcons`   | `boolean` | `false` | Disable all icons.                                        |
+| `iconOnly`       | `boolean` | `false` | Hide label (accessible via tooltip and screen readers).   |
+| `groupByNetwork` | `boolean` | `false` | Group chains by network type (mainnet/testnet) with tabs. |

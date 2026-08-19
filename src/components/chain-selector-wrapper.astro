@@ -1,0 +1,13 @@
+---
+import { ChainSelectorWithProvider } from "@/components/chain-selector-with-provider";
+
+interface Props {
+  iconOnly?: boolean;
+  groupByNetwork?: boolean;
+  variant?: "mono" | "branded" | "background";
+}
+
+const { iconOnly, groupByNetwork, variant = "background" } = Astro.props;
+---
+
+<ChainSelectorWithProvider client:idle iconOnly={iconOnly} groupByNetwork={groupByNetwork} variant={variant} />

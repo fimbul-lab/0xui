@@ -1,0 +1,12 @@
+---
+import { ChainSelectorDialogWithProvider } from "@/components/chain-selector-dialog-with-provider";
+
+interface Props {
+  iconOnly?: boolean;
+  groupByNetwork?: boolean;
+}
+
+const { iconOnly, groupByNetwork } = Astro.props;
+---
+
+<ChainSelectorDialogWithProvider client:load iconOnly={iconOnly} groupByNetwork={groupByNetwork} />
