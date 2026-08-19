@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
-  "name": "web3-cn",
-  "homepage": "https://github.com/webfluential/web3-cn",
+  "name": "0xui",
+  "homepage": "https://github.com/Matsfjeldstad/0xui",
   "items": [
     {
       "name": "chain-selector",
