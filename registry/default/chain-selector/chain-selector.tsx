@@ -12,113 +12,45 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, Loader2Icon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useState, type ComponentType } from "react";
 import { type Chain } from "viem";
 import { useChainId, useChains, useSwitchChain } from "wagmi";
 import { NetworkIcon } from "@web3icons/react/dynamic";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-type ChainIconProps =
+type IconStyleProps =
   | {
-      chainId: number;
-      className?: string;
-      variant: "mono";
-      monoColor?: string;
-    }
-  | {
-      chainId: number;
-      className?: string;
-      variant?: "branded" | "background";
-      monoColor?: never;
-    };
-
-type ChainSelectorProps =
-  | {
-      /** Custom chain icon component. Receives chainId, className, and variant props. */
-      chainIcon?: ComponentType<ChainIconProps> | false;
-      /** Custom chevron icon component. Receives className prop. */
-      chevronIcon?: ComponentType<{ className?: string }> | false;
-      /** Custom loader icon component. Receives className prop. */
-      loaderIcon?: ComponentType<{ className?: string }> | false;
-      /** Disable all icons. Overrides individual icon props. */
-      disableIcons?: boolean;
-      /** Show only icons without visible labels. Label remains accessible via tooltip and screen readers. */
-      iconOnly?: boolean;
       /** Icon style. */
       variant: "mono";
       /** Color for mono variant icons. Only applies when variant is "mono". */
       monoColor?: string;
-      /** Group chains by network type (mainnet/testnet) with tabs. */
-      groupByNetwork?: boolean;
     }
   | {
-      /** Custom chain icon component. Receives chainId, className, and variant props. */
-      chainIcon?: ComponentType<ChainIconProps> | false;
-      /** Custom chevron icon component. Receives className prop. */
-      chevronIcon?: ComponentType<{ className?: string }> | false;
-      /** Custom loader icon component. Receives className prop. */
-      loaderIcon?: ComponentType<{ className?: string }> | false;
-      /** Disable all icons. Overrides individual icon props. */
-      disableIcons?: boolean;
-      /** Show only icons without visible labels. Label remains accessible via tooltip and screen readers. */
-      iconOnly?: boolean;
       /** Icon style. */
       variant?: "branded" | "background";
-      /** Color for mono variant icons. Only applies when variant is "mono". */
       monoColor?: never;
-      /** Group chains by network type (mainnet/testnet) with tabs. */
-      groupByNetwork?: boolean;
     };
 
-function ChainItem({
-  chain,
-  onSwitch,
-  chainIcon,
-  showChainIcon,
-  variant = "background",
-  monoColor,
-}: {
-  chain: Chain;
-  onSwitch?: (chainId: number) => void;
-  chainIcon?: ComponentType<ChainIconProps>;
-  showChainIcon: boolean;
-  variant?: "branded" | "mono" | "background";
-  monoColor?: string;
-}) {
-  const IconComponent = chainIcon;
+export type ChainIconProps = {
+  chainId: number;
+  className?: string;
+} & IconStyleProps;
 
-  const iconProps =
-    variant === "mono"
-      ? {
-          chainId: chain.id,
-          variant: "mono" as const,
-          monoColor,
-          className: "rounded-full border ",
-        }
-      : {
-          chainId: chain.id,
-          variant: variant as "branded" | "background",
-          className: "rounded-full border ",
-        };
-
-  return (
-    <button
-      key={chain.id}
-      onClick={async () => {
-        try {
-          onSwitch?.(chain.id);
-        } catch (error) {
-          console.error("Failed to switch chain:", error);
-        }
-      }}
-      className="flex items-center w-full  gap-2 p-2 hover:bg-accent/20 group active:scale-97 cursor-pointer "
-    >
-      {showChainIcon && IconComponent && <IconComponent {...iconProps} />}
-      <div className="text-sm">{chain.name}</div>
-    </button>
-  );
-}
+export type ChainSelectorProps = {
+  /** Custom chain icon component. Receives chainId, className, and variant props. Pass false to hide. */
+  chainIcon?: ComponentType<ChainIconProps> | false;
+  /** Custom chevron icon component. Receives className prop. Pass false to hide. */
+  chevronIcon?: ComponentType<{ className?: string }> | false;
+  /** Custom loader icon component. Receives className prop. Pass false to hide. */
+  loaderIcon?: ComponentType<{ className?: string }> | false;
+  /** Disable all icons. Overrides individual icon props. */
+  disableIcons?: boolean;
+  /** Show only icons without visible labels. Label remains accessible via tooltip and screen readers. */
+  iconOnly?: boolean;
+  /** Group chains by network type (mainnet/testnet) with tabs. */
+  groupByNetwork?: boolean;
+} & IconStyleProps;
 
 function FallbackIcon({ className }: { className?: string }) {
   return (
@@ -142,7 +74,7 @@ function DefaultChainIcon({
       variant={variant}
       chainId={chainId}
       color={variant === "mono" && monoColor ? monoColor : undefined}
-      className={cn("size-6 ", className)}
+      className={cn("size-6", className)}
       fallback={<FallbackIcon className={className} />}
     />
   );
@@ -153,7 +85,6 @@ function groupChainsByNetwork(chains: readonly Chain[]) {
   const testnet: Chain[] = [];
 
   chains.forEach((chain) => {
-    // Check if chain has testnet property (viem chains have this)
     if ((chain as Chain & { testnet?: boolean }).testnet) {
       testnet.push(chain);
     } else {
@@ -164,382 +95,422 @@ function groupChainsByNetwork(chains: readonly Chain[]) {
   return { mainnet, testnet };
 }
 
+function useChainSwitcher() {
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  const chainId = useChainId();
+  const chains = useChains();
+  const currentChain = chains.find((c) => c.id === chainId);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const { mutateAsync, isPending, variables, error, reset } = useSwitchChain();
+  const pendingChainId = isPending ? variables?.chainId : undefined;
+
+  const onSwitch = async (id: number) => {
+    try {
+      await mutateAsync({ chainId: id });
+      setOpen(false);
+    } catch {
+      // Surfaced via `error` below.
+    }
+  };
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (next) reset();
+  };
+
+  return {
+    open,
+    onOpenChange,
+    mounted,
+    chains,
+    currentChain,
+    onSwitch,
+    isPending,
+    pendingChainId,
+    error,
+  };
+}
+
+function resolveIcons({
+  chainIcon,
+  chevronIcon,
+  loaderIcon,
+  disableIcons,
+}: Pick<
+  ChainSelectorProps,
+  "chainIcon" | "chevronIcon" | "loaderIcon" | "disableIcons"
+>) {
+  if (disableIcons) return {};
+  return {
+    ChainIcon: chainIcon === false ? undefined : chainIcon || DefaultChainIcon,
+    ChevronIcon:
+      chevronIcon === false ? undefined : chevronIcon || ChevronDownIcon,
+    LoaderIcon: loaderIcon === false ? undefined : loaderIcon || Loader2Icon,
+  };
+}
+
+function chainIconProps(
+  chainId: number,
+  variant: "branded" | "mono" | "background",
+  monoColor: string | undefined,
+  className?: string
+): ChainIconProps {
+  return variant === "mono"
+    ? { chainId, variant, monoColor, className }
+    : { chainId, variant, className };
+}
+
+const triggerClassName = (iconOnly?: boolean) =>
+  cn(
+    "flex items-center gap-2 justify-between border transition-all w-fit py-2 pl-1.5 px-3 rounded-full hover:bg-accent/10 active:scale-97 cursor-pointer",
+    iconOnly ? "min-w-fit gap-1 py-1 px-1 pl-1" : "min-w-30"
+  );
+
+function TriggerContent({
+  mounted,
+  currentChain,
+  chainName,
+  iconOnly,
+  open,
+  isPending,
+  variant,
+  monoColor,
+  ChainIcon,
+  ChevronIcon,
+  LoaderIcon,
+}: {
+  mounted: boolean;
+  currentChain: Chain | undefined;
+  chainName: string;
+  iconOnly?: boolean;
+  open: boolean;
+  isPending: boolean;
+  variant: "branded" | "mono" | "background";
+  monoColor?: string;
+  ChainIcon?: ComponentType<ChainIconProps>;
+  ChevronIcon?: ComponentType<{ className?: string }>;
+  LoaderIcon?: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <>
+      {mounted && currentChain && ChainIcon && (
+        <div className="size-6">
+          <ChainIcon
+            {...chainIconProps(
+              currentChain.id,
+              variant,
+              monoColor,
+              "rounded-full"
+            )}
+          />
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <span suppressHydrationWarning className={cn(iconOnly && "sr-only")}>
+          {chainName}
+        </span>
+        {ChevronIcon && (
+          <span
+            className={cn(
+              "transition-transform h-fit w-fit",
+              open && "rotate-180",
+              isPending && "hidden"
+            )}
+          >
+            <ChevronIcon className="size-4 shrink-0" />
+          </span>
+        )}
+        {isPending && LoaderIcon && (
+          <LoaderIcon className="size-4 shrink-0 animate-spin" />
+        )}
+      </div>
+    </>
+  );
+}
+
+function ChainItem({
+  chain,
+  isActive,
+  isSwitching,
+  disabled,
+  onSwitch,
+  ChainIcon,
+  variant,
+  monoColor,
+  LoaderIcon,
+}: {
+  chain: Chain;
+  isActive: boolean;
+  isSwitching: boolean;
+  disabled: boolean;
+  onSwitch: (chainId: number) => void;
+  ChainIcon?: ComponentType<ChainIconProps>;
+  variant: "branded" | "mono" | "background";
+  monoColor?: string;
+  LoaderIcon?: ComponentType<{ className?: string }>;
+}) {
+  return (
+    <button
+      onClick={() => onSwitch(chain.id)}
+      disabled={disabled || isActive}
+      aria-current={isActive || undefined}
+      className={cn(
+        "flex items-center w-full gap-2 p-2 rounded-md hover:bg-accent/20 group active:scale-97 cursor-pointer disabled:cursor-default disabled:opacity-50",
+        isActive && "bg-accent/20 opacity-100"
+      )}
+    >
+      {ChainIcon && (
+        <ChainIcon
+          {...chainIconProps(chain.id, variant, monoColor, "rounded-full border")}
+        />
+      )}
+      <div className="text-sm">{chain.name}</div>
+      {isActive && <CheckIcon className="size-4 ml-auto shrink-0" />}
+      {isSwitching && LoaderIcon && (
+        <LoaderIcon className="size-4 ml-auto shrink-0 animate-spin" />
+      )}
+    </button>
+  );
+}
+
 function ChainsGrid({
   chains,
-  variant,
-  ChainIconComponent,
+  currentChainId,
+  pendingChainId,
+  isPending,
   onSwitch,
+  ChainIcon,
+  LoaderIcon,
+  variant,
   monoColor,
 }: {
   chains: readonly Chain[];
-  variant?: "branded" | "mono" | "background";
-  ChainIconComponent?: ComponentType<ChainIconProps>;
+  currentChainId?: number;
+  pendingChainId?: number;
+  isPending: boolean;
   onSwitch: (chainId: number) => void;
+  ChainIcon?: ComponentType<ChainIconProps>;
+  LoaderIcon?: ComponentType<{ className?: string }>;
+  variant: "branded" | "mono" | "background";
   monoColor?: string;
 }) {
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-2 w-full">
       {chains.map((chain) => (
         <ChainItem
-          variant={variant}
           key={chain.id}
           chain={chain}
-          onSwitch={() => onSwitch(chain.id)}
-          chainIcon={ChainIconComponent}
-          showChainIcon={!!ChainIconComponent}
-          {...(variant === "mono" && monoColor ? { monoColor } : {})}
+          isActive={chain.id === currentChainId}
+          isSwitching={chain.id === pendingChainId}
+          disabled={isPending}
+          onSwitch={onSwitch}
+          ChainIcon={ChainIcon}
+          LoaderIcon={LoaderIcon}
+          variant={variant}
+          monoColor={monoColor}
         />
       ))}
     </div>
   );
 }
 
-export function ChainSelector({
-  chainIcon,
-  chevronIcon,
-  loaderIcon,
-  disableIcons = false,
-  iconOnly = false,
-  variant = "background",
-  monoColor,
-  groupByNetwork = false,
-}: ChainSelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  const chainId = useChainId();
-  const chains = useChains();
-  const currentChain = chains.find((c) => c.id === chainId);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const { mutateAsync, isPending } = useSwitchChain();
-
-  const onSwitch = async (chainId: number) => {
-    try {
-      await mutateAsync({ chainId });
-      setOpen(false);
-    } catch (error) {
-      console.error("Failed to switch chain:", error);
-    }
-  };
-
-  // Determine which icons to use
-  const showIcons = !disableIcons;
-  const ChainIconComponent = showIcons
-    ? chainIcon === false
-      ? undefined
-      : chainIcon || DefaultChainIcon
-    : undefined;
-  const ChevronIconComponent = showIcons
-    ? chevronIcon === false
-      ? undefined
-      : chevronIcon || ChevronDownIcon
-    : undefined;
-  const LoaderIconComponent = showIcons
-    ? loaderIcon === false
-      ? undefined
-      : loaderIcon || Loader2Icon
-    : undefined;
-
-  const chainName = mounted
-    ? currentChain?.name || "Select Chain"
-    : "Select Chain";
-  const ariaLabel = iconOnly ? chainName : undefined;
-  const tooltipTitle = iconOnly ? chainName : undefined;
+function ChainListContent({
+  mounted,
+  chains,
+  groupByNetwork,
+  error,
+  ...gridProps
+}: {
+  mounted: boolean;
+  chains: readonly Chain[];
+  groupByNetwork?: boolean;
+  error: { message: string; shortMessage?: string } | null;
+  currentChainId?: number;
+  pendingChainId?: number;
+  isPending: boolean;
+  onSwitch: (chainId: number) => void;
+  ChainIcon?: ComponentType<ChainIconProps>;
+  LoaderIcon?: ComponentType<{ className?: string }>;
+  variant: "branded" | "mono" | "background";
+  monoColor?: string;
+}) {
+  if (!mounted) {
+    return <p className="text-sm text-muted-foreground">Loading chains...</p>;
+  }
 
   const { mainnet, testnet } = groupByNetwork
     ? groupChainsByNetwork(chains)
-    : { mainnet: chains, testnet: [] };
+    : { mainnet: chains, testnet: [] as Chain[] };
+
+  const empty = (label: string) => (
+    <p className="text-sm text-muted-foreground text-center py-4">
+      No {label} chains available
+    </p>
+  );
 
   return (
-    <div className="flex flex-col gap-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          className={cn(
-            "flex items-center gap-2 justify-between border transition-all w-fit py-2 pl-1.5 px-3 rounded-full hover:bg-accent/10 active:scale-97 cursor-pointer",
-            iconOnly ? "min-w-fit gap-1 py-1 px-1 pl-1" : "min-w-30"
-          )}
-          aria-label={ariaLabel}
-          title={tooltipTitle}
-        >
-          {mounted && currentChain && ChainIconComponent && (
-            <div className="h-fit w-fit  ">
-              {variant === "mono" ? (
-                <ChainIconComponent
-                  chainId={currentChain.id}
-                  variant="mono"
-                  monoColor={monoColor}
-                  className=" rounded-full "
-                />
-              ) : (
-                <ChainIconComponent
-                  chainId={currentChain.id}
-                  variant={variant}
-                  className=" rounded-full "
-                />
-              )}
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span
-              suppressHydrationWarning
-              className={cn(iconOnly && "sr-only")}
-            >
-              {chainName}
-            </span>
-            {ChevronIconComponent && (
-              <span
-                className={cn(
-                  "transition-transform",
-                  open ? "rotate-180" : "",
-                  isPending && "hidden"
-                )}
-              >
-                <ChevronIconComponent className="size-4 shrink-0" />
-              </span>
-            )}
-            {isPending && LoaderIconComponent && (
-              <LoaderIconComponent className="size-4 shrink-0 animate-spin" />
-            )}
-          </div>
-        </PopoverTrigger>
-        <PopoverContent className="p- min-w-48 flex flex-col gap-4 w-full">
-          <div>Select Network</div>
-          {mounted ? (
-            groupByNetwork && (mainnet.length > 0 || testnet.length > 0) ? (
-              <Tabs defaultValue="mainnet" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="mainnet" disabled={mainnet.length === 0}>
-                    Mainnet
-                  </TabsTrigger>
-                  <TabsTrigger value="testnet" disabled={testnet.length === 0}>
-                    Testnet
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="mainnet" className="mt-2">
-                  {mainnet.length > 0 ? (
-                    <ChainsGrid
-                      chains={mainnet}
-                      variant={variant}
-                      ChainIconComponent={ChainIconComponent}
-                      onSwitch={onSwitch}
-                      monoColor={monoColor}
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No mainnet chains available
-                    </p>
-                  )}
-                </TabsContent>
-                <TabsContent value="testnet" className="mt-2">
-                  {testnet.length > 0 ? (
-                    <ChainsGrid
-                      chains={testnet}
-                      variant={variant}
-                      ChainIconComponent={ChainIconComponent}
-                      onSwitch={onSwitch}
-                      monoColor={monoColor}
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No testnet chains available
-                    </p>
-                  )}
-                </TabsContent>
-              </Tabs>
+    <>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error.shortMessage ?? error.message}
+        </p>
+      )}
+      {groupByNetwork && (mainnet.length > 0 || testnet.length > 0) ? (
+        <Tabs defaultValue="mainnet" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="mainnet" disabled={mainnet.length === 0}>
+              Mainnet
+            </TabsTrigger>
+            <TabsTrigger value="testnet" disabled={testnet.length === 0}>
+              Testnet
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="mainnet" className="mt-2">
+            {mainnet.length > 0 ? (
+              <ChainsGrid chains={mainnet} {...gridProps} />
             ) : (
-              <ChainsGrid
-                chains={chains}
-                variant={variant}
-                ChainIconComponent={ChainIconComponent}
-                onSwitch={onSwitch}
-                monoColor={monoColor}
-              />
-            )
-          ) : (
-            <p className="text-sm text-muted-foreground">Loading chains...</p>
-          )}
-        </PopoverContent>
-      </Popover>
-    </div>
+              empty("mainnet")
+            )}
+          </TabsContent>
+          <TabsContent value="testnet" className="mt-2">
+            {testnet.length > 0 ? (
+              <ChainsGrid chains={testnet} {...gridProps} />
+            ) : (
+              empty("testnet")
+            )}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <ChainsGrid chains={chains} {...gridProps} />
+      )}
+    </>
   );
 }
 
-export function ChainSelectorDialog({
-  chainIcon,
-  chevronIcon,
-  loaderIcon,
-  disableIcons = false,
-  iconOnly = false,
-  variant = "background",
-  monoColor,
-  groupByNetwork = false,
-}: ChainSelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+function useChainSelectorParts(props: ChainSelectorProps) {
+  const {
+    disableIcons = false,
+    iconOnly = false,
+    variant = "background",
+    monoColor,
+    groupByNetwork = false,
+  } = props;
 
-  const chainId = useChainId();
-  const chains = useChains();
-  const currentChain = chains.find((c) => c.id === chainId);
+  const switcher = useChainSwitcher();
+  const icons = resolveIcons(props);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const { mutateAsync, isPending } = useSwitchChain();
-
-  const onSwitch = async (chainId: number) => {
-    try {
-      await mutateAsync({ chainId });
-      setOpen(false);
-    } catch (error) {
-      console.error("Failed to switch chain:", error);
-    }
-  };
-
-  // Determine which icons to use
-  const showIcons = !disableIcons;
-  const ChainIconComponent = showIcons
-    ? chainIcon === false
-      ? undefined
-      : chainIcon || DefaultChainIcon
-    : undefined;
-  const ChevronIconComponent = showIcons
-    ? chevronIcon === false
-      ? undefined
-      : chevronIcon || ChevronDownIcon
-    : undefined;
-  const LoaderIconComponent = showIcons
-    ? loaderIcon === false
-      ? undefined
-      : loaderIcon || Loader2Icon
-    : undefined;
-
-  const chainName = mounted
-    ? currentChain?.name || "Select Chain"
+  const chainName = switcher.mounted
+    ? switcher.currentChain?.name || "Select Chain"
     : "Select Chain";
-  const ariaLabel = iconOnly ? chainName : undefined;
-  const tooltipTitle = iconOnly ? chainName : undefined;
 
-  const { mainnet, testnet } = groupByNetwork
-    ? groupChainsByNetwork(chains)
-    : { mainnet: chains, testnet: [] };
+  return {
+    ...switcher,
+    ...icons,
+    chainName,
+    ariaLabel: iconOnly ? chainName : undefined,
+    tooltipTitle: iconOnly ? chainName : undefined,
+    iconOnly,
+    disableIcons,
+    variant,
+    monoColor,
+    groupByNetwork,
+  };
+}
+
+export function ChainSelector(props: ChainSelectorProps) {
+  const s = useChainSelectorParts(props);
 
   return (
-    <div className="flex flex-col gap-2">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger
-          className={cn(
-            "flex items-center gap-2 justify-between border transition-all w-fit py-2 pl-1.5 px-3 rounded-full hover:bg-accent/10 active:scale-97 cursor-pointer",
-            iconOnly ? "min-w-fit gap-1 py-1 px-1 pl-1" : "min-w-30"
-          )}
-          aria-label={ariaLabel}
-          title={tooltipTitle}
-        >
-          {mounted && currentChain && ChainIconComponent && (
-            <div className="h-fit w-fit  ">
-              {variant === "mono" ? (
-                <ChainIconComponent
-                  chainId={currentChain.id}
-                  variant="mono"
-                  monoColor={monoColor}
-                  className=" rounded-full "
-                />
-              ) : (
-                <ChainIconComponent
-                  chainId={currentChain.id}
-                  variant={variant}
-                  className=" rounded-full "
-                />
-              )}
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span
-              suppressHydrationWarning
-              className={cn(iconOnly && "sr-only")}
-            >
-              {chainName}
-            </span>
-            {ChevronIconComponent && (
-              <span
-                className={cn(
-                  "transition-transform",
-                  open ? "rotate-180" : "",
-                  isPending && "hidden"
-                )}
-              >
-                <ChevronIconComponent className="size-4 shrink-0" />
-              </span>
-            )}
-            {isPending && LoaderIconComponent && (
-              <LoaderIconComponent className="size-4 shrink-0 animate-spin" />
-            )}
-          </div>
-        </DialogTrigger>
-        <DialogContent className="min-w-96">
-          <DialogHeader>
-            <DialogTitle>Select Network</DialogTitle>
-          </DialogHeader>
-          {mounted ? (
-            groupByNetwork && (mainnet.length > 0 || testnet.length > 0) ? (
-              <Tabs defaultValue="mainnet" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="mainnet" disabled={mainnet.length === 0}>
-                    Mainnet
-                  </TabsTrigger>
-                  <TabsTrigger value="testnet" disabled={testnet.length === 0}>
-                    Testnet
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="mainnet" className="mt-2">
-                  {mainnet.length > 0 ? (
-                    <ChainsGrid
-                      chains={mainnet}
-                      variant={variant}
-                      ChainIconComponent={ChainIconComponent}
-                      onSwitch={onSwitch}
-                      monoColor={monoColor}
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No mainnet chains available
-                    </p>
-                  )}
-                </TabsContent>
-                <TabsContent value="testnet" className="mt-2">
-                  {testnet.length > 0 ? (
-                    <ChainsGrid
-                      chains={testnet}
-                      variant={variant}
-                      ChainIconComponent={ChainIconComponent}
-                      onSwitch={onSwitch}
-                      monoColor={monoColor}
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No testnet chains available
-                    </p>
-                  )}
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <ChainsGrid
-                chains={chains}
-                variant={variant}
-                ChainIconComponent={ChainIconComponent}
-                onSwitch={onSwitch}
-                monoColor={monoColor}
-              />
-            )
-          ) : (
-            <p className="text-sm text-muted-foreground">Loading chains...</p>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+    <Popover open={s.open} onOpenChange={s.onOpenChange}>
+      <PopoverTrigger
+        className={triggerClassName(s.iconOnly)}
+        aria-label={s.ariaLabel}
+        title={s.tooltipTitle}
+      >
+        <TriggerContent
+          mounted={s.mounted}
+          currentChain={s.currentChain}
+          chainName={s.chainName}
+          iconOnly={s.iconOnly}
+          open={s.open}
+          isPending={s.isPending}
+          variant={s.variant}
+          monoColor={s.monoColor}
+          ChainIcon={s.ChainIcon}
+          ChevronIcon={s.ChevronIcon}
+          LoaderIcon={s.LoaderIcon}
+        />
+      </PopoverTrigger>
+      <PopoverContent className="min-w-48 flex flex-col gap-4 w-full">
+        <div className="text-sm font-medium">Select Network</div>
+        <ChainListContent
+          mounted={s.mounted}
+          chains={s.chains}
+          groupByNetwork={s.groupByNetwork}
+          error={s.error}
+          currentChainId={s.currentChain?.id}
+          pendingChainId={s.pendingChainId}
+          isPending={s.isPending}
+          onSwitch={s.onSwitch}
+          ChainIcon={s.ChainIcon}
+          LoaderIcon={s.LoaderIcon}
+          variant={s.variant}
+          monoColor={s.monoColor}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function ChainSelectorDialog(props: ChainSelectorProps) {
+  const s = useChainSelectorParts(props);
+
+  return (
+    <Dialog open={s.open} onOpenChange={s.onOpenChange}>
+      <DialogTrigger
+        className={triggerClassName(s.iconOnly)}
+        aria-label={s.ariaLabel}
+        title={s.tooltipTitle}
+      >
+        <TriggerContent
+          mounted={s.mounted}
+          currentChain={s.currentChain}
+          chainName={s.chainName}
+          iconOnly={s.iconOnly}
+          open={s.open}
+          isPending={s.isPending}
+          variant={s.variant}
+          monoColor={s.monoColor}
+          ChainIcon={s.ChainIcon}
+          ChevronIcon={s.ChevronIcon}
+          LoaderIcon={s.LoaderIcon}
+        />
+      </DialogTrigger>
+      <DialogContent className="min-w-96">
+        <DialogHeader>
+          <DialogTitle>Select Network</DialogTitle>
+        </DialogHeader>
+        <ChainListContent
+          mounted={s.mounted}
+          chains={s.chains}
+          groupByNetwork={s.groupByNetwork}
+          error={s.error}
+          currentChainId={s.currentChain?.id}
+          pendingChainId={s.pendingChainId}
+          isPending={s.isPending}
+          onSwitch={s.onSwitch}
+          ChainIcon={s.ChainIcon}
+          LoaderIcon={s.LoaderIcon}
+          variant={s.variant}
+          monoColor={s.monoColor}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }
