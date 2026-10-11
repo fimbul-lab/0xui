@@ -1,0 +1,64 @@
+---
+title: Amount Input
+description: Large decimal input for token amounts. String state, decimal clamping, lenient paste, Max.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/amount-input";
+
+The big borderless amount field from swap UIs. It keeps the value as a string, so precision is never lost to floats. It refuses invalid keystrokes and digits past the token's decimals, and cleans up pasted amounts like `$1,000.50`.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/amount-input
+```
+
+## Usage
+
+```tsx
+import { AmountInput } from "@/components/amount-input";
+
+const [value, setValue] = useState("");
+
+<AmountInput
+  value={value}
+  onValueChange={(next, { amount, exceedsMax }) => setValue(next)}
+  decimals={6}
+  max={balance}
+/>;
+```
+
+`amount` is the parsed `bigint`, ready for a contract call. It is `undefined` while the field is empty.
+
+## Input rules
+
+| User does | Result |
+| --- | --- |
+| Types `1,5` | `1.5`. A comma is treated as the decimal point. |
+| Types `.5` | `0.5` |
+| Types letters, `-` or `e` | The keystroke is ignored. |
+| Types a 7th decimal on a 6-decimal token | The keystroke is ignored. |
+| Pastes `$1,000.50` or `1.000,50 USDC` | `1000.5` |
+
+It is `type="text"` with `inputMode="decimal"`, never `type="number"`. Number inputs silently round large values and reject commas.
+
+## Props
+
+Also accepts `<input>` props.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `string` | — | Decimal string. |
+| `onValueChange` | `(value, { amount, exceedsMax }) => void` | — | Called on every accepted change. |
+| `decimals` | `number` | — | Token decimals. |
+| `max` | `bigint` | — | Enables Max and the over-max state (`aria-invalid`). |
+| `showMax` | `boolean` | `true` | Show the Max button when `max` is set. |
+| `hint` | `ReactNode` | — | Line under the amount, e.g. a fiat value. |
+| `label` | `string` | `"Amount"` | Accessible label. |
+
+Pure helpers: `sanitizeAmountInput(raw, decimals)` and `getAmountState(value, decimals, max?)`.

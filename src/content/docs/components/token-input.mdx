@@ -1,0 +1,61 @@
+---
+title: Token Input
+description: The swap panel. Amount, token picker, fiat value, balance with Max, insufficient-balance state.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/token-input";
+
+[Amount Input](/components/amount-input/) and [Token Select](/components/token-select/) combined into the panel every swap and send form uses. It reads the connected account's balance of the chosen token, offers Max, and flags amounts above the balance.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/token-input
+```
+
+## Usage
+
+```tsx
+import { TokenInput } from "@/components/token-input";
+
+<TokenInput
+  label="You pay"
+  value={value}
+  onValueChange={(next, { amount, insufficient }) => setValue(next)}
+  token={token}
+  onTokenChange={setToken}
+  tokens={tokens}
+  price={prices[token.symbol]}
+/>;
+```
+
+Use `insufficient` to block the action, and name the reason on the button:
+
+```tsx
+<TransactionButton disabledReason={insufficient ? `Insufficient ${token.symbol}` : undefined} …>
+```
+
+### "You receive" panel
+
+```tsx
+<TokenInput label="You receive" value={quote} onValueChange={() => {}} token={out} readOnly checkBalance={false} />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `label` | `ReactNode` | — | Label above the panel. |
+| `value` | `string` | — | Decimal string. |
+| `onValueChange` | `(value, { amount, insufficient, balance }) => void` | — | Called on change. |
+| `token` | `Token` | — | Selected token. |
+| `onTokenChange` / `tokens` | — | — | Pass both to make the token pickable. |
+| `popular` | `string[]` | — | Quick picks in the picker. |
+| `price` / `currency` | `number` / `string` | — / `"USD"` | Fiat line. |
+| `checkBalance` | `boolean` | `true` | Read the balance, offer Max, flag insufficient amounts. |
+| `readOnly` | `boolean` | `false` | For quoted outputs. |

@@ -1,4 +1,15 @@
-import { custom, http, keccak256, toHex, type Chain, type Hex } from "viem";
+import {
+  custom,
+  decodeFunctionData,
+  encodeFunctionResult,
+  erc20Abi,
+  http,
+  keccak256,
+  toHex,
+  type Chain,
+  type Hex,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { createConfig, createConnector } from "wagmi";
 import {
   base,
@@ -24,19 +35,53 @@ export const demoRevertAddress = "0x000000000000000000000000000000000000dEaD";
 /** How long a demo transaction stays pending. */
 const MINE_AFTER_MS = 3_000;
 
-type DemoTx = { hash: Hex; from: Hex; to: Hex; value: Hex; sentAt: number };
+/**
+ * Signs for the demo wallet. It's a throwaway key, not the demo account's,
+ * so demo signatures don't verify against the connected address.
+ */
+const demoSigner = privateKeyToAccount(keccak256(toHex("0xui demo signer")));
+
+type DemoTx = {
+  hash: Hex;
+  from: Hex;
+  to: Hex;
+  value: Hex;
+  data: Hex;
+  sentAt: number;
+};
 const demoTxs = new Map<Hex, DemoTx>();
 
-function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex }) {
+const isMined = (tx: DemoTx) => Date.now() - tx.sentAt >= MINE_AFTER_MS;
+
+function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }) {
   const hash = keccak256(toHex(`${tx.from}${tx.to}${Date.now()}${Math.random()}`));
   demoTxs.set(hash, {
     hash,
     from: tx.from,
     to: tx.to,
     value: tx.value ?? "0x0",
+    data: tx.data ?? "0x",
     sentAt: Date.now(),
   });
   return hash;
+}
+
+/** Allowance set by a mined demo approve, so approval demos can complete. */
+function demoAllowance(token: Hex, owner: Hex, spender: Hex) {
+  let allowance: bigint | undefined;
+  for (const tx of demoTxs.values()) {
+    if (!isMined(tx) || tx.to.toLowerCase() !== token.toLowerCase()) continue;
+    if (tx.from.toLowerCase() !== owner.toLowerCase()) continue;
+    try {
+      const call = decodeFunctionData({ abi: erc20Abi, data: tx.data });
+      if (call.functionName === "approve" && call.args[0].toLowerCase() === spender.toLowerCase()) {
+        allowance = call.args[1];
+      }
+    } catch {
+      // Not an ERC-20 call.
+    }
+  }
+  return allowance;
 }
 
 /**
@@ -61,8 +106,16 @@ function demoWallet() {
           ...provider,
           async request(args: { method: string; params?: unknown }) {
             if (args.method === "eth_sendTransaction") {
-              const [tx] = args.params as [{ from: Hex; to: Hex; value?: Hex }];
+              const [tx] = args.params as [{ from: Hex; to: Hex; value?: Hex; data?: Hex }];
               return sendDemoTransaction(tx);
+            }
+            if (args.method === "personal_sign") {
+              const [message] = args.params as [Hex];
+              return demoSigner.signMessage({ message: { raw: message } });
+            }
+            if (args.method === "eth_signTypedData_v4") {
+              const [, typedData] = args.params as [Hex, string];
+              return demoSigner.signTypedData(JSON.parse(typedData));
             }
             return provider.request(args as never);
           },
@@ -84,13 +137,27 @@ function demoTransport(chain: Chain) {
       const tx = typeof hash === "string" ? demoTxs.get(hash) : undefined;
 
       if (method === "eth_estimateGas") return "0x5208";
+      if (method === "eth_call") {
+        const [{ to, data }] = params as [{ to: Hex; data: Hex }];
+        try {
+          const call = decodeFunctionData({ abi: erc20Abi, data });
+          if (call.functionName === "allowance") {
+            const allowance = demoAllowance(to, call.args[0], call.args[1]);
+            if (allowance !== undefined) {
+              return encodeFunctionResult({ abi: erc20Abi, functionName: "allowance", result: allowance });
+            }
+          }
+        } catch {
+          // Not an ERC-20 call: ask the real chain.
+        }
+      }
       if (tx && method === "eth_getTransactionByHash") {
         return {
           hash: tx.hash,
           from: tx.from,
           to: tx.to,
           value: tx.value,
-          input: "0x",
+          input: tx.data,
           nonce: "0x0",
           gas: "0x5208",
           maxFeePerGas: "0x3b9aca00",
@@ -105,7 +172,7 @@ function demoTransport(chain: Chain) {
         };
       }
       if (tx && method === "eth_getTransactionReceipt") {
-        if (Date.now() - tx.sentAt < MINE_AFTER_MS) return null;
+        if (!isMined(tx)) return null;
         const blockNumber = await rpc.request({ method: "eth_blockNumber" });
         return {
           transactionHash: tx.hash,
@@ -146,6 +213,9 @@ const chains = [
 export const demoConfig = createConfig({
   chains,
   connectors: [demoWallet(), injected()],
+  // Plain eth_call reads instead of Multicall3, so the demo transport can
+  // answer allowance reads after a demo approve.
+  batch: { multicall: false },
   transports: Object.fromEntries(
     chains.map((chain) => [chain.id, demoTransport(chain)])
   ) as Record<(typeof chains)[number]["id"], ReturnType<typeof demoTransport>>,

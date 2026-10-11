@@ -1,0 +1,64 @@
+---
+title: Token Select
+description: Searchable token picker with recent and popular tokens and the user's balances.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/token-select";
+
+A token pill that opens a picker. It has search by symbol, name or pasted address, quick picks (your recent tokens, then `popular`), and the full list with tokens you hold sorted first. Arrow keys move between the search field and the rows.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/token-select
+```
+
+## Usage
+
+Tokens use the [Uniswap token list](https://tokenlists.org) format, so you can pass any token list's `tokens` array directly.
+
+```tsx
+import { TokenSelect, type Token } from "@/components/token-select";
+
+const [token, setToken] = useState<Token>();
+
+<TokenSelect
+  tokens={tokenList.tokens}
+  value={token}
+  onValueChange={setToken}
+  popular={["ETH", "USDC", "WBTC"]}
+/>;
+```
+
+Only tokens on `chainId` (the current chain by default) are listed. For the chain's native currency, use the address `NATIVE_TOKEN_ADDRESS` (`0xEeee…EEeE`).
+
+### Your own trigger
+
+```tsx
+<TokenSelectDialog open={open} onOpenChange={setOpen} tokens={tokens} onValueChange={setToken} />
+```
+
+### Headless
+
+`filterTokens(tokens, query)` is the search, and `useTokenBalances(tokens)` reads every balance in one batch.
+
+## Props
+
+Also accepts shadcn `Button` props for the trigger.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tokens` | `Token[]` | — | Token list. |
+| `value` | `Token` | — | Selected token. |
+| `onValueChange` | `(token) => void` | — | Called on pick. The dialog closes itself. |
+| `chainId` | `number` | current chain | Chain to list. |
+| `popular` | `string[]` | `[]` | Symbols or addresses for quick picks. |
+| `showBalances` | `boolean` | `true` | Read and show the connected account's balances. |
+| `placeholder` | `string` | `"Select token"` | Trigger text with nothing selected. |
+
+Recent picks are kept in `localStorage` per chain (4 max). If storage is blocked, they're simply not saved.

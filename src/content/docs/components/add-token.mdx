@@ -1,0 +1,46 @@
+---
+title: Add Token
+description: Button that asks the wallet to track a token, e.g. "Add USDC to wallet".
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/add-token";
+
+Asks the wallet to track an ERC-20 ([EIP-747](https://eips.ethereum.org/EIPS/eip-747)). Useful after a swap or bridge into a token the wallet doesn't list by default. Renders nothing when no wallet is connected.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/add-token
+```
+
+## Usage
+
+```tsx
+import { AddToken } from "@/components/add-token";
+
+<AddToken token={{ address, symbol: "USDC", decimals: 6, logoURI }} />;
+```
+
+## States
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `idle` | "Add USDC to wallet" |
+| `adding` | Spinner, "Confirm in your wallet." |
+| `added` | Check, "USDC added" (disabled) |
+| `cancelled` | "Cancelled in wallet." Not an error. |
+| `error` | The wallet doesn't support adding tokens, or failed. |
+
+## Props
+
+Also accepts shadcn `Button` props.
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `token` | `{ address, symbol, decimals, logoURI? }` | Token to add. Wallets show `logoURI` as its icon. |
+| `children` | `ReactNode` | Label. Defaults to "Add &lt;symbol&gt; to wallet". |

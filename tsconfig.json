@@ -4,12 +4,10 @@
   "exclude": ["dist", "node_modules"],
   "compilerOptions": {
     "paths": {
-      // shadcn primitives and `cn` are docs-site code. The more specific
-      // patterns win, so `shadcn add <primitive>` writes into src/.
-      "@/components/ui/*": ["./src/components/ui/*"],
-      "@/lib/utils": ["./src/lib/utils"],
-      // Registry files first, then docs-only code. Mirrors scripts/registry-resolver.mjs.
-      "@/*": ["./registry/default/*", "./src/*"]
+      // Docs-only code (shadcn primitives, `cn`) and registry files never
+      // share a path, so the order only decides where `shadcn add` writes:
+      // src/ first. Mirrors scripts/registry-resolver.mjs.
+      "@/*": ["./src/*", "./registry/default/*"]
     }
   }
 }

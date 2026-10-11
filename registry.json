@@ -332,6 +332,195 @@
       ]
     },
     {
+      "name": "amount-input",
+      "type": "registry:component",
+      "title": "Amount Input",
+      "description": "Large borderless decimal input for token amounts that keeps a string value (no float precision loss). type=text with inputMode=decimal; refuses invalid keystrokes and digits past the token's decimals; accepts ',' as the decimal point; cleans up pasted amounts like '$1,000.50'. Optional max with a Max button and an over-max state (aria-invalid). onValueChange returns the string plus the parsed bigint. Exports sanitizeAmountInput and getAmountState.",
+      "files": [
+        {
+          "path": "registry/default/components/amount-input.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "token-select",
+      "type": "registry:component",
+      "title": "Token Select",
+      "description": "Searchable token picker (pill trigger plus dialog) for Uniswap token list format tokens on one chain: search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation. Exports TokenSelectDialog, filterTokens, useTokenBalances, the Token type and NATIVE_TOKEN_ADDRESS.",
+      "files": [
+        {
+          "path": "registry/default/components/token-select.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "@0xui/token-icon",
+        "@0xui/token-amount",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "token-input",
+      "type": "registry:component",
+      "title": "Token Input",
+      "description": "Swap/send panel: label, AmountInput, TokenSelect pill, fiat value from a price prop, the connected account's balance of the chosen token with Max, and an 'Insufficient <symbol> balance' state. onValueChange returns the amount as a bigint plus insufficient. readOnly and checkBalance=false for 'you receive' panels.",
+      "files": [
+        {
+          "path": "registry/default/components/token-input.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/amount-input",
+        "@0xui/token-select",
+        "@0xui/balance",
+        "@0xui/token-amount"
+      ]
+    },
+    {
+      "name": "address-input",
+      "type": "registry:component",
+      "title": "Address Input",
+      "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found.",
+      "files": [
+        {
+          "path": "registry/default/components/address-input.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/address-avatar",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "approve-button",
+      "type": "registry:component",
+      "title": "Approve Button",
+      "description": "ERC-20 approval gate: reads the allowance (useReadContract allowance) and shows an 'Approve <symbol>' TransactionButton until it covers the amount, then renders children (your action); skips straight to children when already approved. Exact amount by default, unlimited (maxUint256) opt-in. Refetches the allowance after approval. Exports useAllowance.",
+      "files": [
+        {
+          "path": "registry/default/components/approve-button.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/transaction-button"
+      ]
+    },
+    {
+      "name": "network-guard",
+      "type": "registry:component",
+      "title": "Network Guard",
+      "description": "Wrapper that shows a 'This works on <chain>. Switch to <chain>' notice when the connected wallet is on an unsupported network, as a banner above the content or replacing it. Renders children unchanged when disconnected or on a supported chain. A declined switch shows as cancelled. Exports useNetworkGuard.",
+      "files": [
+        {
+          "path": "registry/default/components/network-guard.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/use-mounted",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "sign-message",
+      "type": "registry:component",
+      "title": "Sign Message",
+      "description": "Button that signs a message (EIP-191, useSignMessage) or typed data (EIP-712, useSignTypedData), opening the wallet picker when disconnected. Labeled steps, optional verification through the RPC (works for ERC-1271/6492 smart wallets), message preview, signature with copy. A rejected request shows as cancelled. Exports useSignFlow and SignPhase.",
+      "files": [
+        {
+          "path": "registry/default/components/sign-message.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/connect-wallet",
+        "@0xui/copy-button",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "transaction-toast",
+      "type": "registry:component",
+      "title": "Transaction Toast",
+      "description": "useTransactionToast() returns toastTransaction(hash, options): one Sonner toast that goes from 'Transaction pending' to 'Transaction confirmed' or 'Transaction reverted' (or 'Couldn't track transaction'), with a View-on-explorer action and your description in every state. Waits with viem directly so reverted receipts are handled. Needs the shadcn Toaster mounted once.",
+      "files": [
+        {
+          "path": "registry/default/components/transaction-toast.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "sonner"
+      ],
+      "registryDependencies": [
+        "sonner",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "add-token",
+      "type": "registry:component",
+      "title": "Add Token",
+      "description": "'Add USDC to wallet' button (EIP-747 wallet_watchAsset via useWatchAsset) with adding, added, cancelled and error states. Renders nothing when no wallet is connected.",
+      "files": [
+        {
+          "path": "registry/default/components/add-token.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
       "name": "wagmi-config",
       "type": "registry:lib",
       "title": "wagmi config + provider",

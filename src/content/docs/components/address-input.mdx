@@ -1,0 +1,63 @@
+---
+title: Address Input
+description: Recipient field that takes an address or ENS name, resolves names, and catches checksum typos.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/address-input";
+
+Type or paste an address or an ENS name. Names resolve on mainnet once typing pauses, with the avatar and resolved address shown. Mixed-case addresses must match their checksum, which catches most single-character typos. Problems show after the field loses focus, not while typing.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/address-input
+```
+
+## Usage
+
+```tsx
+import { AddressInput } from "@/components/address-input";
+
+const [text, setText] = useState("");
+const [recipient, setRecipient] = useState<Address>();
+
+<AddressInput
+  value={text}
+  onValueChange={setText}
+  onResolve={(state) => setRecipient(state.address)}
+/>;
+```
+
+Always send to `state.address`, never to the raw text. It is `undefined` until the input is a valid address or a resolved name.
+
+## States
+
+`data-phase` on the root holds the current state.
+
+| Phase | Meaning |
+| --- | --- |
+| `empty` | Nothing typed. |
+| `incomplete` | Not a full address or name yet. Reported after blur. |
+| `resolving` | Looking up an ENS name. |
+| `valid` | `state.address` is set. For names, the resolved address is shown under the field. For addresses, the ENS name is shown. |
+| `invalid` | Bad checksum, too long, or not a valid name. Reported after blur. |
+| `not-found` | The name has no address. Reported right away. |
+
+## Props
+
+Also accepts `<input>` props.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `string` | — | Text in the field. |
+| `onValueChange` | `(value) => void` | — | Called on every change. |
+| `onResolve` | `(state) => void` | — | Called when validation settles on a new result. |
+| `label` | `string` | `"Recipient"` | Accessible label. |
+| `showPaste` | `boolean` | `true` | Paste button while empty. |
+
+Headless: `useAddressInput(value)` returns the same state.

@@ -1,7 +1,19 @@
 import { QueryClient } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { custom, type Chain } from "viem";
+import {
+  custom,
+  decodeFunctionData,
+  encodeAbiParameters,
+  encodeFunctionResult,
+  erc20Abi,
+  hexToBytes,
+  parseAbi,
+  zeroAddress,
+  type Address,
+  type Chain,
+  type Hex,
+} from "viem";
 import { vi } from "vitest";
 import { createConfig, type Config } from "wagmi";
 import { connect } from "wagmi/actions";
@@ -59,7 +71,13 @@ function stubWalletRpc(rpc: RpcResponses) {
 export function createTestConfig({
   features,
   rpc = {},
-}: { features?: MockParameters["features"]; rpc?: RpcResponses } = {}) {
+  accounts = testAccounts,
+}: {
+  features?: MockParameters["features"];
+  rpc?: RpcResponses;
+  /** Accounts the mock wallet exposes. The first one is used. */
+  accounts?: readonly [Address, ...Address[]];
+} = {}) {
   stubWalletRpc(rpc);
   const transport = custom(
     { request: ({ method, params }) => respond(rpc, method, params) },
@@ -67,7 +85,7 @@ export function createTestConfig({
   );
   return createConfig({
     chains: [withoutMulticall(mainnet), withoutMulticall(sepolia)],
-    connectors: [mock({ accounts: testAccounts, features })],
+    connectors: [mock({ accounts, features })],
     transports: { [mainnet.id]: transport, [sepolia.id]: transport },
     // Fast block/receipt polling so tests don't wait 4s per poll.
     pollingInterval: 20,
@@ -179,4 +197,69 @@ export function renderWithWagmi(
 /** Connect the mock wallet, as if the user approved the connection. */
 export function connectMock(config: Config) {
   return connect(config, { connector: config.connectors[0]! });
+}
+
+type EthCall = [{ to: Address; data: Hex }];
+
+/**
+ * eth_call handler for ERC-20 reads. Values can be functions so a test can
+ * change them, e.g. raise the allowance after an approve is sent.
+ */
+export function erc20CallRpc({
+  balance = 0n,
+  allowance = 0n,
+  decimals = 18,
+  symbol = "TKN",
+}: {
+  balance?: bigint | (() => bigint);
+  allowance?: bigint | (() => bigint);
+  decimals?: number;
+  symbol?: string;
+} = {}) {
+  const value = <T,>(v: T | (() => T)) => (typeof v === "function" ? (v as () => T)() : v);
+  return ([{ data }]: EthCall) => {
+    const { functionName } = decodeFunctionData({ abi: erc20Abi, data });
+    const result =
+      functionName === "balanceOf"
+        ? value(balance)
+        : functionName === "allowance"
+          ? value(allowance)
+          : functionName === "decimals"
+            ? decimals
+            : functionName === "symbol"
+              ? symbol
+              : undefined;
+    if (result === undefined) throw new Error(`erc20 ${functionName} not mocked`);
+    return encodeFunctionResult({ abi: erc20Abi, functionName, result } as never);
+  };
+}
+
+const universalResolverAbi = parseAbi([
+  "function resolveWithGateways(bytes name, bytes data, string[] gateways) view returns (bytes, address)",
+]);
+
+/** Decode a DNS wire-format name ("\x07vitalik\x03eth\x00") to "vitalik.eth". */
+function decodeDnsName(data: Hex) {
+  const bytes = hexToBytes(data);
+  const labels: string[] = [];
+  for (let i = 0; bytes[i]; i += bytes[i]! + 1) {
+    labels.push(new TextDecoder().decode(bytes.slice(i + 1, i + 1 + bytes[i]!)));
+  }
+  return labels.join(".");
+}
+
+/**
+ * eth_call handler for ENS forward resolution through the universal
+ * resolver. Names missing from `names` resolve to no address.
+ */
+export function ensResolveRpc(names: Record<string, Address>) {
+  return ([{ data }]: EthCall) => {
+    const { args } = decodeFunctionData({ abi: universalResolverAbi, data });
+    const address = names[decodeDnsName(args[0])] ?? zeroAddress;
+    return encodeFunctionResult({
+      abi: universalResolverAbi,
+      functionName: "resolveWithGateways",
+      result: [encodeAbiParameters([{ type: "address" }], [address]), address],
+    });
+  };
 }

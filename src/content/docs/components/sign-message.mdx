@@ -1,0 +1,76 @@
+---
+title: Sign Message
+description: Asks the wallet to sign a message or typed data, with labeled steps and optional verification.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, TypedData } from "@/demos/sign-message";
+
+For sign-in flows, off-chain orders, and proving ownership of an address. It signs plain messages (EIP-191) or typed data (EIP-712), labels each step, and can check the signature against the connected address.
+
+Connect the **Demo Wallet** to try it. Demo signatures come from a throwaway key, so they wouldn't verify against the demo address.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/sign-message
+```
+
+## Usage
+
+```tsx
+import { SignMessage } from "@/components/sign-message";
+
+<SignMessage
+  message="Sign in to Example"
+  verify
+  onSigned={(signature) => login(address, signature)}
+>
+  Sign in
+</SignMessage>;
+```
+
+Verification goes through the RPC, so smart-contract wallets (ERC-1271 and ERC-6492) verify too. It's a convenience for the UI: **always verify again on your server** before trusting a signature.
+
+## Examples
+
+### Typed data
+
+<Card>
+  <TypedData client:load />
+</Card>
+
+```tsx
+<SignMessage typedData={{ domain, types, primaryType: "Order", message }} />
+```
+
+## States
+
+| `data-phase` | Button |
+| --- | --- |
+| `idle` | Your label, or "Connect wallet" |
+| `signing` | Spinner, "Sign in wallet…" |
+| `verifying` | Spinner, "Verifying…" |
+| `signed` | Check, "Signed" or "Signature verified" |
+| `invalid` | Alert: the signature doesn't match the connected address. |
+| `cancelled` | "Cancelled in wallet." Not an error. |
+| `error` | Alert with the wallet's message. |
+
+## Props
+
+Also accepts shadcn `Button` props.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `message` | `string \| { raw: Hex }` | — | Message to sign. Pass this or `typedData`. |
+| `typedData` | `TypedDataDefinition` | — | EIP-712 payload. |
+| `verify` | `boolean` | `false` | Check the signature after signing. |
+| `onSigned` | `(signature) => void` | — | Called with the signature. |
+| `showMessage` | `boolean` | `false` | Show what is being signed. |
+| `showSignature` | `boolean` | `false` | Show the signature with copy. |
+
+Headless: `useSignFlow(request, { verify })`.

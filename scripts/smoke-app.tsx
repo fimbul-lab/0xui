@@ -1,7 +1,18 @@
 // Copied into the smoke-test app as src/App.tsx. Render every component here
 // so the build fails if an installed component doesn't compile.
 import { erc20Abi, parseEther, parseUnits } from "viem";
+import { useState } from "react";
 import { Account } from "@/components/account";
+import { AddToken } from "@/components/add-token";
+import { AddressInput } from "@/components/address-input";
+import { AmountInput } from "@/components/amount-input";
+import { ApproveButton } from "@/components/approve-button";
+import { NetworkGuard } from "@/components/network-guard";
+import { SignMessage } from "@/components/sign-message";
+import { TokenInput } from "@/components/token-input";
+import { NATIVE_TOKEN_ADDRESS, TokenSelect, type Token } from "@/components/token-select";
+import { useTransactionToast } from "@/components/transaction-toast";
+import { Toaster } from "@/components/ui/sonner";
 import { Address } from "@/components/address";
 import { AddressAvatar } from "@/components/address-avatar";
 import { Balance } from "@/components/balance";
@@ -21,6 +32,34 @@ import { Web3Provider } from "@/components/web3-provider";
 
 const address = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const tokens: Token[] = [
+  { chainId: 1, address: NATIVE_TOKEN_ADDRESS, symbol: "ETH", name: "Ether", decimals: 18 },
+  { chainId: 1, address: usdc, symbol: "USDC", name: "USD Coin", decimals: 6 },
+];
+
+function Phase3() {
+  const [amount, setAmount] = useState("");
+  const [token, setToken] = useState<Token>(tokens[0]!);
+  const [recipient, setRecipient] = useState("");
+  const toastTransaction = useTransactionToast();
+  return (
+    <>
+      <AmountInput value={amount} onValueChange={setAmount} decimals={18} />
+      <TokenSelect tokens={tokens} value={token} onValueChange={setToken} />
+      <TokenInput value={amount} onValueChange={setAmount} token={token} onTokenChange={setToken} tokens={tokens} />
+      <AddressInput value={recipient} onValueChange={setRecipient} onResolve={(s) => s.address} />
+      <ApproveButton token={{ address: usdc, symbol: "USDC" }} spender={address} amount={1n} chainId={1}>
+        <TransactionButton chainId={1} transaction={{ to: address }} onSubmitted={(hash) => toastTransaction(hash)}>
+          Go
+        </TransactionButton>
+      </ApproveButton>
+      <NetworkGuard chainId={1}>Guarded</NetworkGuard>
+      <SignMessage message="hello" verify />
+      <AddToken token={{ address: usdc, symbol: "USDC", decimals: 6 }} />
+      <Toaster />
+    </>
+  );
+}
 
 export default function App() {
   return (
@@ -51,6 +90,7 @@ export default function App() {
       <TokenAmount value={parseUnits("1.5", 6)} decimals={6} symbol="USDC" price={1} />
       <BlockNumber explorer />
       <GasPrice thresholds={{ low: 5, high: 30 }} />
+      <Phase3 />
     </Web3Provider>
   );
 }

@@ -1,0 +1,56 @@
+---
+title: Approve Button
+description: ERC-20 approval gate. Shows "Approve" until the allowance covers the amount, then your action.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/approve-button";
+
+Wrap the action that spends a token. While the allowance is too low it shows "Approve USDC" as a [Transaction Button](/components/transaction-button/). Once the approval is mined, it renders your action instead. If the allowance already covers the amount, it skips straight to the action.
+
+Connect the **Demo Wallet** to try it.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/approve-button
+```
+
+## Usage
+
+```tsx
+import { ApproveButton } from "@/components/approve-button";
+
+<ApproveButton token={usdc} spender={router} amount={amount} chainId={1}>
+  <TransactionButton chainId={1} contract={swapCall}>Swap</TransactionButton>
+</ApproveButton>;
+```
+
+## Exact or unlimited
+
+By default it approves exactly `amount`. That's safest: the spender can't move more than this action needs. `unlimited` approves the maximum, which saves future approvals but lets the spender move all of the token. If you offer it, let the user choose.
+
+```tsx
+<ApproveButton unlimited={rememberApproval} …>
+```
+
+Some tokens (notably USDT on mainnet) refuse to change a non-zero allowance to another non-zero value. For those, approve `0` first.
+
+## Props
+
+Also accepts [Transaction Button](/components/transaction-button/) props such as `onSuccess` and `variant`.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `token` | `{ address, symbol }` | — | Token to approve. |
+| `spender` | `Address` | — | Contract that will spend it. |
+| `amount` | `bigint` | — | Amount the action needs. |
+| `chainId` | `number` | — | Chain the token is on. |
+| `unlimited` | `boolean` | `false` | Approve the maximum. |
+| `children` | `ReactNode` | — | Shown once approved. |
+
+Headless: `useAllowance({ token, spender })`.

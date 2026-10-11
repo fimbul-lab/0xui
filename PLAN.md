@@ -181,8 +181,16 @@ These are fast and they lock in the conventions before the big components.
 - **Docs demos:** the Demo Wallet simulates transactions. `eth_sendTransaction` returns a fake hash, and the demo transport serves its receipt about 3 s later. Sending to `0x…dEaD` reverts. Nothing is broadcast.
 - **Tests:** `fakeChainRpc()` in `test/wagmi.tsx` is a chain that advances a block on each poll and mines sent transactions. Test configs drop Multicall3 (so reads are plain RPC calls) and have no storage (so the chain and recent wallet don't leak between tests).
 
-### Phase 3: Good to have
+### Phase 3: Good to have ✅ done 2026-10-11
 `amount-input` → `token-select` → `token-input` → `address-input` → `approve-button` → `network-guard` → `sign-message` → `transaction-toast` → `add-token`.
+
+**Phase 3 notes**
+- **`address-input` callbacks:** `onValueChange(text)` fires on every keystroke and `onResolve(state)` fires when validation settles. One callback can't carry both, because ENS resolution is async.
+- **Approvals:** `approve-button` approves the exact amount by default. `unlimited` is opt-in. The docs explain the USDT approve-0-first quirk, but the component doesn't handle it automatically.
+- **Toasts:** `transaction-toast` adds the shadcn `sonner` primitive, which pulls in `next-themes`.
+- **Repo setup:** `tsconfig` `@/*` now lists `src/` before `registry/default/`. A path exists in only one of them, so resolution is unaffected, but `shadcn add <primitive>` now writes into `src/`.
+- **Demo Wallet:** signs with a throwaway key, so its signatures don't verify against the demo address. It also remembers demo approvals. The docs config sets `batch.multicall: false` so allowance reads can be intercepted.
+- **Test helpers:** `erc20CallRpc()` and `ensResolveRpc()` in `test/wagmi.tsx`, plus custom `accounts` in `createTestConfig`, so signatures can verify with a real key.
 
 ### Phase 4: Nice to have
 `send` → `swap` → `batch-transaction` → `contract-form` → `portfolio` → `transaction-history` → `ens-profile` → `nft-card` → `event-feed`.

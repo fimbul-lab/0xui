@@ -33,6 +33,15 @@ npx shadcn@latest add @0xui/chain-selector
 | `balance` | Native or ERC-20 balance. |
 | `transaction-button` | Sends a transaction and shows every step: connect, switch, confirm, pending, done. |
 | `transaction-status` | Inline card that follows a transaction from submitted to confirmed. |
+| `token-input` | Swap panel: amount, token picker, fiat, balance with Max, insufficient state. |
+| `token-select` | Searchable token picker with recent/popular tokens and balances. |
+| `amount-input` | Decimal amount input with string state and decimal clamping. |
+| `address-input` | Address or ENS input with resolution and checksum validation. |
+| `approve-button` | ERC-20 approval gate in front of your action. |
+| `network-guard` | "Switch to X" notice for chain-specific content. |
+| `sign-message` | Sign messages or typed data, with optional verification. |
+| `transaction-toast` | Follow a transaction in a Sonner toast. |
+| `add-token` | "Add USDC to wallet". |
 | `chain-selector` | Network switcher as a popover or dialog. |
 | `chain-badge` | Static chain chip. Also exports `ChainIcon`. |
 | `address` | ENS name or truncated address, with copy and explorer link. |

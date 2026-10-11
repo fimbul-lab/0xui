@@ -1,0 +1,61 @@
+---
+title: Transaction Toast
+description: Follow a transaction in a toast, from pending to confirmed or reverted.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/transaction-toast";
+
+Follow a transaction without keeping its UI on screen. One toast goes from "Transaction pending" to "Transaction confirmed" or "Transaction reverted", with a link to the explorer. Built on [Sonner](https://sonner.emilkowal.ski).
+
+Connect the **Demo Wallet** and send to see it.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/transaction-toast
+```
+
+This also installs the shadcn `sonner` component. Mount its `<Toaster />` once, near the root of your app:
+
+```tsx
+import { Toaster } from "@/components/ui/sonner";
+
+<Web3Provider>
+  <App />
+  <Toaster />
+</Web3Provider>;
+```
+
+## Usage
+
+```tsx
+import { useTransactionToast } from "@/components/transaction-toast";
+
+const toastTransaction = useTransactionToast();
+
+<TransactionButton
+  transaction={tx}
+  onSubmitted={(hash) => toastTransaction(hash, { description: "Send 0.01 ETH" })}
+  hideStatus
+>
+  Send
+</TransactionButton>;
+```
+
+It works with any hash, including ones from your own `writeContract` calls.
+
+## Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `chainId` | `number` | Chain the transaction is on. Defaults to the current chain. |
+| `description` | `ReactNode` | What the transaction does. Shown in every state. |
+| `titles` | `{ pending?, success?, reverted?, error? }` | Override the headings. |
+| `onConfirmed` | `(receipt) => void` | Called when mined successfully. |
+
+The pending toast stays until the transaction settles. The confirmed toast stays 6 seconds, and the reverted or error toast 10 seconds.

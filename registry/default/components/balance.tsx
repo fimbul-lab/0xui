@@ -14,6 +14,8 @@ export type UseTokenBalanceParameters = {
   chainId?: number;
   /** Refetch interval in ms. Pass false to fetch once. */
   refreshInterval?: number | false;
+  /** Set to false to skip reading, e.g. until a token is chosen. */
+  enabled?: boolean;
 };
 
 /**
@@ -25,9 +27,10 @@ export function useTokenBalance({
   token,
   chainId,
   refreshInterval = 15_000,
+  enabled: enabledProp = true,
 }: UseTokenBalanceParameters = {}) {
   const connection = useConnection();
-  const address = addressProp ?? connection.address;
+  const address = enabledProp ? (addressProp ?? connection.address) : undefined;
 
   const native = useBalance({
     address,
