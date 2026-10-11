@@ -1,0 +1,96 @@
+---
+title: Token lists
+description: 0xui uses the token list standard, the format of Uniswap's lists. Load any list with useTokenList.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/token-select";
+
+Every 0xui component that takes tokens (Token Select, Token Input, Swap, Send, Portfolio) takes them in the [token list standard](https://tokenlists.org). It's the JSON format Uniswap created, and CoinGecko, most DEXs and most wallets publish lists in it. So you don't map anything: load a list and pass its tokens.
+
+The demos in these docs use **[Uniswap Labs' default list](https://tokens.uniswap.org)**, fetched live: about 1,800 tokens across Ethereum, Base, Arbitrum, Optimism, Polygon and more.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Install
+
+```bash
+npx shadcn@latest add @0xui/use-token-list
+```
+
+## Load a list
+
+```tsx
+import { useTokenList } from "@/hooks/use-token-list";
+import { UNISWAP_DEFAULT_LIST } from "@/lib/token-list";
+import { TokenSelect } from "@/components/token-select";
+
+function Picker() {
+  const { tokens, isLoading } = useTokenList(UNISWAP_DEFAULT_LIST);
+  const [token, setToken] = useState<TokenInfo>();
+  return <TokenSelect tokens={tokens} isLoading={isLoading} value={token} onValueChange={setToken} />;
+}
+```
+
+`useTokenList`:
+
+- downloads the list once per session (cached with TanStack Query, one retry);
+- keeps only tokens on the current chain (or `chainId`, or `null` for all chains);
+- puts the chain's **native currency first**. Lists don't include it (Uniswap's has WETH, not ETH), so it's added from your wagmi chain config with the address `NATIVE_TOKEN_ADDRESS` (`0xEeee…EEeE`);
+- drops entries that aren't EVM tokens. Uniswap's list includes Solana tokens, for example.
+
+### Several lists
+
+```tsx
+const { tokens } = useTokenList(
+  [UNISWAP_DEFAULT_LIST, "https://tokens.coingecko.com/base/all.json"],
+  { extraTokens: importedTokens }
+);
+```
+
+Earlier lists win when two lists contain the same token, and `extraTokens` win over everything. `ipfs://` and `ar://` list URLs work too.
+
+## The token shape
+
+```ts
+type TokenInfo = {
+  chainId: number;
+  address: Address;      // checksummed
+  name: string;
+  symbol: string;
+  decimals: number;
+  logoURI?: string;      // https://, ipfs:// or ar://
+  tags?: string[];
+  extensions?: {
+    bridgeInfo?: Record<string, { tokenAddress: Address }>; // Uniswap: the same token on other chains
+    [key: string]: unknown;
+  };
+};
+```
+
+Writing tokens by hand? Use the same shape. `nativeToken(chain)` builds the native-currency entry.
+
+## Logos
+
+[Token Icon](/components/token-icon/) shows `logoURI` and resolves `ipfs://` through a gateway. When a logo fails to load, which happens often with list logos, it falls back to the built-in icon for the symbol, then to the symbol's first letters.
+
+## Big lists
+
+Uniswap's list has about 400 tokens on Ethereum alone, so the components are built for that:
+
+- **Token Select** shows the first 100 rows (tokens you hold first) until the user searches.
+- **Balances** for the whole list are read in one batched multicall per component.
+- **Portfolio** reads every token on the chain. With a long list, consider passing a shorter one.
+
+Without a wallet or RPC provider, lists like this can hit public RPC rate limits. Use your own RPC URL in production.
+
+## Without the hook
+
+```ts
+import { fetchTokenList, parseTokenList, mergeTokenLists } from "@/lib/token-list";
+
+const list = await fetchTokenList("https://tokens.uniswap.org"); // validated and cleaned
+const fromFile = parseTokenList(await import("./my-list.json"));
+```

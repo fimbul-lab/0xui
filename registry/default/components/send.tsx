@@ -120,7 +120,7 @@ export function Send({
         }}
         tokens={tokens.length > 1 ? tokens : undefined}
         popular={popular}
-        price={prices?.[token.symbol]}
+        prices={prices}
       />
       <TransactionButton
         {...request}

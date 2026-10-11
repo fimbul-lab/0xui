@@ -12,6 +12,8 @@ import { Default } from "@/demos/token-input";
   <Default client:load />
 </Card>
 
+Tokens use the [token list standard](/getting-started/token-lists/). The demo uses Uniswap's default list, loaded live with `useTokenList`.
+
 ## Installation
 
 ```bash
@@ -57,5 +59,6 @@ Use `insufficient` to block the action, and name the reason on the button:
 | `onTokenChange` / `tokens` | — | — | Pass both to make the token pickable. |
 | `popular` | `string[]` | — | Quick picks in the picker. |
 | `price` / `currency` | `number` / `string` | — / `"USD"` | Fiat line. |
+| `prices` | `Record<symbol, number>` | — | Fiat line for any selected token, and value-sorted holdings in the picker. |
 | `checkBalance` | `boolean` | `true` | Read the balance, offer Max, flag insufficient amounts. |
 | `readOnly` | `boolean` | `false` | For quoted outputs. |

@@ -6,7 +6,7 @@ description: Token logo with fallbacks and an optional chain badge.
 import { Card } from "@astrojs/starlight/components";
 import { Default, WithChain } from "@/demos/token-icon";
 
-Tries three sources in order: your `src` URL, the built-in icon for the symbol, then the symbol's first two letters.
+Tries three sources in order: your `src` URL (a token list's `logoURI`; `ipfs://` works), the built-in icon for the symbol, then the symbol's first two letters. List logos go dead often, so each step falls through to the next.
 
 <Card>
   <Default client:load />
@@ -48,7 +48,8 @@ The same token on different chains is easy to mix up. `chainId` adds the chain's
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `symbol` | `string` | — | Token symbol. Used for the built-in icon, the fallback and the accessible label. |
-| `src` | `string` | — | Logo URL. Takes priority over the built-in icon. |
+| `src` | `string` | — | Logo URL, e.g. `token.logoURI`. Takes priority over the built-in icon. |
+| `gateway` | `string` | `https://ipfs.io/ipfs/` | IPFS gateway for `ipfs://` logos. |
 | `chainId` | `number` | — | Show this chain's logo as a corner badge. |
 | `size` | `number` | `24` | Diameter in px. |
 | `variant` | `"background" \| "branded" \| "mono"` | `"branded"` | Style of the built-in icons. |

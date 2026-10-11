@@ -34,8 +34,10 @@ export type TokenInputProps = {
   tokens?: readonly Token[];
   /** Symbols or addresses shown as quick picks in the token picker. */
   popular?: readonly string[];
-  /** Price of one token, for the fiat line. */
+  /** Price of one token, for the fiat line. Defaults to `prices[token.symbol]`. */
   price?: number;
+  /** Price per symbol: the fiat line, and sorting held tokens in the picker by value. */
+  prices?: Record<string, number>;
   currency?: string;
   /** Check the amount against the balance and offer Max. Turn off for "you receive" panels. */
   checkBalance?: boolean;
@@ -57,13 +59,15 @@ export function TokenInput({
   onTokenChange,
   tokens,
   popular,
-  price,
+  price: priceProp,
+  prices,
   currency,
   checkBalance = true,
   readOnly = false,
   className,
 }: TokenInputProps) {
   const id = useId();
+  const price = priceProp ?? (token ? prices?.[token.symbol] : undefined);
   const decimals = token?.decimals ?? 18;
   const { value: balance } = useTokenBalance({
     token: token && !isNativeToken(token) ? token.address : undefined,
@@ -117,6 +121,7 @@ export function TokenInput({
             onValueChange={onTokenChange}
             chainId={token?.chainId}
             popular={popular}
+            prices={prices}
             className="shrink-0"
           />
         ) : (

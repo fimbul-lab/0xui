@@ -23,6 +23,7 @@ import {
   NATIVE_TOKEN_ADDRESS,
   TokenSelect,
   filterTokens,
+  sortByHoldings,
   type Token,
 } from "./token-select";
 
@@ -173,6 +174,25 @@ describe("filterTokens", () => {
   });
 });
 
+describe("sortByHoldings", () => {
+  const wojak: Token = { ...dai, address: "0x5026F006B85729a8b14553FAE6af249aD16c9aaB", symbol: "WOJAK", name: "Wojak" };
+  const balances = new Map<string, bigint>([
+    [eth.address.toLowerCase(), parseEther("2")],
+    [usdc.address.toLowerCase(), parseUnits("10000", 6)],
+    [wojak.address.toLowerCase(), parseEther("15000000000")],
+  ]);
+
+  it("ranks priced holdings by value, never by raw amount", () => {
+    const sorted = sortByHoldings([dai, wojak, usdc, eth], balances, { ETH: 3000, USDC: 1 });
+    expect(sorted.map((t) => t.symbol)).toEqual(["USDC", "ETH", "WOJAK", "DAI"]);
+  });
+
+  it("keeps list order among holdings without prices", () => {
+    const sorted = sortByHoldings([dai, wojak, usdc, eth], balances);
+    expect(sorted.map((t) => t.symbol)).toEqual(["WOJAK", "USDC", "ETH", "DAI"]);
+  });
+});
+
 describe("TokenSelect", () => {
   it("searches, picks, and remembers recent tokens", async () => {
     const user = userEvent.setup();
@@ -211,6 +231,34 @@ describe("TokenSelect", () => {
     expect(within(dialog).getAllByRole("listitem")[0]!.querySelector("button")).toHaveFocus();
     await user.keyboard("{ArrowUp}");
     expect(within(dialog).getByRole("searchbox")).toHaveFocus();
+  });
+
+  it("shows a loading state for a list that's still downloading", async () => {
+    const user = userEvent.setup();
+    renderWithWagmi(<TokenSelect tokens={[]} isLoading onValueChange={() => {}} chainId={1} />);
+
+    await user.click(screen.getByRole("button", { name: "Select token" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Loading tokens…");
+  });
+
+  it("caps long lists until you search", async () => {
+    const user = userEvent.setup();
+    const many: Token[] = Array.from({ length: 150 }, (_, i) => ({
+      chainId: 1,
+      address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
+      symbol: `T${i}`,
+      name: `Token ${i}`,
+      decimals: 18,
+    }));
+    renderWithWagmi(<TokenSelect tokens={many} onValueChange={() => {}} chainId={1} showBalances={false} />);
+
+    await user.click(screen.getByRole("button", { name: "Select token" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getAllByRole("button", { name: /^T\d+/ })).toHaveLength(100);
+    expect(within(dialog).getByText("Showing 100 of 150. Search to find the rest.")).toBeInTheDocument();
+
+    await user.type(within(dialog).getByRole("searchbox"), "T149");
+    expect(within(dialog).getByRole("button", { name: /T149/ })).toBeInTheDocument();
   });
 
   it("says when nothing matches", async () => {

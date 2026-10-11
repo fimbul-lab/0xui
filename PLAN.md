@@ -205,6 +205,17 @@ These are fast and they lock in the conventions before the big components.
 - **Demo Wallet:** supports EIP-5792 (atomic everywhere) and stays connected across docs pages (persisted flag, since the mock only remembers in memory).
 - **Remaining follow-ups:** a mobile drawer for dialogs, `simulate` in transaction-button, and the real registry domain.
 
+### Token lists (2026-10-11)
+- Every token-taking component uses the **token list standard** (tokenlists.org, Uniswap's format). `Token` is `TokenInfo` from `@0xui/token-list`: `tags`, `extensions` and `bridgeInfo` included.
+- **`@0xui/token-list` lib:** types, `parseTokenList` (validates, drops non-EVM entries such as Uniswap's Solana tokens, checksums addresses), `fetchTokenList` (http/ipfs/ar), `mergeTokenLists`, `nativeToken(chain)` and `UNISWAP_DEFAULT_LIST`.
+- **`@0xui/use-token-list` hook:** multiple lists, chain filter, native currency first, `extraTokens`, cached per session.
+- **Docs:** demos load Uniswap's default list live (about 1,800 tokens, 412 on Ethereum including ETH).
+- **Big lists:**
+  - `TokenSelect` shows 100 rows until you search and has a loading state.
+  - Held tokens sort by value when `prices` is given, otherwise in list order. Raw amounts aren't comparable: an airdropped 15bn-token balance used to top the list.
+  - `TokenIcon` resolves `ipfs://` logos and only mounts the built-in icon after the list logo fails. Mounting it as a placeholder fetched a built-in icon for every row.
+- **Demo Wallet:** Multicall is back on in the docs config, and the demo transport patches allowance results inside Multicall3 `aggregate3` batches.
+
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).
 - Document the shadcn registry MCP (`npx shadcn registry:mcp`) so agents can browse and install 0xui.

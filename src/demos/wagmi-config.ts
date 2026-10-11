@@ -1,7 +1,9 @@
 import {
   custom,
   decodeFunctionData,
+  decodeFunctionResult,
   encodeFunctionResult,
+  multicall3Abi,
   erc20Abi,
   http,
   keccak256,
@@ -66,6 +68,44 @@ function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }
     sentAt: Date.now(),
   });
   return hash;
+}
+
+/** Encoded allowance for a direct `allowance()` call covered by a demo approve. */
+function demoAllowanceResult(token: Hex, data: Hex) {
+  try {
+    const call = decodeFunctionData({ abi: erc20Abi, data });
+    if (call.functionName !== "allowance") return undefined;
+    const allowance = demoAllowance(token, call.args[0], call.args[1]);
+    return allowance === undefined
+      ? undefined
+      : encodeFunctionResult({ abi: erc20Abi, functionName: "allowance", result: allowance });
+  } catch {
+    return undefined; // Not an ERC-20 call.
+  }
+}
+
+/**
+ * Reads are batched through Multicall3. Forward the batch to the real
+ * chain, then overwrite allowance results that a demo approve changed.
+ */
+async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
+  const result = (await forward()) as Hex;
+  let calls: readonly { target: Hex; callData: Hex }[];
+  try {
+    const decoded = decodeFunctionData({ abi: multicall3Abi, data });
+    if (decoded.functionName !== "aggregate3") return result;
+    calls = decoded.args[0];
+  } catch {
+    return result;
+  }
+  const overrides = calls.map((c) => demoAllowanceResult(c.target, c.callData));
+  if (!overrides.some(Boolean)) return result;
+  const results = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: result });
+  return encodeFunctionResult({
+    abi: multicall3Abi,
+    functionName: "aggregate3",
+    result: results.map((r, i) => (overrides[i] ? { success: true, returnData: overrides[i]! } : r)),
+  });
 }
 
 /** Demo call batches (EIP-5792) by id, each a list of demo transaction hashes. */
@@ -203,16 +243,10 @@ function demoTransport(chain: Chain) {
       if (method === "eth_estimateGas") return "0x5208";
       if (method === "eth_call") {
         const [{ to, data }] = params as [{ to: Hex; data: Hex }];
-        try {
-          const call = decodeFunctionData({ abi: erc20Abi, data });
-          if (call.functionName === "allowance") {
-            const allowance = demoAllowance(to, call.args[0], call.args[1]);
-            if (allowance !== undefined) {
-              return encodeFunctionResult({ abi: erc20Abi, functionName: "allowance", result: allowance });
-            }
-          }
-        } catch {
-          // Not an ERC-20 call: ask the real chain.
+        const direct = demoAllowanceResult(to, data);
+        if (direct) return direct;
+        if (to.toLowerCase() === chain.contracts?.multicall3?.address.toLowerCase()) {
+          return patchMulticall(data, () => rpc.request({ method, params } as never));
         }
       }
       if (tx && method === "eth_getTransactionByHash") {
@@ -277,9 +311,6 @@ const chains = [
 export const demoConfig = createConfig({
   chains,
   connectors: [demoWallet(), injected()],
-  // Plain eth_call reads instead of Multicall3, so the demo transport can
-  // answer allowance reads after a demo approve.
-  batch: { multicall: false },
   transports: Object.fromEntries(
     chains.map((chain) => [chain.id, demoTransport(chain)])
   ) as Record<(typeof chains)[number]["id"], ReturnType<typeof demoTransport>>,

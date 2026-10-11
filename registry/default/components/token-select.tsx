@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { erc20Abi, formatUnits, isAddressEqual, type Address } from "viem";
+import { erc20Abi, formatUnits, type Address } from "viem";
 import { useBalance, useChainId, useConnection, useReadContracts } from "wagmi";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
@@ -21,25 +21,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { truncateAddress } from "@/lib/0xui-utils";
+import { NATIVE_TOKEN_ADDRESS, isNativeToken, type TokenInfo } from "@/lib/token-list";
 import { cn } from "@/lib/utils";
 
-/** A token in the Uniswap token list format. */
-export type Token = {
-  chainId: number;
-  address: Address;
-  symbol: string;
-  name: string;
-  decimals: number;
-  logoURI?: string;
-};
-
-/** Placeholder address for a chain's native currency in token lists. */
-export const NATIVE_TOKEN_ADDRESS =
-  "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as const;
-
-export function isNativeToken(token: Pick<Token, "address">) {
-  return isAddressEqual(token.address, NATIVE_TOKEN_ADDRESS);
-}
+/** A token-list entry (https://tokenlists.org). Same as `TokenInfo`. */
+export type Token = TokenInfo;
+export { NATIVE_TOKEN_ADDRESS, isNativeToken };
 
 const key = (token: Pick<Token, "address">) => token.address.toLowerCase();
 
@@ -118,6 +105,31 @@ export function useTokenBalances(
   };
 }
 
+/**
+ * Tokens the user holds first: priced holdings by value, then other
+ * holdings in list order, then everything else in list order. Raw amounts
+ * aren't compared: a billion airdropped tokens shouldn't outrank 2 ETH.
+ */
+export function sortByHoldings(
+  tokens: readonly Token[],
+  balances: ReadonlyMap<string, bigint>,
+  prices: Record<string, number> = {}
+) {
+  return tokens
+    .map((token, index) => {
+      const balance = balances.get(key(token)) ?? 0n;
+      const price = prices[token.symbol];
+      const value =
+        balance > 0n && price !== undefined
+          ? Number(formatUnits(balance, token.decimals)) * price
+          : undefined;
+      const group = value !== undefined ? 0 : balance > 0n ? 1 : 2;
+      return { token, index, value: value ?? 0, group };
+    })
+    .sort((a, b) => a.group - b.group || b.value - a.value || a.index - b.index)
+    .map((t) => t.token);
+}
+
 const RECENT_LIMIT = 4;
 const recentKey = (chainId: number) => `0xui:recent-tokens:${chainId}`;
 
@@ -153,6 +165,12 @@ export type TokenSelectDialogProps = {
   popular?: readonly string[];
   /** Read and show the connected account's balances. */
   showBalances?: boolean;
+  /** Price per symbol. Held tokens are sorted by value when given. */
+  prices?: Record<string, number>;
+  /** The token list is still loading, e.g. `useTokenList(…).isLoading`. */
+  isLoading?: boolean;
+  /** Rows shown before searching. Long lists (Uniswap's has 400+ tokens on Ethereum) stay fast. */
+  maxRows?: number;
   title?: ReactNode;
 };
 
@@ -166,6 +184,9 @@ export function TokenSelectDialog({
   chainId: chainIdProp,
   popular = [],
   showBalances = true,
+  prices,
+  isLoading = false,
+  maxRows = 100,
   title = "Select a token",
 }: TokenSelectDialogProps) {
   const currentChainId = useChainId();
@@ -190,16 +211,8 @@ export function TokenSelectDialog({
   const results = useMemo(() => {
     const matches = filterTokens(tokens, query);
     if (query) return matches;
-    // Tokens the user holds first, largest first.
-    const held = (t: Token) => {
-      const balance = balances.get(key(t));
-      return balance ? Number(formatUnits(balance, t.decimals)) : 0;
-    };
-    return matches
-      .map((token, index) => ({ token, index, held: held(token) }))
-      .sort((a, b) => b.held - a.held || a.index - b.index)
-      .map((t) => t.token);
-  }, [tokens, query, balances]);
+    return sortByHoldings(matches, balances, prices);
+  }, [tokens, query, balances, prices]);
 
   const chips = useMemo(() => {
     const wanted = [...recent, ...popular.map((p) => p.toLowerCase())];
@@ -275,12 +288,16 @@ export function TokenSelectDialog({
         )}
 
         {results.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No tokens match “{query}”.
+          <p role="status" className="py-6 text-center text-sm text-muted-foreground">
+            {isLoading
+              ? "Loading tokens…"
+              : query
+                ? `No tokens match “${query}”.`
+                : "No tokens on this network."}
           </p>
         ) : (
           <ul ref={listRef} aria-label="Tokens" className="-mx-2 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
-            {results.map((token) => {
+            {results.slice(0, maxRows).map((token) => {
               const balance = balances.get(key(token));
               const selected = value !== undefined && key(value) === key(token);
               return (
@@ -317,6 +334,11 @@ export function TokenSelectDialog({
                 </li>
               );
             })}
+            {results.length > maxRows && (
+              <li className="px-2 py-3 text-center text-xs text-muted-foreground">
+                Showing {maxRows} of {results.length}. Search to find the rest.
+              </li>
+            )}
           </ul>
         )}
       </DialogContent>
@@ -341,6 +363,9 @@ export function TokenSelect({
   chainId,
   popular,
   showBalances,
+  prices,
+  isLoading,
+  maxRows,
   title,
   placeholder = "Select token",
   className,
@@ -373,6 +398,9 @@ export function TokenSelect({
         chainId={chainId}
         popular={popular}
         showBalances={showBalances}
+        prices={prices}
+        isLoading={isLoading}
+        maxRows={maxRows}
         title={title}
       />
     </>

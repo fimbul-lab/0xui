@@ -229,7 +229,7 @@ export function Swap({
           onTokenChange={pick("sell")}
           tokens={tokens}
           popular={popular}
-          price={sellToken ? prices?.[sellToken.symbol] : undefined}
+          prices={prices}
         />
         <button
           type="button"
@@ -247,7 +247,7 @@ export function Swap({
           onTokenChange={pick("buy")}
           tokens={tokens}
           popular={popular}
-          price={buyToken ? prices?.[buyToken.symbol] : undefined}
+          prices={prices}
           readOnly
           checkBalance={false}
         />

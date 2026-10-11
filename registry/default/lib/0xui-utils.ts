@@ -127,3 +127,13 @@ export function isUserRejection(error: unknown) {
   }
   return (error as { code?: unknown }).code === UserRejectedRequestError.code;
 }
+
+/**
+ * Turn `ipfs://` and `ar://` URIs (common in token lists and NFT metadata)
+ * into HTTP URLs. Other URIs pass through unchanged.
+ */
+export function resolveUri(uri: string, gateway = "https://ipfs.io/ipfs/") {
+  if (uri.startsWith("ipfs://")) return gateway + uri.replace(/^ipfs:\/\/(ipfs\/)?/, "");
+  if (uri.startsWith("ar://")) return `https://arweave.net/${uri.slice(5)}`;
+  return uri;
+}

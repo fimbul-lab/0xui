@@ -3,6 +3,7 @@ import { ImageOffIcon } from "lucide-react";
 import { useState } from "react";
 import { parseAbi, type Address } from "viem";
 import { useReadContracts } from "wagmi";
+import { resolveUri } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 const nftAbi = parseAbi([
@@ -19,12 +20,7 @@ export type NftMetadata = {
   attributes?: { trait_type?: string; value?: unknown }[];
 };
 
-/** Turn ipfs:// and ar:// URIs into HTTP URLs. Other URIs pass through. */
-export function resolveUri(uri: string, gateway = "https://ipfs.io/ipfs/") {
-  if (uri.startsWith("ipfs://")) return gateway + uri.replace(/^ipfs:\/\/(ipfs\/)?/, "");
-  if (uri.startsWith("ar://")) return `https://arweave.net/${uri.slice(5)}`;
-  return uri;
-}
+export { resolveUri };
 
 /** ERC-1155 URIs may contain `{id}`: the token id as 64 lowercase hex characters. */
 export function expandTokenUri(uri: string, tokenId: bigint) {

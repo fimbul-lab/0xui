@@ -8,6 +8,8 @@ import { Default } from "@/demos/token-select";
 
 A token pill that opens a picker. It has search by symbol, name or pasted address, quick picks (your recent tokens, then `popular`), and the full list with tokens you hold sorted first. Arrow keys move between the search field and the rows.
 
+The demo loads [Uniswap's default token list](https://tokens.uniswap.org) live.
+
 <Card>
   <Default client:load />
 </Card>
@@ -20,22 +22,26 @@ npx shadcn@latest add @0xui/token-select
 
 ## Usage
 
-Tokens use the [Uniswap token list](https://tokenlists.org) format, so you can pass any token list's `tokens` array directly.
+Tokens use the [token list standard](/getting-started/token-lists/), the format of Uniswap's lists. Load one with `useTokenList`:
 
 ```tsx
 import { TokenSelect, type Token } from "@/components/token-select";
+import { useTokenList } from "@/hooks/use-token-list";
+import { UNISWAP_DEFAULT_LIST } from "@/lib/token-list";
 
+const { tokens, isLoading } = useTokenList(UNISWAP_DEFAULT_LIST);
 const [token, setToken] = useState<Token>();
 
 <TokenSelect
-  tokens={tokenList.tokens}
+  tokens={tokens}
+  isLoading={isLoading}
   value={token}
   onValueChange={setToken}
   popular={["ETH", "USDC", "WBTC"]}
 />;
 ```
 
-Only tokens on `chainId` (the current chain by default) are listed. For the chain's native currency, use the address `NATIVE_TOKEN_ADDRESS` (`0xEeee…EEeE`).
+Only tokens on `chainId` (the current chain by default) are listed. `useTokenList` adds the native currency (ETH) first, since lists don't include it.
 
 ### Your own trigger
 
@@ -59,6 +65,9 @@ Also accepts shadcn `Button` props for the trigger.
 | `chainId` | `number` | current chain | Chain to list. |
 | `popular` | `string[]` | `[]` | Symbols or addresses for quick picks. |
 | `showBalances` | `boolean` | `true` | Read and show the connected account's balances. |
+| `prices` | `Record<symbol, number>` | — | Sort held tokens by value. Without prices, held tokens keep list order: raw amounts aren't comparable across tokens. |
+| `isLoading` | `boolean` | `false` | The list is still downloading. Shows "Loading tokens…". |
+| `maxRows` | `number` | `100` | Rows shown before searching. |
 | `placeholder` | `string` | `"Select token"` | Trigger text with nothing selected. |
 
 Recent picks are kept in `localStorage` per chain (4 max). If storage is blocked, they're simply not saved.

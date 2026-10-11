@@ -3,7 +3,7 @@ import { Swap, type GetQuote } from "@/components/swap";
 import { isNativeToken } from "@/components/token-select";
 import { ConnectWallet } from "@/components/connect-wallet";
 import { demoPrices } from "./prices";
-import { demoTokens } from "./tokens";
+import { demoEth, demoUsdc, useDemoTokens } from "./tokens";
 import { demo } from "./demo";
 
 // Uniswap's universal router, as the spender. Demo swaps are never broadcast.
@@ -25,17 +25,21 @@ const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount }) => {
   };
 };
 
-export const Default = demo(() => (
-  <>
-    <Swap
-      tokens={demoTokens.filter((t) => t.chainId === 1)}
-      defaultBuyToken={demoTokens[1]}
-      getQuote={getQuote}
-      popular={["ETH", "USDC", "WBTC"]}
-      prices={demoPrices}
-    />
-    <ConnectWallet variant="link" size="sm">
-      Connect the Demo Wallet to use it
-    </ConnectWallet>
-  </>
-));
+export const Default = demo(function SwapDemo() {
+  const { tokens } = useDemoTokens();
+  return (
+    <>
+      <Swap
+        tokens={tokens}
+        defaultSellToken={demoEth}
+        defaultBuyToken={demoUsdc}
+        getQuote={getQuote}
+        popular={["ETH", "USDC", "WBTC"]}
+        prices={demoPrices}
+      />
+      <ConnectWallet variant="link" size="sm">
+        Connect the Demo Wallet to use it
+      </ConnectWallet>
+    </>
+  );
+});

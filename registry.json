@@ -129,7 +129,7 @@
       "name": "token-icon",
       "type": "registry:component",
       "title": "Token Icon",
-      "description": "Token logo: uses a src URL (e.g. token-list logoURI), else the web3icons icon for the symbol, else the symbol's first letters. Optional chain badge in the corner via chainId. Labelled by the symbol for screen readers. Size in px.",
+      "description": "Token logo with fallbacks: the token list's logoURI (ipfs:// is resolved through a gateway), then the built-in web3icons icon for the symbol, then the symbol's first letters. Optional chain badge in the corner via chainId. Labelled by the symbol for screen readers. Size in px.",
       "files": [
         {
           "path": "registry/default/components/token-icon.tsx",
@@ -140,8 +140,9 @@
         "@web3icons/react"
       ],
       "registryDependencies": [
-        "avatar",
-        "@0xui/chain-badge"
+        "@0xui/0xui-utils",
+        "@0xui/chain-badge",
+        "avatar"
       ]
     },
     {
@@ -353,7 +354,7 @@
       "name": "token-select",
       "type": "registry:component",
       "title": "Token Select",
-      "description": "Searchable token picker (pill trigger plus dialog) for Uniswap token list format tokens on one chain: search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation. Exports TokenSelectDialog, filterTokens, useTokenBalances, the Token type and NATIVE_TOKEN_ADDRESS.",
+      "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading state; and the first 100 rows until you search, so 400-token lists stay fast. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type.",
       "files": [
         {
           "path": "registry/default/components/token-select.tsx",
@@ -370,6 +371,7 @@
         "dialog",
         "@0xui/token-icon",
         "@0xui/token-amount",
+        "@0xui/token-list",
         "@0xui/0xui-utils"
       ]
     },
@@ -691,6 +693,9 @@
         "viem",
         "@tanstack/react-query",
         "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-utils"
       ]
     },
     {
@@ -739,7 +744,7 @@
       "name": "0xui-utils",
       "type": "registry:lib",
       "title": "0xui utils",
-      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234\u2026abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) and isUserRejection (detects a dismissed wallet prompt).",
+      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234\u2026abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) isUserRejection (detects a dismissed wallet prompt) and resolveUri (ipfs:// and ar:// to HTTP).",
       "files": [
         {
           "path": "registry/default/lib/0xui-utils.ts",
@@ -748,6 +753,43 @@
       ],
       "dependencies": [
         "viem"
+      ]
+    },
+    {
+      "name": "token-list",
+      "type": "registry:lib",
+      "title": "Token list",
+      "description": "Token list standard (tokenlists.org, as used by Uniswap) for 0xui: TokenInfo and TokenList types (including tags and extensions such as Uniswap's bridgeInfo), parseTokenList (validates, drops non-EVM entries such as Solana tokens, checksums addresses), fetchTokenList (http, ipfs, ar), mergeTokenLists, nativeToken(chain) (lists don't include ETH), NATIVE_TOKEN_ADDRESS and UNISWAP_DEFAULT_LIST.",
+      "files": [
+        {
+          "path": "registry/default/lib/token-list.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "use-token-list",
+      "type": "registry:hook",
+      "title": "useTokenList",
+      "description": "Load one or more token lists by URL (e.g. https://tokens.uniswap.org) with TanStack Query (cached for the session, one retry), merge and de-duplicate them, filter to the current or a given chain, and put the native currency first. Returns { tokens, lists, isLoading, error }, ready for TokenSelect, TokenInput, Swap, Send and Portfolio.",
+      "files": [
+        {
+          "path": "registry/default/hooks/use-token-list.ts",
+          "type": "registry:hook"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "@tanstack/react-query"
+      ],
+      "registryDependencies": [
+        "@0xui/token-list"
       ]
     },
     {

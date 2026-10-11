@@ -22,6 +22,8 @@ import { TokenInput } from "@/components/token-input";
 import { NATIVE_TOKEN_ADDRESS, TokenSelect, type Token } from "@/components/token-select";
 import { useTransactionToast } from "@/components/transaction-toast";
 import { Toaster } from "@/components/ui/sonner";
+import { useTokenList } from "@/hooks/use-token-list";
+import { UNISWAP_DEFAULT_LIST } from "@/lib/token-list";
 import { Address } from "@/components/address";
 import { AddressAvatar } from "@/components/address-avatar";
 import { Balance } from "@/components/balance";
@@ -47,6 +49,7 @@ const tokens: Token[] = [
 ];
 
 function Phase3() {
+  const uniswap = useTokenList(UNISWAP_DEFAULT_LIST);
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState<Token>(tokens[0]!);
   const [recipient, setRecipient] = useState("");
@@ -54,7 +57,7 @@ function Phase3() {
   return (
     <>
       <AmountInput value={amount} onValueChange={setAmount} decimals={18} />
-      <TokenSelect tokens={tokens} value={token} onValueChange={setToken} />
+      <TokenSelect tokens={uniswap.tokens} isLoading={uniswap.isLoading} value={token} onValueChange={setToken} />
       <TokenInput value={amount} onValueChange={setAmount} token={token} onTokenChange={setToken} tokens={tokens} />
       <AddressInput value={recipient} onValueChange={setRecipient} onResolve={(s) => s.address} />
       <ApproveButton token={{ address: usdc, symbol: "USDC" }} spender={address} amount={1n} chainId={1}>

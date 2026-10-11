@@ -1,13 +1,17 @@
 import { TokenIcon as Web3TokenIcon } from "@web3icons/react/dynamic";
+import { useState, type ReactNode } from "react";
 import { ChainIcon } from "@/components/chain-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { resolveUri } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type TokenIconProps = {
   /** Token symbol, e.g. "USDC". Used for the built-in icon and the lettered fallback. */
   symbol: string;
-  /** Logo URL, e.g. `logoURI` from a token list. Takes priority over the built-in icon. */
+  /** Logo URL, e.g. `logoURI` from a token list. `ipfs://` works. Takes priority over the built-in icon. */
   src?: string;
+  /** IPFS gateway for `ipfs://` logos. */
+  gateway?: string;
   /** Show this chain's icon as a small badge in the corner. */
   chainId?: number;
   /** Diameter in px. */
@@ -25,13 +29,27 @@ export type TokenIconProps = {
 export function TokenIcon({
   symbol,
   src,
+  gateway,
   chainId,
   size = 24,
   variant = "branded",
   className,
 }: TokenIconProps) {
-  const fallback = <TokenIconFallback symbol={symbol} />;
   const badge = Math.max(10, Math.round(size * 0.45));
+  const builtIn = (
+    <Web3TokenIcon
+      symbol={symbol.toLowerCase()}
+      variant={variant}
+      className="size-full rounded-full"
+      fallback={
+        <Avatar className="size-full">
+          <AvatarFallback className="text-[0.6em] font-medium uppercase">
+            {symbol.slice(0, 2)}
+          </AvatarFallback>
+        </Avatar>
+      }
+    />
+  );
 
   return (
     <span
@@ -41,17 +59,9 @@ export function TokenIcon({
       style={{ width: size, height: size }}
     >
       {src ? (
-        <Avatar className="size-full">
-          <AvatarImage src={src} alt="" />
-          {fallback}
-        </Avatar>
+        <ListLogo key={src} src={resolveUri(src, gateway)} fallback={builtIn} />
       ) : (
-        <Web3TokenIcon
-          symbol={symbol.toLowerCase()}
-          variant={variant}
-          className="size-full rounded-full"
-          fallback={<Avatar className="size-full">{fallback}</Avatar>}
-        />
+        builtIn
       )}
       {chainId !== undefined && (
         <span
@@ -65,10 +75,22 @@ export function TokenIcon({
   );
 }
 
-function TokenIconFallback({ symbol }: { symbol: string }) {
+/**
+ * A token-list logo. These go dead often, so on error show `fallback`. The
+ * fallback only mounts after a failure: rendering it while the logo loads
+ * would fetch a built-in icon for every row of a long list.
+ */
+function ListLogo({ src, fallback }: { src: string; fallback: ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
   return (
-    <AvatarFallback className="text-[0.6em] font-medium uppercase">
-      {symbol.slice(0, 2)}
-    </AvatarFallback>
+    <Avatar className="size-full">
+      <AvatarImage
+        src={src}
+        alt=""
+        onLoadingStatusChange={(status) => status === "error" && setFailed(true)}
+      />
+      <AvatarFallback className="animate-pulse" />
+    </Avatar>
   );
 }
