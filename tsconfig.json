@@ -5,8 +5,12 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@registry/*": ["./registry/*"]
+      // shadcn primitives and `cn` are docs-site code. The more specific
+      // patterns win, so `shadcn add <primitive>` writes into src/.
+      "@/components/ui/*": ["./src/components/ui/*"],
+      "@/lib/utils": ["./src/lib/utils"],
+      // Registry files first, then docs-only code. Mirrors scripts/registry-resolver.mjs.
+      "@/*": ["./registry/default/*", "./src/*"]
     }
   }
 }

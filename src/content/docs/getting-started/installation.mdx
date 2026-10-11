@@ -1,0 +1,74 @@
+---
+title: Installation
+description: Add the 0xui registry to a shadcn project and set up wagmi.
+---
+
+0xui is a [shadcn registry](https://ui.shadcn.com/docs/registry). Components are copied into your project as source, so you own and can edit them.
+
+## 1. Set up shadcn
+
+If your project doesn't use shadcn yet, follow the [shadcn installation guide](https://ui.shadcn.com/docs/installation) for your framework. You need Tailwind CSS v4 and a `components.json`.
+
+0xui is built and tested on the [Base UI](https://base-ui.com) flavor of shadcn (`npx shadcn@latest init --base base`). Projects on Radix also install and compile, but only Base UI is tested at runtime.
+
+## 2. Add the 0xui registry
+
+Add the `@0xui` namespace to `components.json`:
+
+```json title="components.json" ins={3-5}
+{
+  // ...
+  "registries": {
+    "@0xui": "https://0xui.dev/r/{name}.json"
+  }
+}
+```
+
+## 3. Add wagmi
+
+```bash
+npx shadcn@latest add @0xui/wagmi-config
+```
+
+This adds two files:
+
+- `lib/wagmi-config.ts`: chains, connectors and transports. Edit it to match your app.
+- `components/web3-provider.tsx`: `WagmiProvider` and a TanStack `QueryClientProvider`.
+
+Wrap your app once:
+
+```tsx title="app.tsx"
+import { Web3Provider } from "@/components/web3-provider";
+
+export function App() {
+  return <Web3Provider>{/* your app */}</Web3Provider>;
+}
+```
+
+Optionally, register the config type so wagmi hooks infer your chain IDs:
+
+```ts title="lib/wagmi-config.ts"
+declare module "wagmi" {
+  interface Register {
+    config: typeof config;
+  }
+}
+```
+
+If you already have a wagmi setup, skip this step. Every 0xui component reads from whatever `WagmiProvider` is above it.
+
+## 4. Add components
+
+```bash
+npx shadcn@latest add @0xui/chain-selector
+```
+
+Shared helpers (`@0xui/0xui-utils`, `@0xui/use-mounted`, …) and shadcn primitives (`popover`, `dialog`, …) install automatically as dependencies.
+
+## Using an AI agent
+
+The shadcn MCP server lets agents browse and install from any registry in your `components.json`, including `@0xui`:
+
+```bash
+npx shadcn@latest mcp init
+```

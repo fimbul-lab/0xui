@@ -1,0 +1,43 @@
+---
+title: Conventions
+description: The rules every 0xui component follows, so once you know one you know them all.
+---
+
+## Hook, parts, shell
+
+Each component has three layers, and all of them are exported:
+
+1. **Hook**: all wagmi calls and state. Use it alone to build your own UI.
+2. **Parts**: small presentational pieces that take plain props.
+3. **Shell**: the default composed component. Variants such as popover and dialog are thin shells over the same hook and parts.
+
+## Props
+
+- `variant`, `size` and `className` on the root.
+- Icon slots take a component, or `false` to hide the icon. `disableIcons` hides all of them.
+- Overlays can be controlled or uncontrolled: `open`, `defaultOpen`, `onOpenChange`.
+- Callbacks are named `onX` and receive typed payloads.
+
+## State
+
+Async components export their state as a union type, such as `type TxPhase = "idle" | "confirming" | "pending" | "success" | "error"`, and set it as `data-phase` on the root element. Style or test each state without reaching into internals:
+
+```css
+[data-phase="pending"] { opacity: 0.8; }
+```
+
+## Web3 rules
+
+- **Amounts are `bigint`** from end to end. Formatting goes through viem `formatUnits` / `parseUnits`, never `Number()`.
+- **Amount inputs use text**, `inputMode="decimal"`, never `type="number"`.
+- **Addresses** are checksummed, truncated as `0x1234…abcd`, and copyable.
+- **Explorer links** come from `chain.blockExplorers`. Nothing is hardcoded.
+- **A dismissed wallet prompt is a cancellation, not an error.** It gets a muted note, not red text.
+- **SSR-safe**: nothing that depends on the wallet renders until the component has mounted in the browser.
+
+## Accessibility
+
+- Click targets are at least 44px. Every list supports keyboard navigation.
+- Icon-only triggers keep an accessible label.
+- Phase changes are announced politely. Errors use `role="alert"`.
+- Spinners always have a label. Disabled buttons say what is blocking them.

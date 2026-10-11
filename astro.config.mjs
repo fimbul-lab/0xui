@@ -3,7 +3,7 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
-import { fileURLToPath } from "node:url";
+import { registryResolver } from "./scripts/registry-resolver.mjs";
 
 // https://astro.build/config
 export default defineConfig({
@@ -11,6 +11,8 @@ export default defineConfig({
     react(),
     starlight({
       title: "0xui",
+      description:
+        "Copy-paste web3 React components built on wagmi, viem, Base UI and Tailwind.",
       social: [
         {
           icon: "github",
@@ -20,27 +22,21 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Guides",
+          label: "Getting started",
           items: [
-            // Each item here is one entry in the navigation menu.
-            { label: "Example Guide", slug: "guides/example" },
+            { label: "Installation", slug: "getting-started/installation" },
+            { label: "Conventions", slug: "getting-started/conventions" },
           ],
         },
         {
-          label: "Reference",
-          items: [{ autogenerate: { directory: "reference" } }],
+          label: "Components",
+          items: [{ autogenerate: { directory: "components" } }],
         },
       ],
       customCss: ["./src/styles/global.css"],
     }),
   ],
   vite: {
-    plugins: [tailwindcss()],
-    resolve: {
-      alias: {
-        "@": fileURLToPath(new URL("./src", import.meta.url)),
-        "@registry": fileURLToPath(new URL("./registry", import.meta.url)),
-      },
-    },
+    plugins: [registryResolver(), tailwindcss()],
   },
 });

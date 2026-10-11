@@ -1,0 +1,112 @@
+---
+title: Chain Selector
+description: Network switcher with chain icons, active-chain indicator, per-row pending state and inline errors.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import {
+  Default,
+  IconOnly,
+  Dialog,
+  GroupByNetwork,
+  Branded,
+} from "@/demos/chain-selector";
+
+Shows the current chain and lets the user switch to any chain in your wagmi config. Comes as a popover (`ChainSelector`) and a dialog (`ChainSelectorDialog`). Both share the same props and behavior.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/chain-selector
+```
+
+Requires the `@0xui` registry in `components.json` and a `<Web3Provider>` around your app. See [Installation](/getting-started/installation/).
+
+## Usage
+
+```tsx
+import { ChainSelector } from "@/components/chain-selector";
+
+<ChainSelector />;
+```
+
+Chains come from your wagmi config. There is nothing to pass in.
+
+## Examples
+
+### Icon only
+
+The label is hidden visually but stays available as a tooltip and to screen readers.
+
+<Card>
+  <IconOnly client:load />
+</Card>
+
+```tsx
+<ChainSelector iconOnly />
+```
+
+### Dialog
+
+Better on small screens, or when the list of chains is long.
+
+<Card>
+  <Dialog client:load />
+</Card>
+
+```tsx
+import { ChainSelectorDialog } from "@/components/chain-selector";
+
+<ChainSelectorDialog />;
+```
+
+### Grouped by network
+
+Splits chains into Mainnet and Testnet tabs, based on `chain.testnet`.
+
+<Card>
+  <GroupByNetwork client:load />
+</Card>
+
+```tsx
+<ChainSelector groupByNetwork />
+```
+
+### Branded icons
+
+<Card>
+  <Branded client:load />
+</Card>
+
+```tsx
+<ChainSelector variant="branded" />
+```
+
+## States
+
+| State | What the user sees |
+| --- | --- |
+| Before hydration | "Select Chain" label with no icon, so server HTML never shows wallet state. |
+| Idle | Current chain icon and name. In the list, the active chain has a checkmark and `aria-current`. |
+| Switching | Spinner on the trigger and on the target row. The list is disabled until the wallet responds. |
+| Cancelled | The user dismissed the wallet prompt. Muted "Request cancelled in wallet" note. |
+| Error | Any other failure. The wallet's message is shown inline with `role="alert"`. |
+
+Errors and the cancelled note clear when the selector is reopened.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `variant` | `"background" \| "branded" \| "mono"` | `"background"` | Chain icon style. |
+| `monoColor` | `string` | — | Icon color. Only with `variant="mono"`. |
+| `iconOnly` | `boolean` | `false` | Hide the visible label. It stays accessible. |
+| `groupByNetwork` | `boolean` | `false` | Group chains into Mainnet / Testnet tabs. |
+| `chainIcon` | `ComponentType<ChainIconProps> \| false` | `NetworkIcon` | Custom chain icon, or `false` to hide it. |
+| `chevronIcon` | `ComponentType<{ className?: string }> \| false` | `ChevronDownIcon` | Custom chevron, or `false` to hide it. |
+| `loaderIcon` | `ComponentType<{ className?: string }> \| false` | `Loader2Icon` | Custom spinner, or `false` to hide it. |
+| `disableIcons` | `boolean` | `false` | Hide every icon. Overrides the icon props. |

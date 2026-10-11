@@ -1,53 +1,54 @@
-# Starlight Starter Kit: Tailwind
+# 0xui
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+Web3 React components you copy into your app. Built on [wagmi](https://wagmi.sh), [viem](https://viem.sh), [Base UI](https://base-ui.com) and Tailwind CSS v4, and installed with the [shadcn CLI](https://ui.shadcn.com/docs/cli).
 
-```
-bun create astro@latest -- --template starlight/tailwind
-```
+Every component handles the states real wallets produce: pending, cancelled in wallet, wrong network, error. Each one exports its hook, so you can keep the logic and bring your own UI.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Install
 
-## 🚀 Project Structure
+Add the registry to `components.json`:
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
-
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   ├── styles/
-│   │   └── global.css
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
+```json
+{
+  "registries": {
+    "@0xui": "https://0xui.dev/r/{name}.json"
+  }
+}
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+Set up wagmi (skip this if you already have a `WagmiProvider`), then add components:
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+```bash
+npx shadcn@latest add @0xui/wagmi-config
+npx shadcn@latest add @0xui/chain-selector
+```
 
-Static assets, like favicons, can be placed in the `public/` directory.
+## Components
 
-The project includes [Tailwind CSS](https://starlight.astro.build/guides/css-and-tailwind/#tailwind-css) for styling. Customize your design by modifying `src/styles/global.css`.
+| Component | Description |
+| --- | --- |
+| `chain-selector` | Network switcher as a popover or dialog. |
 
-## 🧞 Commands
+Shared helpers: `0xui-utils` (address and amount formatting, explorer links), `use-mounted`, `use-copy`.
 
-All commands are run from the root of the project, from a terminal:
+See [PLAN.md](./PLAN.md) for the roadmap.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
+## Development
 
-## 👀 Want to learn more?
+```bash
+bun install
+bun run dev     # docs site with live demos
+bun run test    # Vitest, using wagmi's mock connector
+bun run check   # typecheck
+bun run lint
+```
 
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+| Path | What lives there |
+| --- | --- |
+| `registry/default/` | The product. Laid out the way files land in a user's app (`components/`, `hooks/`, `lib/`). |
+| `registry.json` | Registry manifest. `bun run registry:build` writes `public/r/*.json`. |
+| `src/content/docs/` | Docs pages (Astro Starlight). |
+| `src/demos/` | Live demos. Each export is one Astro island wrapped in a demo wallet. |
+| `scripts/smoke-install.sh` | Installs every item into a fresh shadcn app and builds it. Runs in CI. |
+
+In this repo, `@/…` imports resolve to `registry/default/` first and then `src/`, so registry code uses the same import paths it will have after install.
