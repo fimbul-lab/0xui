@@ -1,6 +1,8 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "wagmi-config",
+  "title": "wagmi config + provider",
+  "description": "Starter wagmi setup: lib/wagmi-config.ts (mainnet + sepolia, injected connector, SSR on) and a Web3Provider component that wraps WagmiProvider and a TanStack QueryClientProvider. Install once, wrap your app in <Web3Provider>, then add any 0xui component.",
   "dependencies": [
     "wagmi",
     "viem",
@@ -8,11 +10,15 @@
   ],
   "files": [
     {
-      "path": "registry/default/config/config.ts",
-      "content": "import { createConfig, http } from \"wagmi\";\nimport { mainnet, sepolia } from \"wagmi/chains\";\n\nexport const config = createConfig({\n  chains: [mainnet, sepolia],\n  transports: {\n    [mainnet.id]: http(),\n    [sepolia.id]: http(),\n  },\n});\n",
-      "type": "registry:file",
-      "target": "config/config.ts"
+      "path": "registry/default/lib/wagmi-config.ts",
+      "content": "import { createConfig, http } from \"wagmi\";\nimport { mainnet, sepolia } from \"wagmi/chains\";\nimport { injected } from \"wagmi/connectors\";\n\nexport const config = createConfig({\n  chains: [mainnet, sepolia],\n  connectors: [\n    // Browser extension wallets (MetaMask, Rabby, ...). Extensions that\n    // support EIP-6963 are also discovered automatically.\n    injected(),\n\n    // More connectors live in `wagmi/connectors`. Each needs its SDK installed:\n    // walletConnect({ projectId: \"<id from cloud.reown.com>\" }), // npm i @walletconnect/ethereum-provider\n    // baseAccount({ appName: \"My App\" }),                        // npm i @base-org/account\n  ],\n  transports: {\n    // `http()` with no URL uses the chain's public RPC, which is rate limited.\n    // Pass your own RPC URL in production.\n    [mainnet.id]: http(),\n    [sepolia.id]: http(),\n  },\n  // Set to true when rendering on a server (Next.js, Remix, Astro islands).\n  ssr: true,\n});\n",
+      "type": "registry:lib"
+    },
+    {
+      "path": "registry/default/components/web3-provider.tsx",
+      "content": "import { QueryClient, QueryClientProvider } from \"@tanstack/react-query\";\nimport { useState, type ReactNode } from \"react\";\nimport { WagmiProvider, type Config, type State } from \"wagmi\";\nimport { config as defaultConfig } from \"@/lib/wagmi-config\";\n\nexport type Web3ProviderProps = {\n  children: ReactNode;\n  /** wagmi config. Defaults to the one in `lib/wagmi-config`. */\n  config?: Config;\n  /** Initial wagmi state from `cookieToInitialState`, for SSR. */\n  initialState?: State;\n};\n\n/** wagmi + TanStack Query providers. Wrap your app (or the part that uses wallets) once. */\nexport function Web3Provider({\n  children,\n  config = defaultConfig,\n  initialState,\n}: Web3ProviderProps) {\n  const [queryClient] = useState(() => new QueryClient());\n\n  return (\n    <WagmiProvider config={config} initialState={initialState}>\n      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>\n    </WagmiProvider>\n  );\n}\n",
+      "type": "registry:component"
     }
   ],
-  "type": "registry:file"
+  "type": "registry:lib"
 }
