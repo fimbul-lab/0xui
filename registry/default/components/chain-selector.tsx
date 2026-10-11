@@ -16,8 +16,7 @@ import { CheckIcon, ChevronDownIcon, Loader2Icon } from "lucide-react";
 import { useState, type ComponentType } from "react";
 import { type Chain } from "viem";
 import { useChainId, useChains, useSwitchChain } from "wagmi";
-import { NetworkIcon } from "@web3icons/react/dynamic";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ChainIcon, type ChainIconProps } from "@/components/chain-badge";
 import { useMounted } from "@/hooks/use-mounted";
 import { isUserRejection } from "@/lib/0xui-utils";
 
@@ -34,10 +33,7 @@ type IconStyleProps =
       monoColor?: never;
     };
 
-export type ChainIconProps = {
-  chainId: number;
-  className?: string;
-} & IconStyleProps;
+export type { ChainIconProps };
 
 export type ChainSelectorProps = {
   /** Custom chain icon component. Receives chainId, className, and variant props. Pass false to hide. */
@@ -53,34 +49,6 @@ export type ChainSelectorProps = {
   /** Group chains by network type (mainnet/testnet) with tabs. */
   groupByNetwork?: boolean;
 } & IconStyleProps;
-
-function FallbackIcon({ className }: { className?: string }) {
-  return (
-    <Avatar className={cn("size-6", className)}>
-      <AvatarFallback>?</AvatarFallback>
-    </Avatar>
-  );
-}
-
-function DefaultChainIcon({
-  chainId,
-  className,
-  variant,
-  monoColor,
-}: ChainIconProps) {
-  if (!chainId) return null;
-
-  return (
-    <NetworkIcon
-      key={chainId}
-      variant={variant}
-      chainId={chainId}
-      color={variant === "mono" && monoColor ? monoColor : undefined}
-      className={cn("size-6", className)}
-      fallback={<FallbackIcon className={className} />}
-    />
-  );
-}
 
 function groupChainsByNetwork(chains: readonly Chain[]) {
   const mainnet: Chain[] = [];
@@ -149,7 +117,7 @@ function resolveIcons({
 >) {
   if (disableIcons) return {};
   return {
-    ChainIcon: chainIcon === false ? undefined : chainIcon || DefaultChainIcon,
+    ChainIcon: chainIcon === false ? undefined : chainIcon || ChainIcon,
     ChevronIcon:
       chevronIcon === false ? undefined : chevronIcon || ChevronDownIcon,
     LoaderIcon: loaderIcon === false ? undefined : loaderIcon || Loader2Icon,
@@ -162,9 +130,7 @@ function chainIconProps(
   monoColor: string | undefined,
   className?: string
 ): ChainIconProps {
-  return variant === "mono"
-    ? { chainId, variant, monoColor, className }
-    : { chainId, variant, className };
+  return { chainId, variant, monoColor, className };
 }
 
 const triggerClassName = (iconOnly?: boolean) =>

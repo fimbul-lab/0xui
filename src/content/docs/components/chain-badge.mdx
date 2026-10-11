@@ -1,0 +1,63 @@
+---
+title: Chain Badge
+description: Static chain chip with icon and name.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, IconOnly } from "@/demos/chain-badge";
+
+Labels a chain, e.g. where a token lives or which network a transaction ran on. It doesn't switch chains. Use [Chain Selector](/components/chain-selector/) for that.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/chain-badge
+```
+
+## Usage
+
+```tsx
+import { ChainBadge } from "@/components/chain-badge";
+
+<ChainBadge chainId={8453} />;
+```
+
+The name comes from your wagmi config. Chains that aren't configured show as "Chain &lt;id&gt;", unless you pass `name`.
+
+## Examples
+
+### Icon only
+
+<Card>
+  <IconOnly client:load />
+</Card>
+
+```tsx
+<ChainBadge chainId={1} iconOnly />
+```
+
+### Just the icon
+
+`ChainIcon` is the logo on its own, with a placeholder for unknown chains. Other 0xui components reuse it.
+
+```tsx
+import { ChainIcon } from "@/components/chain-badge";
+
+<ChainIcon chainId={1} variant="branded" className="size-8" />;
+```
+
+## Props
+
+Also accepts all `<span>` props.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chainId` | `number` | — | Chain to show. |
+| `name` | `string` | from config | Display name. |
+| `iconOnly` | `boolean` | `false` | Hide the name visually. It stays accessible. |
+| `variant` | `"background" \| "branded" \| "mono"` | `"background"` | Icon style. |
+| `chainIcon` | `ComponentType<ChainIconProps> \| false` | `ChainIcon` | Custom icon, or `false` to hide it. |

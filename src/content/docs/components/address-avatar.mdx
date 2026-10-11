@@ -1,0 +1,50 @@
+---
+title: Address Avatar
+description: ENS avatar, or a deterministic gradient for any address.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/address-avatar";
+
+Shows the ENS avatar when the address has one. Otherwise it shows a gradient derived from the address, so the same address always looks the same.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/address-avatar
+```
+
+ENS avatars resolve on Ethereum mainnet, so mainnet must be in your wagmi config.
+
+## Usage
+
+```tsx
+import { AddressAvatar } from "@/components/address-avatar";
+
+<AddressAvatar address={address} size={32} />;
+```
+
+The avatar is decorative (`aria-hidden`). Put the name or address next to it as text.
+
+### Headless
+
+```tsx
+import { useAddressAvatar, addressGradient } from "@/components/address-avatar";
+
+const { name, avatar } = useAddressAvatar(address);
+const background = addressGradient(address); // CSS gradient string
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `address` | `Address` | — | Address to show. |
+| `ens` | `boolean` | `true` | Look up the ENS avatar. |
+| `src` | `string` | — | Image URL to use instead of the ENS avatar. |
+| `size` | `number` | `24` | Diameter in px. |
+| `className` | `string` | — | Extra classes on the root. |

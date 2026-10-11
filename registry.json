@@ -14,14 +14,187 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": ["wagmi", "viem", "@web3icons/react", "lucide-react"],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
       "registryDependencies": [
         "popover",
         "dialog",
         "tabs",
-        "avatar",
+        "@0xui/chain-badge",
         "@0xui/use-mounted",
         "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "copy-button",
+      "type": "registry:component",
+      "title": "Copy Button",
+      "description": "Icon button that copies a value to the clipboard, swaps to a checkmark for a moment, and announces 'Copied' to screen readers. Hit area extends past the small visual size. onCopy only fires when the clipboard write succeeds. Icons are swappable. Built on the shadcn Button and the useCopy hook.",
+      "files": [
+        {
+          "path": "registry/default/components/copy-button.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/use-copy"
+      ]
+    },
+    {
+      "name": "explorer-link",
+      "type": "registry:component",
+      "title": "Explorer Link",
+      "description": "Link to an address, transaction or block on a chain's block explorer, taken from chain.blockExplorers in the wagmi config (current chain by default, or chainId). Opens in a new tab with rel=noopener and a screen-reader note. Default text is 'View on <explorer>'. Renders plain text when the chain has no explorer. Exports useExplorerLink.",
+      "files": [
+        {
+          "path": "registry/default/components/explorer-link.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "address",
+      "type": "registry:component",
+      "title": "Address",
+      "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234\u2026abcd, with a copy button and an optional block-explorer link. Inline or pill variant. Full address on hover and for screen readers. Exports useAddressName.",
+      "files": [
+        {
+          "path": "registry/default/components/address.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/copy-button",
+        "@0xui/explorer-link",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "address-avatar",
+      "type": "registry:component",
+      "title": "Address Avatar",
+      "description": "Round avatar for an address: the ENS avatar (useEnsName + useEnsAvatar on mainnet), or a deterministic gradient derived from the address as a fallback. Accepts a custom image src and a pixel size. Exports useAddressAvatar and addressGradient.",
+      "files": [
+        {
+          "path": "registry/default/components/address-avatar.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem"
+      ],
+      "registryDependencies": [
+        "avatar"
+      ]
+    },
+    {
+      "name": "chain-badge",
+      "type": "registry:component",
+      "title": "Chain Badge",
+      "description": "Static chain chip: chain icon plus name for a chainId, with the name read from the wagmi config ('Chain <id>' for unknown chains). Icon-only mode keeps an accessible label. Also exports ChainIcon, the web3icons network logo with a placeholder for unknown chains, which other 0xui components reuse.",
+      "files": [
+        {
+          "path": "registry/default/components/chain-badge.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "@web3icons/react"
+      ],
+      "registryDependencies": [
+        "avatar"
+      ]
+    },
+    {
+      "name": "token-icon",
+      "type": "registry:component",
+      "title": "Token Icon",
+      "description": "Token logo: uses a src URL (e.g. token-list logoURI), else the web3icons icon for the symbol, else the symbol's first letters. Optional chain badge in the corner via chainId. Labelled by the symbol for screen readers. Size in px.",
+      "files": [
+        {
+          "path": "registry/default/components/token-icon.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@web3icons/react"
+      ],
+      "registryDependencies": [
+        "avatar",
+        "@0xui/chain-badge"
+      ]
+    },
+    {
+      "name": "token-amount",
+      "type": "registry:component",
+      "title": "Token Amount",
+      "description": "Formats a bigint token amount with its decimals, e.g. '1,234.5678 USDC', without float precision loss. Rounds toward zero so balances never look larger than they are, shows '<0.0001' for dust, supports compact notation (1.2M) and an optional fiat value from a price prop. The exact amount shows on hover. Exports formatFiat.",
+      "files": [
+        {
+          "path": "registry/default/components/token-amount.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "block-number",
+      "type": "registry:component",
+      "title": "Block Number",
+      "description": "Live block indicator: status dot plus the latest block number, updated as blocks arrive (useBlockNumber with watch). Doubles as an RPC health check. data-phase is loading, live or error, and the dot turns red with 'RPC unavailable' when the RPC fails. Optional explorer link. Exports useLiveBlockNumber.",
+      "files": [
+        {
+          "path": "registry/default/components/block-number.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi"
+      ],
+      "registryDependencies": [
+        "@0xui/explorer-link"
+      ]
+    },
+    {
+      "name": "gas-price",
+      "type": "registry:component",
+      "title": "Gas Price",
+      "description": "Current gas price in gwei with three significant digits (useGasPrice, refreshed on an interval). Optional low/medium/high tone from per-chain gwei thresholds, exposed as data-tone. Loading and error states. Exports useGasPriceInfo, formatGasPrice and gasTone.",
+      "files": [
+        {
+          "path": "registry/default/components/gas-price.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
       ]
     },
     {
@@ -39,20 +212,26 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": ["wagmi", "viem", "@tanstack/react-query"]
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "@tanstack/react-query"
+      ]
     },
     {
       "name": "0xui-utils",
       "type": "registry:lib",
       "title": "0xui utils",
-      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234…abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) and isUserRejection (detects a dismissed wallet prompt).",
+      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234\u2026abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) and isUserRejection (detects a dismissed wallet prompt).",
       "files": [
         {
           "path": "registry/default/lib/0xui-utils.ts",
           "type": "registry:lib"
         }
       ],
-      "dependencies": ["viem"]
+      "dependencies": [
+        "viem"
+      ]
     },
     {
       "name": "use-mounted",

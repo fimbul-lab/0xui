@@ -1,0 +1,69 @@
+---
+title: Explorer Link
+description: Link to an address, transaction or block on the chain's block explorer.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, CustomText } from "@/demos/explorer-link";
+
+Builds the URL from `chain.blockExplorers` in your wagmi config, so it works on every chain you configure. Nothing is hardcoded.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/explorer-link
+```
+
+## Usage
+
+Pass exactly one of `address`, `tx` or `block`.
+
+```tsx
+import { ExplorerLink } from "@/components/explorer-link";
+
+<ExplorerLink tx={hash} />;
+```
+
+Uses the current chain unless you pass `chainId`.
+
+## Examples
+
+### Custom text and chain
+
+<Card>
+  <CustomText client:load />
+</Card>
+
+```tsx
+<ExplorerLink block={21_000_000} chainId={8453}>
+  Block 21,000,000 on Base
+</ExplorerLink>
+```
+
+### Headless
+
+```tsx
+import { useExplorerLink } from "@/components/explorer-link";
+
+const { href, explorerName } = useExplorerLink({ address }, chainId);
+```
+
+## Behavior
+
+- Opens in a new tab with `rel="noopener noreferrer"`. Screen readers hear "(opens in a new tab)".
+- If the chain has no explorer, the children render as plain text with no link.
+
+## Props
+
+Also accepts all `<a>` props except `href`.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `address` / `tx` / `block` | `string` / `string` / `bigint \| number` | — | What to link to. Pass one. |
+| `chainId` | `number` | current chain | Chain whose explorer to use. |
+| `children` | `ReactNode` | `"View on <explorer>"` | Link text. |
+| `icon` | `ComponentType \| false` | `ExternalLinkIcon` | Custom icon, or `false` to hide it. |

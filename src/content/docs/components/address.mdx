@@ -1,0 +1,71 @@
+---
+title: Address
+description: ENS name or checksummed, truncated address, with copy and explorer link.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, NoEns, Pill } from "@/demos/address";
+
+Shows an address the way people expect: the ENS name when there is one, otherwise `0x1234…abcd` (checksummed). The full address is always available on hover and to screen readers.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/address
+```
+
+ENS names resolve on Ethereum mainnet, so mainnet must be in your wagmi config. If it isn't, or if the lookup fails, the component shows the address.
+
+## Usage
+
+```tsx
+import { Address } from "@/components/address";
+
+<Address address={address} />;
+```
+
+## Examples
+
+### Without ENS, with explorer link
+
+<Card>
+  <NoEns client:load />
+</Card>
+
+```tsx
+<Address address={address} ens={false} explorer />
+```
+
+### Pill
+
+<Card>
+  <Pill client:load />
+</Card>
+
+```tsx
+<Address address={address} variant="pill" />
+```
+
+### Headless
+
+```tsx
+import { useAddressName } from "@/components/address";
+
+const { name, checksummed, isLoading } = useAddressName(address);
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `address` | `Address` | — | Address to show. Any casing works. |
+| `ens` | `boolean` | `true` | Resolve and show the ENS name. |
+| `name` | `string` | — | Name to show instead. Skips the ENS lookup. |
+| `variant` | `"inline" \| "pill"` | `"inline"` | Inline text or a bordered chip. |
+| `copyable` | `boolean` | `true` | Show a copy button. |
+| `explorer` | `boolean` | `false` | Link to the address on the current chain's explorer. |
+| `truncate` | `{ start?: number; end?: number }` | `{ start: 6, end: 4 }` | Characters kept when truncating. |

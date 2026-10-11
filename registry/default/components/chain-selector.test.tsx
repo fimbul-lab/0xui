@@ -46,7 +46,7 @@ describe("ChainSelector", () => {
 
   it("shows a rejected switch as cancelled, not as an error", async () => {
     const user = userEvent.setup();
-    const config = createTestConfig({ switchChainError: true });
+    const config = createTestConfig({ features: { switchChainError: true } });
     renderWithWagmi(<ChainSelector />, { config });
     await act(() => connectMock(config));
 
@@ -62,7 +62,9 @@ describe("ChainSelector", () => {
   it("shows other switch failures inline and clears them on reopen", async () => {
     const user = userEvent.setup();
     const config = createTestConfig({
-      switchChainError: new SwitchChainError(new Error("Chain unsupported")),
+      features: {
+        switchChainError: new SwitchChainError(new Error("Chain unsupported")),
+      },
     });
     renderWithWagmi(<ChainSelector />, { config });
     await act(() => connectMock(config));

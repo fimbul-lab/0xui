@@ -9,6 +9,8 @@ export type Web3ProviderProps = {
   config?: Config;
   /** Initial wagmi state from `cookieToInitialState`, for SSR. */
   initialState?: State;
+  /** Reuse your app's QueryClient. One is created when omitted. */
+  queryClient?: QueryClient;
 };
 
 /** wagmi + TanStack Query providers. Wrap your app (or the part that uses wallets) once. */
@@ -16,8 +18,10 @@ export function Web3Provider({
   children,
   config = defaultConfig,
   initialState,
+  queryClient: queryClientProp,
 }: Web3ProviderProps) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [ownQueryClient] = useState(() => new QueryClient());
+  const queryClient = queryClientProp ?? ownQueryClient;
 
   return (
     <WagmiProvider config={config} initialState={initialState}>

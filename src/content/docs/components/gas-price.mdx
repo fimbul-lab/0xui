@@ -1,0 +1,53 @@
+---
+title: Gas Price
+description: Current gas price in gwei, optionally colored low, medium or high.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, WithThresholds } from "@/demos/gas-price";
+
+Shows the current gas price and refreshes it every 12 seconds.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/gas-price
+```
+
+## Usage
+
+```tsx
+import { GasPrice } from "@/components/gas-price";
+
+<GasPrice />;
+```
+
+## Examples
+
+### With thresholds
+
+Normal gas varies a lot between chains: 20 gwei is cheap on mainnet and very expensive on Base. So there are no default thresholds. Pass the cut-offs that make sense for your chain.
+
+<Card>
+  <WithThresholds client:load />
+</Card>
+
+```tsx
+<GasPrice thresholds={{ low: 5, high: 30 }} />
+```
+
+The tone is set as `data-tone` (`low`, `medium` or `high`) and is announced to screen readers.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chainId` | `number` | current chain | Chain to read. |
+| `refreshInterval` | `number \| false` | `12000` | Refresh interval in ms. `false` fetches once. |
+| `thresholds` | `{ low: number; high: number }` | — | Gwei cut-offs for the tone. |
+| `icon` | `ComponentType \| false` | `FuelIcon` | Custom icon, or `false` to hide it. |
+| `locale` | `string` | runtime locale | Number formatting locale. |

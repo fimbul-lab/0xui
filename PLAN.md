@@ -158,9 +158,16 @@ Each phase ends with something shippable: components live on the docs site and i
 - **Docs demos share one wagmi config**, so switching chain in one demo moves every demo on the page. Fine for now. Give each island its own config if it starts to confuse.
 - `wagmi-config` is **not** a `registryDependency` of components. Components only need some `WagmiProvider` above them, and forcing the file in would clash with existing setups.
 
-### Phase 1: Easy primitives
+### Phase 1: Easy primitives ✅ done 2026-10-11
 `copy-button` → `explorer-link` → `address` → `avatar` → `chain-badge` → `token-icon` → `token-amount` → `block-number` → `gas-price`.
 These are fast and they lock in the conventions before the big components.
+
+**Phase 1 notes**
+- `avatar` shipped as **`address-avatar`** (`AddressAvatar`) to avoid clashing with the shadcn `avatar` primitive.
+- `ChainIcon` now lives in `chain-badge`, and `chain-selector` and `token-icon` depend on it.
+- `token-icon` has no lookup by contract address. Pass `src` (token-list `logoURI`) instead. Mapping addresses would mean shipping the whole web3icons token metadata.
+- `Web3Provider` takes an optional `queryClient`. Tests use it to turn off retries, and apps can reuse their own client.
+- The test RPC is fake: `createTestConfig({ rpc: { eth_blockNumber: "0x…" } })`. Any method that isn't mocked fails, so tests never touch the network.
 
 ### Phase 2: Must-haves
 `connect-wallet` → `account` → `wallet-button` → `balance` → `transaction-button` → `transaction-status` → chain-selector follow-ups.

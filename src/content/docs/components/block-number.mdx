@@ -1,0 +1,59 @@
+---
+title: Block Number
+description: Live block indicator that doubles as an RPC health check.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, WithExplorer } from "@/demos/block-number";
+
+Shows the latest block and updates as new blocks arrive. The dot shows whether the RPC is responding.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/block-number
+```
+
+## Usage
+
+```tsx
+import { BlockNumber } from "@/components/block-number";
+
+<BlockNumber />;
+```
+
+With HTTP transports, wagmi polls for new blocks (every 4 seconds by default). Pass `watch={false}` to fetch once.
+
+## Examples
+
+### Linked to the explorer
+
+<Card>
+  <WithExplorer client:load />
+</Card>
+
+```tsx
+<BlockNumber chainId={8453} explorer />
+```
+
+## States
+
+`data-phase` on the root holds the current state.
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `loading` | Grey dot, "Loading block…". |
+| `live` | Green dot (pulses while watching) and the block number. |
+| `error` | Red dot, "RPC unavailable". |
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chainId` | `number` | current chain | Chain to watch. |
+| `watch` | `boolean` | `true` | Keep updating. |
+| `explorer` | `boolean` | `false` | Link the number to the block on the explorer. |

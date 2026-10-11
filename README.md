@@ -28,6 +28,15 @@ npx shadcn@latest add @0xui/chain-selector
 | Component | Description |
 | --- | --- |
 | `chain-selector` | Network switcher as a popover or dialog. |
+| `chain-badge` | Static chain chip. Also exports `ChainIcon`. |
+| `address` | ENS name or truncated address, with copy and explorer link. |
+| `address-avatar` | ENS avatar or a gradient derived from the address. |
+| `copy-button` | Copy to clipboard with confirmation. |
+| `explorer-link` | Link to an address, tx or block on the chain's explorer. |
+| `token-icon` | Token logo with fallbacks and an optional chain badge. |
+| `token-amount` | `bigint` amount formatting, with optional fiat value. |
+| `block-number` | Live block number and RPC health. |
+| `gas-price` | Current gas in gwei, with optional low/medium/high tone. |
 
 Shared helpers: `0xui-utils` (address and amount formatting, explorer links), `use-mounted`, `use-copy`.
 

@@ -94,9 +94,9 @@ export function parseAmount(input: string, decimals: number) {
 }
 
 export type ExplorerTarget =
-  | { address: string }
-  | { tx: string }
-  | { block: bigint | number };
+  | { address: string; tx?: never; block?: never }
+  | { tx: string; address?: never; block?: never }
+  | { block: bigint | number; address?: never; tx?: never };
 
 /** Link to an address, transaction or block on the chain's default block explorer. */
 export function getExplorerUrl(
@@ -105,8 +105,8 @@ export function getExplorerUrl(
 ) {
   const base = chain?.blockExplorers?.default.url.replace(/\/$/, "");
   if (!base) return undefined;
-  if ("address" in target) return `${base}/address/${target.address}`;
-  if ("tx" in target) return `${base}/tx/${target.tx}`;
+  if (target.address) return `${base}/address/${target.address}`;
+  if (target.tx) return `${base}/tx/${target.tx}`;
   return `${base}/block/${target.block}`;
 }
 
