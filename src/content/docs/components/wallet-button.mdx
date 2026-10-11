@@ -1,0 +1,54 @@
+---
+title: Wallet Button
+description: One button for the whole wallet lifecycle. Connect, restore, account.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/wallet-button";
+
+The wallet button most apps need in their header. It shows "Connect wallet" when disconnected and the [Account](/components/account/) button when connected. While wagmi restores a previous connection on page load, it shows a placeholder, so returning users never see a flash of "Connect wallet".
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/wallet-button
+```
+
+## Usage
+
+```tsx
+import { WalletButton } from "@/components/wallet-button";
+
+<WalletButton />;
+```
+
+Pass props through to either state:
+
+```tsx
+<WalletButton
+  connect={{ title: "Sign in", onConnect: track }}
+  account={{ showBalance: true }}
+/>
+```
+
+## States
+
+| Phase | What the user sees |
+| --- | --- |
+| `restoring` | Pulsing placeholder: during server render and while wagmi reconnects. |
+| `disconnected` | [Connect Wallet](/components/connect-wallet/) button. |
+| `connected` | [Account](/components/account/) button. |
+
+`useWalletButtonPhase()` returns the current phase.
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `connect` | `ConnectWalletProps` | Props for the connect button and picker. |
+| `account` | `AccountProps` | Props for the account button and panel. |
+| `className` | `string` | Applied in every state. |

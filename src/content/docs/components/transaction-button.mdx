@@ -1,0 +1,119 @@
+---
+title: Transaction Button
+description: Sends a transaction and shows every step on the button. Connect, switch network, confirm, pending, done.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, Reverted, WrongNetwork, Blocked } from "@/demos/transaction-button";
+
+The button carries the whole flow. Disconnected users get the wallet picker. On the wrong network it offers to switch. Then it walks through confirm in wallet, pending and done, with a status line for each step.
+
+Connect the **Demo Wallet** to try it. Demo transactions get a fake hash and "mine" after 3 seconds. Nothing is broadcast.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/transaction-button
+```
+
+## Usage
+
+Send ETH:
+
+```tsx
+import { TransactionButton } from "@/components/transaction-button";
+
+<TransactionButton transaction={{ to, value: parseEther("0.01") }} chainId={1}>
+  Send 0.01 ETH
+</TransactionButton>;
+```
+
+Call a contract:
+
+```tsx
+<TransactionButton
+  chainId={8453}
+  contract={{ address: token, abi: erc20Abi, functionName: "approve", args: [spender, amount] }}
+  onSuccess={() => refetchAllowance()}
+>
+  Approve
+</TransactionButton>
+```
+
+Always pass `chainId`. The button then makes sure the wallet is on that chain before sending.
+
+## Examples
+
+### Wrong network
+
+<Card>
+  <WrongNetwork client:load />
+</Card>
+
+The label says exactly what clicking does: "Switch to Base". Once the switch is done, the button returns to its normal label.
+
+### Name the blocker
+
+Don't just disable the button. Say why, so users know what to fix.
+
+<Card>
+  <Blocked client:load />
+</Card>
+
+```tsx
+<TransactionButton disabledReason={!amount ? "Enter an amount" : undefined} …>
+```
+
+### Reverted
+
+<Card>
+  <Reverted client:load />
+</Card>
+
+### Headless
+
+```tsx
+import { useTransactionFlow } from "@/components/transaction-button";
+
+const flow = useTransactionFlow({ chainId: 1 });
+flow.execute({ transaction: { to, value } });
+// flow.phase, flow.hash, flow.receipt, flow.error, flow.wrongChain, flow.switchToTarget()
+```
+
+## States
+
+`data-phase` on the root holds the current state, also exported as `TxPhase`.
+
+| `data-phase` | Button | Status line |
+| --- | --- | --- |
+| `idle` | Your label, or "Connect wallet" / "Switch to X" | — |
+| `switching` | Spinner, "Switching network…" | Approve the network switch in your wallet. |
+| `confirming` | Spinner, "Confirm in wallet…" | Confirm the transaction in your wallet. |
+| `pending` | Spinner, "Pending…" | Transaction submitted. Waiting for confirmation… |
+| `success` | Check, `successLabel` | Transaction confirmed. Returns to idle after `resetAfter`. |
+| `reverted` | Your label (retry) | Alert: transaction reverted. |
+| `cancelled` | Your label | Cancelled in wallet. Not an error, and `onError` isn't called. |
+| `error` | Your label (retry) | Alert with the wallet or RPC message. |
+
+## Props
+
+Also accepts shadcn `Button` props.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `transaction` | `{ to, value?, data? }` | — | Plain transaction. Pass this or `contract`. |
+| `contract` | `{ address, abi, functionName, args?, value? }` | — | Contract call. |
+| `chainId` | `number` | current chain | Chain the transaction must run on. |
+| `confirmations` | `number` | `1` | Confirmations before success. |
+| `disabledReason` | `string` | — | Disable and show this text. |
+| `children` | `ReactNode` | `"Submit"` | Label. |
+| `successLabel` | `ReactNode` | `"Done"` | Label after success. |
+| `resetAfter` | `number \| false` | `4000` | Back to idle after success, in ms. |
+| `hideStatus` | `boolean` | `false` | Hide the status line. |
+| `onSubmitted` | `(hash) => void` | — | Wallet returned a hash. |
+| `onSuccess` | `(receipt) => void` | — | Mined successfully. |
+| `onError` | `(error) => void` | — | Failed or reverted. Not called on cancel. |

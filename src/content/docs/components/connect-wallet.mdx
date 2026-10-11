@@ -1,0 +1,98 @@
+---
+title: Connect Wallet
+description: Wallet picker with recent and installed badges, per-wallet pending state and cancel handling.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, CustomTrigger } from "@/demos/connect-wallet";
+
+A "Connect wallet" button that opens a wallet picker. The wallets are the connectors in your wagmi config. Browser extensions that announce themselves ([EIP-6963](https://eips.ethereum.org/EIPS/eip-6963)) appear automatically with their own icon.
+
+Pick **Demo Wallet** to try it without an extension.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/connect-wallet
+```
+
+## Usage
+
+```tsx
+import { ConnectWallet } from "@/components/connect-wallet";
+
+<ConnectWallet />;
+```
+
+Most apps want [Wallet Button](/components/wallet-button/), which shows this button while disconnected and the account once connected.
+
+## Examples
+
+### Custom trigger
+
+`ConnectWallet` accepts every shadcn `Button` prop. Its children become the label.
+
+<Card>
+  <CustomTrigger client:load />
+</Card>
+
+```tsx
+<ConnectWallet variant="outline" title="Sign in with your wallet">
+  Sign in
+</ConnectWallet>
+```
+
+### Your own trigger
+
+Open the picker from anywhere with `ConnectWalletDialog`:
+
+```tsx
+import { ConnectWalletDialog } from "@/components/connect-wallet";
+
+const [open, setOpen] = useState(false);
+
+<ConnectWalletDialog open={open} onOpenChange={setOpen} />;
+```
+
+### Headless
+
+```tsx
+import { useConnectWallet } from "@/components/connect-wallet";
+
+const { wallets, connect, phase, pendingId } = useConnectWallet();
+// wallets: { id, name, icon, installed, recent, connector }[]
+```
+
+## Behavior
+
+- **Order:** the wallet used last comes first, then installed extensions, then everything else.
+- **Fewer choices:** shows `maxVisible` wallets (4 by default). The rest sit behind "Other wallets".
+- **Duplicates:** the generic `injected()` connector is hidden when extensions announce themselves, since it would duplicate one of them.
+- **Closing:** the dialog closes itself after a successful connection.
+
+## States
+
+`data-phase` on the dialog holds the current state.
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `idle` | Wallet list. |
+| `connecting` | Spinner on the chosen wallet, other rows disabled, "Confirm the connection in &lt;wallet&gt;". |
+| `cancelled` | The user closed the wallet prompt. Muted "Request cancelled" note. Not an error. |
+| `error` | The wallet's message, with `role="alert"`. |
+
+## Props
+
+`ConnectWallet` also accepts all shadcn `Button` props.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `open` / `defaultOpen` / `onOpenChange` | — | — | Control the dialog. |
+| `onConnect` | `(connector: Connector) => void` | — | Called after a wallet connects. |
+| `title` | `ReactNode` | `"Connect a wallet"` | Dialog title. |
+| `maxVisible` | `number` | `4` | Wallets shown before "Other wallets". |
+| `footer` | `ReactNode` | privacy note | Small print under the list. `null` hides it. |

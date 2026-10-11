@@ -1,0 +1,73 @@
+---
+title: Balance
+description: Native or ERC-20 balance for the connected account or any address.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Native, Erc20 } from "@/demos/balance";
+
+Reads a balance and formats it with [Token Amount](/components/token-amount/). It defaults to the connected account's native balance on the current chain, and refreshes every 15 seconds.
+
+<Card>
+  <Native client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/balance
+```
+
+## Usage
+
+```tsx
+import { Balance } from "@/components/balance";
+
+// Connected account, native currency, current chain
+<Balance />;
+```
+
+## Examples
+
+### ERC-20
+
+Pass the token contract. Balance, decimals and symbol are read in one batched call.
+
+<Card>
+  <Erc20 client:load />
+</Card>
+
+```tsx
+<Balance token="0xA0b8…eB48" price={1} />
+```
+
+### Headless
+
+```tsx
+import { useTokenBalance } from "@/components/balance";
+
+const { value, decimals, symbol, phase, refetch } = useTokenBalance({ token });
+```
+
+Call `refetch()` after a transaction to update right away.
+
+## States
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `idle` | Nothing: no address and no wallet connected. |
+| `loading` | Pulsing placeholder, "Loading balance" for screen readers. |
+| `ready` | The formatted balance. |
+| `error` | "—", with "Couldn't load balance" on hover. |
+
+## Props
+
+Also accepts the [Token Amount](/components/token-amount/) formatting props: `maxDecimals`, `compact`, `price`, `currency` and `locale`.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `address` | `Address` | connected account | Whose balance. |
+| `token` | `Address` | — | ERC-20 contract. Omit for native. |
+| `chainId` | `number` | current chain | Chain to read. |
+| `symbol` | `string` | from chain | Override the symbol. |
+| `refreshInterval` | `number \| false` | `15000` | Refetch interval in ms. |

@@ -1,0 +1,79 @@
+---
+title: Hello dapp
+description: Connect, switch network, show a balance and send a transaction, using only 0xui components.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { HelloDapp } from "@/demos/hello-dapp";
+
+A whole dapp in about 40 lines: a header with network and wallet, a balance, a send button, and live transaction status. Connect the **Demo Wallet** to try it. Demo transactions aren't broadcast.
+
+<Card>
+  <HelloDapp client:load />
+</Card>
+
+## Install
+
+```bash
+npx shadcn@latest add @0xui/wagmi-config @0xui/wallet-button @0xui/chain-selector @0xui/balance @0xui/transaction-button @0xui/transaction-status @0xui/block-number
+```
+
+## Code
+
+```tsx
+import { useState } from "react";
+import { parseEther, type Hash } from "viem";
+import { useConnection } from "wagmi";
+import { Balance } from "@/components/balance";
+import { BlockNumber } from "@/components/block-number";
+import { ChainSelector } from "@/components/chain-selector";
+import { TransactionButton } from "@/components/transaction-button";
+import { TransactionStatus } from "@/components/transaction-status";
+import { WalletButton } from "@/components/wallet-button";
+import { Web3Provider } from "@/components/web3-provider";
+
+export default function App() {
+  return (
+    <Web3Provider>
+      <HelloDapp />
+    </Web3Provider>
+  );
+}
+
+function HelloDapp() {
+  const { address } = useConnection();
+  const [hash, setHash] = useState<Hash>();
+
+  return (
+    <main>
+      <header>
+        <ChainSelector iconOnly />
+        <WalletButton />
+      </header>
+
+      {address && <Balance />}
+
+      <TransactionButton
+        chainId={1}
+        transaction={{ to: "0x…", value: parseEther("0.01") }}
+        onSubmitted={setHash}
+        hideStatus
+      >
+        Send 0.01 ETH
+      </TransactionButton>
+
+      {hash && <TransactionStatus hash={hash} chainId={1} />}
+
+      <BlockNumber />
+    </main>
+  );
+}
+```
+
+## What you didn't have to write
+
+- A wallet picker with recent and installed wallets, and cancel handling.
+- A placeholder while a returning user's connection is restored.
+- The network check and "Switch to Ethereum" before sending.
+- Confirm, pending, success, reverted and cancelled states, each with words, not just a spinner.
+- `bigint`-safe balance formatting.

@@ -12,10 +12,15 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { CheckIcon, ChevronDownIcon, Loader2Icon } from "lucide-react";
-import { useState, type ComponentType } from "react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  Loader2Icon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { type Chain } from "viem";
-import { useChainId, useChains, useSwitchChain } from "wagmi";
+import { useChainId, useChains, useConnection, useSwitchChain } from "wagmi";
 import { ChainIcon, type ChainIconProps } from "@/components/chain-badge";
 import { useMounted } from "@/hooks/use-mounted";
 import { isUserRejection } from "@/lib/0xui-utils";
@@ -48,6 +53,8 @@ export type ChainSelectorProps = {
   iconOnly?: boolean;
   /** Group chains by network type (mainnet/testnet) with tabs. */
   groupByNetwork?: boolean;
+  /** Extra detail under each chain's name, e.g. bridge time or fees. */
+  chainMeta?: (chain: Chain) => ReactNode;
 } & IconStyleProps;
 
 function groupChainsByNetwork(chains: readonly Chain[]) {
@@ -71,7 +78,16 @@ function useChainSwitcher() {
 
   const chainId = useChainId();
   const chains = useChains();
-  const currentChain = chains.find((c) => c.id === chainId);
+  const connection = useConnection();
+  // The wallet can be on a chain the app doesn't configure. useChainId would
+  // still report the last configured chain, so check the connection directly.
+  const unsupported =
+    connection.status === "connected" &&
+    connection.chainId !== undefined &&
+    !chains.some((c) => c.id === connection.chainId);
+  const currentChain = unsupported
+    ? undefined
+    : chains.find((c) => c.id === chainId);
 
   const { mutateAsync, isPending, variables, error, reset } = useSwitchChain();
   const pendingChainId = isPending ? variables?.chainId : undefined;
@@ -103,6 +119,7 @@ function useChainSwitcher() {
     pendingChainId,
     error: cancelled ? null : error,
     cancelled,
+    unsupported: mounted && unsupported,
   };
 }
 
@@ -133,14 +150,16 @@ function chainIconProps(
   return { chainId, variant, monoColor, className };
 }
 
-const triggerClassName = (iconOnly?: boolean) =>
+const triggerClassName = (iconOnly?: boolean, unsupported?: boolean) =>
   cn(
     "flex items-center gap-2 justify-between border transition-all w-fit py-2 pl-1.5 px-3 rounded-full hover:bg-accent/10 active:scale-97 cursor-pointer",
-    iconOnly ? "min-w-fit gap-1 py-1 px-1 pl-1" : "min-w-30"
+    iconOnly ? "min-w-fit gap-1 py-1 px-1 pl-1" : "min-w-30",
+    unsupported && "border-destructive/50 text-destructive"
   );
 
 function TriggerContent({
   mounted,
+  unsupported,
   currentChain,
   chainName,
   iconOnly,
@@ -153,6 +172,7 @@ function TriggerContent({
   LoaderIcon,
 }: {
   mounted: boolean;
+  unsupported: boolean;
   currentChain: Chain | undefined;
   chainName: string;
   iconOnly?: boolean;
@@ -166,6 +186,9 @@ function TriggerContent({
 }) {
   return (
     <>
+      {unsupported && (
+        <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />
+      )}
       {mounted && currentChain && ChainIcon && (
         <div className="size-6">
           <ChainIcon
@@ -203,6 +226,7 @@ function TriggerContent({
 
 function ChainItem({
   chain,
+  meta,
   isActive,
   isSwitching,
   disabled,
@@ -213,6 +237,7 @@ function ChainItem({
   LoaderIcon,
 }: {
   chain: Chain;
+  meta?: ReactNode;
   isActive: boolean;
   isSwitching: boolean;
   disabled: boolean;
@@ -237,7 +262,12 @@ function ChainItem({
           {...chainIconProps(chain.id, variant, monoColor, "rounded-full border")}
         />
       )}
-      <div className="text-sm">{chain.name}</div>
+      <div className="flex min-w-0 flex-col items-start text-left">
+        <span className="text-sm">{chain.name}</span>
+        {meta && (
+          <span className="text-xs text-muted-foreground">{meta}</span>
+        )}
+      </div>
       {isActive && <CheckIcon className="size-4 ml-auto shrink-0" />}
       {isSwitching && LoaderIcon && (
         <LoaderIcon className="size-4 ml-auto shrink-0 animate-spin" />
@@ -248,6 +278,7 @@ function ChainItem({
 
 function ChainsGrid({
   chains,
+  chainMeta,
   currentChainId,
   pendingChainId,
   isPending,
@@ -258,6 +289,7 @@ function ChainsGrid({
   monoColor,
 }: {
   chains: readonly Chain[];
+  chainMeta?: (chain: Chain) => ReactNode;
   currentChainId?: number;
   pendingChainId?: number;
   isPending: boolean;
@@ -273,6 +305,7 @@ function ChainsGrid({
         <ChainItem
           key={chain.id}
           chain={chain}
+          meta={chainMeta?.(chain)}
           isActive={chain.id === currentChainId}
           isSwitching={chain.id === pendingChainId}
           disabled={isPending}
@@ -293,6 +326,7 @@ function ChainListContent({
   groupByNetwork,
   error,
   cancelled,
+  unsupported,
   ...gridProps
 }: {
   mounted: boolean;
@@ -300,6 +334,8 @@ function ChainListContent({
   groupByNetwork?: boolean;
   error: { message: string; shortMessage?: string } | null;
   cancelled: boolean;
+  unsupported: boolean;
+  chainMeta?: (chain: Chain) => ReactNode;
   currentChainId?: number;
   pendingChainId?: number;
   isPending: boolean;
@@ -328,6 +364,11 @@ function ChainListContent({
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error.shortMessage ?? error.message}
+        </p>
+      )}
+      {unsupported && (
+        <p className="text-sm text-destructive">
+          Your wallet is on a network this app doesn't support. Pick one below.
         </p>
       )}
       {cancelled && (
@@ -379,9 +420,11 @@ function useChainSelectorParts(props: ChainSelectorProps) {
   const switcher = useChainSwitcher();
   const icons = resolveIcons(props);
 
-  const chainName = switcher.mounted
-    ? switcher.currentChain?.name || "Select Chain"
-    : "Select Chain";
+  const chainName = !switcher.mounted
+    ? "Select Chain"
+    : switcher.unsupported
+      ? "Wrong network"
+      : switcher.currentChain?.name || "Select Chain";
 
   return {
     ...switcher,
@@ -394,6 +437,7 @@ function useChainSelectorParts(props: ChainSelectorProps) {
     variant,
     monoColor,
     groupByNetwork,
+    chainMeta: props.chainMeta,
   };
 }
 
@@ -403,12 +447,13 @@ export function ChainSelector(props: ChainSelectorProps) {
   return (
     <Popover open={s.open} onOpenChange={s.onOpenChange}>
       <PopoverTrigger
-        className={triggerClassName(s.iconOnly)}
+        className={triggerClassName(s.iconOnly, s.unsupported)}
         aria-label={s.ariaLabel}
         title={s.tooltipTitle}
       >
         <TriggerContent
           mounted={s.mounted}
+          unsupported={s.unsupported}
           currentChain={s.currentChain}
           chainName={s.chainName}
           iconOnly={s.iconOnly}
@@ -429,6 +474,8 @@ export function ChainSelector(props: ChainSelectorProps) {
           groupByNetwork={s.groupByNetwork}
           error={s.error}
           cancelled={s.cancelled}
+          unsupported={s.unsupported}
+          chainMeta={s.chainMeta}
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}
@@ -449,12 +496,13 @@ export function ChainSelectorDialog(props: ChainSelectorProps) {
   return (
     <Dialog open={s.open} onOpenChange={s.onOpenChange}>
       <DialogTrigger
-        className={triggerClassName(s.iconOnly)}
+        className={triggerClassName(s.iconOnly, s.unsupported)}
         aria-label={s.ariaLabel}
         title={s.tooltipTitle}
       >
         <TriggerContent
           mounted={s.mounted}
+          unsupported={s.unsupported}
           currentChain={s.currentChain}
           chainName={s.chainName}
           iconOnly={s.iconOnly}
@@ -477,6 +525,8 @@ export function ChainSelectorDialog(props: ChainSelectorProps) {
           groupByNetwork={s.groupByNetwork}
           error={s.error}
           cancelled={s.cancelled}
+          unsupported={s.unsupported}
+          chainMeta={s.chainMeta}
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}

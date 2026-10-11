@@ -1,7 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { custom } from "viem";
+import { custom, type Chain } from "viem";
+import { vi } from "vitest";
 import { createConfig, type Config } from "wagmi";
 import { connect } from "wagmi/actions";
 import { mainnet, sepolia } from "wagmi/chains";
@@ -13,12 +14,44 @@ export const testAccounts = [
   "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
 ] as const;
 
-/** Canned JSON-RPC responses by method name. A function receives the params. */
-export type RpcResponses = Record<string, unknown | ((params: unknown) => unknown)>;
+/**
+ * Canned JSON-RPC responses by method name. A function receives the params.
+ * Throw `{ code, message }` from a function to return a JSON-RPC error, e.g.
+ * `{ code: 4001 }` for a user rejection.
+ */
+export type RpcResponses = Record<string, unknown | ((params: any) => unknown)>;
+
+async function respond(rpc: RpcResponses, method: string, params: unknown) {
+  if (!(method in rpc)) throw new Error(`RPC method not mocked: ${method}`);
+  const response = rpc[method];
+  return typeof response === "function" ? response(params) : response;
+}
+
+/**
+ * The mock connector forwards wallet methods it doesn't handle (e.g.
+ * eth_sendTransaction) to the chain's RPC URL with fetch. Answer those from
+ * the same map, as a JSON-RPC server would.
+ */
+function stubWalletRpc(rpc: RpcResponses) {
+  vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
+    const { id, method, params } = JSON.parse(init.body);
+    try {
+      const result = await respond(rpc, method, params);
+      return Response.json({ jsonrpc: "2.0", id, result });
+    } catch (error) {
+      const { code = -32603, message = String(error) } = error as {
+        code?: number;
+        message?: string;
+      };
+      return Response.json({ jsonrpc: "2.0", id, error: { code, message } });
+    }
+  });
+}
 
 /**
  * wagmi config with only the mock connector and a fake RPC. Nothing touches
  * the network: methods missing from `rpc` fail like an unreachable node.
+ * Stubs `fetch` for the test (restored in test/setup.ts).
  *
  * Use `features` to make the "wallet" reject or fail, e.g.
  * `{ switchChainError: true }` for a user rejection.
@@ -27,21 +60,102 @@ export function createTestConfig({
   features,
   rpc = {},
 }: { features?: MockParameters["features"]; rpc?: RpcResponses } = {}) {
+  stubWalletRpc(rpc);
   const transport = custom(
-    {
-      async request({ method, params }) {
-        if (!(method in rpc)) throw new Error(`RPC method not mocked: ${method}`);
-        const response = rpc[method];
-        return typeof response === "function" ? response(params) : response;
-      },
-    },
+    { request: ({ method, params }) => respond(rpc, method, params) },
     { retryCount: 0 }
   );
   return createConfig({
-    chains: [mainnet, sepolia],
+    chains: [withoutMulticall(mainnet), withoutMulticall(sepolia)],
     connectors: [mock({ accounts: testAccounts, features })],
     transports: { [mainnet.id]: transport, [sepolia.id]: transport },
+    // Fast block/receipt polling so tests don't wait 4s per poll.
+    pollingInterval: 20,
+    // No persistence: wagmi would otherwise carry the current chain and
+    // recent wallet from one test to the next through localStorage.
+    storage: null,
   });
+}
+
+export const fakeTxHash = `0x${"ab".repeat(32)}` as const;
+
+/**
+ * A minimal chain that starts at block 100, advances one block per
+ * eth_blockNumber call, and accepts transactions. A sent transaction is
+ * mined in block 100 with `status`. Spread it into `rpc` and override
+ * methods as needed, e.g. `eth_sendTransaction` to reject.
+ */
+export function fakeChainRpc({
+  status = "success",
+  chainId = 1,
+}: { status?: "success" | "reverted"; chainId?: number } = {}): RpcResponses {
+  let sent: { from: string; to: string } | undefined;
+  let block = 100;
+  return {
+    eth_chainId: `0x${chainId.toString(16)}`,
+    eth_blockNumber: () => `0x${(block++).toString(16)}`,
+    eth_getTransactionCount: "0x0",
+    eth_estimateGas: "0x5208",
+    eth_gasPrice: "0x3b9aca00",
+    eth_maxPriorityFeePerGas: "0x3b9aca00",
+    eth_getBlockByNumber: {
+      number: "0x64",
+      hash: `0x${"11".repeat(32)}`,
+      timestamp: "0x0",
+      baseFeePerGas: "0x3b9aca00",
+      transactions: [],
+    },
+    eth_sendTransaction: ([tx]: [{ from: string; to: string }]) => {
+      sent = tx;
+      return fakeTxHash;
+    },
+    eth_getTransactionByHash: () =>
+      sent && {
+        hash: fakeTxHash,
+        from: sent.from,
+        to: sent.to,
+        input: "0x",
+        value: "0x0",
+        nonce: "0x0",
+        gas: "0x5208",
+        maxFeePerGas: "0x3b9aca00",
+        maxPriorityFeePerGas: "0x3b9aca00",
+        type: "0x2",
+        chainId: `0x${chainId.toString(16)}`,
+        v: "0x0",
+        r: `0x${"01".repeat(32)}`,
+        s: `0x${"02".repeat(32)}`,
+        blockHash: null,
+        blockNumber: null,
+        transactionIndex: null,
+      },
+    eth_getTransactionReceipt: () =>
+      sent && {
+        transactionHash: fakeTxHash,
+        blockHash: `0x${"22".repeat(32)}`,
+        blockNumber: "0x64",
+        transactionIndex: "0x0",
+        from: sent.from,
+        to: sent.to,
+        cumulativeGasUsed: "0x5208",
+        gasUsed: "0x5208",
+        effectiveGasPrice: "0x3b9aca00",
+        contractAddress: null,
+        logs: [],
+        logsBloom: `0x${"00".repeat(256)}`,
+        status: status === "success" ? "0x1" : "0x0",
+        type: "0x2",
+      },
+  };
+}
+
+/**
+ * wagmi batches reads through Multicall3 by default. Without it, reads become
+ * plain RPC calls (eth_getBalance, eth_call) that are easy to fake.
+ */
+function withoutMulticall<chain extends Chain>(chain: chain): chain {
+  const { multicall3: _, ...contracts } = chain.contracts ?? {};
+  return { ...chain, contracts };
 }
 
 export function renderWithWagmi(

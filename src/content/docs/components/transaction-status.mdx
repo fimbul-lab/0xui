@@ -1,0 +1,77 @@
+---
+title: Transaction Status
+description: Inline card that follows a transaction from submitted to confirmed.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/transaction-status";
+
+Follows one transaction hash. Shows what the transaction does, a list of steps, the hash with copy, and an explorer link. Never a bare spinner.
+
+Connect the **Demo Wallet** and send to see it. The demo hash isn't on chain, so its explorer link won't resolve.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/transaction-status
+```
+
+## Usage
+
+```tsx
+import { TransactionStatus } from "@/components/transaction-status";
+
+<TransactionStatus hash={hash} chainId={1}>
+  Send 0.01 ETH to vitalik.eth
+</TransactionStatus>;
+```
+
+Pair it with [Transaction Button](/components/transaction-button/) through `onSubmitted`:
+
+```tsx
+const [hash, setHash] = useState<Hash>();
+
+<TransactionButton transaction={tx} onSubmitted={setHash} hideStatus>Send</TransactionButton>
+{hash && <TransactionStatus hash={hash}>Send 0.01 ETH</TransactionStatus>}
+```
+
+### More confirmations
+
+```tsx
+<TransactionStatus hash={hash} confirmations={12} />
+```
+
+This adds a live "3 of 12 confirmations" step.
+
+### Headless
+
+```tsx
+import { useTransactionStatus } from "@/components/transaction-status";
+
+const { phase, receipt, confirmations, required } = useTransactionStatus({ hash });
+```
+
+## States
+
+| `data-phase` | Heading |
+| --- | --- |
+| `pending` | Transaction pending |
+| `confirming` | Confirming (mined, waiting for more confirmations) |
+| `confirmed` | Transaction confirmed |
+| `reverted` | Transaction reverted |
+| `error` | Couldn't track transaction |
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `hash` | `Hash` | — | Transaction to follow. |
+| `chainId` | `number` | current chain | Chain it was sent on. |
+| `confirmations` | `number` | `1` | Required confirmations. |
+| `title` | `ReactNode` | per phase | Heading override. |
+| `children` | `ReactNode` | — | What the transaction does. |
+| `onConfirmed` | `(receipt) => void` | — | Called once on confirmation. |

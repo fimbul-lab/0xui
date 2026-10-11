@@ -26,6 +26,7 @@ export default defineConfig({
           items: [
             { label: "Installation", slug: "getting-started/installation" },
             { label: "Conventions", slug: "getting-started/conventions" },
+            { label: "Hello dapp", slug: "getting-started/hello-dapp" },
           ],
         },
         {

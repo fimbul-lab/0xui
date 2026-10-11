@@ -80,6 +80,37 @@ describe("ChainSelector", () => {
   });
 });
 
+describe("ChainSelector extras", () => {
+  it("flags a wallet on a chain the app doesn't support", async () => {
+    const user = userEvent.setup();
+    const config = createTestConfig();
+    renderWithWagmi(<ChainSelector />, { config });
+    await act(() => connectMock(config));
+
+    // The wallet moves to Base, which isn't in the test config.
+    act(() => config.connectors[0]!.onChainChanged("8453"));
+
+    const trigger = await screen.findByRole("button", { name: /wrong network/i });
+    await user.click(trigger);
+    expect(
+      await screen.findByText(/network this app doesn't support/i)
+    ).toBeInTheDocument();
+    // No chain is marked active.
+    expect(screen.queryByRole("button", { current: true })).not.toBeInTheDocument();
+  });
+
+  it("shows per-chain meta", async () => {
+    const user = userEvent.setup();
+    renderWithWagmi(
+      <ChainSelector chainMeta={(chain) => (chain.testnet ? "Testnet" : "~12s")} />
+    );
+
+    await user.click(screen.getByRole("button", { name: /ethereum/i }));
+    expect(await screen.findByText("~12s")).toBeInTheDocument();
+    expect(screen.getByText("Testnet")).toBeInTheDocument();
+  });
+});
+
 describe("ChainSelectorDialog", () => {
   it("opens a dialog with the chain list", async () => {
     const user = userEvent.setup();

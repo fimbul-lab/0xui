@@ -1,0 +1,69 @@
+---
+title: Account
+description: Connected-account button with a panel for balance, copy, explorer link and disconnect.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, WithBalance } from "@/demos/account";
+
+The button shows the connected account's avatar and ENS name, or its truncated address. It opens a panel with the balance, current network, copy, explorer link and disconnect. It renders nothing while disconnected.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/account
+```
+
+## Usage
+
+```tsx
+import { Account } from "@/components/account";
+
+<Account />;
+```
+
+To show "Connect wallet" while disconnected as well, use [Wallet Button](/components/wallet-button/).
+
+## Examples
+
+### Balance in the trigger
+
+<Card>
+  <WithBalance client:load />
+</Card>
+
+```tsx
+<Account showBalance />
+```
+
+### Extra panel content
+
+Children render at the bottom of the panel, above disconnect:
+
+```tsx
+<Account>
+  <a href="/settings">Settings</a>
+</Account>
+```
+
+### Headless
+
+```tsx
+import { useConnectedAccount } from "@/components/account";
+
+const { address, ensName, displayName, chain, connector, disconnect } =
+  useConnectedAccount();
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `open` / `defaultOpen` / `onOpenChange` | — | — | Control the panel. |
+| `showBalance` | `boolean` | `false` | Show the native balance in the trigger. |
+| `onDisconnect` | `() => void` | — | Called after disconnecting. |
+| `children` | `ReactNode` | — | Extra panel content. |

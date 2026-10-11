@@ -169,9 +169,17 @@ These are fast and they lock in the conventions before the big components.
 - `Web3Provider` takes an optional `queryClient`. Tests use it to turn off retries, and apps can reuse their own client.
 - The test RPC is fake: `createTestConfig({ rpc: { eth_blockNumber: "0x…" } })`. Any method that isn't mocked fails, so tests never touch the network.
 
-### Phase 2: Must-haves
+### Phase 2: Must-haves ✅ done 2026-10-11
 `connect-wallet` → `account` → `wallet-button` → `balance` → `transaction-button` → `transaction-status` → chain-selector follow-ups.
-**Milestone:** a "Hello dapp" guide that connects, shows the account, switches chain and sends a tx using only 0xui components.
+**Milestone:** a "Hello dapp" guide that connects, shows the account, switches chain and sends a tx using only 0xui components. ✅ `getting-started/hello-dapp`.
+
+**Phase 2 notes**
+- **Receipts:** wagmi's `useWaitForTransactionReceipt` *throws* on a reverted transaction and drops the receipt. `transaction-status` exports `useMinedReceipt`, which waits with viem directly, so reverted transactions come back as data. `transaction-button` uses it too.
+- **Wrong network:** `transaction-button` doesn't switch and send in one click. On the wrong network the label is "Switch to X" and clicking only switches. Two wallet prompts from one click would surprise people.
+- **Simulation:** there is no `simulate` gate yet. Use `disabledReason` to name blockers. A simulation gate (`useSimulateContract`, showing revert reasons before sending) is a follow-up.
+- **Mobile:** there is no drawer for mobile dialogs yet (open decision in §5).
+- **Docs demos:** the Demo Wallet simulates transactions. `eth_sendTransaction` returns a fake hash, and the demo transport serves its receipt about 3 s later. Sending to `0x…dEaD` reverts. Nothing is broadcast.
+- **Tests:** `fakeChainRpc()` in `test/wagmi.tsx` is a chain that advances a block on each poll and mines sent transactions. Test configs drop Multicall3 (so reads are plain RPC calls) and have no storage (so the chain and recent wallet don't leak between tests).
 
 ### Phase 3: Good to have
 `amount-input` → `token-select` → `token-input` → `address-input` → `approve-button` → `network-guard` → `sign-message` → `transaction-toast` → `add-token`.

@@ -95,6 +95,7 @@ Splits chains into Mainnet and Testnet tabs, based on `chain.testnet`.
 | Switching | Spinner on the trigger and on the target row. The list is disabled until the wallet responds. |
 | Cancelled | The user dismissed the wallet prompt. Muted "Request cancelled in wallet" note. |
 | Error | Any other failure. The wallet's message is shown inline with `role="alert"`. |
+| Wrong network | The wallet is on a chain your config doesn't include. The trigger reads "Wrong network" with a warning icon, and the list asks the user to pick a supported chain. |
 
 Errors and the cancelled note clear when the selector is reopened.
 
@@ -110,3 +111,4 @@ Errors and the cancelled note clear when the selector is reopened.
 | `chevronIcon` | `ComponentType<{ className?: string }> \| false` | `ChevronDownIcon` | Custom chevron, or `false` to hide it. |
 | `loaderIcon` | `ComponentType<{ className?: string }> \| false` | `Loader2Icon` | Custom spinner, or `false` to hide it. |
 | `disableIcons` | `boolean` | `false` | Hide every icon. Overrides the icon props. |
+| `chainMeta` | `(chain: Chain) => ReactNode` | — | Extra detail under each chain's name, e.g. `"~2s blocks"`. |

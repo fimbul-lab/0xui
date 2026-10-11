@@ -7,7 +7,7 @@
       "name": "chain-selector",
       "type": "registry:component",
       "title": "Chain Selector",
-      "description": "Network switcher for wagmi apps, as a popover (ChainSelector) or dialog (ChainSelectorDialog). Shows the current chain with its icon, lists every chain in the wagmi config (optionally grouped into mainnet/testnet tabs), marks the active chain, shows a per-row spinner while switching, and surfaces wallet errors inline; a rejected request shows as cancelled, not as an error. Wraps useSwitchChain, useChains and useChainId. Icon slots are swappable or can be hidden; iconOnly mode keeps an accessible label.",
+      "description": "Network switcher for wagmi apps, as a popover (ChainSelector) or dialog (ChainSelectorDialog). Shows the current chain with its icon, lists every chain in the wagmi config (optionally grouped into mainnet/testnet tabs), marks the active chain, shows a per-row spinner while switching, and surfaces wallet errors inline; a rejected request shows as cancelled, not as an error. Wraps useSwitchChain, useChains and useChainId. Flags a wallet on an unsupported chain as 'Wrong network', and takes a chainMeta slot for per-chain detail. Icon slots are swappable or can be hidden; iconOnly mode keeps an accessible label.",
       "files": [
         {
           "path": "registry/default/components/chain-selector.tsx",
@@ -195,6 +195,140 @@
         "wagmi",
         "viem",
         "lucide-react"
+      ]
+    },
+    {
+      "name": "connect-wallet",
+      "type": "registry:component",
+      "title": "Connect Wallet",
+      "description": "Wallet picker for wagmi: 'Connect wallet' button plus dialog listing the config's connectors and EIP-6963 browser extensions with their icons. Recent wallet first, then installed (badged), max N shown with an 'Other wallets' overflow, generic injected hidden when extensions announce themselves. Per-wallet spinner while connecting, a rejected request shows as cancelled (not an error), other errors inline. Exports ConnectWalletDialog (bring your own trigger), useConnectWallet and useWalletOptions. data-phase: idle | connecting | cancelled | error.",
+      "files": [
+        {
+          "path": "registry/default/components/connect-wallet.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "@web3icons/react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "dialog",
+        "avatar",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "balance",
+      "type": "registry:component",
+      "title": "Balance",
+      "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton, '\u2014' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
+      "files": [
+        {
+          "path": "registry/default/components/balance.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/token-amount"
+      ]
+    },
+    {
+      "name": "account",
+      "type": "registry:component",
+      "title": "Account",
+      "description": "Connected-account button: avatar plus ENS name or truncated address, optional balance. Opens a popover panel with the balance, current chain, copy address, explorer link, connector name and disconnect, plus a children slot for app links. Renders nothing when disconnected. Exports useConnectedAccount.",
+      "files": [
+        {
+          "path": "registry/default/components/account.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "popover",
+        "@0xui/address-avatar",
+        "@0xui/balance",
+        "@0xui/chain-badge",
+        "@0xui/copy-button",
+        "@0xui/explorer-link",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "wallet-button",
+      "type": "registry:component",
+      "title": "Wallet Button",
+      "description": "The one wallet button for an app header: ConnectWallet when disconnected, Account when connected, and a pulsing placeholder during SSR and while wagmi restores a previous connection, so returning users never see a flash of 'Connect wallet'. Exports useWalletButtonPhase (restoring | disconnected | connected).",
+      "files": [
+        {
+          "path": "registry/default/components/wallet-button.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi"
+      ],
+      "registryDependencies": [
+        "@0xui/connect-wallet",
+        "@0xui/account",
+        "@0xui/use-mounted"
+      ]
+    },
+    {
+      "name": "transaction-status",
+      "type": "registry:component",
+      "title": "Transaction Status",
+      "description": "Inline card for one transaction hash: what it does (children), steps from submitted to included in block N to N of M confirmations, the hash with copy, and an explorer link. Reverted transactions are shown with their receipt instead of throwing like wagmi's useWaitForTransactionReceipt. Exports useTransactionStatus and useMinedReceipt. data-phase: pending | confirming | confirmed | reverted | error.",
+      "files": [
+        {
+          "path": "registry/default/components/transaction-status.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/copy-button",
+        "@0xui/explorer-link",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "transaction-button",
+      "type": "registry:component",
+      "title": "Transaction Button",
+      "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet\u2026', 'Pending\u2026', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error.",
+      "files": [
+        {
+          "path": "registry/default/components/transaction-button.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/connect-wallet",
+        "@0xui/transaction-status",
+        "@0xui/0xui-utils"
       ]
     },
     {

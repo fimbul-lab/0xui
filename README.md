@@ -27,6 +27,12 @@ npx shadcn@latest add @0xui/chain-selector
 
 | Component | Description |
 | --- | --- |
+| `wallet-button` | Connect button when disconnected, account when connected. Start here. |
+| `connect-wallet` | Wallet picker with recent/installed wallets and cancel handling. |
+| `account` | Connected-account button and panel: balance, copy, explorer, disconnect. |
+| `balance` | Native or ERC-20 balance. |
+| `transaction-button` | Sends a transaction and shows every step: connect, switch, confirm, pending, done. |
+| `transaction-status` | Inline card that follows a transaction from submitted to confirmed. |
 | `chain-selector` | Network switcher as a popover or dialog. |
 | `chain-badge` | Static chain chip. Also exports `ChainIcon`. |
 | `address` | ENS name or truncated address, with copy and explorer link. |
