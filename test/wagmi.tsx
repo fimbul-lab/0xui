@@ -45,7 +45,10 @@ async function respond(rpc: RpcResponses, method: string, params: unknown) {
  * the same map, as a JSON-RPC server would.
  */
 function stubWalletRpc(rpc: RpcResponses) {
-  vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
+  const realFetch = globalThis.fetch;
+  vi.stubGlobal("fetch", async (url: string, init?: { body?: string }) => {
+    // Not JSON-RPC (e.g. NFT metadata, data: URIs): use the real fetch.
+    if (typeof init?.body !== "string") return realFetch(url, init as RequestInit);
     const { id, method, params } = JSON.parse(init.body);
     try {
       const result = await respond(rpc, method, params);
@@ -248,18 +251,33 @@ function decodeDnsName(data: Hex) {
   return labels.join(".");
 }
 
+const resolverAbi = parseAbi([
+  "function addr(bytes32 node) view returns (address)",
+  "function text(bytes32 node, string key) view returns (string)",
+]);
+
 /**
  * eth_call handler for ENS forward resolution through the universal
- * resolver. Names missing from `names` resolve to no address.
+ * resolver: `addr` from `names`, `text` records from `texts`. Names missing
+ * from `names` resolve to no address.
  */
-export function ensResolveRpc(names: Record<string, Address>) {
+export function ensResolveRpc(
+  names: Record<string, Address>,
+  texts: Record<string, Record<string, string>> = {}
+) {
   return ([{ data }]: EthCall) => {
     const { args } = decodeFunctionData({ abi: universalResolverAbi, data });
-    const address = names[decodeDnsName(args[0])] ?? zeroAddress;
+    const name = decodeDnsName(args[0]);
+    const address = names[name] ?? zeroAddress;
+    const call = decodeFunctionData({ abi: resolverAbi, data: args[1] });
+    const inner =
+      call.functionName === "text"
+        ? encodeAbiParameters([{ type: "string" }], [texts[name]?.[call.args[1]] ?? ""])
+        : encodeAbiParameters([{ type: "address" }], [address]);
     return encodeFunctionResult({
       abi: universalResolverAbi,
       functionName: "resolveWithGateways",
-      result: [encodeAbiParameters([{ type: "address" }], [address]), address],
+      result: [inner, address],
     });
   };
 }

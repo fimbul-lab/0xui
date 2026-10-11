@@ -1,0 +1,55 @@
+---
+title: Event Feed
+description: Live list of a contract's events, newest first, each linked to its transaction.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/event-feed";
+
+Follow a contract's events as they happen: transfers, swaps, mints. New events appear at the top, each with its arguments and a link to the transaction. Screen readers hear new entries politely (`role="log"`).
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/event-feed
+```
+
+## Usage
+
+```tsx
+import { EventFeed } from "@/components/event-feed";
+
+<EventFeed address={usdc} abi={erc20Abi} eventName="Transfer" args={{ to: address }} />;
+```
+
+`args` filters on indexed arguments, so `{ to: address }` shows only incoming transfers. `historyBlocks` loads that many recent blocks first. Keep it small: public RPCs cap how many blocks one log request may cover.
+
+### Custom rows
+
+```tsx
+<EventFeed
+  address={pool}
+  abi={poolAbi}
+  eventName="Swap"
+  renderEvent={(event) => <SwapRow args={event.args} />}
+/>
+```
+
+Headless: `useEventFeed(params)` returns `events`, newest first and deduplicated.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `address` | `Address` | — | Contract. |
+| `abi` | `Abi` | — | ABI with the event. |
+| `eventName` | `string` | all | Event to follow. |
+| `args` | `object` | — | Indexed-argument filter. |
+| `chainId` | `number` | current | Chain. |
+| `historyBlocks` | `number` | `0` | Recent blocks to load first. |
+| `max` | `number` | `20` | Events kept. |
+| `renderEvent` | `(event) => ReactNode` | — | Custom row. |

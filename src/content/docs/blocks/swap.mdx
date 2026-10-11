@@ -1,0 +1,73 @@
+---
+title: Swap
+description: Swap form with live quotes, flip, rate, price impact and an approval step. Bring your own quotes.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/swap";
+
+Two [Token Input](/components/token-input/) panels with a flip button, a live quote that refreshes, the rate (click to invert), price impact, and an [Approve Button](/components/approve-button/) in front of the swap when the sell token needs one.
+
+The demo uses fixed prices and a 0.3% fee. Nothing is broadcast.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/swap
+```
+
+## Quotes
+
+0xui doesn't pick a DEX or aggregator. You pass `getQuote`, which returns the output amount and the transaction to send:
+
+```tsx
+import { Swap, type GetQuote } from "@/components/swap";
+
+const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount, taker }) => {
+  const res = await fetch(`/api/quote?sell=${sellToken.address}&buy=${buyToken.address}&amount=${sellAmount}&taker=${taker}`);
+  const q = await res.json();
+  return {
+    buyAmount: BigInt(q.buyAmount),
+    transaction: { to: q.to, data: q.data, value: BigInt(q.value) },
+    spender: q.allowanceTarget, // omit for native sells
+    priceImpact: q.priceImpact,
+  };
+};
+
+<Swap tokens={tokens} getQuote={getQuote} prices={prices} />;
+```
+
+Quotes are fetched 400 ms after typing stops, cached per amount and token pair, and refreshed every 15 seconds. Keep API keys on your server.
+
+## States
+
+The swap button always names the blocker:
+
+| Situation | Button |
+| --- | --- |
+| No token picked | Select a token |
+| No amount | Enter an amount |
+| Amount above balance | Insufficient ETH balance |
+| Quote loading or out of date | Fetching quote… |
+| `getQuote` threw | No route found, plus the error message |
+| ERC-20 sell without allowance | Approve USDC |
+| Ready | Swap |
+
+Price impact over 5% shows in amber, and over 15% in red.
+
+## Props
+
+| Prop | Type | Description |
+| --- | --- | --- |
+| `tokens` | `Token[]` | Tokens for both pickers. |
+| `getQuote` | `GetQuote` | Your quote function. |
+| `defaultSellToken` / `defaultBuyToken` | `Token` | Initial pair. Sell defaults to the first token. |
+| `popular` | `string[]` | Quick picks. |
+| `prices` | `Record<symbol, number>` | Fiat values. |
+| `onSubmitted` / `onSuccess` | — | Transaction callbacks. The input clears on success. |
+
+Headless pieces: `useSwapQuote` and `formatRate`.

@@ -1,0 +1,52 @@
+---
+title: Portfolio
+description: Token holdings with total value, sorted largest first.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/portfolio";
+
+Holdings for a token list: total value on top, then one row per token with amount and value, largest first. All balances are read in one batch.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/portfolio
+```
+
+## Usage
+
+```tsx
+import { Portfolio } from "@/components/portfolio";
+
+<Portfolio tokens={tokenList.tokens} prices={prices} />;
+```
+
+It shows the connected account's holdings, or pass `address` for anyone's. Only tokens on `chainId` (the current chain by default) are read. Tokens without a price are listed with "—" and left out of the total.
+
+Headless: `usePortfolio({ tokens, prices })` returns sorted `rows`, `total` and `unpriced`.
+
+## States
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `idle` | "Connect a wallet to see its tokens." |
+| `loading` | Three skeleton rows. |
+| `ready` | Total and rows. |
+| `empty` | "No tokens from this list in this wallet." |
+| `error` | Couldn't load balances. |
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tokens` | `Token[]` | — | Tokens to check. |
+| `prices` | `Record<symbol, number>` | — | Prices for values and the total. |
+| `address` | `Address` | connected | Whose holdings. |
+| `chainId` | `number` | current | Chain to read. |
+| `hideZero` | `boolean` | `true` | Hide empty balances. |
+| `currency` | `string` | `"USD"` | Currency for values. |

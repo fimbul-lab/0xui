@@ -3,6 +3,15 @@
 import { erc20Abi, parseEther, parseUnits } from "viem";
 import { useState } from "react";
 import { Account } from "@/components/account";
+import { BatchTransaction } from "@/components/batch-transaction";
+import { ContractForm } from "@/components/contract-form";
+import { EnsProfile } from "@/components/ens-profile";
+import { EventFeed } from "@/components/event-feed";
+import { NftCard } from "@/components/nft-card";
+import { Portfolio } from "@/components/portfolio";
+import { Send } from "@/components/send";
+import { Swap } from "@/components/swap";
+import { TransactionHistory, recordTransaction } from "@/components/transaction-history";
 import { AddToken } from "@/components/add-token";
 import { AddressInput } from "@/components/address-input";
 import { AmountInput } from "@/components/amount-input";
@@ -91,6 +100,19 @@ export default function App() {
       <BlockNumber explorer />
       <GasPrice thresholds={{ low: 5, high: 30 }} />
       <Phase3 />
+      <Send tokens={tokens} />
+      <Swap
+        tokens={tokens}
+        getQuote={async ({ sellAmount }) => ({ buyAmount: sellAmount, transaction: { to: address } })}
+      />
+      <BatchTransaction chainId={1} calls={[{ to: address }, { to: usdc, data: "0x" }]} />
+      <ContractForm address={usdc} abi={erc20Abi} show="read" />
+      <Portfolio tokens={tokens} prices={{ ETH: 3000 }} />
+      <TransactionHistory />
+      <button onClick={() => recordTransaction({ hash: `0x${"ab".repeat(32)}`, chainId: 1 })}>Record</button>
+      <EnsProfile name="vitalik.eth" />
+      <NftCard contract={address} tokenId={1n} />
+      <EventFeed address={usdc} abi={erc20Abi} eventName="Transfer" />
     </Web3Provider>
   );
 }

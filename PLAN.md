@@ -192,8 +192,18 @@ These are fast and they lock in the conventions before the big components.
 - **Demo Wallet:** signs with a throwaway key, so its signatures don't verify against the demo address. It also remembers demo approvals. The docs config sets `batch.multicall: false` so allowance reads can be intercepted.
 - **Test helpers:** `erc20CallRpc()` and `ensResolveRpc()` in `test/wagmi.tsx`, plus custom `accounts` in `createTestConfig`, so signatures can verify with a real key.
 
-### Phase 4: Nice to have
+### Phase 4: Nice to have ✅ done 2026-10-11
 `send` → `swap` → `batch-transaction` → `contract-form` → `portfolio` → `transaction-history` → `ens-profile` → `nft-card` → `event-feed`.
+
+**Phase 4 notes**
+- **Blocks:** `send`, `swap` and `portfolio` are `registry:block` items with their own "Blocks" docs section.
+- **Swap quotes:** `swap` takes `getQuote` and has no built-in aggregator. Quotes are debounced (400 ms), cached per amount, and refreshed every 15 s.
+- **Button labels:** `transaction-button` now lets in-flight and success phases override `disabledReason`, so forms that clear on success still show "Done".
+- **Batch transactions:** `batch-transaction` picks atomic via `useCapabilities` (`atomic.status` supported/ready). Sequential mode stops at the first revert or cancel, and the docs warn that it isn't all-or-nothing.
+- **History storage:** `transaction-history` uses a module-level store with localStorage and `useSyncExternalStore`, synced across tabs and capped at 50 entries. It's per device: cross-device history needs an indexer.
+- **NFT states:** `nft-card` separates `not-found` from `metadata-error`. Public IPFS gateways returned 429 during testing, so production apps should pass their own `gateway`.
+- **Demo Wallet:** supports EIP-5792 (atomic everywhere) and stays connected across docs pages (persisted flag, since the mock only remembers in memory).
+- **Remaining follow-ups:** a mobile drawer for dialogs, `simulate` in transaction-button, and the real registry domain.
 
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).

@@ -30,6 +30,10 @@ export default defineConfig({
           ],
         },
         {
+          label: "Blocks",
+          items: [{ autogenerate: { directory: "blocks" } }],
+        },
+        {
           label: "Components",
           items: [{ autogenerate: { directory: "components" } }],
         },

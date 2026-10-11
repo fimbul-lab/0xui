@@ -1,0 +1,59 @@
+---
+title: Batch Transaction
+description: Several calls as one action. One wallet prompt with EIP-5792, step by step otherwise.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Atomic, Sequential } from "@/demos/batch-transaction";
+
+Approve-and-swap without two prompts. When the wallet supports atomic batches ([EIP-5792](https://eips.ethereum.org/EIPS/eip-5792)), like Coinbase Smart Wallet and most smart accounts, every call goes out in **one prompt** and lands together. Other wallets get the same calls one by one, with a step list showing progress.
+
+Connect the **Demo Wallet**. It acts like a smart account that supports batching.
+
+<Card>
+  <Atomic client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/batch-transaction
+```
+
+## Usage
+
+```tsx
+import { BatchTransaction } from "@/components/batch-transaction";
+
+<BatchTransaction
+  chainId={8453}
+  calls={[
+    { label: "Approve USDC", to: usdc, data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [router, amount] }) },
+    { label: "Swap", to: router, data: swapData },
+  ]}
+>
+  Approve and swap
+</BatchTransaction>;
+```
+
+## Modes
+
+| `mode` | Behavior |
+| --- | --- |
+| `"auto"` (default) | Atomic if the wallet reports `atomic` support on the chain, otherwise sequential. |
+| `"atomic"` | Always `wallet_sendCalls`. The wallet may reject it if it can't batch. |
+| `"sequential"` | One transaction per call, each waiting to be mined. Stops at the first revert or cancel. |
+
+Sequential, for comparison:
+
+<Card>
+  <Sequential client:load />
+</Card>
+
+Atomic batches are all-or-nothing: if one call reverts, none take effect. Sequential calls are not. A revert in step 2 leaves step 1 in place, so order your calls so that's safe (approvals first).
+
+## States
+
+`data-phase` holds the current state, and `data-atomic` is set when batching. Phases: `idle`, `switching`, `confirming`, `pending`, `success`, `reverted`, `cancelled`, `error`. Sequential labels count steps: "Confirm 2 of 3 in wallet…".
+
+Headless: `useBatchTransaction({ calls, chainId, mode })`.

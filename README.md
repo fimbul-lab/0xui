@@ -42,6 +42,15 @@ npx shadcn@latest add @0xui/chain-selector
 | `sign-message` | Sign messages or typed data, with optional verification. |
 | `transaction-toast` | Follow a transaction in a Sonner toast. |
 | `add-token` | "Add USDC to wallet". |
+| `swap` | Swap block with bring-your-own quotes, approval step, rate and price impact. |
+| `send` | Send block for ETH and ERC-20s with ENS recipients. |
+| `portfolio` | Token holdings with total value. |
+| `batch-transaction` | Several calls in one wallet prompt (EIP-5792), step by step otherwise. |
+| `contract-form` | Read/write forms for any contract from its ABI. |
+| `transaction-history` | Transactions sent from your app with live status. |
+| `ens-profile` | ENS profile card: avatar, bio, links. |
+| `nft-card` | ERC-721/1155 card from on-chain metadata. |
+| `event-feed` | Live feed of a contract's events. |
 | `chain-selector` | Network switcher as a popover or dialog. |
 | `chain-badge` | Static chain chip. Also exports `ChainIcon`. |
 | `address` | ENS name or truncated address, with copy and explorer link. |

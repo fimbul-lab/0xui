@@ -67,14 +67,20 @@ export function filterTokens(tokens: readonly Token[], query: string) {
 }
 
 /**
- * Balances of the connected account for a list of tokens on one chain.
- * ERC-20 balances are read in one batch. Keys are lowercase addresses.
+ * Balances for a list of tokens on one chain, for the connected account or
+ * `address`. ERC-20 balances are read in one batch. Keys are lowercase
+ * token addresses.
  */
 export function useTokenBalances(
   tokens: readonly Token[],
-  { chainId, enabled = true }: { chainId?: number; enabled?: boolean } = {}
+  {
+    chainId,
+    address: addressProp,
+    enabled = true,
+  }: { chainId?: number; address?: Address; enabled?: boolean } = {}
 ) {
-  const { address } = useConnection();
+  const connection = useConnection();
+  const address = addressProp ?? connection.address;
   const erc20 = tokens.filter((t) => !isNativeToken(t));
   const hasNative = tokens.some(isNativeToken);
 
@@ -94,15 +100,22 @@ export function useTokenBalances(
     query: { enabled: enabled && Boolean(address) && erc20.length > 0 },
   });
 
-  return useMemo(() => {
-    const balances = new Map<string, bigint>();
-    if (native.data) balances.set(key({ address: NATIVE_TOKEN_ADDRESS }), native.data.value);
+  const balances = useMemo(() => {
+    const map = new Map<string, bigint>();
+    if (native.data) map.set(key({ address: NATIVE_TOKEN_ADDRESS }), native.data.value);
     reads.data?.forEach((result, i) => {
-      if (result.status === "success") balances.set(key(erc20[i]!), result.result as bigint);
+      if (result.status === "success") map.set(key(erc20[i]!), result.result as bigint);
     });
-    return balances;
+    return map;
     // erc20 is derived from tokens.
   }, [native.data, reads.data, tokens]);
+
+  return {
+    balances,
+    isLoading: native.isLoading || reads.isLoading,
+    // Partial results are still useful; only report failure when nothing loaded.
+    isError: (native.isError || reads.isError) && balances.size === 0,
+  };
 }
 
 const RECENT_LIMIT = 4;
@@ -165,7 +178,7 @@ export function TokenSelectDialog({
     () => allTokens.filter((t) => t.chainId === chainId),
     [allTokens, chainId]
   );
-  const balances = useTokenBalances(tokens, { chainId, enabled: open && showBalances });
+  const { balances } = useTokenBalances(tokens, { chainId, enabled: open && showBalances });
 
   useEffect(() => {
     if (open) {

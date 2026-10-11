@@ -32,6 +32,8 @@ export const demoAccounts = [
 /** Demo transactions sent to this address are mined as reverted. */
 export const demoRevertAddress = "0x000000000000000000000000000000000000dEaD";
 
+const CONNECTED_FLAG = "0xui:demo-wallet-connected";
+
 /** How long a demo transaction stays pending. */
 const MINE_AFTER_MS = 3_000;
 
@@ -65,6 +67,9 @@ function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }
   });
   return hash;
 }
+
+/** Demo call batches (EIP-5792) by id, each a list of demo transaction hashes. */
+const demoBatches = new Map<Hex, Hex[]>();
 
 /** Allowance set by a mined demo approve, so approval demos can complete. */
 function demoAllowance(token: Hex, owner: Hex, spender: Hex) {
@@ -100,6 +105,28 @@ function demoWallet() {
       ...wallet,
       id: "demo",
       name: "Demo Wallet",
+      // The mock only remembers its connection in memory. Persist it so the
+      // Demo Wallet reconnects across docs pages, like a real wallet would.
+      async connect(params) {
+        const result = await wallet.connect(params);
+        try {
+          localStorage.setItem(CONNECTED_FLAG, "1");
+        } catch {}
+        return result;
+      },
+      async disconnect() {
+        try {
+          localStorage.removeItem(CONNECTED_FLAG);
+        } catch {}
+        return wallet.disconnect();
+      },
+      async isAuthorized() {
+        try {
+          return localStorage.getItem(CONNECTED_FLAG) === "1";
+        } catch {
+          return false;
+        }
+      },
       async getProvider(params) {
         const provider = await wallet.getProvider(params);
         return {
@@ -108,6 +135,43 @@ function demoWallet() {
             if (args.method === "eth_sendTransaction") {
               const [tx] = args.params as [{ from: Hex; to: Hex; value?: Hex; data?: Hex }];
               return sendDemoTransaction(tx);
+            }
+            if (args.method === "wallet_getCapabilities") {
+              // Atomic batching everywhere, like a smart account would offer.
+              return Object.fromEntries(
+                config.chains.map((chain) => [toHex(chain.id), { atomic: { status: "supported" } }])
+              );
+            }
+            if (args.method === "wallet_sendCalls") {
+              const [{ from, calls }] = args.params as [
+                { from: Hex; calls: { to: Hex; data?: Hex; value?: Hex }[] },
+              ];
+              const hashes = calls.map((call) => sendDemoTransaction({ from, ...call }));
+              const id = keccak256(toHex(hashes.join("")));
+              demoBatches.set(id, hashes);
+              return { id };
+            }
+            if (args.method === "wallet_getCallsStatus") {
+              const [id] = args.params as [Hex];
+              const txs = (demoBatches.get(id) ?? []).map((hash) => demoTxs.get(hash)!);
+              const mined = txs.length > 0 && txs.every(isMined);
+              return {
+                version: "2.0.0",
+                id,
+                chainId: toHex(params?.chainId ?? 1),
+                atomic: true,
+                status: mined ? 200 : 100,
+                receipts: mined
+                  ? txs.map((tx) => ({
+                      transactionHash: tx.hash,
+                      blockHash: keccak256(toHex(`block-${tx.hash}`)),
+                      blockNumber: "0x1",
+                      gasUsed: "0x5208",
+                      logs: [],
+                      status: "0x1",
+                    }))
+                  : [],
+              };
             }
             if (args.method === "personal_sign") {
               const [message] = args.params as [Hex];

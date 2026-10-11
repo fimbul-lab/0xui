@@ -1,0 +1,53 @@
+---
+title: Transaction History
+description: Transactions sent from your app, with live status. Stored in the browser.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/transaction-history";
+
+A list of transactions sent from your app, newest first. Pending ones update live, and settled ones keep their result. It's stored in this browser (`localStorage`), so it's per device and survives reloads. Other tabs update too.
+
+Connect the **Demo Wallet** and send a couple.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/transaction-history
+```
+
+## Usage
+
+Record transactions wherever you send them, then render the list anywhere:
+
+```tsx
+import { TransactionHistory, recordTransaction } from "@/components/transaction-history";
+
+<TransactionButton
+  transaction={tx}
+  onSubmitted={(hash) =>
+    recordTransaction({ hash, chainId: 1, from: address, description: "Send 0.1 ETH" })
+  }
+/>
+
+<TransactionHistory />
+```
+
+By default, the list shows the connected account's transactions (entries recorded with `from`). Pass `from={null}` to show all. `recordTransaction` works outside React too. It keeps the 50 most recent.
+
+For history across devices, or transactions sent from other apps, you need an indexer. This component only knows what your app recorded.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `from` | `Address \| null` | connected | Filter by sender. `null` shows all. |
+| `limit` | `number` | `10` | Rows shown. |
+| `clearable` | `boolean` | `true` | Show a Clear button. |
+| `title` | `ReactNode` | `"Recent transactions"` | Heading. |
+
+Also exported: `useTransactionHistory`, `updateTransaction`, `clearTransactionHistory`.

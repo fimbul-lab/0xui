@@ -521,6 +521,200 @@
       ]
     },
     {
+      "name": "send",
+      "type": "registry:block",
+      "title": "Send",
+      "description": "Send block for ETH and ERC-20s: AddressInput (address or ENS) + TokenInput (token, amount, balance, Max) + TransactionButton + TransactionStatus. The button names the next missing thing (Enter a recipient / Enter an amount / Insufficient <symbol> balance) before 'Send <symbol>'. Native currency is sent as value, ERC-20s via transfer(). Exports the sendBlocker and sendRequest helpers.",
+      "files": [
+        {
+          "path": "registry/default/components/send.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/address-input",
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/transaction-button",
+        "@0xui/transaction-status"
+      ]
+    },
+    {
+      "name": "swap",
+      "type": "registry:block",
+      "title": "Swap",
+      "description": "Swap block with bring-your-own quotes: two TokenInput panels with a flip button, debounced auto-refreshing quotes from a getQuote(sellToken, buyToken, sellAmount, taker) prop (any aggregator or router), rate row (click to invert), price-impact warning, an ApproveButton step when the sell token needs an allowance, and a swap button naming the blocker (Select a token / Enter an amount / Insufficient balance / Fetching quote / No route found). Exports useSwapQuote, formatRate and the GetQuote/SwapQuote types.",
+      "files": [
+        {
+          "path": "registry/default/components/swap.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "wagmi",
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/approve-button",
+        "@0xui/transaction-button"
+      ]
+    },
+    {
+      "name": "batch-transaction",
+      "type": "registry:component",
+      "title": "Batch Transaction",
+      "description": "Runs several calls (e.g. approve + swap) as one action: a single wallet prompt via EIP-5792 wallet_sendCalls when the wallet reports atomic support (useCapabilities), else one transaction per call, waiting for each. Step list with per-step status, step-counting labels ('Confirm 2 of 3 in wallet\u2026'), network switch, rejection shown as cancelled. mode: auto | atomic | sequential. Exports useBatchTransaction.",
+      "files": [
+        {
+          "path": "registry/default/components/batch-transaction.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/connect-wallet",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "contract-form",
+      "type": "registry:component",
+      "title": "Contract Form",
+      "description": "Read/write forms for any contract generated from its ABI: one collapsible card per function with typed inputs (range-checked ints, checksummed addresses, sized bytes, bool select, JSON arrays/tuples), Read with formatted results for view functions, TransactionButton for writes (plus an ETH value field when payable) naming the first invalid field. Filter with functions=[...] or show=read|write. Exports ContractFunction, parseAbiInput and formatAbiValue.",
+      "files": [
+        {
+          "path": "registry/default/components/contract-form.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "wagmi",
+        "@tanstack/react-query"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/transaction-button"
+      ]
+    },
+    {
+      "name": "portfolio",
+      "type": "registry:block",
+      "title": "Portfolio",
+      "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop. Skeleton rows while loading, plus empty, error and disconnected states. Exports usePortfolio.",
+      "files": [
+        {
+          "path": "registry/default/components/portfolio.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/token-select",
+        "@0xui/token-icon",
+        "@0xui/token-amount"
+      ]
+    },
+    {
+      "name": "transaction-history",
+      "type": "registry:component",
+      "title": "Transaction History",
+      "description": "Transactions sent from this app with live status, persisted in localStorage (synced across tabs, 50 max). Call recordTransaction({ hash, chainId, from, description }) from anywhere (e.g. TransactionButton onSubmitted); pending rows poll for receipts and keep their final status. Filters to the connected account by default. Exports useTransactionHistory, recordTransaction, updateTransaction and clearTransactionHistory.",
+      "files": [
+        {
+          "path": "registry/default/components/transaction-history.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/explorer-link",
+        "@0xui/transaction-status",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "ens-profile",
+      "type": "registry:component",
+      "title": "ENS Profile",
+      "description": "Profile card for an ENS name (forward) or address (primary name): avatar, name, address with copy, description, and website / X / GitHub / email links from text records, read on mainnet. Loading skeleton and not-found state. Exports useEnsProfile, which can read arbitrary text records.",
+      "files": [
+        {
+          "path": "registry/default/components/ens-profile.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/address",
+        "@0xui/address-avatar"
+      ]
+    },
+    {
+      "name": "nft-card",
+      "type": "registry:component",
+      "title": "NFT Card",
+      "description": "Card for an ERC-721 or ERC-1155 token: reads tokenURI or uri (with {id} substitution) and the collection name in one batch, fetches metadata from HTTP, IPFS (configurable gateway), Arweave or inline data: URIs, and shows the image, name, collection, token id and optional traits. Skeleton while loading and a placeholder for missing images or tokens. Exports useNft, fetchNftMetadata, resolveUri and expandTokenUri.",
+      "files": [
+        {
+          "path": "registry/default/components/nft-card.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "@tanstack/react-query",
+        "lucide-react"
+      ]
+    },
+    {
+      "name": "event-feed",
+      "type": "registry:component",
+      "title": "Event Feed",
+      "description": "Live feed of a contract's events (useWatchContractEvent), newest first, deduplicated, with an optional recent-history backfill (getContractEvents over N blocks), indexed-argument filters, default rows showing the event name and formatted args, and a transaction link per event. role=log for polite announcements. renderEvent for custom rows. Exports useEventFeed and formatEventArg.",
+      "files": [
+        {
+          "path": "registry/default/components/event-feed.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "@tanstack/react-query"
+      ],
+      "registryDependencies": [
+        "@0xui/explorer-link",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
       "name": "wagmi-config",
       "type": "registry:lib",
       "title": "wagmi config + provider",

@@ -1,0 +1,56 @@
+---
+title: NFT Card
+description: Image, name and collection for an ERC-721 or ERC-1155 token, from its on-chain metadata.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default, WithTraits } from "@/demos/nft-card";
+
+Reads `tokenURI` (ERC-721) or `uri` (ERC-1155) and fetches the metadata. Handles IPFS, Arweave and inline `data:` metadata. The third card below is a token that doesn't exist.
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/nft-card
+```
+
+## Usage
+
+```tsx
+import { NftCard } from "@/components/nft-card";
+
+<NftCard contract="0xBC4C…f13D" tokenId={1n} chainId={1} />;
+```
+
+### Traits
+
+<Card>
+  <WithTraits client:load />
+</Card>
+
+```tsx
+<NftCard contract={contract} tokenId={1n} showAttributes />
+```
+
+## IPFS
+
+`ipfs://` links go through `https://ipfs.io/ipfs/` by default. The public gateway is slow and rate-limited, so use your own in production:
+
+```tsx
+<NftCard gateway="https://my-gateway.mypinata.cloud/ipfs/" … />
+```
+
+## States
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `loading` | Image and text skeletons. |
+| `ready` | Image, name, collection and id. |
+| `not-found` | "Token not found": no `tokenURI`/`uri`, so it's not an NFT or doesn't exist. |
+| `metadata-error` | "Metadata unavailable": the token exists, but its metadata host failed. Usually a rate-limited public IPFS gateway. |
+
+Helpers: `useNft`, `fetchNftMetadata`, `resolveUri` and `expandTokenUri` (ERC-1155 `{id}` substitution).

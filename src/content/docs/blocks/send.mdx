@@ -1,0 +1,51 @@
+---
+title: Send
+description: Send form for ETH and ERC-20s. Recipient with ENS, amount with balance, and a button that names what's missing.
+---
+
+import { Card } from "@astrojs/starlight/components";
+import { Default } from "@/demos/send";
+
+A complete send flow built from [Address Input](/components/address-input/), [Token Input](/components/token-input/), [Transaction Button](/components/transaction-button/) and [Transaction Status](/components/transaction-status/). The button names the next thing to do: "Enter a recipient", "Enter an amount", "Insufficient USDC balance", then "Send USDC".
+
+<Card>
+  <Default client:load />
+</Card>
+
+## Installation
+
+```bash
+npx shadcn@latest add @0xui/send
+```
+
+## Usage
+
+```tsx
+import { Send } from "@/components/send";
+
+<Send tokens={tokenList.tokens} prices={prices} onSuccess={() => refetch()} />;
+```
+
+Native currency (`NATIVE_TOKEN_ADDRESS`) is sent as a value transfer. ERC-20s call `transfer(to, amount)`. The transaction runs on the selected token's chain, and the button offers a network switch if needed.
+
+### Build your own
+
+`Send` is about 100 lines. If you need a different layout, copy it, or use its pure helpers:
+
+```tsx
+import { sendBlocker, sendRequest } from "@/components/send";
+
+const blocker = sendBlocker(draft, { recipientPhase, insufficient }); // "Enter an amount" | undefined
+const request = sendRequest({ recipient, amount, token });            // { transaction } | { contract }
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tokens` | `Token[]` | — | Sendable tokens. One token locks the picker. |
+| `defaultToken` | `Token` | first token | Initial token. |
+| `popular` | `string[]` | — | Quick picks. |
+| `prices` | `Record<symbol, number>` | — | Fiat values. |
+| `onSubmitted` / `onSuccess` | — | — | Transaction callbacks. |
+| `title` | `ReactNode` | `"Send"` | Heading. `null` hides it. |

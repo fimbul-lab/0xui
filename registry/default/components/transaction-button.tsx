@@ -265,11 +265,11 @@ export function TransactionButton({
 
   let label: ReactNode = children;
   let action: (() => void) | undefined;
+  // In-flight and success states win over `disabledReason`: a form that
+  // clears itself on success shouldn't hide the confirmation.
   if (!flow.isConnected) {
     label = "Connect wallet";
     action = () => setConnectOpen(true);
-  } else if (disabledReason) {
-    label = disabledReason;
   } else if (phase === "switching") {
     label = "Switching network…";
   } else if (phase === "confirming") {
@@ -278,6 +278,8 @@ export function TransactionButton({
     label = "Pending…";
   } else if (phase === "success") {
     label = successLabel;
+  } else if (disabledReason) {
+    label = disabledReason;
   } else if (flow.wrongChain) {
     label = `Switch to ${flow.targetChain?.name ?? "the right network"}`;
     action = flow.switchToTarget;
