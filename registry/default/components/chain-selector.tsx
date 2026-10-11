@@ -13,11 +13,13 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { CheckIcon, ChevronDownIcon, Loader2Icon } from "lucide-react";
-import { useEffect, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { type Chain } from "viem";
 import { useChainId, useChains, useSwitchChain } from "wagmi";
 import { NetworkIcon } from "@web3icons/react/dynamic";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useMounted } from "@/hooks/use-mounted";
+import { isUserRejection } from "@/lib/0xui-utils";
 
 type IconStyleProps =
   | {
@@ -97,22 +99,20 @@ function groupChainsByNetwork(chains: readonly Chain[]) {
 
 function useChainSwitcher() {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
 
   const chainId = useChainId();
   const chains = useChains();
   const currentChain = chains.find((c) => c.id === chainId);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const { mutateAsync, isPending, variables, error, reset } = useSwitchChain();
   const pendingChainId = isPending ? variables?.chainId : undefined;
+  const cancelled = isUserRejection(error);
 
   const onSwitch = async (id: number) => {
     try {
-      await mutateAsync({ chainId: id });
+      // Narrow to the chain-id union when the app registers its config type.
+      await mutateAsync({ chainId: id as (typeof chains)[number]["id"] });
       setOpen(false);
     } catch {
       // Surfaced via `error` below.
@@ -133,7 +133,8 @@ function useChainSwitcher() {
     onSwitch,
     isPending,
     pendingChainId,
-    error,
+    error: cancelled ? null : error,
+    cancelled,
   };
 }
 
@@ -325,12 +326,14 @@ function ChainListContent({
   chains,
   groupByNetwork,
   error,
+  cancelled,
   ...gridProps
 }: {
   mounted: boolean;
   chains: readonly Chain[];
   groupByNetwork?: boolean;
   error: { message: string; shortMessage?: string } | null;
+  cancelled: boolean;
   currentChainId?: number;
   pendingChainId?: number;
   isPending: boolean;
@@ -359,6 +362,11 @@ function ChainListContent({
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error.shortMessage ?? error.message}
+        </p>
+      )}
+      {cancelled && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Request cancelled in wallet
         </p>
       )}
       {groupByNetwork && (mainnet.length > 0 || testnet.length > 0) ? (
@@ -454,6 +462,7 @@ export function ChainSelector(props: ChainSelectorProps) {
           chains={s.chains}
           groupByNetwork={s.groupByNetwork}
           error={s.error}
+          cancelled={s.cancelled}
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}
@@ -501,6 +510,7 @@ export function ChainSelectorDialog(props: ChainSelectorProps) {
           chains={s.chains}
           groupByNetwork={s.groupByNetwork}
           error={s.error}
+          cancelled={s.cancelled}
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}
