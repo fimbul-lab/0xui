@@ -115,3 +115,35 @@ export function mergeTokenLists(lists: readonly Pick<TokenList, "tokens">[]) {
   }
   return tokens;
 }
+
+export type TokenFilters = {
+  /**
+   * Only these tokens (a whitelist). Entries are addresses, or
+   * `chainId:address` to pin a chain. Symbols aren't accepted: spam tokens
+   * copy the symbols of real ones.
+   */
+  allowlist?: readonly string[];
+  /** Never these tokens (a blacklist), e.g. known scams. Same format as `allowlist`. */
+  blocklist?: readonly string[];
+};
+
+function matcher(entries: readonly string[]) {
+  const set = new Set(entries.map((e) => e.toLowerCase()));
+  return (token: Pick<TokenInfo, "chainId" | "address">) => {
+    const address = token.address.toLowerCase();
+    return set.has(address) || set.has(`${token.chainId}:${address}`);
+  };
+}
+
+/**
+ * Apply an allowlist and/or blocklist to tokens. The blocklist wins when a
+ * token is on both.
+ */
+export function applyTokenFilters<T extends Pick<TokenInfo, "chainId" | "address">>(
+  tokens: readonly T[],
+  { allowlist, blocklist }: TokenFilters
+): T[] {
+  const allowed = allowlist ? matcher(allowlist) : () => true;
+  const blocked = blocklist ? matcher(blocklist) : () => false;
+  return tokens.filter((t) => allowed(t) && !blocked(t));
+}

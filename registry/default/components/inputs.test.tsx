@@ -241,7 +241,7 @@ describe("TokenSelect", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Loading tokens…");
   });
 
-  it("caps long lists until you search", async () => {
+  it("pages through long lists", async () => {
     const user = userEvent.setup();
     const many: Token[] = Array.from({ length: 150 }, (_, i) => ({
       chainId: 1,
@@ -254,11 +254,33 @@ describe("TokenSelect", () => {
 
     await user.click(screen.getByRole("button", { name: "Select token" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getAllByRole("button", { name: /^T\d+/ })).toHaveLength(100);
-    expect(within(dialog).getByText("Showing 100 of 150. Search to find the rest.")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("button", { name: /^T\d+/ })).toHaveLength(50);
+    expect(within(dialog).getByText("Showing 50 of 150")).toBeInTheDocument();
 
+    await user.click(within(dialog).getByRole("button", { name: "Show more" }));
+    expect(within(dialog).getAllByRole("button", { name: /^T\d+/ })).toHaveLength(100);
+
+    // A search starts from the first page again and finds tokens beyond it.
     await user.type(within(dialog).getByRole("searchbox"), "T149");
     expect(within(dialog).getByRole("button", { name: /T149/ })).toBeInTheDocument();
+  });
+
+  it("uses balances from your own source instead of the RPC", async () => {
+    const user = userEvent.setup();
+    // No RPC is mocked: any balance read would fail.
+    renderWithWagmi(
+      <TokenSelect
+        tokens={[dai, usdc, usdt]}
+        balances={{ [usdt.address]: parseUnits("250", 6) }}
+        onValueChange={() => {}}
+        chainId={1}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Select token" }));
+    const rows = within(await screen.findByRole("list", { name: "Tokens" })).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("USDT");
+    expect(rows[0]).toHaveTextContent("250");
   });
 
   it("says when nothing matches", async () => {

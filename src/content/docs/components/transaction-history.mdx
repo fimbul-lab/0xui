@@ -3,7 +3,7 @@ title: Transaction History
 description: Transactions sent from your app, with live status. Stored in the browser.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import { Aside, Card } from "@astrojs/starlight/components";
 import { Default } from "@/demos/transaction-history";
 
 A list of transactions sent from your app, newest first. Pending ones update live, and settled ones keep their result. It's stored in this browser (`localStorage`), so it's per device and survives reloads. Other tabs update too.
@@ -39,14 +39,22 @@ import { TransactionHistory, recordTransaction } from "@/components/transaction-
 
 By default, the list shows the connected account's transactions (entries recorded with `from`). Pass `from={null}` to show all. `recordTransaction` works outside React too. It keeps the 50 most recent.
 
-For history across devices, or transactions sent from other apps, you need an indexer. This component only knows what your app recorded.
+<Aside type="tip" title="In production">
+Local history only knows what this browser recorded. For full history across devices and apps, we recommend an [index of the chain](/getting-started/indexed-data/), either your own (Postgres + ClickHouse) or a service like Goldsky. Pass its rows to `transactions`. Pending ones still update live:
+
+```tsx
+<TransactionHistory transactions={transactionsFromYourIndex} />
+```
+</Aside>
+
 
 ## Props
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `from` | `Address \| null` | connected | Filter by sender. `null` shows all. |
-| `limit` | `number` | `10` | Rows shown. |
+| `transactions` | `HistoryEntry[]` | — | Transactions from your own source instead of this browser's. |
+| `pageSize` | `number` | `10` | Rows per page, with "Show more". |
 | `clearable` | `boolean` | `true` | Show a Clear button. |
 | `title` | `ReactNode` | `"Recent transactions"` | Heading. |
 

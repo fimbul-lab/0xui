@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { formatUnits, type Address } from "viem";
 import { useChainId, useConnection } from "wagmi";
 import { TokenAmount } from "@/components/token-amount";
@@ -23,17 +23,27 @@ export function usePortfolio({
   address,
   chainId: chainIdProp,
   hideZero = true,
+  balances: balancesProp,
 }: {
   tokens: readonly Token[];
   prices?: Record<string, number>;
   address?: Address;
   chainId?: number;
   hideZero?: boolean;
+  /** Balances from your own source (e.g. an indexer), keyed by token address. Skips RPC reads. */
+  balances?: ReadonlyMap<string, bigint> | Record<string, bigint>;
 }) {
   const currentChainId = useChainId();
   const chainId = chainIdProp ?? currentChainId;
   const onChain = useMemo(() => tokens.filter((t) => t.chainId === chainId), [tokens, chainId]);
-  const { balances, isLoading, isError } = useTokenBalances(onChain, { chainId, address });
+  const rpc = useTokenBalances(onChain, { chainId, address, enabled: !balancesProp });
+  const balances = useMemo(() => {
+    if (!balancesProp) return rpc.balances;
+    const entries = balancesProp instanceof Map ? [...balancesProp] : Object.entries(balancesProp);
+    return new Map(entries.map(([key, value]) => [key.toLowerCase(), value]));
+  }, [balancesProp, rpc.balances]);
+  const isLoading = !balancesProp && rpc.isLoading;
+  const isError = !balancesProp && rpc.isError;
 
   const rows = useMemo(() => {
     const list: PortfolioRow[] = onChain.map((token) => {
@@ -70,6 +80,10 @@ export type PortfolioProps = {
   /** Hide tokens with a zero balance. */
   hideZero?: boolean;
   currency?: string;
+  /** Balances from your own source, e.g. an indexer. See usePortfolio. */
+  balances?: ReadonlyMap<string, bigint> | Record<string, bigint>;
+  /** Rows per page, with "Show more" for the rest. */
+  pageSize?: number;
   title?: ReactNode;
   className?: string;
 };
@@ -86,9 +100,12 @@ export function Portfolio({
   chainId,
   hideZero = true,
   currency = "USD",
+  balances,
+  pageSize = 10,
   title = "Portfolio",
   className,
 }: PortfolioProps) {
+  const [visible, setVisible] = useState(pageSize);
   const { address: connected } = useConnection();
   const address = addressProp ?? connected;
   const { rows, total, unpriced, isLoading, isError } = usePortfolio({
@@ -97,9 +114,10 @@ export function Portfolio({
     address,
     chainId,
     hideZero,
+    balances,
   });
   const money = new Intl.NumberFormat(undefined, { style: "currency", currency });
-  const phase = !address ? "idle" : isLoading ? "loading" : isError ? "error" : rows.length ? "ready" : "empty";
+  const phase = !address && !balances ? "idle" : isLoading ? "loading" : isError ? "error" : rows.length ? "ready" : "empty";
 
   return (
     <section
@@ -144,7 +162,7 @@ export function Portfolio({
 
       {phase === "ready" && (
         <ul className="flex flex-col">
-          {rows.map(({ token, balance, value }) => (
+          {rows.slice(0, visible).map(({ token, balance, value }) => (
             <li key={`${token.chainId}-${token.address}`} className="flex items-center gap-3 py-2">
               <TokenIcon symbol={token.symbol} src={token.logoURI} size={32} />
               <span className="flex min-w-0 flex-1 flex-col">
@@ -162,6 +180,15 @@ export function Portfolio({
             </li>
           ))}
         </ul>
+      )}
+      {phase === "ready" && rows.length > visible && (
+        <button
+          type="button"
+          onClick={() => setVisible((v) => v + pageSize)}
+          className="self-center rounded-md px-3 py-1.5 text-sm font-medium hover:bg-muted"
+        >
+          Show more ({rows.length - visible})
+        </button>
       )}
     </section>
   );

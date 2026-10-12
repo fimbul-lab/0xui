@@ -25,7 +25,7 @@ import {
 import { BatchTransaction } from "./batch-transaction";
 import { ContractForm, formatAbiValue, parseAbiInput } from "./contract-form";
 import { EnsProfile } from "./ens-profile";
-import { EventFeed, formatEventArg } from "./event-feed";
+import { EventFeed, formatEventArg, type FeedEvent } from "./event-feed";
 import { NftCard, expandTokenUri, resolveUri } from "./nft-card";
 import { Portfolio } from "./portfolio";
 import { Send, sendBlocker, sendRequest } from "./send";
@@ -334,6 +334,33 @@ describe("Portfolio", () => {
     expect(rows[1]).toHaveTextContent("USD Coin");
   });
 
+  it("uses balances from your own source and pages the rows", async () => {
+    const user = userEvent.setup();
+    const many: Token[] = Array.from({ length: 12 }, (_, i) => ({
+      chainId: 1,
+      address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
+      symbol: `T${i}`,
+      name: `Token ${i}`,
+      decimals: 0,
+    }));
+    // No wallet, no RPC: the indexer data is all there is.
+    renderWithWagmi(
+      <Portfolio
+        tokens={many}
+        chainId={1}
+        balances={Object.fromEntries(many.map((t, i) => [t.address, BigInt(i + 1)]))}
+        prices={Object.fromEntries(many.map((t) => [t.symbol, 1]))}
+        pageSize={5}
+      />
+    );
+
+    expect(await screen.findByText("$78.00")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Token 11");
+    await user.click(screen.getByRole("button", { name: "Show more (7)" }));
+    expect(screen.getAllByRole("listitem")).toHaveLength(10);
+  });
+
   it("asks to connect when there's no account", () => {
     renderWithWagmi(<Portfolio tokens={[eth]} />);
     expect(screen.getByText("Connect a wallet to see its tokens.")).toBeInTheDocument();
@@ -367,6 +394,25 @@ describe("TransactionHistory", () => {
 
     expect(await screen.findByText("Mine")).toBeInTheDocument();
     expect(screen.queryByText("Theirs")).not.toBeInTheDocument();
+  });
+
+  it("renders transactions from your own source and pages them", async () => {
+    const user = userEvent.setup();
+    const indexed = Array.from({ length: 4 }, (_, i) => ({
+      hash: `0x${String(i + 1).repeat(64)}` as `0x${string}`,
+      chainId: 1,
+      description: `Indexed ${i}`,
+      submittedAt: Date.now() - i * 60_000,
+      status: "confirmed" as const,
+    }));
+    renderWithWagmi(<TransactionHistory from={null} transactions={indexed} pageSize={3} />);
+
+    expect(screen.getByText("Indexed 0")).toBeInTheDocument();
+    expect(screen.queryByText("Indexed 3")).not.toBeInTheDocument();
+    // Not the local store, so nothing to clear.
+    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show more (1)" }));
+    expect(screen.getByText("Indexed 3")).toBeInTheDocument();
   });
 
   it("clears", async () => {
@@ -469,6 +515,27 @@ describe("EventFeed", () => {
     expect(formatEventArg(1234567n)).toBe("1,234,567");
     expect(formatEventArg(recipient)).toBe("0x71C7…976F");
     expect(formatEventArg(true)).toBe("true");
+  });
+
+  it("shows past events from your own source", () => {
+    const past: FeedEvent = {
+      address: usdc.address,
+      topics: [],
+      data: "0x",
+      eventName: "Transfer",
+      args: { from: testAccounts[0], to: recipient, value: 42n },
+      blockNumber: 99n,
+      blockHash: `0x${"44".repeat(32)}`,
+      transactionHash: `0x${"55".repeat(32)}`,
+      transactionIndex: 0,
+      logIndex: 0,
+      removed: false,
+    };
+    renderWithWagmi(
+      <EventFeed address={usdc.address} abi={erc20Abi} eventName="Transfer" initialEvents={[past]} />,
+      { config: createTestConfig({ rpc: { ...fakeChainRpc(), eth_newFilter: "0x1", eth_getFilterChanges: [], eth_uninstallFilter: true } }) }
+    );
+    expect(within(screen.getByRole("log")).getByText("42")).toBeInTheDocument();
   });
 
   it("shows new events as they arrive", async () => {

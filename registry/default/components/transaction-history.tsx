@@ -1,5 +1,5 @@
 import { CheckIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address, Hash } from "viem";
 import { useConnection } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
@@ -121,7 +121,13 @@ function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string })
     }
   }, [receipt.data, entry.hash]);
 
-  const status = entry.status;
+  // Entries from an indexer aren't in the local store, so derive the status too.
+  const status: HistoryStatus =
+    entry.status === "pending" && receipt.data
+      ? receipt.data.status === "success"
+        ? "confirmed"
+        : "reverted"
+      : entry.status;
   return (
     <li data-status={status} className="flex items-center gap-3 py-2 text-sm">
       {status === "pending" ? (
@@ -150,8 +156,13 @@ function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string })
 export type TransactionHistoryProps = {
   /** Show only this account's transactions. Defaults to the connected account. Pass null for everyone's. */
   from?: Address | null;
-  /** Show at most this many. */
-  limit?: number;
+  /**
+   * Transactions from your own source, e.g. an indexer, instead of the ones
+   * recorded in this browser. Pending entries still update live.
+   */
+  transactions?: readonly HistoryEntry[];
+  /** Rows per page, with "Show more" for the rest. */
+  pageSize?: number;
   /** Show a "Clear" button. */
   clearable?: boolean;
   title?: ReactNode;
@@ -166,7 +177,8 @@ export type TransactionHistoryProps = {
  */
 export function TransactionHistory({
   from: fromProp,
-  limit = 10,
+  transactions: transactionsProp,
+  pageSize = 10,
   clearable = true,
   title = "Recent transactions",
   locale,
@@ -174,8 +186,10 @@ export function TransactionHistory({
 }: TransactionHistoryProps) {
   const { address } = useConnection();
   const from = fromProp === null ? undefined : (fromProp ?? address);
-  const { transactions, clear } = useTransactionHistory({ from });
-  const shown = transactions.slice(0, limit);
+  const local = useTransactionHistory({ from });
+  const transactions = transactionsProp ?? local.transactions;
+  const [visible, setVisible] = useState(pageSize);
+  const shown = transactions.slice(0, visible);
 
   return (
     <section
@@ -185,8 +199,8 @@ export function TransactionHistory({
     >
       <header className="flex items-center justify-between gap-2">
         {title && <h3 className="font-semibold">{title}</h3>}
-        {clearable && shown.length > 0 && (
-          <Button variant="ghost" size="xs" onClick={clear}>
+        {clearable && !transactionsProp && shown.length > 0 && (
+          <Button variant="ghost" size="xs" onClick={local.clear}>
             Clear
           </Button>
         )}
@@ -201,6 +215,15 @@ export function TransactionHistory({
             <HistoryRow key={entry.hash} entry={entry} locale={locale} />
           ))}
         </ul>
+      )}
+      {transactions.length > visible && (
+        <button
+          type="button"
+          onClick={() => setVisible((v) => v + pageSize)}
+          className="self-center rounded-md px-3 py-1.5 text-sm font-medium hover:bg-muted"
+        >
+          Show more ({transactions.length - visible})
+        </button>
       )}
     </section>
   );

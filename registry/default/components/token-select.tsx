@@ -130,6 +130,49 @@ export function sortByHoldings(
     .map((t) => t.token);
 }
 
+/** Normalize caller-supplied balances to lowercase-address keys. */
+function toBalanceMap(balances: ReadonlyMap<string, bigint> | Record<string, bigint>) {
+  const entries = balances instanceof Map ? [...balances] : Object.entries(balances);
+  return new Map(entries.map(([address, value]) => [address.toLowerCase(), value]));
+}
+
+/**
+ * Last row of a paginated list: loads the next page when scrolled into
+ * view, with a button for keyboard users and browsers without
+ * IntersectionObserver.
+ */
+function LoadMore({
+  shown,
+  total,
+  onLoadMore,
+}: {
+  shown: number;
+  total: number;
+  onLoadMore: () => void;
+}) {
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) onLoadMore();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onLoadMore, shown]);
+
+  return (
+    <li ref={ref} className="flex flex-col items-center gap-1 px-2 py-3 text-xs text-muted-foreground">
+      <span>
+        Showing {shown} of {total}
+      </span>
+      <button type="button" onClick={onLoadMore} className="rounded-md px-2 py-1 font-medium text-foreground hover:bg-muted">
+        Show more
+      </button>
+    </li>
+  );
+}
+
 const RECENT_LIMIT = 4;
 const recentKey = (chainId: number) => `0xui:recent-tokens:${chainId}`;
 
@@ -169,8 +212,13 @@ export type TokenSelectDialogProps = {
   prices?: Record<string, number>;
   /** The token list is still loading, e.g. `useTokenList(…).isLoading`. */
   isLoading?: boolean;
-  /** Rows shown before searching. Long lists (Uniswap's has 400+ tokens on Ethereum) stay fast. */
-  maxRows?: number;
+  /** Rows per page. More load as you scroll, or with "Show more". Keeps 400-token lists fast. */
+  pageSize?: number;
+  /**
+   * Balances from your own source, e.g. an indexer, keyed by token address.
+   * When given, nothing is read over RPC.
+   */
+  balances?: ReadonlyMap<string, bigint> | Record<string, bigint>;
   title?: ReactNode;
 };
 
@@ -186,7 +234,8 @@ export function TokenSelectDialog({
   showBalances = true,
   prices,
   isLoading = false,
-  maxRows = 100,
+  pageSize = 50,
+  balances: balancesProp,
   title = "Select a token",
 }: TokenSelectDialogProps) {
   const currentChainId = useChainId();
@@ -199,7 +248,15 @@ export function TokenSelectDialog({
     () => allTokens.filter((t) => t.chainId === chainId),
     [allTokens, chainId]
   );
-  const { balances } = useTokenBalances(tokens, { chainId, enabled: open && showBalances });
+  const rpc = useTokenBalances(tokens, {
+    chainId,
+    enabled: open && showBalances && !balancesProp,
+  });
+  const balances = useMemo(
+    () => (balancesProp ? toBalanceMap(balancesProp) : rpc.balances),
+    [balancesProp, rpc.balances]
+  );
+  const [visible, setVisible] = useState(pageSize);
 
   useEffect(() => {
     if (open) {
@@ -207,6 +264,9 @@ export function TokenSelectDialog({
       setRecent(readRecent(chainId));
     }
   }, [open, chainId]);
+
+  // Back to the first page whenever the results change.
+  useEffect(() => setVisible(pageSize), [query, open, pageSize]);
 
   const results = useMemo(() => {
     const matches = filterTokens(tokens, query);
@@ -297,7 +357,7 @@ export function TokenSelectDialog({
           </p>
         ) : (
           <ul ref={listRef} aria-label="Tokens" className="-mx-2 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
-            {results.slice(0, maxRows).map((token) => {
+            {results.slice(0, visible).map((token) => {
               const balance = balances.get(key(token));
               const selected = value !== undefined && key(value) === key(token);
               return (
@@ -334,10 +394,12 @@ export function TokenSelectDialog({
                 </li>
               );
             })}
-            {results.length > maxRows && (
-              <li className="px-2 py-3 text-center text-xs text-muted-foreground">
-                Showing {maxRows} of {results.length}. Search to find the rest.
-              </li>
+            {results.length > visible && (
+              <LoadMore
+                shown={visible}
+                total={results.length}
+                onLoadMore={() => setVisible((v) => v + pageSize)}
+              />
             )}
           </ul>
         )}
@@ -365,7 +427,8 @@ export function TokenSelect({
   showBalances,
   prices,
   isLoading,
-  maxRows,
+  pageSize,
+  balances,
   title,
   placeholder = "Select token",
   className,
@@ -400,7 +463,8 @@ export function TokenSelect({
         showBalances={showBalances}
         prices={prices}
         isLoading={isLoading}
-        maxRows={maxRows}
+        pageSize={pageSize}
+        balances={balances}
         title={title}
       />
     </>

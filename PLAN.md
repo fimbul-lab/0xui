@@ -216,6 +216,14 @@ These are fast and they lock in the conventions before the big components.
   - `TokenIcon` resolves `ipfs://` logos and only mounts the built-in icon after the list logo fails. Mounting it as a placeholder fetched a built-in icon for every row.
 - **Demo Wallet:** Multicall is back on in the docs config, and the demo transport patches allowance results inside Multicall3 `aggregate3` batches.
 
+### Filters, pagination, indexed data (2026-10-12)
+- **Filters:** `applyTokenFilters` and `useTokenList({ allowlist, blocklist })` take addresses or `chainId:address`. Symbols aren't accepted, because spam copies them. The blocklist wins, and the native currency is always kept.
+- **Pagination:**
+  - `TokenSelect`: `pageSize` (50), infinite scroll via IntersectionObserver, plus a "Show more" button.
+  - `Portfolio` and `TransactionHistory`: `pageSize` (10) with "Show more".
+- **Bring your own data:** `balances` on TokenSelect and Portfolio, `transactions` on TransactionHistory, and `initialEvents` on EventFeed. Each skips the matching RPC reads.
+- **Docs:** a new "Indexed data" guide recommends an index of the chain for production: your own Postgres (current state) + ClickHouse (history), or Goldsky (subgraphs, or Mirror into your own Postgres/ClickHouse). "In production" callouts on the relevant pages.
+
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).
 - Document the shadcn registry MCP (`npx shadcn registry:mcp`) so agents can browse and install 0xui.

@@ -354,7 +354,7 @@
       "name": "token-select",
       "type": "registry:component",
       "title": "Token Select",
-      "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading state; and the first 100 rows until you search, so 400-token lists stay fast. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type.",
+      "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading state; and pagination (50 rows per page, infinite scroll plus a Show more button) so 400-token lists stay fast. Accepts balances from an indexer via the balances prop, which skips RPC reads. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type.",
       "files": [
         {
           "path": "registry/default/components/token-select.tsx",
@@ -615,7 +615,7 @@
       "name": "portfolio",
       "type": "registry:block",
       "title": "Portfolio",
-      "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop. Skeleton rows while loading, plus empty, error and disconnected states. Exports usePortfolio.",
+      "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop. Pagination (pageSize with Show more). Accepts balances from an indexer (balances prop) instead of RPC reads. Skeleton rows while loading, plus empty, error and disconnected states. Exports usePortfolio.",
       "files": [
         {
           "path": "registry/default/components/portfolio.tsx",
@@ -636,7 +636,7 @@
       "name": "transaction-history",
       "type": "registry:component",
       "title": "Transaction History",
-      "description": "Transactions sent from this app with live status, persisted in localStorage (synced across tabs, 50 max). Call recordTransaction({ hash, chainId, from, description }) from anywhere (e.g. TransactionButton onSubmitted); pending rows poll for receipts and keep their final status. Filters to the connected account by default. Exports useTransactionHistory, recordTransaction, updateTransaction and clearTransactionHistory.",
+      "description": "Transactions sent from this app with live status, persisted in localStorage (synced across tabs, 50 max). Call recordTransaction({ hash, chainId, from, description }) from anywhere (e.g. TransactionButton onSubmitted); pending rows poll for receipts and keep their final status. Filters to the connected account by default. Pass transactions from an indexer (transactions prop) for cross-device history. Paginated with Show more. Exports useTransactionHistory, recordTransaction, updateTransaction and clearTransactionHistory.",
       "files": [
         {
           "path": "registry/default/components/transaction-history.tsx",
@@ -702,7 +702,7 @@
       "name": "event-feed",
       "type": "registry:component",
       "title": "Event Feed",
-      "description": "Live feed of a contract's events (useWatchContractEvent), newest first, deduplicated, with an optional recent-history backfill (getContractEvents over N blocks), indexed-argument filters, default rows showing the event name and formatted args, and a transaction link per event. role=log for polite announcements. renderEvent for custom rows. Exports useEventFeed and formatEventArg.",
+      "description": "Live feed of a contract's events (useWatchContractEvent), newest first, deduplicated, with an optional recent-history backfill (getContractEvents over N blocks), indexed-argument filters, default rows showing the event name and formatted args, and a transaction link per event. role=log for polite announcements. renderEvent for custom rows. initialEvents takes past events from an indexer instead of RPC history. Exports useEventFeed and formatEventArg.",
       "files": [
         {
           "path": "registry/default/components/event-feed.tsx",
@@ -759,7 +759,7 @@
       "name": "token-list",
       "type": "registry:lib",
       "title": "Token list",
-      "description": "Token list standard (tokenlists.org, as used by Uniswap) for 0xui: TokenInfo and TokenList types (including tags and extensions such as Uniswap's bridgeInfo), parseTokenList (validates, drops non-EVM entries such as Solana tokens, checksums addresses), fetchTokenList (http, ipfs, ar), mergeTokenLists, nativeToken(chain) (lists don't include ETH), NATIVE_TOKEN_ADDRESS and UNISWAP_DEFAULT_LIST.",
+      "description": "Token list standard (tokenlists.org, as used by Uniswap) for 0xui: TokenInfo and TokenList types (including tags and extensions such as Uniswap's bridgeInfo), parseTokenList (validates, drops non-EVM entries such as Solana tokens, checksums addresses), fetchTokenList (http, ipfs, ar), mergeTokenLists, nativeToken(chain) (lists don't include ETH), applyTokenFilters (allowlist/whitelist and blocklist by address or chainId:address), NATIVE_TOKEN_ADDRESS and UNISWAP_DEFAULT_LIST.",
       "files": [
         {
           "path": "registry/default/lib/token-list.ts",
@@ -777,7 +777,7 @@
       "name": "use-token-list",
       "type": "registry:hook",
       "title": "useTokenList",
-      "description": "Load one or more token lists by URL (e.g. https://tokens.uniswap.org) with TanStack Query (cached for the session, one retry), merge and de-duplicate them, filter to the current or a given chain, and put the native currency first. Returns { tokens, lists, isLoading, error }, ready for TokenSelect, TokenInput, Swap, Send and Portfolio.",
+      "description": "Load one or more token lists by URL (e.g. https://tokens.uniswap.org) with TanStack Query (cached for the session, one retry), merge and de-duplicate them, filter to the current or a given chain, apply an allowlist (whitelist) or blocklist, and put the native currency first. Returns { tokens, lists, isLoading, error }, ready for TokenSelect, TokenInput, Swap, Send and Portfolio.",
       "files": [
         {
           "path": "registry/default/hooks/use-token-list.ts",

@@ -3,8 +3,8 @@ title: Token lists
 description: 0xui uses the token list standard, the format of Uniswap's lists. Load any list with useTokenList.
 ---
 
-import { Card } from "@astrojs/starlight/components";
-import { Default } from "@/demos/token-select";
+import { Aside, Card } from "@astrojs/starlight/components";
+import { Default, Allowlisted } from "@/demos/token-select";
 
 Every 0xui component that takes tokens (Token Select, Token Input, Swap, Send, Portfolio) takes them in the [token list standard](https://tokenlists.org). It's the JSON format Uniswap created, and CoinGecko, most DEXs and most wallets publish lists in it. So you don't map anything: load a list and pass its tokens.
 
@@ -52,6 +52,23 @@ const { tokens } = useTokenList(
 
 Earlier lists win when two lists contain the same token, and `extraTokens` win over everything. `ipfs://` and `ar://` list URLs work too.
 
+## Allowlist and blocklist
+
+Long lists include tokens you may not want to offer. Pass an **allowlist** (a whitelist) to show only the tokens you support, or a **blocklist** to hide known scams:
+
+```tsx
+const { tokens } = useTokenList(UNISWAP_DEFAULT_LIST, {
+  allowlist: [USDC, USDT, WETH, WBTC],        // only these, on any chain
+  blocklist: ["8453:0x…"],                    // never this one, on Base
+});
+```
+
+<Card>
+  <Allowlisted client:load />
+</Card>
+
+Entries are token addresses, or `chainId:address` to pin a chain. Symbols aren't accepted, because spam tokens copy the symbols of real ones. The blocklist wins when a token is on both, and the native currency is always kept. For plain arrays, use `applyTokenFilters(tokens, { allowlist, blocklist })` from `@/lib/token-list`.
+
 ## The token shape
 
 ```ts
@@ -80,11 +97,13 @@ Writing tokens by hand? Use the same shape. `nativeToken(chain)` builds the nati
 
 Uniswap's list has about 400 tokens on Ethereum alone, so the components are built for that:
 
-- **Token Select** shows the first 100 rows (tokens you hold first) until the user searches.
-- **Balances** for the whole list are read in one batched multicall per component.
-- **Portfolio** reads every token on the chain. With a long list, consider passing a shorter one.
+- **Token Select** pages through the list 50 rows at a time (tokens you hold first), loading more as you scroll.
+- **Balances** for the whole list are read in batched multicalls.
+- **Portfolio** reads every token on the chain and shows 10 rows per page.
 
-Without a wallet or RPC provider, lists like this can hit public RPC rate limits. Use your own RPC URL in production.
+<Aside type="tip" title="In production">
+Reading balances for 400 tokens per user over RPC is fine for a prototype but hits public RPC rate limits at scale. We recommend an [index of the chain](/getting-started/indexed-data/): your own Postgres + ClickHouse, or a service like Goldsky. Pass its balances to the `balances` prop.
+</Aside>
 
 ## Without the hook
 

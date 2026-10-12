@@ -3,7 +3,7 @@ title: Portfolio
 description: Token holdings with total value, sorted largest first.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import { Aside, Card } from "@astrojs/starlight/components";
 import { Default } from "@/demos/portfolio";
 
 Holdings for a token list: total value on top, then one row per token with amount and value, largest first. All balances are read in one batch.
@@ -32,6 +32,15 @@ It shows the connected account's holdings, or pass `address` for anyone's. Only 
 
 Headless: `usePortfolio({ tokens, prices })` returns sorted `rows`, `total` and `unpriced`.
 
+<Aside type="tip" title="In production">
+Over RPC, a portfolio costs one balance read per token, per user, per chain. We recommend an [index of the chain](/getting-started/indexed-data/), either your own (Postgres + ClickHouse) or a service like Goldsky. Pass its balances in:
+
+```tsx
+<Portfolio tokens={tokens} address={address} balances={balancesFromYourIndex} prices={prices} />
+```
+</Aside>
+
+
 ## States
 
 | `data-phase` | What the user sees |
@@ -52,3 +61,5 @@ Headless: `usePortfolio({ tokens, prices })` returns sorted `rows`, `total` and 
 | `chainId` | `number` | current | Chain to read. |
 | `hideZero` | `boolean` | `true` | Hide empty balances. |
 | `currency` | `string` | `"USD"` | Currency for values. |
+| `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
+| `pageSize` | `number` | `10` | Rows per page, with "Show more". |

@@ -3,7 +3,7 @@ title: Token Select
 description: Searchable token picker with recent and popular tokens and the user's balances.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import { Aside, Card } from "@astrojs/starlight/components";
 import { Default } from "@/demos/token-select";
 
 A token pill that opens a picker. It has search by symbol, name or pasted address, quick picks (your recent tokens, then `popular`), and the full list with tokens you hold sorted first. Arrow keys move between the search field and the rows.
@@ -41,7 +41,18 @@ const [token, setToken] = useState<Token>();
 />;
 ```
 
-Only tokens on `chainId` (the current chain by default) are listed. `useTokenList` adds the native currency (ETH) first, since lists don't include it.
+Only tokens on `chainId` (the current chain by default) are listed. `useTokenList` adds the native currency (ETH) first, since lists don't include it, and takes an `allowlist` or `blocklist` to control which tokens appear.
+
+The list is paged, 50 rows at a time (`pageSize`): more load as the user scrolls, or with "Show more".
+
+<Aside type="tip" title="In production">
+Balances are read over RPC by default: fine for prototypes, but heavy for long lists. With an [index of the chain](/getting-started/indexed-data/), pass `balances` and nothing is read over RPC:
+
+```tsx
+<TokenSelect tokens={tokens} balances={balancesFromYourIndex} … />
+```
+</Aside>
+
 
 ### Your own trigger
 
@@ -67,7 +78,8 @@ Also accepts shadcn `Button` props for the trigger.
 | `showBalances` | `boolean` | `true` | Read and show the connected account's balances. |
 | `prices` | `Record<symbol, number>` | — | Sort held tokens by value. Without prices, held tokens keep list order: raw amounts aren't comparable across tokens. |
 | `isLoading` | `boolean` | `false` | The list is still downloading. Shows "Loading tokens…". |
-| `maxRows` | `number` | `100` | Rows shown before searching. |
+| `pageSize` | `number` | `50` | Rows per page. More load on scroll or with "Show more". |
+| `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
 | `placeholder` | `string` | `"Select token"` | Trigger text with nothing selected. |
 
 Recent picks are kept in `localStorage` per chain (4 max). If storage is blocked, they're simply not saved.

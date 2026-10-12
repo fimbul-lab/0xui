@@ -28,6 +28,7 @@ export default defineConfig({
             { label: "Conventions", slug: "getting-started/conventions" },
             { label: "Hello dapp", slug: "getting-started/hello-dapp" },
             { label: "Token lists", slug: "getting-started/token-lists" },
+            { label: "Indexed data", slug: "getting-started/indexed-data" },
           ],
         },
         {

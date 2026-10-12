@@ -8,6 +8,7 @@ import { createTestConfig } from "../../../test/wagmi";
 import { useTokenList } from "../hooks/use-token-list";
 import {
   NATIVE_TOKEN_ADDRESS,
+  applyTokenFilters,
   isNativeToken,
   mergeTokenLists,
   nativeToken,
@@ -70,6 +71,22 @@ describe("helpers", () => {
   });
 });
 
+describe("applyTokenFilters", () => {
+  const tokens = parseTokenList(list([usdc, baseUsdc])).tokens;
+
+  it("keeps only allowlisted addresses, on any chain or a pinned one", () => {
+    expect(applyTokenFilters(tokens, { allowlist: [usdc.address] }).map((t) => t.chainId)).toEqual([1]);
+    expect(
+      applyTokenFilters(tokens, { allowlist: [`8453:${baseUsdc.address.toLowerCase()}`] }).map((t) => t.chainId)
+    ).toEqual([8453]);
+  });
+
+  it("drops blocklisted tokens, even when allowlisted", () => {
+    expect(applyTokenFilters(tokens, { blocklist: [baseUsdc.address] })).toHaveLength(1);
+    expect(applyTokenFilters(tokens, { allowlist: [usdc.address], blocklist: [usdc.address] })).toHaveLength(0);
+  });
+});
+
 describe("useTokenList", () => {
   const dataUrl = (json: unknown) =>
     `data:application/json;base64,${Buffer.from(JSON.stringify(json)).toString("base64")}`;
@@ -106,6 +123,17 @@ describe("useTokenList", () => {
 
     await waitFor(() => expect(result.current.lists).toHaveLength(2));
     expect(result.current.tokens.map((t) => `${t.chainId}:${t.name}`)).toEqual(["1:My USDC", "8453:USDCoin"]);
+  });
+
+  it("applies an allowlist but keeps the native currency", async () => {
+    const { result } = renderHook(
+      () => useTokenList(dataUrl(list([usdc, { ...usdc, address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT" }])), {
+        allowlist: [usdc.address],
+      }),
+      { wrapper }
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.tokens.map((t) => t.symbol)).toEqual(["ETH", "USDC"]);
   });
 
   it("reports a broken list", async () => {

@@ -30,6 +30,12 @@ export type UseEventFeedParameters = {
   historyBlocks?: number;
   /** Keep at most this many events. */
   max?: number;
+  /**
+   * Past events from your own source, e.g. an indexer. Shown alongside
+   * live events and de-duplicated. Prefer this over `historyBlocks` in
+   * production.
+   */
+  initialEvents?: readonly FeedEvent[];
 };
 
 /** Contract events, newest first: optional recent history plus live updates. */
@@ -41,6 +47,7 @@ export function useEventFeed({
   chainId,
   historyBlocks = 0,
   max = 20,
+  initialEvents,
 }: UseEventFeedParameters) {
   const client = usePublicClient({ chainId });
   const [live, setLive] = useState<FeedEvent[]>([]);
@@ -75,7 +82,7 @@ export function useEventFeed({
 
   const events = useMemo(() => {
     const seen = new Set<string>();
-    return [...live, ...(history.data ?? [])]
+    return [...live, ...(history.data ?? []), ...(initialEvents ?? [])]
       .filter((log) => {
         const id = logId(log);
         if (seen.has(id)) return false;
@@ -84,7 +91,7 @@ export function useEventFeed({
       })
       .sort(newestFirst)
       .slice(0, max);
-  }, [live, history.data, max]);
+  }, [live, history.data, initialEvents, max]);
 
   return { events, isLoadingHistory: history.isLoading, historyError: history.error };
 }

@@ -2,17 +2,19 @@ import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useChainId, useChains } from "wagmi";
 import {
+  applyTokenFilters,
   fetchTokenList,
   isNativeToken,
   mergeTokenLists,
   nativeToken,
+  type TokenFilters,
   type TokenInfo,
   type TokenList,
 } from "@/lib/token-list";
 
 const NO_TOKENS: readonly TokenInfo[] = [];
 
-export type UseTokenListOptions = {
+export type UseTokenListOptions = TokenFilters & {
   /** Only tokens on this chain. Defaults to the current chain. Pass null for every chain. */
   chainId?: number | null;
   /** Put the chain's native currency (e.g. ETH) first. Lists don't include it. */
@@ -33,7 +35,14 @@ export type UseTokenListOptions = {
  */
 export function useTokenList(
   urls: string | readonly string[],
-  { chainId: chainIdOption, includeNative = true, extraTokens = NO_TOKENS, gateway }: UseTokenListOptions = {}
+  {
+    chainId: chainIdOption,
+    includeNative = true,
+    extraTokens = NO_TOKENS,
+    gateway,
+    allowlist,
+    blocklist,
+  }: UseTokenListOptions = {}
 ) {
   const currentChainId = useChainId();
   const chains = useChains();
@@ -55,13 +64,16 @@ export function useTokenList(
 
   const tokens = useMemo(() => {
     const merged = mergeTokenLists([{ tokens: [...extraTokens] }, ...lists]);
-    const onChain = chainId === null ? merged : merged.filter((t) => t.chainId === chainId);
+    const filtered = applyTokenFilters(merged, { allowlist, blocklist });
+    const onChain = chainId === null ? filtered : filtered.filter((t) => t.chainId === chainId);
     const chain = chains.find((c) => c.id === chainId);
     if (!includeNative || !chain) return onChain;
+    // Filters don't apply to the native currency: it can't be spoofed.
     // Skip it if a list (or extraTokens) already has an entry for it.
     return onChain.some(isNativeToken) ? onChain : [nativeToken(chain), ...onChain];
     // `lists` is rebuilt every render; dataKey tracks its contents.
-  }, [dataKey, chainId, chains, includeNative, extraTokens]);
+    // Filters are compared by content, so inline arrays don't recompute every render.
+  }, [dataKey, chainId, chains, includeNative, extraTokens, allowlist?.join(), blocklist?.join()]);
 
   return {
     tokens,

@@ -1,0 +1,105 @@
+---
+title: Indexed data
+description: For production, feed 0xui from an index of the chain, either your own (Postgres + ClickHouse) or a service like Goldsky.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Out of the box, 0xui components read straight from the chain over RPC. That needs zero setup and suits prototypes, small token lists and single users. In production it hits limits:
+
+| Reading over RPC | What goes wrong |
+| --- | --- |
+| Balances for a 400-token list | Dozens of `eth_call` batches per user, and public RPCs rate-limit you. |
+| Event history (`historyBlocks`) | Providers cap `eth_getLogs` ranges, so you only see recent blocks. |
+| Transaction history | Only what this browser recorded: per device, and nothing from other apps. |
+| Portfolios across chains | One set of reads per chain, per user, per page view. |
+| Spam tokens | RPC can't tell a real USDC from a copy. |
+
+**We recommend putting an index of the chain behind your app** and passing its data into the components. Every data-heavy component accepts it through a prop and then skips its RPC reads.
+
+## Plugging in your data
+
+| Component | Prop | Your index provides |
+| --- | --- | --- |
+| [Token Select](/components/token-select/) | `balances` | The account's balance per token address |
+| [Portfolio](/blocks/portfolio/) | `balances` | The same, for every token in the list |
+| [Transaction History](/components/transaction-history/) | `transactions` | The account's transactions, from any device or app |
+| [Event Feed](/components/event-feed/) | `initialEvents` | Past events. New ones still stream in over RPC. |
+| [`useTokenList`](/getting-started/token-lists/) | `allowlist` / `blocklist` | Tokens you've verified, or flagged as spam |
+
+```tsx
+function Holdings({ address }: { address: Address }) {
+  const { tokens } = useTokenList(UNISWAP_DEFAULT_LIST);
+  const { data } = useQuery({
+    queryKey: ["balances", address],
+    queryFn: async () => {
+      const rows: { token: string; balance: string }[] = await fetch(`/api/balances/${address}`).then((r) => r.json());
+      // bigints travel as strings over JSON
+      return Object.fromEntries(rows.map((r) => [r.token, BigInt(r.balance)]));
+    },
+  });
+  return <Portfolio tokens={tokens} address={address} balances={data} prices={prices} />;
+}
+```
+
+While `balances` is `undefined` (still loading), components fall back to reading over RPC. Pass `{}` instead if you never want RPC reads.
+
+## Option 1: run your own index (Postgres + ClickHouse)
+
+The split that works well for chain data: **Postgres for current state, ClickHouse for history.**
+
+- **Postgres** holds what changes in place and what you look up by key: current balances, allowances, your verified-token table, users. It's transactional, so balance updates and reorg rollbacks stay consistent.
+- **ClickHouse** holds what only grows: transfers, swaps, every event. It's a columnar database built for scanning and aggregating billions of rows, which is what "history for this address" and "volume per token per day" need.
+
+An indexer (your own service, or a framework such as Ponder or rindexer) follows new blocks, decodes the logs you care about, writes events to ClickHouse and applies their effects to Postgres. Your API serves the components.
+
+Example tables, to adapt rather than copy:
+
+```sql
+-- Postgres: current balances, upserted by the indexer
+create table token_balances (
+  chain_id integer        not null,
+  owner    text           not null, -- lowercase address
+  token    text           not null,
+  balance  numeric(78, 0) not null, -- fits uint256
+  block    bigint         not null, -- last block that changed it, for reorg handling
+  primary key (chain_id, owner, token)
+);
+```
+
+```sql
+-- ClickHouse: every ERC-20 transfer, append-only
+CREATE TABLE transfers
+(
+    chain_id     UInt32,
+    block_number UInt64,
+    block_time   DateTime,
+    tx_hash      String,
+    log_index    UInt32,
+    token        LowCardinality(String),
+    sender       String,
+    recipient    String,
+    value        UInt256
+)
+ENGINE = ReplacingMergeTree
+ORDER BY (chain_id, block_number, tx_hash, log_index);
+-- ReplacingMergeTree de-duplicates re-ingested logs (after a restart or reorg) by the ORDER BY key.
+-- For "transfers of this address", add a table or projection ordered by (chain_id, recipient, block_number).
+```
+
+<Aside type="caution">
+Handle reorgs. Recent blocks can be replaced. Either only index blocks past a confirmation depth, or record the block hash with each row and roll back rows from blocks that were replaced.
+</Aside>
+
+## Option 2: use a managed indexer (Goldsky)
+
+If you'd rather not run ingestion yourself, [Goldsky](https://goldsky.com) runs it for you:
+
+- **Subgraphs**: describe the events you care about and query the indexed result over GraphQL. A good fit for history and feeds.
+- **Mirror**: streams chain data (blocks, logs, transfers, decoded events) into a database you own, such as Postgres or ClickHouse, so you keep the setup from option 1 without writing the ingestion.
+
+Either way, the shape the components need doesn't change: balances by token address, transactions as `HistoryEntry[]`, events as decoded logs.
+
+## When RPC is fine
+
+Keep the defaults for prototypes, internal tools, testnets, short token lists, and anything where one user loads one page now and then. The components are built so you can start on RPC and move to an index without changing the UI, only adding props.
