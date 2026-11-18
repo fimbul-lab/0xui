@@ -1,0 +1,99 @@
+---
+title: Privacy Badge
+description: Marks a value or an action as public or private.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, OnValues, Inline, IconOnly, CustomLabel } from "@/demos/privacy-badge";
+
+A small label that says whether something is visible on-chain. Private is filled and public is outlined, and each has its own icon, so the two differ by more than color. Hover for what it means.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+Use it wherever public and private sit side by side: next to a balance, on a step of a flow, or on the action that moves funds out of the private balance.
+
+## Installation
+
+<Install name="privacy-badge" />
+
+## Usage
+
+```tsx
+import { PrivacyBadge } from "@/components/privacy-badge";
+
+<PrivacyBadge privacy="private" />;
+```
+
+## Examples
+
+### On values
+
+<Preview>
+  <OnValues client:load />
+</Preview>
+
+```tsx
+<dt>
+  Shielded balance <PrivacyBadge privacy="private" />
+</dt>
+```
+
+### Inline
+
+For running text. No border and no fill.
+
+<Preview>
+  <Inline client:load />
+</Preview>
+
+```tsx
+Unshielding is a <PrivacyBadge privacy="public" variant="inline" /> action.
+```
+
+### Icon only
+
+The label stays available to screen readers, and the tooltip still says what it means.
+
+<Preview>
+  <IconOnly client:load />
+</Preview>
+
+```tsx
+<PrivacyBadge privacy="private" iconOnly />
+```
+
+### Custom label
+
+<Preview>
+  <CustomLabel client:load />
+</Preview>
+
+```tsx
+<PrivacyBadge privacy="public">Public exit</PrivacyBadge>
+```
+
+## Styling
+
+The root sets `data-privacy`:
+
+```css
+[data-privacy="public"] { border-style: dashed; }
+```
+
+## Props
+
+Also accepts the props of a `<span>`.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `privacy` | `"public" \| "private"` | — | Whether the thing it marks is visible on-chain. |
+| `variant` | `"badge" \| "inline"` | `"badge"` | A chip, or plain text with an icon. |
+| `children` | `ReactNode` | `"Private"` / `"Public"` | Label override. |
+| `iconOnly` | `boolean` | `false` | Hide the label visually. |
+| `icon` | `ComponentType \| false` | eye / crossed-out eye | Custom icon. `false` hides it. |
+| `title` | `string` | what the state means | Tooltip override. |
+
+`privacyMeta` holds the default label, description and icon for each side.

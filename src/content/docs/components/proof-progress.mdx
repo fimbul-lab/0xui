@@ -1,0 +1,125 @@
+---
+title: Proof Progress
+description: Proof generation shown as stages, with cancel and retry. No fake percentage.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Failed, Phases } from "@/demos/proof-progress";
+
+A private transaction needs a zero-knowledge proof, and generating one takes from several seconds to half a minute. This component shows that wait as three stages: loading circuits, computing, verifying.
+
+There is no percentage. Provers don't report real progress, and the number SDKs give is a timer.
+
+The proof below runs at its real speed: about 13 seconds the first time, because the circuits are downloaded first. Prove again to see a cached run.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+It works with a [shielded engine](/components/shielded-engine/). These demos run on the [mock engine](/components/mock-shielded-engine/).
+
+## Installation
+
+<Install name="proof-progress" />
+
+## Usage
+
+`ProofProgress` takes its state as props. `useProof` gets that state from the engine.
+
+```tsx
+import { ProofProgress, useProof } from "@/components/proof-progress";
+
+function Unshield({ draft }: { draft: PrivateDraft }) {
+  const proof = useProof({ onProved: (operation) => console.log(operation) });
+
+  return (
+    <>
+      <Button onClick={() => proof.prove(draft)} disabled={proof.isProving}>
+        Generate proof
+      </Button>
+      <ProofProgress
+        phase={proof.phase}
+        stage={proof.stage}
+        error={proof.error}
+        onCancel={proof.cancel}
+        onRetry={() => proof.prove(draft)}
+      >
+        Unshield 0.5 WETH
+      </ProofProgress>
+    </>
+  );
+}
+```
+
+The draft says what to prove:
+
+```ts
+const draft: PrivateDraft = {
+  kind: "unshield",
+  chainId: 1,
+  token: WETH,
+  amount: parseEther("0.5"),
+  recipient: "0xd8dA…6045",
+};
+```
+
+## Examples
+
+### Failure
+
+The step that failed is marked, the reason is shown, and **Try again** starts over.
+
+<Preview>
+  <Failed client:load />
+</Preview>
+
+### Without the hook
+
+Pass `phase` yourself to drive it from your own flow.
+
+<Preview>
+  <Phases client:load />
+</Preview>
+
+```tsx
+<ProofProgress phase="proving" />
+<ProofProgress phase="cancelled" stage="proving" />
+```
+
+### Headless
+
+```tsx
+const { phase, stage, operation, error, isProving, prove, cancel, reset } = useProof();
+```
+
+- `prove(draft)` resolves with the proved operation, or `undefined` if it failed or was cancelled.
+- `cancel()` aborts the running proof. Unmounting does too.
+- Starting a new proof replaces the running one.
+- `operation.expiresAt` says when the proof must be generated again.
+
+`ProofStep`, `proofStepStates` and `proofStageMeta` are exported for building your own list.
+
+## States
+
+| `data-phase` | Heading | Steps |
+| --- | --- | --- |
+| `idle` | Proof not started | All waiting. |
+| `loading-circuits` | Generating proof | Loading circuits is running. The first proof downloads them. |
+| `proving` | Generating proof | Computing proof is running. |
+| `verifying` | Generating proof | Verifying proof is running. |
+| `done` | Proof ready | All done. |
+| `cancelled` | Proof cancelled | Steps before `stage` are done. Quiet, not an error. |
+| `error` | Couldn't generate proof | The step in `stage` is marked failed, with the reason below. |
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `phase` | `ProofPhase` | — | Where the proof is. |
+| `stage` | `ProofStage` | — | The stage a failed or cancelled proof stopped in. |
+| `error` | `Error \| string` | — | Shown when `phase` is `error`. |
+| `onCancel` | `() => void` | — | Shows **Cancel** while the proof runs. |
+| `onRetry` | `() => void` | — | Shows **Try again** after an error or a cancel. |
+| `title` | `ReactNode` | per phase | Heading override. |
+| `children` | `ReactNode` | — | What is being proved. |

@@ -1,0 +1,112 @@
+---
+title: Shielded Balance
+description: Private balance of one token, split into what is spendable and what isn't yet.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, States, StuckProofs, Inline } from "@/demos/shielded-balance";
+
+A private balance is not one number. Funds that were just shielded can't be spent yet, and some may be waiting on a proof. This component shows what can be spent now as the headline, and lists the rest with what each state means.
+
+Shield and unshield to watch funds move between states. The demo's standby period is 12 seconds, not the real 60.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+It reads from a [shielded engine](/components/shielded-engine/). These demos run on the [mock engine](/components/mock-shielded-engine/).
+
+## Installation
+
+<Install name="shielded-balance" />
+
+## Usage
+
+```tsx
+import { ShieldedBalance } from "@/components/shielded-balance";
+
+const weth = { address: "0xC02a…6Cc2", symbol: "WETH", decimals: 18 };
+
+<ShieldedProvider engine={engine}>
+  <ShieldedBalance token={weth} chainId={1} />
+</ShieldedProvider>;
+```
+
+`chainId` is required. It is the chain the private balance lives on, which need not be the network the connected wallet is on.
+
+Symbol and decimals are props. The component doesn't read them from the chain, because that would tell your RPC provider which tokens the account holds privately. Any entry from a [token list](/getting-started/token-lists/) fits.
+
+Native currency is held as its wrapped token, so pass WETH for ETH.
+
+## Examples
+
+### Every state
+
+Only states that hold funds are listed.
+
+<Preview>
+  <States client:load />
+</Preview>
+
+| State | Shown as | Meaning |
+| --- | --- | --- |
+| `spendable` | The headline | Ready to send or unshield. |
+| `pending` | Pending | Recently shielded. Spendable after the waiting period. |
+| `proving` | Proving | Proofs for these funds are being checked. |
+| `incomplete` | Incomplete, with **Retry proofs** | A proof is missing, so these funds can't be spent yet. |
+| `restricted` | Restricted | Can't be spent privately. Can only go back to the address it came from. |
+
+### Retry proofs
+
+Incomplete funds get a **Retry proofs** button. When the retry works, they move to Proving and then become spendable, as in the demo above. When it changes nothing, the component says so:
+
+<Preview>
+  <StuckProofs client:load />
+</Preview>
+
+### Inline
+
+The spendable amount alone, for a row or a line of text.
+
+<Preview>
+  <Inline client:load />
+</Preview>
+
+```tsx
+<ShieldedBalance token={weth} chainId={1} variant="inline" />
+```
+
+### Headless
+
+```tsx
+import { useShieldedBalance } from "@/components/shielded-balance";
+
+const { phase, spendable, total, amounts, isUpdating, retryProofs, retryPhase } =
+  useShieldedBalance({ token: weth.address, chainId: 1 });
+
+amounts?.pending; // bigint
+```
+
+`useShieldedBalances({ chainId })` returns every token the account holds on that chain. `ShieldedBalanceRow`, `shieldedBalanceMeta` and `totalShielded` are exported for building your own layout.
+
+## States
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `idle` | Nothing: the private account is not unlocked. |
+| `loading` | A skeleton, during the first scan. "Loading private balance" for screen readers. |
+| `ready` | The balance. A token the account doesn't hold reads as 0. |
+| `error` | "—": the first scan failed. [Shielded Sync Status](/components/shielded-sync-status/) shows why and offers a retry. |
+
+While a later scan runs, the root has `data-updating` and a small spinner sits next to the label. The amounts stay on screen.
+
+## Props
+
+Also accepts the [Token Amount](/components/token-amount/) formatting props: `maxDecimals`, `compact`, `price`, `currency` and `locale`. The headline morphs when it changes. Pass `animate={false}` to turn that off.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `token` | `{ address, symbol, decimals }` | — | Token to show. |
+| `chainId` | `number` | — | Chain to read. Required. |
+| `variant` | `"card" \| "inline"` | `"card"` | The breakdown, or the spendable amount alone. |

@@ -1,0 +1,144 @@
+---
+title: Shielded Engine
+description: The interface between the shielded components and a privacy protocol, with its provider and hooks.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default } from "@/demos/shielded-engine";
+
+The shielded components show private balances, scan progress and proofs. They don't know which privacy protocol is behind them. They talk to a **shielded engine**: a small interface that wraps one protocol SDK and reports its state in neutral terms.
+
+<Aside type="caution" title="Preview">
+  Only the [mock engine](/components/mock-shielded-engine/) exists today. It imitates the Railgun SDK's behaviour without a network or real funds. A Railgun engine is planned, and the interface will grow as the shield, unshield and private send components are built.
+</Aside>
+
+Everything below runs on the mock. Unlock it, then use the buttons to make things happen.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+## Installation
+
+<Install name="shielded-engine" />
+
+This adds `lib/shielded-engine.ts` (the interface and its types) and `components/shielded-provider.tsx` (the provider and hooks).
+
+## Usage
+
+Create an engine once and put it in context. Shielded components go inside. They don't need a wagmi provider themselves; you will have one anyway for the public side.
+
+```tsx
+import { ShieldedProvider } from "@/components/shielded-provider";
+import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
+
+const engine = createMockShieldedEngine();
+
+<Web3Provider>
+  <ShieldedProvider engine={engine}>
+    <App />
+  </ShieldedProvider>
+</Web3Provider>;
+```
+
+## Hooks
+
+```tsx
+import {
+  useShieldedAccount,
+  useShieldedEngine,
+  useShieldedState,
+} from "@/components/shielded-provider";
+
+// The engine itself, to call its methods.
+const engine = useShieldedEngine();
+
+// Whether a private account exists and is unlocked, and its private address.
+const { status, address } = useShieldedAccount();
+
+// Any piece of engine state, re-read when an event fires.
+const syncing = useShieldedState("sync", (e) => e.getSync(1).status === "syncing", false);
+```
+
+`useShieldedState` takes the event to listen to, a function that reads from the engine, and the value to use on the server. Private state never reaches server HTML.
+
+## The interface
+
+```ts
+interface ShieldedEngine {
+  id: string;
+
+  account: {
+    status(): "none" | "locked" | "unlocked";
+    create(password: string): Promise<{ mnemonic: string }>;
+    import(mnemonic: string, password: string): Promise<void>;
+    unlock(password: string): Promise<void>;
+    lock(): void;
+    address(): string | null;
+  };
+
+  subscribe(event: "account" | "sync" | "balances", listener: () => void): () => void;
+
+  getSync(chainId: number): ShieldedSync;
+  getBalances(chainId: number): readonly ShieldedTokenBalance[] | undefined;
+
+  sync(chainId: number): Promise<void>;
+  retryProofs(chainId: number): Promise<void>;
+  prove(
+    draft: PrivateDraft,
+    options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
+  ): Promise<ProvedOperation>;
+}
+```
+
+Three rules make it easy to build UI on:
+
+- **Listeners get no payload.** An event says "this changed". The new state comes from the getters, so a component can never hold an event that disagrees with them.
+- **Getters return the same reference until the state changes.** That is what lets the hooks use `useSyncExternalStore`.
+- **Balances are one snapshot per chain.** Protocol SDKs report balances in pieces. The engine merges them, so the states of a token always add up.
+
+### Balance states
+
+A private balance is split by what can be done with it. Each engine maps its protocol's own states onto these five, and protocol names stay inside the engine.
+
+| State | Meaning |
+| --- | --- |
+| `spendable` | Ready to spend. |
+| `pending` | Recently shielded, waiting out the protocol's standby period. |
+| `proving` | Proofs for these funds are submitted and being checked. |
+| `incomplete` | A proof is missing. `retryProofs` tries again. |
+| `restricted` | Can't be spent privately. Can only return to the address it came from. |
+
+### Sync
+
+```ts
+type ShieldedSync = {
+  stage: "notes" | "transactions";
+  status: "idle" | "syncing" | "synced" | "error";
+  progress: number; // 0 to 1 within the stage
+  error?: string;
+};
+```
+
+`progress` is what the protocol reports, and it is not monotonic: it restarts for each stage, can jump backwards inside one, and may be 0 when the scan is done. [Shielded Sync Status](/components/shielded-sync-status/) turns it into a bar that only moves forward.
+
+`sync(chainId)` resolves when the scan settles. A failed scan is reported through `getSync`, not by rejecting.
+
+### Proofs
+
+`prove` reports stages (`loading-circuits`, `proving`, `verifying`), not a percentage: provers don't report a real one. See [Proof Progress](/components/proof-progress/).
+
+## Not in the interface yet
+
+These are planned and arrive with the components that need them: preparing a shield transaction, fee estimates, submitting a proved operation, private transfers, relayers, and capability flags per engine.
+
+## Writing an engine
+
+An engine is any object that implements `ShieldedEngine`. Keep the protocol SDK, its event shapes and its vocabulary inside it:
+
+- Merge the SDK's balance events into one snapshot before you notify listeners.
+- Map the SDK's balance buckets onto the five states.
+- Scan after `unlock`, and again on an interval, since most SDKs don't push balance changes.
+- Honor the `AbortSignal` in `prove` and reject with its reason.

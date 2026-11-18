@@ -1,0 +1,89 @@
+---
+title: Shielded Address
+description: A private address, truncated, with the full address on hover and on copy.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Pill, Full, FromAccount } from "@/demos/shielded-address";
+
+Shows a private address, such as a Railgun `0zk…` address. Those are 127 characters long, so the component keeps the start and the end and always offers a copy button. The full address is on hover and available to screen readers.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+Use it for private addresses. For `0x…` addresses use [Address](/components/address/), which checksums them and resolves ENS names.
+
+## Installation
+
+<Install name="shielded-address" />
+
+## Usage
+
+```tsx
+import { ShieldedAddress } from "@/components/shielded-address";
+
+<ShieldedAddress address="0zk1qyk9nw8x3ld…" />;
+```
+
+It needs no provider. To show the unlocked account's own address, read it from the [engine](/components/shielded-engine/):
+
+<Preview>
+  <FromAccount client:load />
+</Preview>
+
+```tsx
+import { useShieldedAccount } from "@/components/shielded-provider";
+
+const { address } = useShieldedAccount();
+
+{address && <ShieldedAddress address={address} variant="pill" />}
+```
+
+## Examples
+
+### Pill
+
+<Preview>
+  <Pill client:load />
+</Preview>
+
+```tsx
+<ShieldedAddress address={address} variant="pill" />
+```
+
+### Whole address
+
+For a "receive" screen, where the address is the point. It wraps anywhere.
+
+<Preview>
+  <Full client:load />
+</Preview>
+
+```tsx
+<ShieldedAddress address={address} truncate={false} variant="pill" />
+```
+
+### Truncation
+
+The default keeps 9 characters at the start and 6 at the end. It keeps more of the start than a public address does, because every `0zk` address begins with the same five characters.
+
+```tsx
+<ShieldedAddress address={address} truncate={{ start: 12, end: 8 }} />
+```
+
+```tsx
+import { truncateShieldedAddress } from "@/components/shielded-address";
+
+truncateShieldedAddress(address); // "0zk1qyk9n…e0s4jt"
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `address` | `string` | — | The private address. |
+| `variant` | `"inline" \| "pill"` | `"inline"` | Inline text or a bordered chip. |
+| `copyable` | `boolean` | `true` | Show a copy button. It copies the full address. |
+| `truncate` | `{ start?: number; end?: number } \| false` | `{ start: 9, end: 6 }` | Characters kept. `false` shows the whole address. |

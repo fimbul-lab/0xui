@@ -781,6 +781,97 @@
       ]
     },
     {
+      "name": "shielded-address",
+      "type": "registry:component",
+      "title": "Shielded Address",
+      "description": "Private (shielded) address display, e.g. a 127-character Railgun 0zk address: truncated as 0zk1qyk9n…x8w3ld with the full address on hover, for screen readers and on copy. Inline or pill variant, configurable truncation, or truncate={false} to show the whole address wrapped. Exports truncateShieldedAddress. Needs no engine or provider.",
+      "files": [
+        {
+          "path": "registry/default/components/shielded-address.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "registryDependencies": [
+        "@0xui/copy-button"
+      ]
+    },
+    {
+      "name": "privacy-badge",
+      "type": "registry:component",
+      "title": "Privacy Badge",
+      "description": "Marks a value or an action as public or private: a filled chip with a crossed-out eye for private, an outlined chip with an eye for public, so the two differ by more than color. Badge or inline variant, icon-only mode with a screen reader label, custom label and icon, tooltip explaining what each means. Exports the Privacy type and privacyMeta. Sets data-privacy. Needs no engine or provider.",
+      "files": [
+        {
+          "path": "registry/default/components/privacy-badge.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ]
+    },
+    {
+      "name": "shielded-balance",
+      "type": "registry:component",
+      "title": "Shielded Balance",
+      "description": "Private (shielded) balance of one token from a ShieldedEngine, split by five protocol-neutral states: spendable, pending (standby after shielding), proving, incomplete (a proof is missing) and restricted. The headline is the spendable amount; every other state that holds funds gets a row saying what it means, and incomplete funds get a 'Retry proofs' button. Card or inline variant, loading skeleton, 'updating' indicator while a scan runs, bigint amounts formatted with TokenAmount. Token symbol and decimals are props, so nothing about private holdings is asked of the RPC. Exports useShieldedBalance, useShieldedBalances, ShieldedBalanceRow, totalShielded and shieldedBalanceMeta. data-phase: idle | loading | ready | error.",
+      "files": [
+        {
+          "path": "registry/default/components/shielded-balance.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "lucide-react",
+        "skullet"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/shielded-engine",
+        "@0xui/token-amount",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "shielded-sync-status",
+      "type": "registry:component",
+      "title": "Shielded Sync Status",
+      "description": "Scan progress for a private (shielded) balance from a ShieldedEngine: names the pass that is running (finding your funds, checking transaction history), shows step N of 2 and a progress bar that never moves backwards even though protocol SDKs report progress that restarts per stage and jumps back. Error state with the reason and a Retry button, 'up to date' state with a sync-again button, quieter 'updating' label for repeat scans. Bar or inline variant. Exports useShieldedSync, advanceSync (the pure monotonic reducer), ShieldedSyncBar and shieldedSyncStageLabels. data-phase: idle | syncing | synced | error.",
+      "files": [
+        {
+          "path": "registry/default/components/shielded-sync-status.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/shielded-engine"
+      ]
+    },
+    {
+      "name": "proof-progress",
+      "type": "registry:component",
+      "title": "Proof Progress",
+      "description": "Zero-knowledge proof generation shown as stages, not a fake percentage: loading circuits (the first proof downloads them), computing proof, verifying proof. Step list with done, active and failed icons, a hint under the running step, Cancel while it runs (AbortSignal), error with 'Try again', and a 'Proof ready' state. Controlled by props, so it works with the exported useProof hook (wraps ShieldedEngine.prove) or your own flow. Exports useProof, ProofStep, proofStepStates and proofStageMeta. data-phase: idle | loading-circuits | proving | verifying | done | cancelled | error.",
+      "files": [
+        {
+          "path": "registry/default/components/proof-progress.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/shielded-engine"
+      ]
+    },
+    {
       "name": "wagmi-config",
       "type": "registry:lib",
       "title": "wagmi config + provider",
@@ -875,6 +966,43 @@
           "path": "registry/default/hooks/use-copy.ts",
           "type": "registry:hook"
         }
+      ]
+    },
+    {
+      "name": "shielded-engine",
+      "type": "registry:lib",
+      "title": "Shielded engine",
+      "description": "The contract between 0xui's shielded (private transaction) components and a privacy protocol such as Railgun: lib/shielded-engine.ts holds the ShieldedEngine interface and its types (five neutral balance states, staged sync state, proof stages, account status, unshield draft, proved operation), and ShieldedProvider puts an engine in context. Hooks: useShieldedEngine, useShieldedAccount (status and private address) and useShieldedState (subscribe to one engine event, SSR-safe). Protocol names stay inside the engine. Pair with @0xui/mock-shielded-engine until a real engine is wired up.",
+      "files": [
+        {
+          "path": "registry/default/lib/shielded-engine.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "registry/default/components/shielded-provider.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ]
+    },
+    {
+      "name": "mock-shielded-engine",
+      "type": "registry:lib",
+      "title": "Mock shielded engine",
+      "description": "In-memory ShieldedEngine for demos, tests and building UI before a real privacy engine exists: no network, no cryptography, no funds. Behaves like the Railgun SDK did on Sepolia: two-pass scans whose progress goes backwards, balances that only change when a scan finishes, a 60 s standby for shielded funds, change that can get stuck as incomplete, staged proofs with a slow first circuit download, and a 25 bps fee each way on bigint amounts. Realistic delays (6 s account creation, 40 s first scan, 13 s proof) with a speed option (Infinity for tests). simulate.* produces every state on demand: shield, unshield, addFunds, failNextSync, failNextProof, failNextRetry, keepIncomplete.",
+      "files": [
+        {
+          "path": "registry/default/lib/mock-shielded-engine.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/shielded-engine"
       ]
     }
   ]

@@ -64,6 +64,20 @@ npx shadcn@latest add @0xui/chain-selector
 
 Shared helpers: `0xui-utils` (address and amount formatting, explorer links), `use-mounted`, `use-copy`.
 
+### Shielded (preview)
+
+Components for private balances. They talk to a shielded engine, and only a mock engine exists so far.
+
+| Item | Description |
+| --- | --- |
+| `shielded-engine` | The interface between the components and a privacy protocol, with its provider and hooks. |
+| `mock-shielded-engine` | In-memory engine for demos and tests. No network, no funds. |
+| `shielded-balance` | Private balance of a token, split into spendable, pending, proving, incomplete and restricted. |
+| `shielded-sync-status` | Scan progress with a bar that never moves backwards, and a retry. |
+| `proof-progress` | Proof generation as stages, with cancel and retry. |
+| `shielded-address` | Truncated private address with copy. |
+| `privacy-badge` | Marks a value or action as public or private. |
+
 See [PLAN.md](./PLAN.md) for the roadmap.
 
 ## Development

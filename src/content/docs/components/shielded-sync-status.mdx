@@ -1,0 +1,103 @@
+---
+title: Shielded Sync Status
+description: Scan progress for the private balance, with a bar that never moves backwards.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Failed, Inline } from "@/demos/shielded-sync-status";
+
+Before a private balance can be shown, the account has to scan the chain for its funds. The first scan can take most of a minute. This component says which pass is running and how far along it is, and offers a retry when the scan fails.
+
+The demo runs four times faster than a real first scan, which takes about 40 seconds.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+It reads from a [shielded engine](/components/shielded-engine/). These demos run on the [mock engine](/components/mock-shielded-engine/).
+
+## Installation
+
+<Install name="shielded-sync-status" />
+
+## Usage
+
+```tsx
+import { ShieldedSyncStatus } from "@/components/shielded-sync-status";
+
+<ShieldedProvider engine={engine}>
+  <ShieldedSyncStatus chainId={1} />
+</ShieldedProvider>;
+```
+
+`chainId` is required. It is the chain being scanned, which need not be the network the connected wallet is on.
+
+## A bar that only moves forward
+
+Protocol SDKs report scan progress per pass, and the number is not steady. On Sepolia the Railgun SDK climbed to 87%, fell back to 20%, climbed again, started over for the second pass, and finished on 0.
+
+The component spreads the passes evenly over one bar and keeps the highest value it has seen since the scan started. A scan that starts after one finished or failed begins again from zero.
+
+The logic is a pure function, exported for your own UI:
+
+```ts
+import { advanceSync } from "@/components/shielded-sync-status";
+
+let view = advanceSync(undefined, engine.getSync(1));
+view = advanceSync(view, engine.getSync(1)); // progress is never lower than before
+```
+
+## Examples
+
+### Failed scan
+
+Public RPCs drop out mid-scan often enough to plan for it. The bar stays where the scan stopped.
+
+<Preview>
+  <Failed client:load />
+</Preview>
+
+### Inline
+
+One line, for a header or a footer.
+
+<Preview>
+  <Inline client:load />
+</Preview>
+
+```tsx
+<ShieldedSyncStatus chainId={1} variant="inline" />
+```
+
+### Headless
+
+```tsx
+import { useShieldedSync, ShieldedSyncBar } from "@/components/shielded-sync-status";
+
+const { phase, stage, progress, isUpdate, error, sync } = useShieldedSync({ chainId: 1 });
+
+<ShieldedSyncBar progress={progress} />;
+```
+
+`progress` runs from 0 to 1 across the whole scan. `sync()` retries after an error or refreshes early.
+
+## States
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `idle` | Nothing: no scan has started, or the account is locked. |
+| `syncing` | The pass ("Finding your funds", then "Checking transaction history"), "Step 1 of 2", a percentage and the bar. |
+| `synced` | "Private balance up to date", with a button to sync again. |
+| `error` | "Couldn't sync private balance", the reason, and **Retry**. |
+
+The root also sets `data-stage` to `notes` or `transactions`.
+
+Once balances are showing, a later scan is an update. It reads "Updating private balance" and drops the step count. If it fails, the message says the balance shown is from the last successful sync.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chainId` | `number` | — | Chain to follow. Required. |
+| `variant` | `"bar" \| "inline"` | `"bar"` | Stage and progress bar, or one line of text. |

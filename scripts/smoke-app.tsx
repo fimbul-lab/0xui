@@ -40,6 +40,13 @@ import { TransactionButton } from "@/components/transaction-button";
 import { TransactionStatus } from "@/components/transaction-status";
 import { WalletButton } from "@/components/wallet-button";
 import { Web3Provider } from "@/components/web3-provider";
+import { PrivacyBadge } from "@/components/privacy-badge";
+import { ProofProgress, useProof } from "@/components/proof-progress";
+import { ShieldedAddress } from "@/components/shielded-address";
+import { ShieldedBalance } from "@/components/shielded-balance";
+import { ShieldedProvider, useShieldedAccount } from "@/components/shielded-provider";
+import { ShieldedSyncStatus } from "@/components/shielded-sync-status";
+import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
 
 const address = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
@@ -69,6 +76,33 @@ function Phase3() {
       <SignMessage message="hello" verify />
       <AddToken token={{ address: usdc, symbol: "USDC", decimals: 6 }} />
       <Toaster />
+    </>
+  );
+}
+
+const shieldedEngine = createMockShieldedEngine({ funds: [{ token: usdc, amount: 1_000_000n }] });
+
+function Shielded() {
+  const account = useShieldedAccount();
+  const proof = useProof();
+  return (
+    <>
+      <button onClick={() => shieldedEngine.account.unlock("password")}>Unlock</button>
+      {account.address && <ShieldedAddress address={account.address} variant="pill" />}
+      <PrivacyBadge privacy="private" />
+      <PrivacyBadge privacy="public" variant="inline" iconOnly />
+      <ShieldedBalance token={{ address: usdc, symbol: "USDC", decimals: 6 }} chainId={1} price={1} />
+      <ShieldedBalance token={{ address: usdc, symbol: "USDC", decimals: 6 }} chainId={1} variant="inline" />
+      <ShieldedSyncStatus chainId={1} />
+      <ShieldedSyncStatus chainId={1} variant="inline" />
+      <button
+        onClick={() =>
+          proof.prove({ kind: "unshield", chainId: 1, token: usdc, amount: 1n, recipient: address })
+        }
+      >
+        Prove
+      </button>
+      <ProofProgress phase={proof.phase} stage={proof.stage} error={proof.error} onCancel={proof.cancel} />
     </>
   );
 }
@@ -116,6 +150,9 @@ export default function App() {
       <EnsProfile name="vitalik.eth" />
       <NftCard contract={address} tokenId={1n} />
       <EventFeed address={usdc} abi={erc20Abi} eventName="Transfer" />
+      <ShieldedProvider engine={shieldedEngine}>
+        <Shielded />
+      </ShieldedProvider>
     </Web3Provider>
   );
 }

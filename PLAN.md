@@ -269,6 +269,291 @@ These are fast and they lock in the conventions before the big components.
   - A live demo for "Switch account" needs a second demo wallet.
   - `chain-selector`'s dialog could use `responsive-dialog`.
 
+### Phase 5: Shielded transactions (planned 2026-11-18)
+
+Components for private balances and transfers: shield, private send, unshield. Railgun first, Kohaku second. Step 1 (spike) and step 2 (interface, mock, primitives) are done. Steps 3 to 6 are planned. Everything shipped so far runs on the mock engine.
+
+**Research findings (2026-11-18)**
+
+*Railgun SDK*
+- **Packages:** `@railgun-community/wallet` 11.3.5, `shared-models` 8.2.3, `engine` 9.9.1. All MIT, all CommonJS, all pinned to `ethers` 6.14.3. No viem.
+- **Source moved:** the canonical repos are on `gitlab.com/railgun-protocol/community/*`. The GitHub `Railgun-Community` org is stale.
+- **GPL underneath:** the engine depends on `@railgun-community/circomlibjs` (GPL-3.0) and needs `snarkjs` (GPL-3.0) as the prover.
+- **Install today:** local npm has `min-release-age=7`, so use wallet 11.3.0 + shared-models 8.2.1 until the newer ones age in.
+- **Browser needs:** an IndexedDB LevelDOWN store (`level-js`), your own `ArtifactStore`, Node polyfills (`crypto`, `stream`, `buffer`, `events`, `util`), and circuit artifacts fetched on demand (3–21 MB per circuit, 45 s timeout each).
+- **No worker:** scanning and decryption run on the calling thread. The engine has to live in our own Web Worker.
+- **Global state:** one callback slot per event and one cached proof. `populateProved*` throws unless it gets the exact arguments the proof was made with.
+- **Proof progress is simulated** by a timer on the snarkjs path, so a real percentage does not exist.
+- **Balance buckets:** `Spendable`, `ShieldPending`, `ProofSubmitted`, `MissingInternalPOI`, `MissingExternalPOI`, `ShieldBlocked`, `Spent`. Only `Spendable` can be spent.
+- **Standby:** one hour on mainnet, 60 s on testnets. Blocked or pending shields can only go back to the address they came from ("unshield to origin").
+- **Fees:** 25 bps to shield and 25 bps to unshield, read from the contract by `loadProvider`.
+- **Public side:** the shield key is `keccak256(signMessage("RAILGUN_SHIELD"))`. Populate functions return an ethers transaction that maps onto wagmi `sendTransaction`.
+- **Broadcasters:** `waku-broadcaster-client-web` 10.0.1 declares peer `wallet ~11.1.0`, which conflicts with 11.3.x. Self-broadcast needs no extra package but links the public address.
+- **Networks:** Ethereum, BNB Chain, Polygon, Arbitrum, Base. Base has no classic RelayAdapt (EIP-7702 only). Sepolia has Proof of Innocence and is usable for demos; broadcasters there are unverified.
+- **Successor:** "RAILGUN Reloaded" (`@railgun-reloaded/wallet-sdk`) is ESM, viem-native and worker-based, but marked WIP and not on npm.
+
+*Kohaku (`ethereum/kohaku`)*
+- **State:** alpha, "NOT READY FOR PRODUCTION USE… UNAUDITED CODE", several prereleases a week.
+- **The Railgun plugin is a stub.** `packages/railgun` is a placeholder "to be reintroduced". The last usable build is npm `@kohaku-eth/railgun` 0.0.1-alpha.31, a Rust/WASM reimplementation pinned to old `plugins` and `provider` versions.
+- **What works:** `@kohaku-eth/privacy-pools` (alpha.40 under the `alpha` tag) and `@kohaku-eth/tornado-cash`. Both do shield and unshield only, with no private transfer.
+- **Plugin interface:** `prepareShield` / `prepareTransfer` / `prepareUnshield`, then `broadcast`. It has no sync events, proof stages, fee quotes, history or compliance states, and operation payloads are opaque per plugin.
+- **Host assumes a wallet:** `Keystore.deriveAt(path)` returns a raw private key, which a wagmi-connected dapp cannot supply from the connected wallet.
+- **Useful parts:** viem adapters (`@kohaku-eth/provider/viem`), the `AssetId` / `AssetAmount` shapes, and the `PluginError` classes.
+
+*Prior art*
+- **No React kit exists** for Railgun or Privacy Pools on npm. This is an open gap.
+- **Reference apps are copyleft:** Railway Wallet (AGPL-3.0, the best reference), Faceless-Privacy (AGPL-3.0, wagmi + viem, closest to our stack), kohaku-extension (GPL-3.0), Privacy Pools site (CC BY-NC). Read them for flow and states, then write our own code and copy.
+- **Mocking is normal:** Railway has `USE_FAKE_PROOF_IN_DEV`, and the Privacy Pools site swaps in wagmi's `mock` connector and skips proving.
+- **Proof expiry:** Railway treats a broadcaster proof as valid for 240 s and locks the fee meanwhile. Changing the memo, signer or gas invalidates it.
+- **Privacy pitfalls a UI can catch from local data:** unshielding to the address that shielded, matching amounts, exiting soon after entry, self-broadcast, public exits, a visible sender.
+- **Request discipline:** queries keyed or enabled by user actions leak intent to the RPC, and so does polling a relayed transaction's hash.
+
+**Decisions**
+- **Own interface.** `shielded-engine` is a small 0xui interface. Kohaku's `PluginInstance` is not the contract, because it lacks sync, proof stages, fees and compliance states. We borrow its `prepare*` then `broadcast` split.
+- **Three engines:**
+  1. `mock-shielded-engine`: scripted sync, fake proof delay, bucket transitions. Every docs demo and test runs on it.
+  2. `railgun-engine`: wraps `@railgun-community/wallet` inside a Web Worker. Ethers stays inside the adapter; components get `{ to, data, value }` and send through wagmi.
+  3. `kohaku-engine` (experimental): Privacy Pools through `@kohaku-eth/privacy-pools`. Its job is to prove the interface fits a second protocol. Kohaku's Railgun plugin joins when it is reintroduced.
+- **Account is a seed, not a signature.** The private account is a BIP-39 mnemonic encrypted with a password. It feeds both `createRailgunWallet` and Kohaku's `Keystore`. Components never hold the mnemonic; the engine does.
+- **Neutral balance states,** mapped by each adapter:
+
+  | 0xui state | Railgun bucket | Privacy Pools |
+  |---|---|---|
+  | `spendable` | `Spendable` | approved |
+  | `pending` | `ShieldPending` | pending review |
+  | `proving` | `ProofSubmitted` | none |
+  | `incomplete` | `MissingInternalPOI`, `MissingExternalPOI` | none |
+  | `restricted` | `ShieldBlocked` | declined, `poi_required` |
+
+- **Proof progress shows stages** (`loading-circuits`, `proving`, `verifying`), not a percentage, since the percentage is fake.
+- **Proofs expire.** A proved operation carries `expiresAt`, and any change to the draft sends the flow back to "ready to prove".
+- **Self-broadcast first.** It needs no extra package and works on Sepolia. The broadcaster picker comes once the Waku client's peer range matches.
+- **Capability flags per engine:** `transfer`, `relayer`, `viewOnly`, `exitToOrigin`, `memo`. Components hide what an engine cannot do.
+- **Types only from Railgun.** Registry components use `import type` from `shared-models` at most, so they never pull in ethers or the engine.
+- **CI:** engine adapters stay out of the "install every item" smoke job and get their own job.
+
+**Interface sketch** (the plan before step 2; see "Step 2 results" for the interface as built)
+```ts
+export type ShieldedBalanceState = "spendable" | "pending" | "proving" | "incomplete" | "restricted";
+export type ProofStage = "loading-circuits" | "proving" | "verifying";
+export type Submission = { kind: "self" } | { kind: "relayer"; relayerId: string; feeToken: Address };
+
+export interface ShieldedEngine {
+  id: string;
+  capabilities: ShieldedCapabilities;
+  account: {
+    status(): "none" | "locked" | "unlocked";
+    create(password: string): Promise<{ mnemonic: string }>;
+    import(mnemonic: string, password: string): Promise<void>;
+    unlock(password: string): Promise<void>;
+    lock(): void;
+    address(): string | null;
+  };
+  /** "sync" | "balances" | "compliance". Many listeners per event. */
+  subscribe<E extends ShieldedEvent>(event: E, listener: ShieldedListener<E>): () => void;
+  getBalances(chainId: number): ShieldedBalance[];
+  prepareShield(draft: ShieldDraft): Promise<PublicCall[]>;
+  estimate(draft: PrivateDraft): Promise<FeeQuote>;
+  prove(draft: PrivateDraft, opts: { onStage(stage: ProofStage): void; signal?: AbortSignal }): Promise<ProvedOperation>;
+  submit(operation: ProvedOperation): Promise<{ hash?: Hash }>;
+}
+```
+
+**Steps**
+
+1. ✅ **Spike (go/no-go).** Done 2026-11-18, see "Spike results". A throwaway Vite app, outside the registry:
+   - Railgun SDK 11.3.0 in a Web Worker on Sepolia: start the engine, create a wallet, scan, shield through wagmi, wait out the 60 s standby, unshield by self-broadcast.
+   - Kohaku Privacy Pools in the browser: sync and read a balance.
+   - Output: the Vite polyfill config, measured scan and proof times, artifact sizes, and the interface revised against both. If the Railgun SDK cannot run in a worker, stop and re-plan around Reloaded.
+2. ✅ **Interface, mock, primitives.** Done 2026-11-18, see "Step 2 results". `shielded-engine` (types, `ShieldedProvider`, `useShieldedEngine`) → `mock-shielded-engine` → `shielded-address` → `privacy-badge` → `shielded-balance` → `shielded-sync-status` → `proof-progress`.
+3. **Account and shield.** `shielded-account` (create, import, unlock, lock) → `address-input` accepts `0zk` → `shield` block (approve, sign shield key, send, standby countdown) → `shielded-transaction-status`.
+4. **Private spend.** `unshield` block → `private-send` block → exit to origin for pending and restricted funds → `privacy-hints` (pure rules over history and the draft).
+   - **Unlisted private tokens.** A private balance in a token the app's list lacks cannot be shown yet, since `shielded-balance` takes symbol and decimals as props. Railway Wallet resolves these with a chain read for `decimals` and a CoinGecko call by address, which tells both which token the account holds. Leave the lookup to the app and document the tradeoff; do not build it into the component.
+5. **Real engines.** `railgun-engine` → a "Shielded setup" guide (polyfills, worker, RPC and POI node config, GPL note) → one opt-in live Sepolia demo → `kohaku-engine`.
+6. **Later.** Broadcaster picker, `viewing-key`, `shielded-history`, private swap, the Reloaded SDK when it reaches npm.
+
+**Spike results (2026-11-18)**
+
+Step 1 ran as a Vite 8 app with the engine in a Web Worker, driven in headless Chrome against Sepolia. The verdict is **go** for Railgun in a worker. Shield, standby, proof and unshield all ran on-chain with a throwaway key. One issue is open: change left after a spend did not become spendable again (see "On-chain run").
+
+*Railgun, verified in the browser*
+- **It bundles and runs in a worker.** wallet 11.3.0 + shared-models 8.2.1 + ethers 6.14.3 + snarkjs 0.7.6 + `level-js` + `localforage` (artifact store).
+- **Vite config that works:**
+  ```ts
+  const polyfills = () => nodePolyfills({ globals: { Buffer: true, global: true, process: true } });
+  export default defineConfig({
+    define: { global: "globalThis" },
+    plugins: [polyfills()],
+    worker: { format: "es", plugins: () => [polyfills()] },
+  });
+  ```
+- **The worker needs a shim as its first import.** `vite-plugin-node-polyfills` does not inject globals into worker bundles, and the worker died with `global is not defined` until `globalThis.global`, `Buffer` and `process` were set by hand.
+- **The wallet's `postinstall` script** only patches React Native projects. Skipping it is fine.
+- **Size:** the worker chunk is 9.87 MB (2.65 MB gzip), plus a 1.94 MB poseidon wasm (0.89 MB gzip). Circuit artifacts come on top, at proof time.
+- **Timings:** engine start 0.7 s, `loadProvider` 0.7 s, `createRailgunWallet` 6.4 s, first balance scan 40.9 s.
+- **No jank:** the longest main-thread frame gap during the scan was 17 ms.
+- **Fees** came back as 25 and 25 bps. The `0zk` address is 127 characters.
+- **Shield transaction:** `populateShieldBaseToken` took 8 ms and returned a call to the RelayAdapt contract with `value` equal to the amount and 868 bytes of data. It maps onto `sendTransaction` with no ethers on the page.
+- **Scan progress is not monotonic.** There are two passes (UTXO, then TXID), each from 0 to 1. Progress jumped backwards (0.87 to 0.20), and the `Complete` event carries progress 0.
+- **Balance events:** one event per bucket (seven per update), and the full set fired twice.
+- **Scan errors on public RPCs:** "Failed to scan V2 events" twice and one "Invalid verification hash" on the TXID queue. The scan still finished.
+- **The engine needs its own RPC URLs** (two providers, total weight at least 2) and a POI node URL. It cannot reuse the wagmi transport.
+
+*Kohaku Privacy Pools, verified in the browser*
+- **It bundles and loads:** 2.0 MB (0.81 MB gzip), no polyfills needed.
+- **`estimateShield` works** (59 ms): 100 bps vetting fee, 0.001 ETH minimum deposit.
+- **Sync does not work on public Sepolia RPCs:**
+  - One RPC answered "pruned history unavailable".
+  - Another returned HTTP 429 after 134 s of a cold scan.
+  - Seeded with the repo's Sepolia snapshot it still sent 1,080 `eth_getLogs` requests before the 429.
+- **`balance` failed on Sepolia** with an invalid IPFS path for the association set, so no balance was read.
+- **It runs on the main thread:** the longest frame gap was 217 ms.
+- **Version drift:** `privacy-pools` alpha.33 installs its own `plugins` alpha.19 next to the top-level alpha.20.
+- **One seed fits both:** Kohaku's `MnemonicKeystore` already includes Railgun-compatible key derivation.
+
+*Changes to the plan*
+- **Sync is staged.** The `sync` event carries `{ stage, status, progress }`. `shielded-sync-status` shows the stage name and never lets the bar move backwards.
+- **Sync can fail and recover.** It needs an `error` status with a retry, since public RPCs fail mid-scan.
+- **Account creation is slow** (6.4 s), so `shielded-account` gets a `creating` phase.
+- **Balance updates are merged** in the adapter into one snapshot per wallet before components see them.
+- **`railgun-engine` takes config:** `rpcUrls` per chain and `poiNodeUrls`. The setup guide must say public RPCs are not enough for production.
+- **`kohaku-engine` is tested on mainnet, read-only,** through Kohaku's saga data service. Sepolia is not usable for it. It also has to run in a worker.
+
+*On-chain run (Sepolia, self-broadcast)*
+- **Shield 0.01 ETH:** confirmed in block 12162729 (`0xe90ae687…8dd9`), 947,613 gas, sent as a plain transaction to the classic RelayAdapt contract.
+- **Fee:** the private balance was 0.009975 WETH, exactly 25 bps less.
+- **Standby:** the balance showed as `ShieldPending` on the first scan and as `Spendable` 136 s after the shield was sent.
+- **Balances are pulled, not pushed.** Nothing changes until `refreshBalances` is called. A repeat scan takes about 3.5 s; a fresh browser profile rescans in about 41 s.
+- **Unshield 0.005 as WETH:** confirmed (`0xaffc9e4d…0f38`), 5 logs, 1,419,664 gas, sent to the Railgun proxy. The public address received 0.0049875 WETH, checked with `balanceOf`.
+- **Proof time in the worker:** gas estimate 5.8 s, proof 12.8 s, including a first download of the `01x02` circuit (3.0 MB wasm, 6.1 MB zkey). Longest main-thread frame gap: 17 ms.
+- **ETH unshield is an EIP-7702 transaction on Sepolia.** `populateProvedUnshieldBaseToken` returns a type-4 transaction addressed to an SDK-derived ephemeral account, with a signed authorization. The SDK has no switch to turn this off on networks with `supports7702`.
+  - Sent as a plain `{ to, data, value }` call it "succeeds" with 0 logs and moves nothing. The spike did this twice before the receipts were checked.
+  - That path is also slower: estimate 20 s, proof 32 to 36 s.
+- **Open: change is stuck.** After the unshield, the 0.004975 WETH of change sat in `MissingExternalPOI` and never became spendable.
+  - The TXID queue stops with "Invalid verification hash" on every scan.
+  - Calling `syncRailgunTransactionsV2`, `generatePOIsForWallet` and `refreshReceivePOIsForWallet` by hand found nothing to do.
+  - It is not known whether this is specific to Sepolia and the public POI node. Check on a mainnet read-only wallet when building `railgun-engine`.
+
+*More changes to the plan*
+- **Spend as WETH.** `unshield` and `shield` work on the wrapped token: a plain call any wallet can send. ETH in and out is a separate wrap or unwrap step, not the SDK's base-token path.
+- **The adapter refuses EIP-7702 transactions.** It checks every populated transaction for an `authorizationList` and throws a typed error; it never drops the field.
+- **A receipt is not proof.** `shielded-transaction-status` reports success only when the engine sees the balance change, not when the public receipt says `success`.
+- **The adapter polls.** It calls `refreshBalances` on an interval and after each submit, and components show "updating" between a confirmed transaction and the next scan.
+- **`incomplete` is a real state.** Change can sit there. `shielded-balance` needs it from the start, with a "retry proofs" action.
+
+*Where the spike is*
+- In the session scratch directory, not in the repo: the repo's `tsconfig` includes `**/*`, so `astro check` would try to typecheck it.
+- The throwaway key still holds about 0.04 Sepolia ETH, 0.0049875 WETH, and 0.004975 WETH in the private balance.
+
+**Step 2 results (2026-11-18)**
+
+Seven registry items, each with a registry entry, a docs page with live demos, and tests. They sit in a new "Shielded" docs group, marked as a preview. Nothing is committed yet.
+
+| Item | Type | Exports |
+|---|---|---|
+| `shielded-engine` | lib | `ShieldedEngine` and its types (`lib/shielded-engine.ts`); `ShieldedProvider`, `useShieldedEngine`, `useShieldedAccount`, `useShieldedState` (`components/shielded-provider.tsx`) |
+| `mock-shielded-engine` | lib | `createMockShieldedEngine`, `MOCK_TIMINGS`, `MOCK_FEE_BPS`, `MOCK_MNEMONIC` |
+| `shielded-address` | component | `ShieldedAddress`, `truncateShieldedAddress` |
+| `privacy-badge` | component | `PrivacyBadge`, `privacyMeta`, `Privacy` |
+| `shielded-balance` | component | `ShieldedBalance`, `ShieldedBalanceRow`, `useShieldedBalance`, `useShieldedBalances`, `totalShielded`, `shieldedBalanceMeta`, `ShieldedBalancePhase` |
+| `shielded-sync-status` | component | `ShieldedSyncStatus`, `ShieldedSyncBar`, `useShieldedSync`, `advanceSync`, `ShieldedSyncPhase` |
+| `proof-progress` | component | `ProofProgress`, `ProofStep`, `useProof`, `proofStepStates`, `proofStageMeta`, `ProofPhase` |
+
+*Interface as built*
+```ts
+export type ShieldedBalanceState = "spendable" | "pending" | "proving" | "incomplete" | "restricted";
+export type ShieldedTokenBalance = { token: Address; amounts: Readonly<Record<ShieldedBalanceState, bigint>> };
+export type ShieldedSyncStage = "notes" | "transactions";
+export type ShieldedSync = {
+  stage: ShieldedSyncStage;
+  status: "idle" | "syncing" | "synced" | "error";
+  progress: number; // 0 to 1 within the stage, not monotonic
+  error?: string;
+};
+export type ProofStage = "loading-circuits" | "proving" | "verifying";
+export type PrivateDraft = { kind: "unshield"; chainId: number; token: Address; amount: bigint; recipient: Address };
+export type ProvedOperation = { id: string; draft: PrivateDraft; expiresAt: number };
+
+export interface ShieldedEngine {
+  id: string;
+  account: {
+    status(): "none" | "locked" | "unlocked";
+    create(password: string): Promise<{ mnemonic: string }>;
+    import(mnemonic: string, password: string): Promise<void>;
+    unlock(password: string): Promise<void>;
+    lock(): void;
+    address(): string | null;
+  };
+  subscribe(event: "account" | "sync" | "balances", listener: () => void): () => void;
+  getSync(chainId: number): ShieldedSync;
+  getBalances(chainId: number): readonly ShieldedTokenBalance[] | undefined;
+  sync(chainId: number): Promise<void>;
+  retryProofs(chainId: number): Promise<void>;
+  prove(draft: PrivateDraft, opts: { onStage(stage: ProofStage): void; signal?: AbortSignal }): Promise<ProvedOperation>;
+}
+```
+
+*Changes to the sketch, and why*
+- **Listeners carry no payload.** An event says "this changed" and the state is read from the getters. The getters return the same reference until the state changes, so hooks use `useSyncExternalStore` and a component can never hold an event that disagrees with a getter. `ShieldedListener<E>` is gone.
+- **`getSync(chainId)` is new.** A component that mounts mid-scan needs the current state, not the next event.
+- **`getBalances` returns `undefined` until the first scan finishes.** An empty array means "scanned, holds nothing". The balance component needs the difference to show a skeleton.
+- **`ShieldedBalance` became `ShieldedTokenBalance`.** The component is called `ShieldedBalance`. Amounts are a record with all five states, 0n when empty.
+- **`sync(chainId)` is new.** It is the retry behind the sync error state and the "sync again" button. It resolves when the scan settles and never rejects; a failure shows up in `getSync`.
+- **`retryProofs(chainId)` is new,** for `incomplete` funds. It is per chain, because the SDK call it maps to is per wallet and network.
+- **An `account` event is new.** Components have to re-render on unlock and lock.
+- **The `compliance` event is dropped.** The balance states already carry what a component shows.
+- **Sync stages are `notes` and `transactions`,** neutral names for the UTXO pass and the TXID pass.
+- **`PrivateDraft` has one member, `unshield`.** A proof needs a draft, and the only private operation the mock can show yet is an unshield. `transfer` joins in step 4.
+- **Left out until a component uses them:** `capabilities`, `Submission`, `prepareShield`, `estimate`, `submit`, and typed error classes. Errors are plain `Error`s, and an aborted proof rejects with the signal's reason.
+- **Kept though no component calls them yet:** `account.create` / `import` / `unlock` / `lock` (the mock implements them so step 3 has them), `id`, and `ProvedOperation.expiresAt`.
+
+*Component decisions*
+- **Token metadata is a prop.** `shielded-balance` takes `{ address, symbol, decimals }` and does not read them from the chain. An RPC lookup keyed by the tokens in a private balance would tell the RPC provider what the account holds.
+- **`chainId` is a required prop** on `shielded-balance`, `shielded-sync-status` and their hooks (owner decision, 2026-11-18). The private balance lives on one chain whatever network the wallet is on, so the wagmi chain is the wrong default. No step 2 component needs a `WagmiProvider`. Later shielded components follow the same rule.
+- **The bar is a pure function.** `advanceSync(previous, next)` spreads the stages evenly over 0 to 1 and keeps the highest value seen in a scan. A scan after a finished or failed one starts from 0. The stage order is a constant (`SHIELDED_SYNC_STAGES`), so an engine with one pass would jump from 50% to done.
+- **Repeat scans are "updating".** Once balances exist, a scan reads "Updating private balance" with no step count, and `shielded-balance` sets `data-updating`. Otherwise the adapter's polling would replay the first-scan bar every interval.
+- **`shielded-address` needs no engine.** It takes `address`, so it also shows recipients. The account's own address comes from `useShieldedAccount`.
+- **`proof-progress` is controlled by props.** `useProof` wraps `engine.prove` and can be swapped for the step 4 flow hook. The phase while proving is the stage name.
+- **`privacy-badge` is filled for private, outlined for public,** with different icons, so it does not depend on color. It uses theme variables only.
+- **Default copy has no protocol words.** A test fails if "POI", "innocence", "Railgun" or "UTXO" appears in `shielded-balance`.
+- **ui-sdk is not used.** No registry code uses it today; these follow the existing Base UI and shadcn pattern.
+
+*Mock*
+- **Timings** (`MOCK_TIMINGS`, divided by `speed`): account creation 6 s, first scan 40 s, repeat scan 3.5 s, proof 13 s on the first run (4 s circuits, 8 s proving, 1 s verifying), standby 60 s. Three are guesses, not measurements: unlock 0.8 s, change settling 15 s, one proof retry 5 s.
+- **The 6 s fee estimate is not in the mock,** because `estimate` is not in the interface yet.
+- **`speed: Infinity` uses no timers.** Every flow finishes on the microtask queue, so a test can `await` each call. States that only last a while (`pending`) are tested with real delays and fake timers.
+- **Balances change only when a scan finishes.** The mock keeps notes (what the account really holds) apart from the published snapshot. Every `simulate` call ends in a repeat scan.
+- **`simulate` produces each state:** `shield` (fee, `pending`, then `spendable` or `restricted`), `unshield` (fee, whole notes spent, change `proving` then `spendable` or `incomplete`), `addFunds` (any state), `failNextSync`, `failNextProof`, `failNextRetry`, `keepIncomplete`.
+- **Creating the engine starts no timers,** so it can be created during server render. Scanning starts on `unlock`, for the chains in `chains` (default `[1]`).
+- **Proving moves no funds.** Without `submit`, a proved operation has nowhere to go; `simulate.unshield` stands in for it.
+
+*Checks*
+- Lint, typecheck (`astro check`), tests and build pass. 66 new tests (24 for the mock, 42 for the components), 262 in total.
+- The smoke install passes: every item, the seven new ones included, installs into a fresh shadcn Base UI app and builds.
+- The demos were driven in headless Chrome: shield to spendable, unshield with change, a failed scan and its retry, a proof run, cancel and failure, light and dark, phone width. No console errors.
+- Not done: a pass with a real screen reader. Roles, labels, `aria-live` and `role="alert"` are covered by tests only.
+
+*Follow-ups*
+- `proof-progress` changes height as the hint under the running step appears and goes.
+- The docs demos shorten some delays (first scan, standby) and say so on the page.
+
+**Shield and spend phases** (exported like `TxPhase`)
+```ts
+export type ShieldPhase =
+  | "idle" | "approving" | "signing" | "confirming" | "pending"
+  | "standby" | "spendable" | "restricted" | "cancelled" | "error";
+export type PrivateTxPhase =
+  | "idle" | "estimating" | "ready" | "proving" | "proved" | "expired"
+  | "submitting" | "pending" | "success" | "cancelled" | "error";
+```
+
+**Risks**
+- ~~The Railgun SDK may not bundle cleanly for a worker under Vite.~~ Settled by the spike: it does, with a polyfill plugin and a globals shim, and proofs generate inside the worker.
+- Change stuck in `MissingExternalPOI` after a spend (seen on Sepolia). If this also happens on mainnet, every spend leaves funds unusable until it is solved.
+- GPL-3.0 dependencies arrive in the user's app through `railgun-engine`. Registry source stays MIT, and the guide must say so.
+- Kohaku is unaudited and changes weekly. `kohaku-engine` is labelled experimental and pins exact versions.
+- A mnemonic in the browser is a real attack surface. The account component needs its own security review before release.
+
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).
 - Document the shadcn registry MCP (`npx shadcn registry:mcp`) so agents can browse and install 0xui.
@@ -285,6 +570,10 @@ These are fast and they lock in the conventions before the big components.
 | Drawer on mobile for dialogs (connect, token-select)? | Done 2026-11-18 with the shadcn `drawer` primitive. In the Base UI style that is Base UI's own Drawer, so no `vaul`. |
 | Commit `public/r/*.json` or generate at build? | Generate in CI and the build. Stop committing it once CI is in place. |
 | Token list source for `token-select` | Prop only, in Uniswap tokenlist format. Ship a small default list for docs. |
+| Shielded account: seed or wallet signature? | Seed (BIP-39 + password). A signature-derived account is easier to onboard but ties the private account to the public one. |
+| Shielded: ship `railgun-engine` with GPL-3.0 dependencies? | Yes. Our source stays MIT, the dependencies install into the user's app, and the guide flags it. |
+| Shielded: Kohaku scope while its Railgun plugin is a stub? | Privacy Pools only, experimental, after `railgun-engine`. |
+| Shielded: Railgun SDK 11.x or Reloaded? | 11.x now. Reloaded is WIP and not on npm; the worker boundary keeps a later swap cheap. |
 
 ---
 

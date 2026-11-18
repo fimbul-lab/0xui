@@ -1,0 +1,128 @@
+---
+title: Mock Shielded Engine
+description: An in-memory shielded engine for demos, tests and building UI before a real one is wired up.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default } from "@/demos/shielded-engine";
+
+A [shielded engine](/components/shielded-engine/) with no network, no cryptography and no funds. Every shielded demo and test in 0xui runs on it.
+
+It is not a tidy fake. It behaves the way the Railgun SDK did when we ran it on Sepolia, so UI built against it meets the awkward parts early:
+
+- A scan runs in two passes. Its progress climbs to 87%, falls back to 20%, climbs again, then starts over for the second pass. The final event carries progress 0.
+- Balances only change when a scan finishes, and arrive as one snapshot.
+- Shielded funds are `pending` for a standby period before they can be spent.
+- Change from a spend comes back as `proving`, and can get stuck as `incomplete`.
+- Proofs report stages. The first one downloads the circuits and is slower.
+- Shielding and unshielding each take a 25 bps fee. Amounts are `bigint`.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+## Installation
+
+<Install name="mock-shielded-engine" />
+
+## Usage
+
+```tsx
+import { ShieldedProvider } from "@/components/shielded-provider";
+import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
+
+const engine = createMockShieldedEngine({
+  funds: [{ token: WETH, amount: parseEther("1.25") }],
+});
+
+<ShieldedProvider engine={engine}>…</ShieldedProvider>;
+
+// The account starts locked. The password is "password".
+await engine.account.unlock("password");
+```
+
+Creating the engine starts no timers, so it is safe to create during server render. Scanning starts on `unlock`.
+
+## Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `speed` | `number` | `1` | Divides every delay. `Infinity` skips timers altogether. |
+| `timings` | `Partial<MockTimings>` | see below | Override single delays, in ms. |
+| `account` | `"none" \| "locked"` | `"locked"` | Start with no account, or a locked one. |
+| `password` | `string` | `"password"` | Password of the initial locked account. |
+| `chains` | `number[]` | `[1]` | Chains scanned automatically after unlock. Others scan when `sync` is called. |
+| `funds` | `MockFunds[]` | `[]` | What the account holds: `{ token, amount, state?, chainId? }`. |
+| `circuitsCached` | `boolean` | `false` | Skip the slow first circuit download. |
+
+### Timings
+
+Measured against the Railgun SDK on Sepolia, except where marked as a guess.
+
+| Key | Default | What |
+| --- | --- | --- |
+| `createAccount` | 6 s | Creating or importing an account. |
+| `unlock` | 0.8 s | Unlocking an account. A guess. |
+| `firstScan` | 40 s | The first scan of a chain. |
+| `repeatScan` | 3.5 s | Every later scan, and the delay before a change shows up. |
+| `loadCircuits` | 4 s | Downloading circuits on the first proof. Later proofs take a twentieth. |
+| `prove` | 8 s | Generating the proof. |
+| `verify` | 1 s | Verifying it. |
+| `standby` | 60 s | How long shielded funds stay `pending`. Mainnet is one hour. |
+| `settle` | 15 s | How long change stays `proving`. A guess. |
+| `retryProofs` | 5 s | One "retry proofs" attempt. A guess. |
+
+## Making things happen
+
+`engine.simulate` holds the controls a real engine doesn't have. Each one changes what the account holds, then runs a scan, because that is the only way a balance changes.
+
+| Method | What it does |
+| --- | --- |
+| `shield({ token, amount, outcome? })` | Funds arrive less the fee, `pending` for the standby period, then `spendable` or, with `outcome: "restricted"`, restricted. |
+| `unshield({ token, amount, change? })` | Spends whole notes. The remainder comes back as change: `proving`, then `spendable` or, with `change: "incomplete"`, stuck. |
+| `addFunds({ token, amount, state })` | Puts funds straight into any state. |
+| `failNextSync(message?)` | The next scan stops a third of the way in with an error. |
+| `failNextProof(message?)` | The next proof fails while proving. |
+| `failNextRetry(message?)` | The next `retryProofs` rejects. |
+| `keepIncomplete(keep?)` | While on, `retryProofs` finishes but changes nothing. |
+
+`shield` and `unshield` resolve with `{ fee, received }`.
+
+```ts
+const { received } = await engine.simulate.shield({ token: WETH, amount: parseEther("0.01") });
+// received === parseEther("0.009975")
+```
+
+## In tests
+
+With `speed: Infinity` nothing waits on a timer, so a test can `await` each step:
+
+```tsx
+const engine = createMockShieldedEngine({
+  speed: Infinity,
+  funds: [{ token: WETH, amount: 5n, state: "incomplete" }],
+});
+await engine.account.unlock("password");
+await engine.sync(1);
+
+render(
+  <ShieldedProvider engine={engine}>
+    <ShieldedBalance token={weth} chainId={1} />
+  </ShieldedProvider>
+);
+expect(screen.getByText("Incomplete")).toBeInTheDocument();
+```
+
+To watch a state that only lasts a while, such as `pending`, keep the real delays and use fake timers:
+
+```ts
+vi.useFakeTimers();
+const engine = createMockShieldedEngine();
+void engine.account.unlock("password");
+await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan);
+```
+
+## What it doesn't do
+
+It never produces a transaction, a valid address or a valid proof. The address is 127 characters and starts with `0zk`, but encodes nothing. The recovery phrase is the public BIP-39 test vector.
