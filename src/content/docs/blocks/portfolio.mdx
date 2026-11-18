@@ -3,22 +3,22 @@ title: Portfolio
 description: Token holdings with total value, sorted largest first, with spam kept out.
 ---
 
-import { Aside, Card } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/portfolio";
 
 Holdings for a token list: total value on top, then one row per token with amount and value, largest first. Likely spam, tokens without a price and dust are collapsed under "Hidden tokens". All balances are read in one batch.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
-Tokens use the [token list standard](/getting-started/token-lists/). The demo uses Uniswap's default list, loaded live with `useTokenList`, and prices for a handful of tokens, so the rest of the wallet sits under "Hidden tokens".
+Tokens use the [token list standard](/getting-started/token-lists/). The demo uses a short fixed list and fixed [holdings](#tokens-from-your-indexer), behind a pretend one-second load so you see the skeleton first. Open "Hidden tokens" to see one of each kind: dust, no price, likely spam and not on the list.
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/portfolio
-```
+<Install name="portfolio" />
 
 ## Usage
 
@@ -91,12 +91,41 @@ Over RPC, a portfolio costs one balance read per token, per user, per chain. We 
 ```
 </Aside>
 
+## Tokens from your indexer
+
+`balances` only covers tokens on your list. An indexer usually knows more: every token the address holds, with a name, symbol and decimals. Pass those as `holdings`:
+
+```tsx
+<Portfolio
+  tokens={tokens}
+  holdings={rows.map((row) => ({
+    token: { chainId: 1, address: row.token, symbol: row.symbol, name: row.name, decimals: row.decimals },
+    balance: BigInt(row.balance),
+  }))}
+  prices={prices}
+/>
+```
+
+While your query runs, pass `isLoading`. Portfolio shows its skeleton and doesn't read from RPC in the meantime:
+
+```tsx
+<Portfolio tokens={tokens} holdings={query.data} isLoading={query.isLoading} prices={prices} />
+```
+
+The token list stays the allowlist. A holding on the list uses the list's name and logo. A holding off the list goes under "Hidden tokens" as "Not on the token list", out of the total.
+
+Set `showUnlisted` to show them as normal rows instead. The spam, price and dust filters still apply. Key `prices` by address when you do: a price keyed by symbol also values every copy of that symbol.
+
+```tsx
+<Portfolio holdings={holdings} prices={pricesByAddress} showUnlisted />
+```
+
 ## States
 
 | `data-phase` | What the user sees |
 | --- | --- |
 | `idle` | "Connect a wallet to see its tokens." |
-| `loading` | Three skeleton rows. |
+| `loading` | A skeleton measured from the rows themselves when they are known, from three sample rows otherwise. |
 | `ready` | Total and rows, and "Hidden tokens (N)" when some are hidden. |
 | `empty` | "No tokens from this list in this wallet." |
 | `error` | Couldn't load balances. |
@@ -107,7 +136,7 @@ Each row has `data-hidden` set to its reason when it's hidden.
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `tokens` | `Token[]` | — | Tokens to check. |
+| `tokens` | `Token[]` | `[]` | Tokens to check. With `holdings`, the allowlist. |
 | `prices` | `Record<string, number>` | — | Prices by `chainId:address`, address or symbol. |
 | `address` | `Address` | connected | Whose holdings. |
 | `chainId` | `number` | current | Chain to read. |
@@ -116,5 +145,9 @@ Each row has `data-hidden` set to its reason when it's hidden.
 | `hideUnpriced` | `boolean` | `true` | Hide tokens without a price. |
 | `minValue` | `number` | `0.5` | Hide holdings worth less than this. |
 | `currency` | `string` | `"USD"` | Currency for values. |
+| `locale` | `string` | runtime locale | Locale for amounts and values. Set it when rendering on a server, so server and browser agree. |
 | `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
+| `holdings` | `{ token, balance }[]` | — | Holdings from your own source, with each token's metadata. Skips RPC reads. |
+| `showUnlisted` | `boolean` | `false` | Show `holdings` that aren't on `tokens`. |
+| `isLoading` | `boolean` | `false` | Your own `balances` or `holdings` are still loading. Shows the skeleton and skips RPC reads. |
 | `pageSize` | `number` | `10` | Rows per page, with "Show more". |

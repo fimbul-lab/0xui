@@ -3,20 +3,20 @@ title: Event Feed
 description: Live list of a contract's events, newest first, each linked to its transaction.
 ---
 
-import { Aside, Card } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/event-feed";
 
 Follow a contract's events as they happen: transfers, swaps, mints. New events appear at the top, each with its arguments and a link to the transaction. Screen readers hear new entries politely (`role="log"`).
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/event-feed
-```
+<Install name="event-feed" />
 
 ## Usage
 

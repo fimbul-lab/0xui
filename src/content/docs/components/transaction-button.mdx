@@ -3,22 +3,21 @@ title: Transaction Button
 description: Sends a transaction and shows every step on the button. Connect, switch network, confirm, pending, done.
 ---
 
-import { Card } from "@astrojs/starlight/components";
-import { Default, Reverted, WrongNetwork, Blocked } from "@/demos/transaction-button";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Reverted, WrongNetwork, Blocked, Simulated } from "@/demos/transaction-button";
 
 The button carries the whole flow. Disconnected users get the wallet picker. On the wrong network it offers to switch. Then it walks through confirm in wallet, pending and done, with a status line for each step.
 
 Connect the **Demo Wallet** to try it. Demo transactions get a fake hash and "mine" after 3 seconds. Nothing is broadcast.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/transaction-button
-```
+<Install name="transaction-button" />
 
 ## Usage
 
@@ -50,9 +49,9 @@ Always pass `chainId`. The button then makes sure the wallet is on that chain be
 
 ### Wrong network
 
-<Card>
+<Preview>
   <WrongNetwork client:load />
-</Card>
+</Preview>
 
 The label says exactly what clicking does: "Switch to Base". Once the switch is done, the button returns to its normal label.
 
@@ -60,9 +59,9 @@ The label says exactly what clicking does: "Switch to Base". Once the switch is 
 
 Don't just disable the button. Say why, so users know what to fix.
 
-<Card>
+<Preview>
   <Blocked client:load />
-</Card>
+</Preview>
 
 ```tsx
 <TransactionButton disabledReason={!amount ? "Enter an amount" : undefined} …>
@@ -70,9 +69,29 @@ Don't just disable the button. Say why, so users know what to fix.
 
 ### Reverted
 
-<Card>
+<Preview>
   <Reverted client:load />
-</Card>
+</Preview>
+
+### Simulate first
+
+With `simulate`, the button dry-runs the transaction from the connected account before anyone clicks. If it would revert, the button is disabled and the contract's revert reason is shown, so the wallet never opens on a transaction that will fail.
+
+This demo tries to send a billion USDC from the Demo Wallet. The check runs against mainnet.
+
+<Preview>
+  <Simulated client:load />
+</Preview>
+
+```tsx
+<TransactionButton chainId={1} simulate contract={{ address: usdc, abi: erc20Abi, functionName: "transfer", args: [to, amount] }}>
+  Send
+</TransactionButton>
+```
+
+The simulation runs once a wallet is connected on the right network and `disabledReason` is clear, and again after each transaction. Use `disabledReason` for what your form already knows, such as an empty amount, and `simulate` for what only the chain knows.
+
+It is a check, not a guarantee: state can change between the simulation and the block the transaction lands in.
 
 ### Headless
 
@@ -84,6 +103,8 @@ flow.execute({ transaction: { to, value } });
 // flow.phase, flow.hash, flow.receipt, flow.error, flow.wrongChain, flow.switchToTarget()
 ```
 
+`useTransactionSimulation({ contract, chainId })` runs the same dry run on its own. It returns `status` (`idle`, `checking`, `ok` or `failed`) and the revert `reason`.
+
 ## States
 
 `data-phase` on the root holds the current state, also exported as `TxPhase`.
@@ -91,6 +112,7 @@ flow.execute({ transaction: { to, value } });
 | `data-phase` | Button | Status line |
 | --- | --- | --- |
 | `idle` | Your label, or "Connect wallet" / "Switch to X" | — |
+| `idle`, with `simulate` | "Checking…", then your label or "Transaction will fail" | Alert with the revert reason when it would fail. |
 | `switching` | Spinner, "Switching network…" | Approve the network switch in your wallet. |
 | `confirming` | Spinner, "Confirm in wallet…" | Confirm the transaction in your wallet. |
 | `pending` | Spinner, "Pending…" | Transaction submitted. Waiting for confirmation… |
@@ -110,6 +132,7 @@ Also accepts shadcn `Button` props.
 | `chainId` | `number` | current chain | Chain the transaction must run on. |
 | `confirmations` | `number` | `1` | Confirmations before success. |
 | `disabledReason` | `string` | — | Disable and show this text. |
+| `simulate` | `boolean` | `false` | Dry-run first. Disable and show the revert reason when it would fail. |
 | `children` | `ReactNode` | `"Submit"` | Label. |
 | `successLabel` | `ReactNode` | `"Done"` | Label after success. |
 | `resetAfter` | `number \| false` | `4000` | Back to idle after success, in ms. |

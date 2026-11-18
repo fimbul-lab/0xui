@@ -3,22 +3,21 @@ title: Morph Text
 description: Text that morphs from the old value to the new one when it changes.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Labels, Numbers } from "@/demos/morph-text";
 
 Animates a label when its text changes. Characters the old and new text share slide to their new place, and the rest fade. Built on [torph](https://github.com/lochie/torph).
 
 Click the button to step through a transaction's labels.
 
-<Card>
+<Preview>
   <Labels client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/morph-text
-```
+<Install name="morph-text" />
 
 ## Usage
 
@@ -38,9 +37,9 @@ Keep one `MorphText` mounted and change its text. Swapping between two `MorphTex
 
 Digits roll by place value, so only the places that changed move. Use `tabular-nums` on the parent to stop the width from shifting.
 
-<Card>
+<Preview>
   <Numbers client:load />
-</Card>
+</Preview>
 
 ```tsx
 <span className="tabular-nums">

@@ -3,20 +3,19 @@ title: Address
 description: ENS name or checksummed, truncated address, with copy and explorer link.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, NoEns, Pill } from "@/demos/address";
 
 Shows an address the way people expect: the ENS name when there is one, otherwise `0x1234…abcd` (checksummed). The full address is always available on hover and to screen readers.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/address
-```
+<Install name="address" />
 
 ENS names resolve on Ethereum mainnet, so mainnet must be in your wagmi config. If it isn't, or if the lookup fails, the component shows the address.
 
@@ -32,9 +31,9 @@ import { Address } from "@/components/address";
 
 ### Without ENS, with explorer link
 
-<Card>
+<Preview>
   <NoEns client:load />
-</Card>
+</Preview>
 
 ```tsx
 <Address address={address} ens={false} explorer />
@@ -42,9 +41,9 @@ import { Address } from "@/components/address";
 
 ### Pill
 
-<Card>
+<Preview>
   <Pill client:load />
-</Card>
+</Preview>
 
 ```tsx
 <Address address={address} variant="pill" />

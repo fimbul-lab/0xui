@@ -3,22 +3,21 @@ title: Connect Wallet
 description: Wallet picker with recent and installed badges, per-wallet pending state and cancel handling.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, CustomTrigger } from "@/demos/connect-wallet";
 
 A "Connect wallet" button that opens a wallet picker. The wallets are the connectors in your wagmi config. Browser extensions that announce themselves ([EIP-6963](https://eips.ethereum.org/EIPS/eip-6963)) appear automatically with their own icon.
 
 Pick **Demo Wallet** to try it without an extension.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/connect-wallet
-```
+<Install name="connect-wallet" />
 
 ## Usage
 
@@ -36,9 +35,9 @@ Most apps want [Wallet Button](/components/wallet-button/), which shows this but
 
 `ConnectWallet` accepts every shadcn `Button` prop. Its children become the label.
 
-<Card>
+<Preview>
   <CustomTrigger client:load />
-</Card>
+</Preview>
 
 ```tsx
 <ConnectWallet variant="outline" title="Sign in with your wallet">
@@ -73,6 +72,7 @@ const { wallets, connect, phase, pendingId } = useConnectWallet();
 - **Fewer choices:** shows `maxVisible` wallets (4 by default). The rest sit behind "Other wallets".
 - **Duplicates:** the generic `injected()` connector is hidden when extensions announce themselves, since it would duplicate one of them.
 - **Closing:** the dialog closes itself after a successful connection.
+- **Small screens:** below 640px the picker opens as a bottom drawer, within thumb reach, and can be swiped away. Set `mode` to force a dialog or a drawer. See [Responsive Dialog](/components/responsive-dialog/).
 
 ## States
 
@@ -96,3 +96,4 @@ const { wallets, connect, phase, pendingId } = useConnectWallet();
 | `title` | `ReactNode` | `"Connect a wallet"` | Dialog title. |
 | `maxVisible` | `number` | `4` | Wallets shown before "Other wallets". |
 | `footer` | `ReactNode` | privacy note | Small print under the list. `null` hides it. |
+| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom drawer on small screens, dialog otherwise. Or force one. |

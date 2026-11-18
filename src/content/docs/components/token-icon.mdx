@@ -3,20 +3,19 @@ title: Token Icon
 description: Token logo with fallbacks and an optional chain badge.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, WithChain } from "@/demos/token-icon";
 
 Tries three sources in order: your `src` URL (a token list's `logoURI`; `ipfs://` works), the built-in icon for the symbol, then the symbol's first two letters. List logos go dead often, so each step falls through to the next.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/token-icon
-```
+<Install name="token-icon" />
 
 ## Usage
 
@@ -35,9 +34,9 @@ import { TokenIcon } from "@/components/token-icon";
 
 The same token on different chains is easy to mix up. `chainId` adds the chain's logo in the corner.
 
-<Card>
+<Preview>
   <WithChain client:load />
-</Card>
+</Preview>
 
 ```tsx
 <TokenIcon symbol="USDC" chainId={8453} size={40} />

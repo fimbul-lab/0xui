@@ -3,22 +3,21 @@ title: Send
 description: Send form for ETH and ERC-20s. Recipient with ENS, amount with balance, and a button that names what's missing.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/send";
 
 A complete send flow built from [Address Input](/components/address-input/), [Token Input](/components/token-input/), [Transaction Button](/components/transaction-button/) and [Transaction Status](/components/transaction-status/). The button names the next thing to do: "Enter a recipient", "Enter an amount", "Insufficient USDC balance", then "Send USDC".
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 Tokens use the [token list standard](/getting-started/token-lists/). The demo uses Uniswap's default list, loaded live with `useTokenList`.
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/send
-```
+<Install name="send" />
 
 ## Usage
 

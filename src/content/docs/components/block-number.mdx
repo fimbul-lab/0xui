@@ -3,20 +3,19 @@ title: Block Number
 description: Live block indicator that doubles as an RPC health check.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, WithExplorer } from "@/demos/block-number";
 
 Shows the latest block and updates as new blocks arrive. The dot shows whether the RPC is responding.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/block-number
-```
+<Install name="block-number" />
 
 ## Usage
 
@@ -32,9 +31,9 @@ With HTTP transports, wagmi polls for new blocks (every 4 seconds by default). P
 
 ### Linked to the explorer
 
-<Card>
+<Preview>
   <WithExplorer client:load />
-</Card>
+</Preview>
 
 ```tsx
 <BlockNumber chainId={8453} explorer />
@@ -46,7 +45,7 @@ With HTTP transports, wagmi polls for new blocks (every 4 seconds by default). P
 
 | `data-phase` | What the user sees |
 | --- | --- |
-| `loading` | Grey dot, "Loading block…". |
+| `loading` | Grey dot and a skeleton where the number will be. "Loading block…" for screen readers. |
 | `live` | Green dot (pulses while watching) and the block number. |
 | `error` | Red dot, "RPC unavailable". |
 

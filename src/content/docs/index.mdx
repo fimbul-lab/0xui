@@ -3,38 +3,21 @@ title: 0xui
 description: Copy-paste web3 React components built on wagmi, viem, Base UI and Tailwind.
 template: splash
 hero:
-  tagline: Web3 React components you copy into your app. Built on wagmi, viem, Base UI and Tailwind, and installed with the shadcn CLI.
+  title: Web3 components you own.
+  tagline: React components for wallets, tokens and transactions, copied into your app as source. Built on wagmi, viem, Base UI and Tailwind, and installed with the shadcn CLI.
   actions:
     - text: Get started
       link: /getting-started/installation/
-      icon: right-arrow
-    - text: GitHub
-      link: https://github.com/Matsfjeldstad/0xui
-      icon: external
-      variant: minimal
+      variant: primary
+    - text: Browse components
+      link: /components/
+      variant: secondary
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
-import { Default as ChainSelector } from "@/demos/chain-selector";
+import Features from "@/components/docs/Features.astro";
+import Showcase from "@/components/docs/Showcase.astro";
 
-<Card title="Chain Selector">
-  <ChainSelector client:load />
-</Card>
+<Showcase />
 
-<CardGrid>
-  <Card title="You own the code" icon="document">
-    Components are copied into your project as source. There is no package to
-    upgrade around and nothing to override.
-  </Card>
-  <Card title="Every state handled" icon="approve-check">
-    Pending, cancelled in wallet, wrong network, error. Each one is designed,
-    named, and exported as a type.
-  </Card>
-  <Card title="Ready for agents" icon="rocket">
-    Rich registry descriptions, JSDoc on every prop, and installable through
-    the shadcn MCP server.
-  </Card>
-  <Card title="Headless when you need it" icon="setting">
-    Every component exports its hook. Keep the logic and bring your own UI.
-  </Card>
-</CardGrid>
+<Features />
+

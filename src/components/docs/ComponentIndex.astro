@@ -1,0 +1,138 @@
+---
+/**
+ * Every page in a docs section as a scannable list: name, slug, one line.
+ *
+ *   <ComponentIndex section="components" />   grouped as in the sidebar
+ *   <ComponentIndex section="blocks" />
+ */
+import { getCollection } from "astro:content";
+import { groupComponents } from "../../docs-nav.mjs";
+
+interface Props {
+  section: "components" | "blocks";
+}
+
+const { section } = Astro.props;
+
+const docs = await getCollection("docs");
+const pages = new Map(
+  docs
+    .filter((doc) => doc.id.startsWith(`${section}/`))
+    .map((doc) => [doc.id.slice(section.length + 1), doc.data]),
+);
+
+const groups =
+  section === "components"
+    ? groupComponents([...pages.keys()])
+    : [{ label: "", blurb: "", items: [...pages.keys()].sort() }];
+---
+
+<div class="index not-content">
+  {
+    groups.map((group) => (
+      <section>
+        {group.label && (
+          <header>
+            <h2 id={group.label.toLowerCase()}>{group.label}</h2>
+            {group.blurb && <p>{group.blurb}</p>}
+          </header>
+        )}
+        <ul>
+          {group.items
+            .filter((name) => pages.has(name))
+            .map((name) => (
+              <li>
+                <a href={`/${section}/${name}/`}>
+                  <span class="title">{pages.get(name)!.title}</span>
+                  <span class="slug">{name}</span>
+                  <span class="description">{pages.get(name)!.description}</span>
+                </a>
+              </li>
+            ))}
+        </ul>
+      </section>
+    ))
+  }
+</div>
+
+<style>
+  .index {
+    display: grid;
+    gap: 2.5rem;
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  h2 {
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-white);
+  }
+  header p {
+    font-size: 0.8125rem;
+    color: var(--sl-color-gray-3);
+  }
+  /* Hairlines between cells: each draws its right and bottom edge, and the
+     frame clips the outer ones. An odd count leaves no stray filled cell. */
+  ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    margin: 0;
+    border: 1px solid var(--docs-line);
+    border-radius: 0.625rem;
+    padding: 0;
+    list-style: none;
+    overflow: hidden;
+  }
+  li {
+    display: grid;
+    margin: 0 -1px -1px 0;
+    border: solid var(--docs-line);
+    border-width: 0 1px 1px 0;
+  }
+  a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-content: start;
+    gap: 0.375rem 0.75rem;
+    padding: 0.875rem 1rem 1rem;
+    text-decoration: none;
+    transition: background-color 150ms var(--docs-ease);
+  }
+  a:hover {
+    background-color: var(--docs-surface);
+  }
+  a:focus-visible {
+    outline-offset: -2px;
+  }
+  .title {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--sl-color-white);
+  }
+  .slug {
+    align-self: center;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    color: var(--sl-color-gray-4);
+    transition: color 150ms var(--docs-ease);
+  }
+  a:hover .slug {
+    color: var(--docs-accent);
+  }
+  .description {
+    grid-column: 1 / -1;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    text-wrap: pretty;
+    color: var(--sl-color-gray-3);
+  }
+</style>

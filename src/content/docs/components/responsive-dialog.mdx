@@ -1,0 +1,88 @@
+---
+title: Responsive Dialog
+description: A dialog that becomes a bottom drawer on small screens.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Auto, ForcedDrawer } from "@/demos/responsive-dialog";
+
+A centered dialog is out of thumb reach on a phone. This shell shows the same title and content as a dialog on larger screens and as a bottom drawer below 640px. The drawer has a handle and can be swiped away.
+
+It is what [Connect Wallet](/components/connect-wallet/) and [Token Select](/components/token-select/) open. Use it for your own pickers and small forms.
+
+Narrow the window below 640px to get the drawer.
+
+<Preview>
+  <Auto client:load />
+</Preview>
+
+## Installation
+
+<Install name="responsive-dialog" />
+
+It installs the shadcn `dialog` and `drawer` primitives.
+
+## Usage
+
+```tsx
+import { ResponsiveDialog } from "@/components/responsive-dialog";
+
+const [open, setOpen] = useState(false);
+
+<ResponsiveDialog
+  open={open}
+  onOpenChange={setOpen}
+  title="Slippage"
+  description="Choose how much the price may move before the swap is cancelled."
+  className="sm:max-w-sm"
+>
+  {content}
+</ResponsiveDialog>;
+```
+
+`description` is read by screen readers and not shown. Write it for someone who can't see the content.
+
+## Examples
+
+### Force one
+
+`mode="drawer"` or `mode="dialog"` skips the media query.
+
+<Preview>
+  <ForcedDrawer client:load />
+</Preview>
+
+```tsx
+<ResponsiveDialog mode="drawer" …>
+```
+
+### Another breakpoint
+
+```tsx
+<ResponsiveDialog drawerQuery="(max-width: 767px)" …>
+```
+
+### Headless
+
+`useMediaQuery(query)` is the hook behind `auto`. It is false on the server and where `matchMedia` is missing, such as jsdom.
+
+## Behavior
+
+| Case | What happens |
+| --- | --- |
+| Server render and first paint | Dialog. The drawer is chosen after hydration, while the dialog is still closed. |
+| The screen crosses the breakpoint while open | It stays open and switches. The content remounts, so lift state that must survive above it. |
+| Long content in the drawer | The content area scrolls. The drawer stops short of the top of the screen. |
+| `className` | Applies to the dialog panel only. The drawer is full width and sizes itself. |
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `open` / `onOpenChange` | — | — | Control it. |
+| `title` | `ReactNode` | — | Shown at the top. |
+| `description` | `ReactNode` | — | For screen readers. Not shown. |
+| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Pick by screen size, or force one. |
+| `drawerQuery` | `string` | `"(max-width: 639px)"` | Media query that picks the drawer in `auto` mode. |
+| `className` | `string` | — | Class for the dialog panel. |

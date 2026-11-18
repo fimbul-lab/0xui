@@ -1,22 +1,21 @@
 ---
 title: Account
-description: Connected-account button with a panel for balance, copy, explorer link and disconnect.
+description: Connected-account button with a panel for balance, copy, explorer link, account switching and disconnect.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, WithBalance } from "@/demos/account";
 
 The button shows the connected account's avatar and ENS name, or its truncated address. It opens a panel with the balance, current network, copy, explorer link and disconnect. It renders nothing while disconnected.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/account
-```
+<Install name="account" />
 
 ## Usage
 
@@ -32,13 +31,21 @@ To show "Connect wallet" while disconnected as well, use [Wallet Button](/compon
 
 ### Balance in the trigger
 
-<Card>
+<Preview>
   <WithBalance client:load />
-</Card>
+</Preview>
 
 ```tsx
 <Account showBalance />
 ```
+
+### Switch account
+
+wagmi can hold several wallet connections at once. When more than one wallet is connected, the panel lists the others under "Switch account". Picking one makes it the current account for the whole app. Disconnect only disconnects the current wallet.
+
+There is nothing to configure: the list appears once a second wallet connects, for example through [Connect Wallet](/components/connect-wallet/).
+
+Accounts inside one wallet are switched in the wallet itself. wagmi follows the change, and the button updates.
 
 ### Extra panel content
 
@@ -57,6 +64,10 @@ import { useConnectedAccount } from "@/components/account";
 
 const { address, ensName, displayName, chain, connector, disconnect } =
   useConnectedAccount();
+
+// With several wallets connected:
+const { otherAccounts, switchAccount, isSwitching } = useConnectedAccount();
+otherAccounts.map(({ address, connector }) => switchAccount(connector));
 ```
 
 ## Props

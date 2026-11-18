@@ -3,20 +3,19 @@ title: Address Avatar
 description: ENS avatar, or a deterministic gradient for any address.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/address-avatar";
 
 Shows the ENS avatar when the address has one. Otherwise it shows a gradient derived from the address, so the same address always looks the same.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/address-avatar
-```
+<Install name="address-avatar" />
 
 ENS avatars resolve on Ethereum mainnet, so mainnet must be in your wagmi config.
 

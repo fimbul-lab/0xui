@@ -3,20 +3,19 @@ title: Balance
 description: Native or ERC-20 balance for the connected account or any address.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Native, Erc20 } from "@/demos/balance";
 
 Reads a balance and formats it with [Token Amount](/components/token-amount/). It defaults to the connected account's native balance on the current chain, and refreshes every 15 seconds.
 
-<Card>
+<Preview>
   <Native client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/balance
-```
+<Install name="balance" />
 
 ## Usage
 
@@ -33,9 +32,9 @@ import { Balance } from "@/components/balance";
 
 Pass the token contract. Balance, decimals and symbol are read in one batched call.
 
-<Card>
+<Preview>
   <Erc20 client:load />
-</Card>
+</Preview>
 
 ```tsx
 <Balance token="0xA0b8…eB48" price={1} />
@@ -56,7 +55,7 @@ Call `refetch()` after a transaction to update right away.
 | `data-phase` | What the user sees |
 | --- | --- |
 | `idle` | Nothing: no address and no wallet connected. |
-| `loading` | Pulsing placeholder, "Loading balance" for screen readers. |
+| `loading` | Skeleton the height of the text, "Loading balance" for screen readers. |
 | `ready` | The formatted balance. |
 | `error` | "—", with "Couldn't load balance" on hover. |
 

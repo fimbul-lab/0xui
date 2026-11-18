@@ -23,6 +23,7 @@ Out of the box, 0xui components read straight from the chain over RPC. That need
 | --- | --- | --- |
 | [Token Select](/components/token-select/) | `balances` | The account's balance per token address |
 | [Portfolio](/blocks/portfolio/) | `balances` | The same, for every token in the list |
+| [Portfolio](/blocks/portfolio/#tokens-from-your-indexer) | `holdings` | Every token the account holds, with its own metadata. Off-list tokens need `showUnlisted` |
 | [Transaction History](/components/transaction-history/) | `transactions` | The account's transactions, from any device or app |
 | [Event Feed](/components/event-feed/) | `initialEvents` | Past events. New ones still stream in over RPC. |
 | [`useTokenList`](/getting-started/token-lists/) | `allowlist` / `blocklist` | Tokens you've verified, or flagged as spam |

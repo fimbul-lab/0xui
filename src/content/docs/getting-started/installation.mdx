@@ -3,13 +3,15 @@ title: Installation
 description: Add the 0xui registry to a shadcn project and set up wagmi.
 ---
 
+import Install from "@/components/docs/Install.astro";
+
 0xui is a [shadcn registry](https://ui.shadcn.com/docs/registry). Components are copied into your project as source, so you own and can edit them.
 
 ## 1. Set up shadcn
 
 If your project doesn't use shadcn yet, follow the [shadcn installation guide](https://ui.shadcn.com/docs/installation) for your framework. You need Tailwind CSS v4 and a `components.json`.
 
-0xui is built and tested on the [Base UI](https://base-ui.com) flavor of shadcn (`npx shadcn@latest init --base base`). Projects on Radix also install and compile, but only Base UI is tested at runtime.
+0xui needs the [Base UI](https://base-ui.com) flavor of shadcn (`npx shadcn@latest init --base base`). The Radix flavor isn't supported: components use Base UI props that Radix primitives don't have.
 
 ## 2. Add the 0xui registry
 
@@ -26,9 +28,7 @@ Add the `@0xui` namespace to `components.json`:
 
 ## 3. Add wagmi
 
-```bash
-npx shadcn@latest add @0xui/wagmi-config
-```
+<Install name="wagmi-config" />
 
 This adds two files:
 
@@ -59,9 +59,7 @@ If you already have a wagmi setup, skip this step. Every 0xui component reads fr
 
 ## 4. Add components
 
-```bash
-npx shadcn@latest add @0xui/chain-selector
-```
+<Install name="chain-selector" />
 
 Shared helpers (`@0xui/0xui-utils`, `@0xui/use-mounted`, …) and shadcn primitives (`popover`, `dialog`, …) install automatically as dependencies.
 

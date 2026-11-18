@@ -3,20 +3,19 @@ title: Amount Input
 description: Large decimal input for token amounts. String state, decimal clamping, lenient paste, Max.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/amount-input";
 
 The big borderless amount field from swap UIs. It keeps the value as a string, so precision is never lost to floats. It refuses invalid keystrokes and digits past the token's decimals, and cleans up pasted amounts like `$1,000.50`.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/amount-input
-```
+<Install name="amount-input" />
 
 ## Usage
 

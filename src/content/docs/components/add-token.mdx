@@ -3,20 +3,19 @@ title: Add Token
 description: Button that asks the wallet to track a token, e.g. "Add USDC to wallet".
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/add-token";
 
 Asks the wallet to track an ERC-20 ([EIP-747](https://eips.ethereum.org/EIPS/eip-747)). Useful after a swap or bridge into a token the wallet doesn't list by default. Renders nothing when no wallet is connected.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/add-token
-```
+<Install name="add-token" />
 
 ## Usage
 

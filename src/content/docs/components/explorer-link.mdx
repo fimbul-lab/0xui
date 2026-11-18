@@ -3,20 +3,19 @@ title: Explorer Link
 description: Link to an address, transaction or block on the chain's block explorer.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, CustomText } from "@/demos/explorer-link";
 
 Builds the URL from `chain.blockExplorers` in your wagmi config, so it works on every chain you configure. Nothing is hardcoded.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/explorer-link
-```
+<Install name="explorer-link" />
 
 ## Usage
 
@@ -34,9 +33,9 @@ Uses the current chain unless you pass `chainId`.
 
 ### Custom text and chain
 
-<Card>
+<Preview>
   <CustomText client:load />
-</Card>
+</Preview>
 
 ```tsx
 <ExplorerLink block={21_000_000} chainId={8453}>

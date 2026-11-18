@@ -3,20 +3,19 @@ title: Address Input
 description: Recipient field that takes an address or ENS name, resolves names, and catches checksum typos.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/address-input";
 
 Type or paste an address or an ENS name. Names resolve on mainnet once typing pauses, with the avatar and resolved address shown. Mixed-case addresses must match their checksum, which catches most single-character typos. Problems show after the field loses focus, not while typing.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/address-input
-```
+<Install name="address-input" />
 
 ## Usage
 

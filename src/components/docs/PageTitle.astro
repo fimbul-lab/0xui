@@ -1,0 +1,127 @@
+---
+import registry from "../../../registry.json";
+
+const { entry, id } = Astro.locals.starlightRoute;
+const { title, description } = entry.data;
+
+const sections: Record<string, string> = {
+  "getting-started": "Getting started",
+  components: "Components",
+  blocks: "Blocks",
+};
+const [section, name] = id.split("/");
+const eyebrow = name ? sections[section] : undefined;
+
+// Component and block pages link to what `shadcn add` actually installs.
+const item =
+  section === "components" || section === "blocks"
+    ? registry.items.find((entry) => entry.name === name)
+    : undefined;
+const source = item?.files[0]?.path;
+---
+
+<header class="page-title">
+  {eyebrow && <p class="eyebrow">{eyebrow}</p>}
+  <h1 id="_top">{title}</h1>
+  {description && <p class="lead">{description}</p>}
+  {
+    item && (
+      <ul class="meta">
+        {source && (
+          <li>
+            <a href={`https://github.com/Matsfjeldstad/0xui/blob/main/${source}`}>
+              Source
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M5 11 11 5M6 5h5v5" />
+              </svg>
+            </a>
+          </li>
+        )}
+        <li>
+          <a href={`/r/${item.name}.json`}>
+            Registry JSON
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M5 11 11 5M6 5h5v5" />
+            </svg>
+          </a>
+        </li>
+      </ul>
+    )
+  }
+</header>
+
+<style>
+  .page-title {
+    padding-top: 0.5rem;
+  }
+  .eyebrow {
+    margin-bottom: 0.75rem;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  h1 {
+    font-size: var(--sl-text-h1);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    color: var(--sl-color-white);
+  }
+  .lead {
+    max-width: 38rem;
+    margin-top: 0.75rem;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    text-wrap: pretty;
+    color: var(--sl-color-gray-3);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding: 0;
+    list-style: none;
+  }
+  .meta a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.75rem;
+    border: 1px solid var(--docs-line);
+    border-radius: 0.4375rem;
+    padding: 0 0.5rem 0 0.625rem;
+    background-color: var(--docs-surface);
+    font-family: var(--__sl-font-mono);
+    font-size: 0.75rem;
+    text-decoration: none;
+    color: var(--sl-color-gray-2);
+    transition:
+      border-color 150ms var(--docs-ease),
+      color 150ms var(--docs-ease);
+  }
+  .meta a:hover {
+    border-color: var(--docs-line-strong);
+    color: var(--sl-color-white);
+  }
+  .meta svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: var(--sl-color-gray-4);
+  }
+  @media (pointer: coarse) {
+    .meta a {
+      min-height: 2.75rem;
+      padding-inline: 0.875rem 0.75rem;
+    }
+  }
+</style>

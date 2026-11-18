@@ -1,0 +1,142 @@
+---
+title: Sign in with Ethereum
+description: Prove wallet ownership to your server with Sign Message and viem's SIWE helpers.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { SignIn } from "@/demos/siwe";
+
+A connected wallet tells your app which address is in the browser. It doesn't prove anything to your server: anyone can send an address in a request. Sign in with Ethereum ([EIP-4361](https://eips.ethereum.org/EIPS/eip-4361), SIWE) closes that gap. The wallet signs a short message, your server checks the signature, and then starts a session.
+
+[Sign Message](/components/sign-message/) handles the wallet side. viem's `viem/siwe` builds and verifies the message, so there is nothing else to install.
+
+Connect the **Demo Wallet** and sign. The demo stops at the signature: checking it is your server's job.
+
+<Preview>
+  <SignIn client:load />
+</Preview>
+
+## How it works
+
+1. Your server creates a one-time nonce and remembers it in the session.
+2. The browser builds the SIWE message with that nonce, and the wallet signs it.
+3. Your server verifies the signature, checks the nonce and domain, and stores the address in the session.
+
+## Install
+
+<Install name="sign-message" />
+
+## Server
+
+Two endpoints. The examples use the web `Request` and `Response`, so they fit any framework. `session` stands for your session store, for example an encrypted `httpOnly` cookie.
+
+```ts
+// GET /api/siwe/nonce
+import { generateSiweNonce } from "viem/siwe";
+
+export async function GET() {
+  const nonce = generateSiweNonce();
+  await session.set("siweNonce", nonce);
+  return Response.json({ nonce });
+}
+```
+
+```ts
+// POST /api/siwe/verify
+import { createPublicClient, http } from "viem";
+import { mainnet } from "viem/chains";
+import { parseSiweMessage } from "viem/siwe";
+
+const client = createPublicClient({ chain: mainnet, transport: http() });
+
+export async function POST(request: Request) {
+  const { message, signature } = await request.json();
+
+  const valid = await client.verifySiweMessage({
+    message,
+    signature,
+    domain: "example.com",
+    nonce: await session.get("siweNonce"),
+  });
+  // A nonce works once, whether or not the signature was good.
+  await session.delete("siweNonce");
+  if (!valid) return new Response("Invalid signature", { status: 401 });
+
+  const { address, chainId } = parseSiweMessage(message);
+  await session.set("user", { address, chainId });
+  return Response.json({ address });
+}
+```
+
+`verifySiweMessage` checks the signature through the RPC, so smart-contract wallets verify too. Create the client for the chain the wallet signed on if your users have smart accounts on other chains.
+
+## Client
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { createSiweMessage } from "viem/siwe";
+import { useConnection } from "wagmi";
+import { SignMessage } from "@/components/sign-message";
+
+export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
+  const { address, chainId } = useConnection();
+  const { data: nonce } = useQuery({
+    queryKey: ["siwe-nonce", address],
+    queryFn: () => fetch("/api/siwe/nonce").then((r) => r.json()).then((d) => d.nonce as string),
+    enabled: Boolean(address),
+    staleTime: Infinity,
+  });
+
+  const message = useMemo(
+    () =>
+      address && chainId && nonce
+        ? createSiweMessage({
+            address,
+            chainId,
+            domain: window.location.host,
+            uri: window.location.origin,
+            nonce,
+            version: "1",
+            statement: "Sign in to Example. This won't cost any gas.",
+          })
+        : undefined,
+    [address, chainId, nonce]
+  );
+
+  return (
+    <SignMessage
+      message={message ?? ""}
+      // Disconnected, the button opens the wallet picker, so leave it enabled.
+      disabled={Boolean(address) && !message}
+      onSigned={async (signature) => {
+        const response = await fetch("/api/siwe/verify", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message, signature }),
+        });
+        if (response.ok) onSignedIn();
+      }}
+    >
+      Sign in
+    </SignMessage>
+  );
+}
+```
+
+Leave `verify` off here. It checks the signature in the browser, which proves nothing to your server.
+
+Build the message with `useMemo`. `createSiweMessage` stamps the current time, so building it on every render would change the message between the prompt and the request.
+
+## Checklist
+
+| Check | Why |
+| --- | --- |
+| The nonce comes from the server and works once | A captured signature can't be replayed. |
+| The server checks `domain` | A signature made for another site is rejected. |
+| The session cookie is `httpOnly`, `Secure` and `SameSite` | Scripts can't read it, and other sites can't send it. |
+| Sign out when the wallet's address changes or disconnects | The session should match the wallet in the browser. Compare `useConnection().address` with the session's address. |
+| Authorize on the session's address, never on one from the request body | The request body is whatever the caller sends. |
+
+Signing in doesn't authorize transactions. The wallet still confirms each one.

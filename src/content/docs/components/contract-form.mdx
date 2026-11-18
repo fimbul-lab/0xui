@@ -3,22 +3,21 @@ title: Contract Form
 description: Read and write forms for any contract, generated from its ABI.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/contract-form";
 
 Point it at a contract and an ABI and get a card per function: typed inputs, **Read** for view functions, and a [Transaction Button](/components/transaction-button/) for writes. Useful for admin panels, debugging, and tools an agent builds on the fly.
 
 The demo is USDC on Ethereum. Reads are real. Writes go through the Demo Wallet and aren't broadcast.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/contract-form
-```
+<Install name="contract-form" />
 
 ## Usage
 

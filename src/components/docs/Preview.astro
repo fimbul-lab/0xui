@@ -1,0 +1,40 @@
+---
+/**
+ * Stage for a live demo:
+ *
+ *   <Preview>
+ *     <Default client:load />
+ *   </Preview>
+ *
+ * A code block placed directly after it joins onto the bottom edge (see the
+ * "Preview" rules in src/styles/docs.css).
+ */
+---
+
+<div class="preview not-content">
+  <slot />
+</div>
+
+<style>
+  .preview {
+    /* Centered vertically, full width: the demo wrapper centers its own
+       content, and a `w-full max-w-*` component keeps its intended width. */
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    min-height: 13rem;
+    border: 1px solid var(--docs-line);
+    border-radius: 0.625rem;
+    padding: 2.5rem 1.5rem;
+    /* Flat on purpose: many components have translucent fills, and any texture
+       behind them shows through as noise. */
+    background-color: var(--sl-color-bg);
+    overflow-x: auto;
+  }
+  @media (max-width: 30rem) {
+    .preview {
+      padding-inline: 1rem;
+    }
+  }
+
+</style>

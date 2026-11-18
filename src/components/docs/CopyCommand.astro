@@ -1,0 +1,127 @@
+---
+/** A one-line shell command with a copy button. */
+interface Props {
+  command: string;
+}
+
+const { command } = Astro.props;
+---
+
+<docs-copy-command class="not-content" data-command={command}>
+  <code><span aria-hidden="true">$</span> {command}</code>
+  <button type="button" aria-label="Copy command">
+    <svg class="copy" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect>
+      <path d="M10.5 5.5v-1A1.5 1.5 0 0 0 9 3H4.5A1.5 1.5 0 0 0 3 4.5V9a1.5 1.5 0 0 0 1.5 1.5h1"></path>
+    </svg>
+    <svg class="check" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="m3.5 8.5 3 3 6-7"></path>
+    </svg>
+  </button>
+  <span class="sr-only" role="status"></span>
+</docs-copy-command>
+
+<script>
+  class DocsCopyCommand extends HTMLElement {
+    #timer = 0;
+
+    connectedCallback() {
+      this.querySelector("button")?.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(this.dataset.command ?? "");
+        } catch {
+          return;
+        }
+        const status = this.querySelector('[role="status"]');
+        this.dataset.copied = "";
+        if (status) status.textContent = "Copied";
+        clearTimeout(this.#timer);
+        this.#timer = window.setTimeout(() => {
+          delete this.dataset.copied;
+          if (status) status.textContent = "";
+        }, 1600);
+      });
+    }
+  }
+  customElements.define("docs-copy-command", DocsCopyCommand);
+</script>
+
+<style>
+  docs-copy-command {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    height: 2.75rem;
+    border: 1px solid var(--docs-line);
+    border-radius: 0.625rem;
+    padding-inline: 0.875rem 0.375rem;
+    background-color: var(--docs-surface);
+  }
+  code {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.8125rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--sl-color-gray-1);
+  }
+  code span {
+    margin-inline-end: 0.25rem;
+    color: var(--sl-color-gray-4);
+    user-select: none;
+  }
+  button {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 0.4375rem;
+    background-color: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    transition:
+      color 150ms var(--docs-ease),
+      background-color 150ms var(--docs-ease);
+  }
+  button:hover {
+    background-color: var(--docs-surface-2);
+    color: var(--sl-color-white);
+  }
+  svg {
+    grid-area: 1 / 1;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition:
+      opacity 150ms var(--docs-ease),
+      scale 150ms var(--docs-ease);
+  }
+  .check {
+    opacity: 0;
+    scale: 0.6;
+    color: var(--docs-accent);
+  }
+  [data-copied] .copy {
+    opacity: 0;
+    scale: 0.6;
+  }
+  [data-copied] .check {
+    opacity: 1;
+    scale: 1;
+  }
+  @media (pointer: coarse) {
+    button {
+      width: 2.75rem;
+      height: 2.75rem;
+      margin-inline-end: -0.375rem;
+    }
+  }
+</style>

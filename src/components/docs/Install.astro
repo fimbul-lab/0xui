@@ -1,0 +1,60 @@
+---
+/**
+ * `shadcn add` for one or more registry items, per package manager. The choice
+ * is remembered and applied to every install block on the site.
+ *
+ *   <Install name="connect-wallet" />
+ *   <Install name={["wagmi-config", "wallet-button"]} />
+ */
+import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
+
+interface Props {
+  /** Registry item name(s), without the `@0xui/` prefix. */
+  name: string | string[];
+}
+
+const items = [Astro.props.name]
+  .flat()
+  .map((name) => `@0xui/${name}`)
+  .join(" ");
+
+const runners = [
+  ["npm", "npx shadcn@latest"],
+  ["pnpm", "pnpm dlx shadcn@latest"],
+  ["yarn", "yarn dlx shadcn@latest"],
+  ["bun", "bunx --bun shadcn@latest"],
+];
+---
+
+<div class="install">
+  <Tabs syncKey="package-manager">
+    {
+      runners.map(([label, runner]) => (
+        <TabItem label={label}>
+          <Code code={`${runner} add ${items}`} lang="bash" />
+        </TabItem>
+      ))
+    }
+  </Tabs>
+</div>
+
+<style>
+  /* Tabs and command share one frame. */
+  .install {
+    border: 1px solid var(--docs-line);
+    border-radius: 0.625rem;
+    background-color: var(--docs-code-bg);
+    overflow: hidden;
+  }
+  .install :global([role="tablist"]) {
+    padding-inline: 0.5rem;
+  }
+  .install :global([role="tabpanel"]) {
+    margin-top: 0 !important;
+  }
+  .install :global(.expressive-code .frame),
+  .install :global(.expressive-code pre) {
+    border: 0;
+    border-radius: 0;
+  }
+</style>

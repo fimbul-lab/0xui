@@ -3,20 +3,29 @@ title: Hello dapp
 description: Connect, switch network, show a balance and send a transaction, using only 0xui components.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { HelloDapp } from "@/demos/hello-dapp";
 
 A whole dapp in about 40 lines: a header with network and wallet, a balance, a send button, and live transaction status. Connect the **Demo Wallet** to try it. Demo transactions aren't broadcast.
 
-<Card>
+<Preview>
   <HelloDapp client:load />
-</Card>
+</Preview>
 
 ## Install
 
-```bash
-npx shadcn@latest add @0xui/wagmi-config @0xui/wallet-button @0xui/chain-selector @0xui/balance @0xui/transaction-button @0xui/transaction-status @0xui/block-number
-```
+<Install
+  name={[
+    "wagmi-config",
+    "wallet-button",
+    "chain-selector",
+    "balance",
+    "transaction-button",
+    "transaction-status",
+    "block-number",
+  ]}
+/>
 
 ## Code
 

@@ -3,22 +3,21 @@ title: Sign Message
 description: Asks the wallet to sign a message or typed data, with labeled steps and optional verification.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, TypedData } from "@/demos/sign-message";
 
 For sign-in flows, off-chain orders, and proving ownership of an address. It signs plain messages (EIP-191) or typed data (EIP-712), labels each step, and can check the signature against the connected address.
 
 Connect the **Demo Wallet** to try it. Demo signatures come from a throwaway key, so they wouldn't verify against the demo address.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/sign-message
-```
+<Install name="sign-message" />
 
 ## Usage
 
@@ -36,13 +35,15 @@ import { SignMessage } from "@/components/sign-message";
 
 Verification goes through the RPC, so smart-contract wallets (ERC-1271 and ERC-6492) verify too. It's a convenience for the UI: **always verify again on your server** before trusting a signature.
 
+For a full sign-in flow with a nonce, a server check and a session, see [Sign in with Ethereum](/getting-started/siwe/).
+
 ## Examples
 
 ### Typed data
 
-<Card>
+<Preview>
   <TypedData client:load />
-</Card>
+</Preview>
 
 ```tsx
 <SignMessage typedData={{ domain, types, primaryType: "Order", message }} />

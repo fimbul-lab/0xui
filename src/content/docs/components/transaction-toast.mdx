@@ -3,22 +3,21 @@ title: Transaction Toast
 description: Follow a transaction in a toast, from pending to confirmed or reverted.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/transaction-toast";
 
 Follow a transaction without keeping its UI on screen. One toast goes from "Transaction pending" to "Transaction confirmed" or "Transaction reverted", with a link to the explorer. Built on [Sonner](https://sonner.emilkowal.ski).
 
 Connect the **Demo Wallet** and send to see it.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/transaction-toast
-```
+<Install name="transaction-toast" />
 
 This also installs the shadcn `sonner` component. Mount its `<Toaster />` once, near the root of your app:
 

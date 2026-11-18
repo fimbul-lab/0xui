@@ -3,22 +3,22 @@ title: Transaction History
 description: Transactions sent from your app, with live status. Stored in the browser.
 ---
 
-import { Aside, Card } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/transaction-history";
 
 A list of transactions sent from your app, newest first. Pending ones update live, and settled ones keep their result. It's stored in this browser (`localStorage`), so it's per device and survives reloads. Other tabs update too.
 
 Connect the **Demo Wallet** and send a couple.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/transaction-history
-```
+<Install name="transaction-history" />
 
 ## Usage
 

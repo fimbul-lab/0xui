@@ -1,0 +1,87 @@
+---
+const features = [
+  {
+    title: "You own the code",
+    body: "Components are copied into your project as source. There is no package to upgrade around and nothing to override.",
+  },
+  {
+    title: "Every state handled",
+    body: "Pending, cancelled in wallet, wrong network, error. Each one is designed, named, and exported as a type.",
+  },
+  {
+    title: "Headless when you need it",
+    body: "Every component exports its hook. Keep the logic and bring your own UI.",
+  },
+  {
+    title: "Ready for agents",
+    body: "Rich registry descriptions, JSDoc on every prop, and installable through the shadcn MCP server.",
+  },
+];
+---
+
+<section class="features not-content" aria-label="Why 0xui">
+  <ol>
+    {
+      features.map(({ title, body }, index) => (
+        <li>
+          <span class="index" aria-hidden="true">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <h3>{title}</h3>
+          <p>{body}</p>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .features {
+    margin-top: 4rem;
+  }
+  ol {
+    display: grid;
+    gap: 1px;
+    margin: 0;
+    border: 1px solid var(--docs-line);
+    border-radius: 0.875rem;
+    padding: 0;
+    background-color: var(--docs-line);
+    list-style: none;
+    overflow: hidden;
+  }
+  li {
+    padding: 1.5rem 1.25rem 1.75rem;
+    background-color: var(--sl-color-bg);
+  }
+  .index {
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--sl-color-gray-4);
+  }
+  h3 {
+    margin-top: 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--sl-color-white);
+  }
+  p {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    text-wrap: pretty;
+    color: var(--sl-color-gray-3);
+  }
+  @media (min-width: 40rem) {
+    ol {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 64rem) {
+    ol {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+</style>

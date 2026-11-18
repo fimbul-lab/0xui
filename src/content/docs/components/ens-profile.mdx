@@ -3,20 +3,19 @@ title: ENS Profile
 description: Profile card for an ENS name or address. Avatar, name, bio and links.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, ByAddress } from "@/demos/ens-profile";
 
 Avatar, name, address with copy, bio, and links from the name's text records (website, X, GitHub, email).
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/ens-profile
-```
+<Install name="ens-profile" />
 
 ## Usage
 
@@ -29,9 +28,9 @@ import { EnsProfile } from "@/components/ens-profile";
 <EnsProfile address={address} />;
 ```
 
-<Card>
+<Preview>
   <ByAddress client:load />
-</Card>
+</Preview>
 
 ENS lives on Ethereum mainnet, so mainnet must be in your wagmi config. Pass `records` to read other text records. Unknown keys are fetched and returned by `useEnsProfile`, but not rendered.
 
@@ -39,6 +38,6 @@ ENS lives on Ethereum mainnet, so mainnet must be in your wagmi config. Pass `re
 
 | `data-phase` | Meaning |
 | --- | --- |
-| `loading` | Skeleton avatar and name. |
+| `loading` | A skeleton measured from the avatar, name and address. |
 | `ready` | Profile shown. |
 | `not-found` | The name has no address, or the address has no primary name. |

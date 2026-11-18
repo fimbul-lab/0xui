@@ -3,22 +3,21 @@ title: Batch Transaction
 description: Several calls as one action. One wallet prompt with EIP-5792, step by step otherwise.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Atomic, Sequential } from "@/demos/batch-transaction";
 
 Approve-and-swap without two prompts. When the wallet supports atomic batches ([EIP-5792](https://eips.ethereum.org/EIPS/eip-5792)), like Coinbase Smart Wallet and most smart accounts, every call goes out in **one prompt** and lands together. Other wallets get the same calls one by one, with a step list showing progress.
 
 Connect the **Demo Wallet**. It acts like a smart account that supports batching.
 
-<Card>
+<Preview>
   <Atomic client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/batch-transaction
-```
+<Install name="batch-transaction" />
 
 ## Usage
 
@@ -46,9 +45,9 @@ import { BatchTransaction } from "@/components/batch-transaction";
 
 Sequential, for comparison:
 
-<Card>
+<Preview>
   <Sequential client:load />
-</Card>
+</Preview>
 
 Atomic batches are all-or-nothing: if one call reverts, none take effect. Sequential calls are not. A revert in step 2 leaves step 1 in place, so order your calls so that's safe (approvals first).
 

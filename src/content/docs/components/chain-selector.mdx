@@ -3,8 +3,10 @@ title: Chain Selector
 description: Network switcher with chain icons, active-chain indicator, per-row pending state and inline errors.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import {
+
   Default,
   IconOnly,
   Dialog,
@@ -14,15 +16,13 @@ import {
 
 Shows the current chain and lets the user switch to any chain in your wagmi config. Comes as a popover (`ChainSelector`) and a dialog (`ChainSelectorDialog`). Both share the same props and behavior.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/chain-selector
-```
+<Install name="chain-selector" />
 
 Requires the `@0xui` registry in `components.json` and a `<Web3Provider>` around your app. See [Installation](/getting-started/installation/).
 
@@ -42,9 +42,9 @@ Chains come from your wagmi config. There is nothing to pass in.
 
 The label is hidden visually but stays available as a tooltip and to screen readers.
 
-<Card>
+<Preview>
   <IconOnly client:load />
-</Card>
+</Preview>
 
 ```tsx
 <ChainSelector iconOnly />
@@ -54,9 +54,9 @@ The label is hidden visually but stays available as a tooltip and to screen read
 
 Better on small screens, or when the list of chains is long.
 
-<Card>
+<Preview>
   <Dialog client:load />
-</Card>
+</Preview>
 
 ```tsx
 import { ChainSelectorDialog } from "@/components/chain-selector";
@@ -68,9 +68,9 @@ import { ChainSelectorDialog } from "@/components/chain-selector";
 
 Splits chains into Mainnet and Testnet tabs, based on `chain.testnet`.
 
-<Card>
+<Preview>
   <GroupByNetwork client:load />
-</Card>
+</Preview>
 
 ```tsx
 <ChainSelector groupByNetwork />
@@ -78,9 +78,9 @@ Splits chains into Mainnet and Testnet tabs, based on `chain.testnet`.
 
 ### Branded icons
 
-<Card>
+<Preview>
   <Branded client:load />
-</Card>
+</Preview>
 
 ```tsx
 <ChainSelector variant="branded" />
@@ -90,7 +90,7 @@ Splits chains into Mainnet and Testnet tabs, based on `chain.testnet`.
 
 | State | What the user sees |
 | --- | --- |
-| Before hydration | "Select Chain" label with no icon, so server HTML never shows wallet state. |
+| Before hydration | A skeleton of the icon and name, so server HTML never shows wallet state and nothing moves when the chain appears. "Select Chain" for screen readers. |
 | Idle | Current chain icon and name. In the list, the active chain has a checkmark and `aria-current`. |
 | Switching | Spinner on the trigger and on the target row. The list is disabled until the wallet responds. |
 | Cancelled | The user dismissed the wallet prompt. Muted "Request cancelled in wallet" note. |

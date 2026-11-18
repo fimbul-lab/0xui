@@ -1,0 +1,100 @@
+---
+// Replaces Starlight's three-way <select>. The first visit follows the system
+// setting; a click flips it and is remembered under the same storage key
+// Starlight's ThemeProvider reads before paint.
+---
+
+<docs-theme-toggle>
+  <button type="button" aria-label="Switch between dark and light theme">
+    <svg class="moon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"></path>
+    </svg>
+    <svg class="sun" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path
+        d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+      ></path>
+    </svg>
+  </button>
+</docs-theme-toggle>
+
+<script>
+  const storageKey = "starlight-theme";
+  const system = matchMedia("(prefers-color-scheme: light)");
+
+  const stored = () => {
+    try {
+      return localStorage.getItem(storageKey);
+    } catch {
+      return null;
+    }
+  };
+
+  system.addEventListener("change", () => {
+    if (!stored()) {
+      document.documentElement.dataset.theme = system.matches ? "light" : "dark";
+    }
+  });
+
+  class DocsThemeToggle extends HTMLElement {
+    connectedCallback() {
+      this.querySelector("button")?.addEventListener("click", () => {
+        const root = document.documentElement;
+        const next = root.dataset.theme === "light" ? "dark" : "light";
+        root.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch {
+          // Private mode: the choice lasts for this page only.
+        }
+      });
+    }
+  }
+  customElements.define("docs-theme-toggle", DocsThemeToggle);
+</script>
+
+<style>
+  docs-theme-toggle {
+    display: inline-flex;
+  }
+  button {
+    display: inline-grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background-color: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+    transition:
+      color 150ms var(--docs-ease),
+      background-color 150ms var(--docs-ease);
+  }
+  button:hover {
+    background-color: var(--docs-surface-2);
+    color: var(--sl-color-white);
+  }
+  svg {
+    grid-area: 1 / 1;
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* Show the theme a click switches to. */
+  :global([data-theme="dark"]) .moon,
+  :global([data-theme="light"]) .sun {
+    display: none;
+  }
+  /* 44px hit area on touch screens without growing the icon. */
+  @media (pointer: coarse) {
+    button {
+      width: 2.75rem;
+      height: 2.75rem;
+    }
+  }
+</style>

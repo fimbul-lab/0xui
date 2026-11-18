@@ -3,20 +3,19 @@ title: Copy Button
 description: Icon button that copies a value and confirms with a checkmark.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default, Outline } from "@/demos/copy-button";
 
 Copies a value to the clipboard. The icon turns into a checkmark for two seconds, and "Copied" is announced to screen readers.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/copy-button
-```
+<Install name="copy-button" />
 
 ## Usage
 
@@ -34,9 +33,9 @@ Always pass a specific `label`. It is the button's only accessible name.
 
 Accepts every shadcn `Button` prop, including `variant` and `size`.
 
-<Card>
+<Preview>
   <Outline client:load />
-</Card>
+</Preview>
 
 ```tsx
 <CopyButton value={hash} label="Copy transaction hash" variant="outline" size="icon" />

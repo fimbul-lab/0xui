@@ -3,22 +3,21 @@ title: Transaction Status
 description: Inline card that follows a transaction from submitted to confirmed.
 ---
 
-import { Card } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/transaction-status";
 
 Follows one transaction hash. Shows what the transaction does, a list of steps, the hash with copy, and an explorer link. Never a bare spinner.
 
 Connect the **Demo Wallet** and send to see it. The demo hash isn't on chain, so its explorer link won't resolve.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/transaction-status
-```
+<Install name="transaction-status" />
 
 ## Usage
 

@@ -3,22 +3,22 @@ title: Token Select
 description: Searchable token picker with recent and popular tokens and the user's balances.
 ---
 
-import { Aside, Card } from "@astrojs/starlight/components";
-import { Default } from "@/demos/token-select";
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Loading } from "@/demos/token-select";
 
 A token pill that opens a picker. It has search by symbol, name or pasted address, quick picks (your recent tokens, then `popular`), and the full list with tokens you hold sorted first. Arrow keys move between the search field and the rows.
 
 The demo loads [Uniswap's default token list](https://tokens.uniswap.org) live.
 
-<Card>
+<Preview>
   <Default client:load />
-</Card>
+</Preview>
 
 ## Installation
 
-```bash
-npx shadcn@latest add @0xui/token-select
-```
+<Install name="token-select" />
 
 ## Usage
 
@@ -45,6 +45,8 @@ Only tokens on `chainId` (the current chain by default) are listed. `useTokenLis
 
 The list is paged, 50 rows at a time (`pageSize`): more load as the user scrolls, or with "Show more".
 
+Below 640px the picker opens as a bottom drawer. Set `mode` to force a dialog or a drawer. See [Responsive Dialog](/components/responsive-dialog/).
+
 <Aside type="tip" title="In production">
 Balances are read over RPC by default: fine for prototypes, but heavy for long lists. With an [index of the chain](/getting-started/indexed-data/), pass `balances` and nothing is read over RPC:
 
@@ -53,6 +55,14 @@ Balances are read over RPC by default: fine for prototypes, but heavy for long l
 ```
 </Aside>
 
+
+### While the list loads
+
+Pass `isLoading` and the picker shows skeleton rows under the tokens it already has, which is usually just the native currency. This demo's list never arrives:
+
+<Preview>
+  <Loading client:load />
+</Preview>
 
 ### Your own trigger
 
@@ -77,9 +87,10 @@ Also accepts shadcn `Button` props for the trigger.
 | `popular` | `string[]` | `[]` | Symbols or addresses for quick picks. |
 | `showBalances` | `boolean` | `true` | Read and show the connected account's balances. |
 | `prices` | `Record<symbol, number>` | — | Sort held tokens by value. Without prices, held tokens keep list order: raw amounts aren't comparable across tokens. |
-| `isLoading` | `boolean` | `false` | The list is still downloading. Shows "Loading tokens…". |
+| `isLoading` | `boolean` | `false` | The list is still downloading. Shows skeleton rows, and "Loading tokens…" for screen readers. |
 | `pageSize` | `number` | `50` | Rows per page. More load on scroll or with "Show more". |
 | `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
+| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom drawer on small screens, dialog otherwise. Or force one. |
 | `placeholder` | `string` | `"Select token"` | Trigger text with nothing selected. |
 
 Recent picks are kept in `localStorage` per chain (4 max). If storage is blocked, they're simply not saved.

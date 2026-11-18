@@ -1,0 +1,558 @@
+/*
+ * Docs chrome: everything around the components (header, sidebar, prose, code).
+ *
+ * Tokens are unlayered so they win over the Starlight/Tailwind bridge. Rules go
+ * in the `docs` layer (declared in global.css): above Starlight, below Tailwind.
+ */
+
+:root {
+  /* The one accent. Used for "you are here" and focus, never for decoration. */
+  --docs-accent: oklch(0.88 0.2 130);
+  --docs-accent-ink: oklch(0.22 0.06 130);
+  --docs-line: oklch(1 0 0 / 9%);
+  --docs-line-strong: oklch(1 0 0 / 16%);
+  --docs-surface: oklch(0.178 0 0);
+  --docs-surface-2: oklch(0.225 0 0);
+  --docs-code-bg: oklch(0.172 0 0);
+  --docs-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --sl-font: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --sl-color-white: oklch(0.985 0 0);
+  --sl-color-gray-1: oklch(0.93 0 0);
+  --sl-color-gray-2: oklch(0.82 0 0);
+  --sl-color-gray-3: oklch(0.66 0 0);
+  --sl-color-gray-4: oklch(0.46 0 0);
+  --sl-color-gray-5: oklch(0.28 0 0);
+  --sl-color-gray-6: oklch(0.2 0 0);
+  --sl-color-black: oklch(0.145 0 0);
+
+  --sl-color-accent-low: oklch(0.28 0.07 130);
+  --sl-color-accent: oklch(0.72 0.19 132);
+  --sl-color-accent-high: var(--docs-accent);
+  --sl-color-text-accent: var(--docs-accent);
+  --sl-color-text-invert: var(--docs-accent-ink);
+
+  --sl-color-bg: var(--sl-color-black);
+  --sl-color-bg-nav: var(--sl-color-black);
+  --sl-color-bg-sidebar: var(--sl-color-black);
+  --sl-color-bg-inline-code: var(--docs-surface-2);
+  --sl-color-hairline-light: var(--docs-line);
+  --sl-color-hairline: var(--docs-line);
+  --sl-color-hairline-shade: var(--docs-line);
+  --sl-color-backdrop-overlay: oklch(0 0 0 / 60%);
+
+  --sl-nav-height: 3.5rem;
+  --sl-sidebar-width: 16.5rem;
+  --sl-content-width: 46rem;
+  --sl-text-body: 0.9375rem;
+  --sl-line-height: 1.7;
+  --sl-text-h1: 2rem;
+  --sl-text-h2: 1.375rem;
+  --sl-text-h3: 1.0625rem;
+  --sl-text-h4: 0.9375rem;
+  --sl-text-h5: 0.9375rem;
+}
+
+:root[data-theme="light"] {
+  --docs-accent: oklch(0.5 0.16 138);
+  --docs-accent-ink: oklch(0.99 0 0);
+  --docs-line: oklch(0 0 0 / 9%);
+  --docs-line-strong: oklch(0 0 0 / 16%);
+  --docs-surface: oklch(0.985 0 0);
+  --docs-surface-2: oklch(0.96 0 0);
+  --docs-code-bg: oklch(0.985 0 0);
+
+  --sl-color-white: oklch(0.145 0 0);
+  --sl-color-gray-1: oklch(0.2 0 0);
+  --sl-color-gray-2: oklch(0.32 0 0);
+  --sl-color-gray-3: oklch(0.46 0 0);
+  --sl-color-gray-4: oklch(0.62 0 0);
+  --sl-color-gray-5: oklch(0.88 0 0);
+  --sl-color-gray-6: oklch(0.95 0 0);
+  --sl-color-gray-7: oklch(0.975 0 0);
+  --sl-color-black: oklch(1 0 0);
+
+  --sl-color-accent-low: oklch(0.94 0.07 132);
+  --sl-color-accent: oklch(0.5 0.16 138);
+  --sl-color-accent-high: oklch(0.36 0.11 138);
+  --sl-color-bg-nav: var(--sl-color-black);
+  --sl-color-bg-sidebar: var(--sl-color-black);
+  --sl-color-bg-inline-code: var(--docs-surface-2);
+  --sl-color-backdrop-overlay: oklch(0.3 0 0 / 40%);
+}
+
+@media (min-width: 50em) {
+  :root {
+    --sl-nav-height: 3.5rem;
+    --sl-text-h1: 2.25rem;
+    --sl-text-h2: 1.5rem;
+    --sl-text-h3: 1.125rem;
+    --sl-text-h4: 1rem;
+  }
+}
+
+@layer docs {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scrollbar-color: var(--sl-color-gray-5) transparent;
+  }
+
+  ::selection {
+    background-color: var(--docs-accent);
+    color: var(--docs-accent-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--docs-accent);
+    outline-offset: 2px;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────────────── */
+
+  .page > .header {
+    border-bottom: 1px solid var(--docs-line);
+    background-color: color-mix(in oklch, var(--sl-color-bg) 82%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.5);
+    backdrop-filter: blur(14px) saturate(1.5);
+  }
+
+  /* Search trigger */
+  site-search > button[data-open-modal] {
+    color: var(--sl-color-gray-3);
+  }
+  @media (min-width: 50rem) {
+    site-search > button[data-open-modal] {
+      height: 2rem;
+      max-width: 15rem;
+      border: 1px solid var(--docs-line);
+      border-radius: 0.5rem;
+      padding-inline: 0.625rem 0.375rem;
+      background-color: var(--docs-surface);
+      font-size: 0.8125rem;
+      transition:
+        border-color 150ms var(--docs-ease),
+        color 150ms var(--docs-ease);
+    }
+    site-search > button[data-open-modal]:hover {
+      border-color: var(--docs-line-strong);
+      color: var(--sl-color-white);
+    }
+    site-search > button[data-open-modal] svg {
+      width: 0.875rem;
+      height: 0.875rem;
+    }
+  }
+  site-search > button > kbd {
+    border: 1px solid var(--docs-line);
+    border-radius: 0.3125rem;
+    padding: 0.0625rem 0.3125rem;
+    background-color: transparent;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    color: var(--sl-color-gray-3);
+  }
+  site-search kbd kbd {
+    font-family: inherit;
+  }
+  site-search dialog {
+    border-color: var(--docs-line-strong);
+    background-color: var(--docs-surface);
+  }
+  @media (min-width: 50rem) {
+    site-search dialog {
+      border-radius: 0.875rem;
+    }
+  }
+
+  /* Mobile menu button */
+  starlight-menu-button button {
+    border: 1px solid var(--docs-line);
+    border-radius: 0.5rem;
+    background-color: transparent;
+    box-shadow: none;
+    color: var(--sl-color-white);
+  }
+  /* 32px to look at, 44px to hit. */
+  starlight-menu-button button::after {
+    content: "";
+    position: absolute;
+    inset: -0.375rem;
+  }
+  starlight-menu-button[aria-expanded="true"] button {
+    border-color: var(--docs-line-strong);
+    background-color: var(--docs-surface-2);
+    box-shadow: none;
+  }
+
+  /* ── Sidebar ────────────────────────────────────────────────────────── */
+
+  .sidebar-pane {
+    border-inline-end: 1px solid var(--docs-line);
+    scrollbar-width: thin;
+  }
+  .sidebar-content {
+    padding-top: 1.5rem;
+  }
+  .sidebar-content ul {
+    --sl-sidebar-item-padding-inline: 0.625rem;
+  }
+  .sidebar-content .top-level > li + li {
+    margin-top: 1.5rem;
+  }
+
+  /* Group label: small mono caps, so it reads as a label and not as a link. */
+  .sidebar-content summary {
+    padding: 0 var(--sl-sidebar-item-padding-inline);
+    margin-bottom: 0.375rem;
+    border-radius: 0.375rem;
+  }
+  .sidebar-content summary .large,
+  .sidebar-content .top-level > li > a.large {
+    display: block;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  .sidebar-content summary:hover .large,
+  .sidebar-content .top-level > li > a.large:hover,
+  .sidebar-content .top-level > li > a.large[aria-current="page"] {
+    background-color: transparent;
+    color: var(--sl-color-white);
+  }
+  /* The "Components" link heads the groups below it and opens the overview. */
+  .sidebar-content .top-level > li > a.large {
+    padding: 0.25rem var(--sl-sidebar-item-padding-inline);
+  }
+  .sidebar-content .top-level > li > a.large::after {
+    content: " \2192";
+    color: var(--sl-color-gray-4);
+  }
+  .sidebar-content summary .caret {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--sl-color-gray-4);
+  }
+
+  /* One hairline rail per group. The current page lights its segment. */
+  .sidebar-content ul ul li {
+    margin-inline-start: var(--sl-sidebar-item-padding-inline);
+    border-inline-start: 1px solid var(--docs-line);
+    padding-inline-start: 0;
+  }
+  .sidebar-content ul ul a {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    margin-inline-start: -1px;
+    border-inline-start: 1px solid transparent;
+    border-radius: 0 0.375rem 0.375rem 0;
+    padding: 0.25rem 0.75rem;
+    font-size: 1rem;
+    color: var(--sl-color-gray-3);
+    transition:
+      color 120ms var(--docs-ease),
+      background-color 120ms var(--docs-ease);
+  }
+  .sidebar-content ul ul a:hover,
+  .sidebar-content ul ul a:focus-visible {
+    color: var(--sl-color-white);
+  }
+  .sidebar-content ul ul a[aria-current="page"],
+  .sidebar-content ul ul a[aria-current="page"]:hover,
+  .sidebar-content ul ul a[aria-current="page"]:focus {
+    border-inline-start-color: var(--docs-accent);
+    background-color: var(--docs-surface-2);
+    font-weight: 500;
+    color: var(--sl-color-white);
+  }
+  @media (min-width: 50rem) {
+    .sidebar-content ul ul a {
+      min-height: 2rem;
+      font-size: 0.875rem;
+    }
+    @media (hover: hover) {
+      .sidebar-content ul ul a:hover {
+        background-color: var(--docs-surface);
+      }
+    }
+  }
+
+  /* ── Table of contents ──────────────────────────────────────────────── */
+
+  .right-sidebar {
+    border-inline-start: 0;
+  }
+  .right-sidebar-panel {
+    padding-top: 2.25rem;
+  }
+  .right-sidebar-panel h2 {
+    margin-bottom: 0.75rem;
+    padding-inline-start: 0.75rem;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+  }
+  .right-sidebar-panel starlight-toc nav > ul {
+    border-inline-start: 1px solid var(--docs-line);
+  }
+  .right-sidebar-panel starlight-toc a {
+    --pad-inline: 0.75rem;
+    margin-inline-start: -1px;
+    border-inline-start: 1px solid transparent;
+    border-radius: 0;
+    padding-block: 0.3125rem;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: var(--sl-color-gray-3);
+    transition: color 120ms var(--docs-ease);
+  }
+  .right-sidebar-panel starlight-toc a:hover {
+    color: var(--sl-color-white);
+  }
+  .right-sidebar-panel starlight-toc a[aria-current="true"] {
+    border-inline-start-color: var(--docs-accent);
+    color: var(--sl-color-white);
+  }
+
+  /* Mobile "On this page" bar */
+  mobile-starlight-toc nav {
+    border-top: 0;
+    background-color: color-mix(in oklch, var(--sl-color-bg) 88%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  mobile-starlight-toc summary {
+    border-bottom-color: var(--docs-line);
+  }
+  mobile-starlight-toc .toggle {
+    border-color: var(--docs-line);
+    background-color: var(--docs-surface);
+  }
+  mobile-starlight-toc details[open] .toggle {
+    border-color: var(--docs-line-strong);
+  }
+  mobile-starlight-toc .dropdown {
+    border-color: var(--docs-line);
+  }
+
+  /* ── Page ───────────────────────────────────────────────────────────── */
+
+  .content-panel {
+    padding: 2rem var(--sl-content-pad-x) 1.5rem;
+  }
+  .content-panel + .content-panel {
+    border-top: 0;
+    padding-top: 0.5rem;
+  }
+
+  /* ── Prose ──────────────────────────────────────────────────────────── */
+
+  .sl-markdown-content :is(h1, h2, h3, h4, h5, h6):not(:where(.not-content *)) {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .sl-markdown-content :not(h1, h2, h3, h4, h5, h6) + h2:not(:where(.not-content *)) {
+    margin-top: 3rem;
+  }
+  .sl-markdown-content :not(h1, h2, h3, h4, h5, h6) + :is(h3, h4):not(:where(.not-content *)) {
+    margin-top: 2.25rem;
+  }
+  .sl-markdown-content p:not(:where(.not-content *)) {
+    text-wrap: pretty;
+  }
+
+  /* Links read as text. The underline carries the affordance. */
+  .sl-markdown-content a:not(:where(.not-content *)) {
+    color: var(--sl-color-white);
+    font-weight: 500;
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: var(--sl-color-gray-4);
+    text-underline-offset: 0.2em;
+    transition: text-decoration-color 120ms var(--docs-ease);
+  }
+  .sl-markdown-content a:hover:not(:where(.not-content *)) {
+    text-decoration-color: var(--docs-accent);
+  }
+  .sl-markdown-content :is(h1, h2, h3, h4, h5, h6) a:not(:where(.not-content *)) {
+    text-decoration: none;
+  }
+
+  .sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+    border: 1px solid var(--docs-line);
+    border-radius: 0.3125rem;
+    padding: 0.0625rem 0.3125rem;
+    background-color: var(--docs-surface-2);
+    font-size: 0.8125em;
+    color: var(--sl-color-white);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .sl-markdown-content a > code:not(:where(.not-content *)) {
+    text-decoration: inherit;
+  }
+
+  .sl-markdown-content strong:not(:where(.not-content *)) {
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+
+  .sl-markdown-content blockquote:not(:where(.not-content *)) {
+    border-inline-start: 2px solid var(--docs-line-strong);
+    color: var(--sl-color-gray-3);
+  }
+  .sl-markdown-content hr:not(:where(.not-content *)) {
+    border-bottom-color: var(--docs-line);
+  }
+
+  /* Tables: a ruled sheet. The first column is the thing being described. */
+  .sl-markdown-content table:not(:where(.not-content *)) {
+    width: 100%;
+    border: 1px solid var(--docs-line);
+    border-radius: 0.625rem;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    scrollbar-width: thin;
+  }
+  .sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+    border-bottom: 1px solid var(--docs-line);
+    padding: 0.625rem 0.875rem;
+  }
+  .sl-markdown-content :is(th:first-child, td:first-child):not(:where(.not-content *)) {
+    padding-inline-start: 0.875rem;
+  }
+  .sl-markdown-content :is(th:last-child, td:last-child):not(:where(.not-content *)) {
+    width: 100%;
+    min-width: 14rem;
+    padding-inline-end: 0.875rem;
+  }
+  .sl-markdown-content tbody tr:last-child td:not(:where(.not-content *)) {
+    border-bottom: 0;
+  }
+  .sl-markdown-content th:not(:where(.not-content *)) {
+    background-color: var(--docs-surface);
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--sl-color-gray-3);
+  }
+  .sl-markdown-content td:first-child:not(:where(.not-content *)) {
+    white-space: nowrap;
+    color: var(--sl-color-white);
+  }
+  /* A type or prop name never breaks mid-token. Wide tables scroll instead. */
+  .sl-markdown-content td:not(:last-child) code:not(:where(.not-content *)) {
+    white-space: nowrap;
+  }
+
+  /* ── Code blocks ────────────────────────────────────────────────────── */
+
+  .expressive-code .frame.is-terminal .header {
+    display: none;
+  }
+  .expressive-code .frame.has-title .header {
+    padding-block: 0.125rem;
+  }
+  .expressive-code .copy button {
+    border-radius: 0.375rem;
+  }
+
+  /* A preview and the code right after it read as one unit. `!important`
+     because the component's own scoped styles are unlayered and would win. */
+  .preview:has(+ .expressive-code) {
+    border-bottom: 0 !important;
+    border-end-start-radius: 0 !important;
+    border-end-end-radius: 0 !important;
+  }
+  .preview + .expressive-code {
+    margin-top: 0 !important;
+  }
+  .preview + .expressive-code :is(.frame, pre) {
+    border-start-start-radius: 0 !important;
+    border-start-end-radius: 0 !important;
+  }
+
+  /* ── Tabs ───────────────────────────────────────────────────────────── */
+
+  starlight-tabs [role="tablist"] {
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--docs-line);
+  }
+  starlight-tabs .tab > [role="tab"] {
+    margin-bottom: -1px;
+    border-bottom: 1px solid transparent;
+    padding: 0.5rem 0.625rem;
+    box-shadow: none;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.75rem;
+    color: var(--sl-color-gray-3);
+    transition: color 120ms var(--docs-ease);
+  }
+  starlight-tabs .tab > [role="tab"]:hover {
+    color: var(--sl-color-white);
+  }
+  starlight-tabs .tab [role="tab"][aria-selected="true"] {
+    border-bottom-color: var(--sl-color-white);
+    font-weight: 500;
+    color: var(--sl-color-white);
+  }
+
+  /* ── Asides ─────────────────────────────────────────────────────────── */
+
+  .starlight-aside {
+    border: 1px solid var(--docs-line);
+    border-inline-start: 2px solid var(--sl-color-asides-border);
+    border-radius: 0.625rem;
+    background-color: var(--docs-surface);
+  }
+
+  /* ── Footer ─────────────────────────────────────────────────────────── */
+
+  .pagination-links a {
+    border-color: var(--docs-line);
+    border-radius: 0.625rem;
+    padding: 0.875rem 1rem;
+    box-shadow: none;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-3);
+    transition:
+      border-color 150ms var(--docs-ease),
+      background-color 150ms var(--docs-ease);
+  }
+  .pagination-links a:hover {
+    border-color: var(--docs-line-strong);
+    background-color: var(--docs-surface);
+  }
+  .pagination-links .link-title {
+    font-family: var(--__sl-font);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.6;
+    text-transform: none;
+  }
+  .pagination-links svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--sl-color-gray-4);
+  }
+  footer .meta {
+    margin-top: 4rem;
+  }
+}

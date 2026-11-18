@@ -1,0 +1,169 @@
+---
+// Live components on the landing page. Each cell links to its docs page.
+import { Default as Address } from "@/demos/address";
+import { Default as ChainSelector } from "@/demos/chain-selector";
+import { Default as GasPrice } from "@/demos/gas-price";
+import { Default as TokenInput } from "@/demos/token-input";
+import { Default as TransactionButton } from "@/demos/transaction-button";
+import { Default as WalletButton } from "@/demos/wallet-button";
+---
+
+<section class="showcase not-content" aria-labelledby="showcase-title">
+  <header>
+    <h2 id="showcase-title">Try them. These are live.</h2>
+    <p>
+      Every demo runs on a built-in Demo Wallet, so there is nothing to install
+      and nothing is broadcast.
+    </p>
+  </header>
+
+  <div class="grid">
+    <article class="cell" data-span="2">
+      <a class="name" href="/components/wallet-button/">wallet-button</a>
+      <div class="demo"><WalletButton client:visible /></div>
+    </article>
+    <article class="cell" data-span="2">
+      <a class="name" href="/components/chain-selector/">chain-selector</a>
+      <div class="demo"><ChainSelector client:visible /></div>
+    </article>
+    <article class="cell" data-span="2">
+      <a class="name" href="/components/address/">address</a>
+      <div class="demo"><Address client:visible /></div>
+    </article>
+    <article class="cell" data-span="3">
+      <a class="name" href="/components/token-input/">token-input</a>
+      <div class="demo"><TokenInput client:visible /></div>
+    </article>
+    <article class="cell" data-span="3" data-stack>
+      <div class="half">
+        <a class="name" href="/components/transaction-button/">transaction-button</a>
+        <div class="demo"><TransactionButton client:visible /></div>
+      </div>
+      <div class="half">
+        <a class="name" href="/components/gas-price/">gas-price</a>
+        <div class="demo"><GasPrice client:visible /></div>
+      </div>
+    </article>
+  </div>
+
+  <a class="all" href="/components/">
+    Browse all components
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"></path></svg>
+  </a>
+</section>
+
+<style>
+  .showcase {
+    margin-top: 4rem;
+  }
+  header {
+    max-width: 34rem;
+    margin-bottom: 1.5rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    color: var(--sl-color-white);
+  }
+  header p {
+    margin-top: 0.5rem;
+    color: var(--sl-color-gray-3);
+    text-wrap: pretty;
+  }
+
+  /* Cells share hairlines instead of each drawing a box. */
+  .grid {
+    display: grid;
+    gap: 1px;
+    border: 1px solid var(--docs-line);
+    border-radius: 0.875rem;
+    background-color: var(--docs-line);
+    overflow: hidden;
+  }
+  .cell,
+  .half {
+    position: relative;
+    display: grid;
+    min-height: 11rem;
+    padding: 3rem 1.25rem 1.75rem;
+    background-color: var(--sl-color-bg);
+  }
+  .cell[data-stack] {
+    gap: 1px;
+    padding: 0;
+    background-color: var(--docs-line);
+  }
+  .half {
+    min-height: 0;
+  }
+  .demo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+  }
+  .name {
+    position: absolute;
+    inset: 0.75rem auto auto 0.875rem;
+    font-family: var(--__sl-font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    color: var(--sl-color-gray-3);
+    transition: color 150ms var(--docs-ease);
+  }
+  .name:hover {
+    color: var(--sl-color-white);
+  }
+  /* Larger hit area for the small label. */
+  .name::after {
+    content: "";
+    position: absolute;
+    inset: -0.75rem -0.875rem;
+  }
+
+  .all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--sl-color-white);
+  }
+  .all svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: var(--sl-color-gray-3);
+    transition:
+      translate 150ms var(--docs-ease),
+      color 150ms var(--docs-ease);
+  }
+  .all:hover svg {
+    translate: 2px 0;
+    color: var(--docs-accent);
+  }
+
+  @media (min-width: 50rem) {
+    .grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .cell[data-span="2"] {
+      grid-column: span 2;
+    }
+    .cell[data-span="3"] {
+      grid-column: span 3;
+    }
+    .cell[data-span="3"]:not([data-stack]) {
+      min-height: 18rem;
+    }
+  }
+</style>
