@@ -75,11 +75,14 @@ export function createTestConfig({
   features,
   rpc = {},
   accounts = testAccounts,
+  wallets = [accounts],
 }: {
   features?: MockParameters["features"];
   rpc?: RpcResponses;
   /** Accounts the mock wallet exposes. The first one is used. */
   accounts?: readonly [Address, ...Address[]];
+  /** One mock wallet per entry, each with its own accounts. Defaults to a single wallet with `accounts`. */
+  wallets?: readonly (readonly [Address, ...Address[]])[];
 } = {}) {
   stubWalletRpc(rpc);
   const transport = custom(
@@ -88,7 +91,7 @@ export function createTestConfig({
   );
   return createConfig({
     chains: [withoutMulticall(mainnet), withoutMulticall(sepolia)],
-    connectors: [mock({ accounts, features })],
+    connectors: wallets.map((walletAccounts) => mock({ accounts: walletAccounts, features })),
     transports: { [mainnet.id]: transport, [sepolia.id]: transport },
     // Fast block/receipt polling so tests don't wait 4s per poll.
     pollingInterval: 20,
@@ -197,9 +200,9 @@ export function renderWithWagmi(
   };
 }
 
-/** Connect the mock wallet, as if the user approved the connection. */
-export function connectMock(config: Config) {
-  return connect(config, { connector: config.connectors[0]! });
+/** Connect a mock wallet (the first by default), as if the user approved the connection. */
+export function connectMock(config: Config, wallet = 0) {
+  return connect(config, { connector: config.connectors[wallet]! });
 }
 
 type EthCall = [{ to: Address; data: Hex }];

@@ -403,6 +403,38 @@ describe("Portfolio", () => {
     expect(hidden.getByText("Under $0.50")).toBeInTheDocument();
   });
 
+  it("hides holdings off the token list unless showUnlisted is set", async () => {
+    const user = userEvent.setup();
+    const unlisted: Token = {
+      chainId: 1,
+      address: "0x00000000000000000000000000000000000000aa",
+      symbol: "NEW",
+      name: "New Token",
+      decimals: 0,
+    };
+    // The indexer's own metadata for USDC loses to the list's.
+    const holdings = [
+      { token: { ...usdc, name: "USDC from indexer" }, balance: parseUnits("50", 6) },
+      { token: unlisted, balance: 20n },
+    ];
+    const prices = { [`1:${usdc.address}`]: 1, [`1:${unlisted.address}`]: 2 };
+    const { unmount } = renderWithWagmi(
+      <Portfolio tokens={[usdc]} chainId={1} holdings={holdings} prices={prices} />
+    );
+
+    expect(await screen.findAllByText("$50.00")).toHaveLength(2);
+    expect(screen.getByText("USD Coin")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Hidden tokens (1)" }));
+    expect(screen.getByText("New Token").closest("li")).toHaveTextContent("Not on the token list");
+
+    unmount();
+    renderWithWagmi(
+      <Portfolio tokens={[usdc]} chainId={1} holdings={holdings} prices={prices} showUnlisted />
+    );
+    expect(await screen.findByText("$90.00")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Hidden tokens/ })).not.toBeInTheDocument();
+  });
+
   it("takes your own spam verdicts and thresholds", async () => {
     const flagged: Token = { ...usdc, address: "0x0000000000000000000000000000000000000bad", name: "USD Coin" };
     renderWithWagmi(

@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# Installs every 0xui registry item into a fresh shadcn Vite app, renders them
-# in App.tsx, and builds. Proves `shadcn add @0xui/<item>` yields code that
-# compiles. Run after `bun run registry:build`.
-#
-#   SMOKE_BASE=base|radix   shadcn component base to test against (default base)
+# Installs every 0xui registry item into a fresh shadcn Vite app on Base UI,
+# renders them in App.tsx, and builds. Proves `shadcn add @0xui/<item>` yields
+# code that compiles. Run after `bun run registry:build`.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WORK="${SMOKE_DIR:-$(mktemp -d)}"
 PORT="${SMOKE_PORT:-4399}"
-BASE="${SMOKE_BASE:-base}"
 
 # Serve the freshly built registry.
 bun -e "Bun.serve({ port: $PORT, fetch: (req) => new Response(Bun.file('$ROOT/public' + new URL(req.url).pathname)) })" &
@@ -18,7 +15,7 @@ trap 'kill $SERVER' EXIT
 
 cd "$WORK"
 # stdin from /dev/null: fail instead of hanging if shadcn adds a new prompt.
-bunx --bun shadcn@latest init --template vite --base "$BASE" --preset nova \
+bunx --bun shadcn@latest init --template vite --base base --preset nova \
   --name app --no-monorepo --yes </dev/null
 cd app
 
@@ -34,4 +31,4 @@ bunx --bun shadcn@latest add $ITEMS --yes --overwrite </dev/null
 
 cp "$ROOT/scripts/smoke-app.tsx" src/App.tsx
 bun run build
-echo "Smoke install OK ($BASE): $ITEMS"
+echo "Smoke install OK: $ITEMS"

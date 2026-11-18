@@ -16,8 +16,8 @@
 | Shared items | `0xui-utils`, `use-mounted`, `use-copy`, `wagmi-config` (config + `Web3Provider`). |
 | Docs | Installation, Conventions and component pages. Demos live in `src/demos/*.tsx`, use the `demo()` wrapper, and run on a mock "Demo Wallet" connector, so no extension is needed. |
 | Tests | Vitest + Testing Library + jsdom. `test/wagmi.tsx` provides `createTestConfig` / `renderWithWagmi` / `connectMock`. 40 tests. |
-| CI | `.github/workflows/ci.yml`: lint, check, test, build, plus a smoke job that installs every item into fresh shadcn Vite apps (Base UI, plus Radix as a compile check) and builds them. |
-| Primitives | **Base UI** (shadcn `base-nova` style). Docs, tests and browser checks run on Base UI. Registry code only uses props shared by both shadcn bases (`open`/`onOpenChange`, `className`, `defaultValue`; no `asChild` / `render`), so Radix projects still compile. |
+| CI | `.github/workflows/ci.yml`: lint, check, test, build, plus a smoke job that installs every item into a fresh shadcn Vite app on Base UI and builds it. |
+| Primitives | **Base UI only** (shadcn `base-nova` style), decided 2026-11-18. Radix is not supported, so registry code can use Base UI props such as `render`. |
 
 ---
 
@@ -154,7 +154,7 @@ Each phase ends with something shippable: components live on the docs site and i
 **Phase 0 follow-ups**
 - **Registry domain.** The docs and README use `https://0xui.dev/r/{name}.json` as a placeholder. Set the real domain (and Astro `site`) when the docs deploy. Later, list `@0xui` in the shadcn registry index so users don't need the `components.json` entry.
 - **`@web3icons/react/dynamic` emits about 2k lazy chunks** (every token and network icon) in a consumer's build. They are never loaded unless used, but they slow builds and add noise. Consider a static per-chain import map.
-- **Radix**: installed components typecheck and build against a Radix shadcn app, but runtime behavior is only tested on Base UI.
+- **Radix**: dropped 2026-11-18. 0xui targets the Base UI flavor of shadcn only, and the Radix smoke job is gone.
 - **Docs demos share one wagmi config**, so switching chain in one demo moves every demo on the page. Fine for now. Give each island its own config if it starts to confuse.
 - `wagmi-config` is **not** a `registryDependency` of components. Components only need some `WagmiProvider` above them, and forcing the file in would clash with existing setups.
 
@@ -176,8 +176,8 @@ These are fast and they lock in the conventions before the big components.
 **Phase 2 notes**
 - **Receipts:** wagmi's `useWaitForTransactionReceipt` *throws* on a reverted transaction and drops the receipt. `transaction-status` exports `useMinedReceipt`, which waits with viem directly, so reverted transactions come back as data. `transaction-button` uses it too.
 - **Wrong network:** `transaction-button` doesn't switch and send in one click. On the wrong network the label is "Switch to X" and clicking only switches. Two wallet prompts from one click would surprise people.
-- **Simulation:** there is no `simulate` gate yet. Use `disabledReason` to name blockers. A simulation gate (`useSimulateContract`, showing revert reasons before sending) is a follow-up.
-- **Mobile:** there is no drawer for mobile dialogs yet (open decision in §5).
+- **Simulation:** added 2026-11-18 as the `simulate` prop (see "Planned features" below). Use `disabledReason` for blockers the form already knows.
+- **Mobile:** added 2026-11-18 as `responsive-dialog` (see "Planned features" below).
 - **Docs demos:** the Demo Wallet simulates transactions. `eth_sendTransaction` returns a fake hash, and the demo transport serves its receipt about 3 s later. Sending to `0x…dEaD` reverts. Nothing is broadcast.
 - **Tests:** `fakeChainRpc()` in `test/wagmi.tsx` is a chain that advances a block on each poll and mines sent transactions. Test configs drop Multicall3 (so reads are plain RPC calls) and have no storage (so the chain and recent wallet don't leak between tests).
 
@@ -186,7 +186,7 @@ These are fast and they lock in the conventions before the big components.
 
 **Phase 3 notes**
 - **`address-input` callbacks:** `onValueChange(text)` fires on every keystroke and `onResolve(state)` fires when validation settles. One callback can't carry both, because ENS resolution is async.
-- **Approvals:** `approve-button` approves the exact amount by default. `unlimited` is opt-in. The docs explain the USDT approve-0-first quirk, but the component doesn't handle it automatically.
+- **Approvals:** `approve-button` approves the exact amount by default. `unlimited` is opt-in. The USDT approve-0-first quirk is handled since 2026-11-18 (`resetFirst`).
 - **Toasts:** `transaction-toast` adds the shadcn `sonner` primitive, which pulls in `next-themes`.
 - **Repo setup:** `tsconfig` `@/*` now lists `src/` before `registry/default/`. A path exists in only one of them, so resolution is unaffected, but `shadcn add <primitive>` now writes into `src/`.
 - **Demo Wallet:** signs with a throwaway key, so its signatures don't verify against the demo address. It also remembers demo approvals. The docs config sets `batch.multicall: false` so allowance reads can be intercepted.
@@ -203,7 +203,7 @@ These are fast and they lock in the conventions before the big components.
 - **History storage:** `transaction-history` uses a module-level store with localStorage and `useSyncExternalStore`, synced across tabs and capped at 50 entries. It's per device: cross-device history needs an indexer.
 - **NFT states:** `nft-card` separates `not-found` from `metadata-error`. Public IPFS gateways returned 429 during testing, so production apps should pass their own `gateway`.
 - **Demo Wallet:** supports EIP-5792 (atomic everywhere) and stays connected across docs pages (persisted flag, since the mock only remembers in memory).
-- **Remaining follow-ups:** a mobile drawer for dialogs, `simulate` in transaction-button, and the real registry domain.
+- **Remaining follow-ups:** the real registry domain. The mobile drawer and `simulate` shipped 2026-11-18.
 
 ### Token lists (2026-10-11)
 - Every token-taking component uses the **token list standard** (tokenlists.org, Uniswap's format). `Token` is `TokenInfo` from `@0xui/token-list`: `tags`, `extensions` and `bridgeInfo` included.
@@ -233,7 +233,7 @@ These are fast and they lock in the conventions before the big components.
 - **Scanner verdicts:** these go through `isSpam` from the app's server. The docs stay vendor-neutral.
 - **Follow-ups:**
   - Extract the "Show more" button, which is now duplicated in Portfolio, TransactionHistory and TokenSelect.
-  - A `showUnlisted` mode for indexer data that carries its own token metadata.
+  - ~~A `showUnlisted` mode for indexer data that carries its own token metadata.~~ Shipped 2026-11-18.
 
 ### Text morphing (2026-11-18)
 - **`@0xui/morph-text`:** `MorphText` wraps `TextMorph` from [torph](https://github.com/lochie/torph). Text that changes in place morphs: shared characters slide, digits roll by place value.
@@ -248,6 +248,27 @@ These are fast and they lock in the conventions before the big components.
   - torph is `0.1.x`. Pin or re-check on upgrade.
   - It injects one `<style>` element, which a strict CSP blocks.
 
+### Planned features (2026-11-18)
+- **Mobile drawer:** `@0xui/responsive-dialog` is a dialog on larger screens and a bottom drawer below 640px.
+  - `connect-wallet` and `token-select` open it. Both take `mode` (`auto`, `dialog`, `drawer`).
+  - Built on the shadcn `dialog` and `drawer` primitives, not ui-sdk: it sits under the flagship, and ui-sdk is still beta.
+  - The drawer shows a swipe handle (`showSwipeHandle`, a Base UI drawer prop).
+  - `chain-selector`'s dialog variant still opens a plain dialog.
+- **Simulate gate:** `transaction-button` takes `simulate`.
+  - It dry-runs the call from the connected account (`useSimulateContract`, or `useCall` for a plain transaction) once connected, on the right chain and with no `disabledReason`.
+  - A revert disables the button ("Transaction will fail") and shows the contract's reason. It re-runs after each transaction.
+  - `useTransactionSimulation` and `revertReason` are exported.
+- **Switch account:** `account` lists the other connected wallets (`useConnections`) and switches with `useSwitchConnection`. Accounts inside one wallet are still switched in the wallet: wagmi has no API to pick one.
+- **USDT reset:** `approve-button` sends "Reset <token> approval" (allowance to 0) first when a leftover allowance is too low. On by default for mainnet USDT, by address. `resetFirst` turns it on for other tokens.
+- **Unlisted tokens:** `portfolio` takes `holdings` (`{ token, balance }[]`) from an indexer.
+  - Tokens on the list keep the list's metadata.
+  - The rest are hidden as "Not on the token list" unless `showUnlisted` is set. Spam, price and dust filters still apply.
+- **SIWE:** a "Sign in with Ethereum" guide built on `sign-message` and `viem/siwe`: nonce, server check, session, and a checklist.
+- **Follow-ups:**
+  - Docs pages with several demos log a hydration warning when the Demo Wallet is already connected. Islands share one wagmi config, so later islands hydrate as connected. Give each island its own config, or gate wallet state on `use-mounted`.
+  - A live demo for "Switch account" needs a second demo wallet.
+  - `chain-selector`'s dialog could use `responsive-dialog`.
+
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).
 - Document the shadcn registry MCP (`npx shadcn registry:mcp`) so agents can browse and install 0xui.
@@ -261,7 +282,7 @@ These are fast and they lock in the conventions before the big components.
 |---|---|
 | Fiat prices: wagmi has no price source. | No built-in API. Components take a `price` / `formatFiat` prop. Document a CoinGecko / DefiLlama example. |
 | Toasts: Sonner as a dependency? | Yes for `transaction-toast` only. Everything else stays toast-free. |
-| Drawer on mobile for dialogs (connect, token-select)? | Yes. Add a `vaul`-based drawer shell in Phase 2. The hook/parts/shell split makes it cheap. |
+| Drawer on mobile for dialogs (connect, token-select)? | Done 2026-11-18 with the shadcn `drawer` primitive. In the Base UI style that is Base UI's own Drawer, so no `vaul`. |
 | Commit `public/r/*.json` or generate at build? | Generate in CI and the build. Stop committing it once CI is in place. |
 | Token list source for `token-select` | Prop only, in Uniswap tokenlist format. Ship a small default list for docs. |
 

@@ -30,6 +30,13 @@ export function useAllowance({ token, spender, owner, chainId }: UseAllowancePar
   });
 }
 
+/**
+ * Tokens that revert when a non-zero allowance is changed to another
+ * non-zero value, as `chainId:address` in lower case. Mainnet USDT is the
+ * well-known one.
+ */
+const RESET_FIRST = new Set(["1:0xdac17f958d2ee523a2206206994597c13d831ec7"]);
+
 export type ApproveButtonProps = Omit<
   TransactionButtonProps,
   "contract" | "transaction" | "children" | "chainId"
@@ -44,6 +51,11 @@ export type ApproveButtonProps = Omit<
   chainId: number;
   /** Approve the maximum instead of `amount`. Saves future approvals, but the spender can then move all of the token. */
   unlimited?: boolean;
+  /**
+   * Set a non-zero allowance to 0 before raising it, as a first
+   * transaction. Defaults to true for mainnet USDT, which reverts otherwise.
+   */
+  resetFirst?: boolean;
   /** Rendered once the allowance covers `amount`, usually the TransactionButton for the real action. */
   children: ReactNode;
 };
@@ -52,7 +64,8 @@ export type ApproveButtonProps = Omit<
  * Approval gate for ERC-20 actions. Shows "Approve <token>" while the
  * allowance is too low, then renders `children` (your action) once it
  * covers `amount`. Skips straight to `children` when nothing needs
- * approving.
+ * approving. For tokens like USDT it first shows "Reset <token> approval",
+ * which sets a leftover allowance to 0.
  */
 export function ApproveButton({
   token,
@@ -60,6 +73,7 @@ export function ApproveButton({
   amount,
   chainId,
   unlimited = false,
+  resetFirst,
   children,
   onSuccess,
   ...buttonProps
@@ -71,26 +85,32 @@ export function ApproveButton({
   if (amount === 0n || approved) return <>{children}</>;
 
   const checking = status === "connected" && allowance.isPending;
+  const reset =
+    (resetFirst ?? RESET_FIRST.has(`${chainId}:${token.address.toLowerCase()}`)) &&
+    allowance.data !== undefined &&
+    allowance.data > 0n;
 
   return (
     <TransactionButton
+      // A fresh button for the approval that follows a reset.
+      key={reset ? "reset" : "approve"}
       {...buttonProps}
       chainId={chainId}
       contract={{
         address: token.address,
         abi: erc20Abi,
         functionName: "approve",
-        args: [spender, unlimited ? maxUint256 : amount],
+        args: [spender, reset ? 0n : unlimited ? maxUint256 : amount],
       }}
       disabledReason={checking ? "Checking allowance…" : buttonProps.disabledReason}
-      successLabel="Approved"
+      successLabel={reset ? "Approval reset" : "Approved"}
       resetAfter={false}
       onSuccess={async (receipt) => {
         await allowance.refetch();
         onSuccess?.(receipt);
       }}
     >
-      Approve {token.symbol}
+      {reset ? `Reset ${token.symbol} approval` : `Approve ${token.symbol}`}
     </TransactionButton>
   );
 }

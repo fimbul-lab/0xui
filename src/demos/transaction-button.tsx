@@ -1,4 +1,4 @@
-import { parseEther } from "viem";
+import { erc20Abi, parseEther, parseUnits } from "viem";
 import { TransactionButton } from "@/components/transaction-button";
 import { demoAccounts, demoRevertAddress } from "./wagmi-config";
 import { demo } from "./demo";
@@ -38,5 +38,22 @@ export const Blocked = demo(() => (
     transaction={{ to: demoAccounts[1] }}
   >
     Send
+  </TransactionButton>
+));
+
+const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+
+export const Simulated = demo(() => (
+  <TransactionButton
+    chainId={1}
+    simulate
+    contract={{
+      address: usdc,
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [demoAccounts[1], parseUnits("1000000000", 6)],
+    }}
+  >
+    Send 1B USDC
   </TransactionButton>
 ));

@@ -14,14 +14,11 @@ import {
   type Connector,
 } from "wagmi";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  type ResponsiveDialogMode,
+} from "@/components/responsive-dialog";
+import { Button } from "@/components/ui/button";
 import { isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +122,8 @@ export type ConnectWalletDialogProps = {
   maxVisible?: number;
   /** Small print under the list. Pass null to hide. */
   footer?: ReactNode;
+  /** `auto` is a bottom drawer on small screens and a dialog otherwise. `dialog` and `drawer` force one. */
+  mode?: ResponsiveDialogMode;
 };
 
 const defaultFooter =
@@ -139,6 +138,7 @@ export function ConnectWalletDialog({
   title = "Connect a wallet",
   maxVisible = 4,
   footer = defaultFooter,
+  mode,
 }: ConnectWalletDialogProps) {
   const [openState, setOpenState] = useState(defaultOpen);
   const open = openProp ?? openState;
@@ -171,15 +171,15 @@ export function ConnectWalletDialog({
   const pendingName = wallets.find((w) => w.id === pendingId)?.name;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-sm" data-phase={phase}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Choose a wallet to connect to this app.
-          </DialogDescription>
-        </DialogHeader>
-
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={setOpen}
+      title={title}
+      description="Choose a wallet to connect to this app."
+      mode={mode}
+      className="sm:max-w-sm"
+      data-phase={phase}
+    >
         {wallets.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No wallets found. Install a browser wallet such as MetaMask or Rabby,
@@ -231,8 +231,7 @@ export function ConnectWalletDialog({
         {footer && (
           <p className="text-xs text-muted-foreground">{footer}</p>
         )}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
 
@@ -345,6 +344,7 @@ export type ConnectWalletProps = Omit<
     | "title"
     | "maxVisible"
     | "footer"
+    | "mode"
   >;
 
 /** "Connect wallet" button that opens the wallet picker. */
@@ -356,6 +356,7 @@ export function ConnectWallet({
   title,
   maxVisible,
   footer,
+  mode,
   children = "Connect wallet",
   ...buttonProps
 }: ConnectWalletProps) {
@@ -382,6 +383,7 @@ export function ConnectWallet({
         title={title}
         maxVisible={maxVisible}
         footer={footer}
+        mode={mode}
       />
     </>
   );

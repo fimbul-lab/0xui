@@ -17,20 +17,12 @@ jobs:
       - run: bun run test
       - run: bun run build
 
-  # Install every registry item into a fresh shadcn app and build it.
-  # Base UI is the primary base. Radix checks that projects on the other
-  # shadcn base still compile.
+  # Install every registry item into a fresh shadcn Base UI app and build it.
   smoke-install:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        base: [base, radix]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run registry:build
       - run: ./scripts/smoke-install.sh
-        env:
-          SMOKE_BASE: ${{ matrix.base }}

@@ -7,11 +7,18 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import type { Hash, TransactionReceipt } from "viem";
 import {
+  BaseError,
+  ContractFunctionRevertedError,
+  type Hash,
+  type TransactionReceipt,
+} from "viem";
+import {
+  useCall,
   useChains,
   useConnection,
   useSendTransaction,
+  useSimulateContract,
   useSwitchChain,
   useTransactionConfirmations,
   useWriteContract,
@@ -193,6 +200,75 @@ export function useTransactionFlow({
   };
 }
 
+/** Why a call failed, in the contract's own words when it gave a revert reason. */
+export function revertReason(error: unknown) {
+  if (!(error instanceof BaseError)) {
+    return error instanceof Error ? error.message : "Something went wrong.";
+  }
+  const revert = error.walk((e) => e instanceof ContractFunctionRevertedError);
+  if (revert instanceof ContractFunctionRevertedError) {
+    return revert.reason ?? revert.data?.errorName ?? revert.shortMessage;
+  }
+  return error.shortMessage;
+}
+
+export type SimulationStatus = "idle" | "checking" | "ok" | "failed";
+
+export type UseTransactionSimulationParameters = {
+  /** Contract call to simulate. Pass this or `transaction`. */
+  contract?: ContractRequest;
+  /** Plain transaction to simulate. Pass this or `contract`. */
+  transaction?: TransactionRequest;
+  /** Chain to simulate on. Defaults to the current chain. */
+  chainId?: number;
+  /** Set false to skip the simulation. */
+  enabled?: boolean;
+};
+
+/**
+ * Dry-runs a transaction from the connected account with `eth_call`, so a
+ * revert shows up before the wallet opens. `status` is `idle` until a wallet
+ * is connected. `reason` is set when it would fail.
+ */
+export function useTransactionSimulation({
+  contract,
+  transaction,
+  chainId,
+  enabled = true,
+}: UseTransactionSimulationParameters) {
+  const { address } = useConnection();
+  const on = enabled && Boolean(address);
+  const simulated = useSimulateContract({
+    ...contract,
+    chainId,
+    account: address,
+    query: { enabled: on && Boolean(contract), retry: false },
+  } as never);
+  const called = useCall({
+    ...transaction,
+    chainId,
+    account: address,
+    query: { enabled: on && !contract && Boolean(transaction), retry: false },
+  } as never);
+  const query = contract ? simulated : called;
+
+  const status: SimulationStatus =
+    !on || (!contract && !transaction)
+      ? "idle"
+      : query.isError
+        ? "failed"
+        : query.isPending
+          ? "checking"
+          : "ok";
+
+  return {
+    status,
+    reason: status === "failed" ? revertReason(query.error) : undefined,
+    error: status === "failed" ? query.error : undefined,
+    refetch: query.refetch,
+  };
+}
+
 export type TransactionButtonProps = Omit<
   ComponentProps<typeof Button>,
   "onClick" | "onError" | "children"
@@ -204,6 +280,11 @@ export type TransactionButtonProps = Omit<
     transaction?: TransactionRequest;
     /** Disable the button and show this text, e.g. "Enter an amount". Name the blocker, not just "Disabled". */
     disabledReason?: string;
+    /**
+     * Dry-run the transaction first. If it would revert, the button is
+     * disabled and the revert reason is shown, before the wallet opens.
+     */
+    simulate?: boolean;
     /** Button label. */
     children?: ReactNode;
     /** Label after success. */
@@ -226,7 +307,8 @@ const statusText: Partial<Record<TxPhase, string>> = {
  * Sends a transaction and shows every step on the button itself. When
  * disconnected it opens the wallet picker. On the wrong network it offers to
  * switch. Each phase gets a label, a status line, and `data-phase` on the
- * root.
+ * root. With `simulate` it dry-runs the call and names the revert reason
+ * instead of letting the wallet open on a transaction that will fail.
  */
 export function TransactionButton({
   contract,
@@ -237,6 +319,7 @@ export function TransactionButton({
   onSuccess,
   onError,
   disabledReason,
+  simulate = false,
   children = "Submit",
   successLabel = "Done",
   resetAfter = 4000,
@@ -264,6 +347,19 @@ export function TransactionButton({
   const busy =
     phase === "switching" || phase === "confirming" || phase === "pending";
 
+  const simulation = useTransactionSimulation({
+    contract,
+    transaction,
+    chainId: flow.targetChain?.id,
+    enabled:
+      simulate && !flow.wrongChain && !disabledReason && !busy && phase !== "success",
+  });
+  // The transaction just sent may have changed what the next one would do.
+  const resimulate = simulation.refetch;
+  useEffect(() => {
+    if (simulate && (phase === "success" || phase === "reverted")) resimulate();
+  }, [simulate, phase, resimulate]);
+
   let label: ReactNode = children;
   let action: (() => void) | undefined;
   // In-flight and success states win over `disabledReason`: a form that
@@ -284,6 +380,10 @@ export function TransactionButton({
   } else if (flow.wrongChain) {
     label = `Switch to ${flow.targetChain?.name ?? "the right network"}`;
     action = flow.switchToTarget;
+  } else if (simulation.status === "checking") {
+    label = "Checking…";
+  } else if (simulation.status === "failed") {
+    label = "Transaction will fail";
   } else if (contract) {
     action = () => flow.execute({ contract });
   } else if (transaction) {
@@ -297,7 +397,9 @@ export function TransactionButton({
         ? ((flow.error as { shortMessage?: string } | undefined)?.shortMessage ??
           flow.error?.message ??
           "Something went wrong.")
-        : undefined;
+        : simulation.status === "failed"
+          ? `This transaction would fail: ${simulation.reason}`
+          : undefined;
 
   return (
     <div

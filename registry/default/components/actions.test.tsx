@@ -1,7 +1,7 @@
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Toaster } from "sonner";
-import { parseUnits, type Address } from "viem";
+import { decodeFunctionData, erc20Abi, parseUnits, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -69,6 +69,40 @@ describe("ApproveButton", () => {
 
     expect(await screen.findByRole("button", { name: "Swap" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Approve USDC" })).not.toBeInTheDocument();
+  });
+
+  it("resets a leftover USDT allowance to 0 before approving", async () => {
+    const user = userEvent.setup();
+    const usdt = { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7" as Address, symbol: "USDT" };
+    let allowance = parseUnits("5", 6);
+    const approved: bigint[] = [];
+    const chain = fakeChainRpc();
+    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const config = createTestConfig({
+      rpc: {
+        ...chain,
+        eth_call: erc20CallRpc({ allowance: () => allowance, decimals: 6 }),
+        eth_sendTransaction: (params: [{ data: Hex }]) => {
+          const { args } = decodeFunctionData({ abi: erc20Abi, data: params[0].data });
+          allowance = args[1] as bigint;
+          approved.push(allowance);
+          return send(params);
+        },
+      },
+    });
+    renderWithWagmi(
+      <ApproveButton token={usdt} spender={router} amount={parseUnits("50", 6)} chainId={1}>
+        <button>Swap</button>
+      </ApproveButton>,
+      { config }
+    );
+    await act(() => connectMock(config));
+
+    await user.click(await screen.findByRole("button", { name: "Reset USDT approval" }));
+    await user.click(await screen.findByRole("button", { name: "Approve USDT" }, { timeout: 5_000 }));
+
+    expect(await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(approved).toEqual([0n, parseUnits("50", 6)]);
   });
 });
 

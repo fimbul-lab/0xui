@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { parseEther } from "viem";
+import { encodeErrorResult, encodeFunctionResult, erc20Abi, parseAbi, parseEther } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -69,6 +69,25 @@ describe("ConnectWallet", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Wallet is locked");
   });
+
+  it("opens as a drawer on a small screen and still connects", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(max-width: 639px)",
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const { config } = renderWithWagmi(<ConnectWallet />);
+
+    await user.click(screen.getByRole("button", { name: "Connect wallet" }));
+    const drawer = await screen.findByRole("dialog", { name: "Connect a wallet" });
+    expect(drawer).toHaveAttribute("data-slot", "drawer-popup");
+    expect(drawer.querySelector('[data-slot="drawer-swipe-handle"]')).toBeInTheDocument();
+    await user.click(within(drawer).getByRole("button", { name: "Mock Connector" }));
+
+    await waitFor(() => expect(config.state.status).toBe("connected"));
+  });
 });
 
 describe("WalletButton", () => {
@@ -110,6 +129,23 @@ describe("Account", () => {
     await user.click(screen.getByRole("button", { name: "Disconnect" }));
     await waitFor(() => expect(config.state.status).toBe("disconnected"));
     expect(onDisconnect).toHaveBeenCalledOnce();
+  });
+
+  it("switches to another connected wallet", async () => {
+    const user = userEvent.setup();
+    const config = createTestConfig({
+      rpc: { ...fakeChainRpc(), eth_getBalance: "0x0" },
+      wallets: [[testAccounts[0]], [testAccounts[1]]],
+    });
+    renderWithWagmi(<Account />, { config });
+    await act(() => connectMock(config, 0));
+    await act(() => connectMock(config, 1));
+
+    await user.click(await screen.findByRole("button", { name: /0x71C7…976F/ }));
+    await user.click(await screen.findByRole("button", { name: /0xd8dA…6045/ }));
+
+    expect(await screen.findByRole("button", { name: /0xd8dA…6045/, expanded: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /0x71C7…976F/ })).toBeInTheDocument();
   });
 });
 
@@ -249,6 +285,63 @@ describe("TransactionButton", () => {
 
     expect(await screen.findByRole("button", { name: "Send" })).toBeEnabled();
     expect(config.state.chainId).toBe(11155111);
+  });
+});
+
+describe("TransactionButton simulate", () => {
+  const transfer = {
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [recipient, 1n],
+  } as const;
+
+  it("names the revert reason instead of opening the wallet", async () => {
+    const config = createTestConfig({
+      rpc: {
+        ...fakeChainRpc(),
+        eth_call: () => {
+          throw {
+            code: 3,
+            message: "execution reverted",
+            data: encodeErrorResult({
+              abi: parseAbi(["error Error(string)"]),
+              args: ["Transfers are paused"],
+            }),
+          };
+        },
+      },
+    });
+    renderWithWagmi(
+      <TransactionButton contract={transfer} simulate>
+        Send
+      </TransactionButton>,
+      { config }
+    );
+    await act(() => connectMock(config));
+
+    expect(await screen.findByRole("button", { name: "Transaction will fail" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Transfers are paused");
+  });
+
+  it("enables the button when the call would succeed", async () => {
+    const config = createTestConfig({
+      rpc: {
+        ...fakeChainRpc(),
+        eth_call: () =>
+          encodeFunctionResult({ abi: erc20Abi, functionName: "transfer", result: true }),
+      },
+    });
+    renderWithWagmi(
+      <TransactionButton contract={transfer} simulate>
+        Send
+      </TransactionButton>,
+      { config }
+    );
+    await act(() => connectMock(config));
+
+    expect(await screen.findByRole("button", { name: "Send" })).toBeEnabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
 
