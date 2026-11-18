@@ -1,5 +1,6 @@
 import { useBlockNumber } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
+import { MorphText } from "@/components/morph-text";
 import { cn } from "@/lib/utils";
 
 export type BlockNumberPhase = "loading" | "live" | "error";
@@ -68,12 +69,12 @@ export function BlockNumber({
       ) : explorer ? (
         <ExplorerLink block={blockNumber!} chainId={chainId} icon={false}>
           <span className="sr-only">Block </span>
-          {formatted}
+          <MorphText>{formatted}</MorphText>
         </ExplorerLink>
       ) : (
         <span>
           <span className="sr-only">Block </span>
-          {formatted}
+          <MorphText>{formatted}</MorphText>
         </span>
       )}
     </span>

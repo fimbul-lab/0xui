@@ -17,6 +17,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
+import { MorphText } from "@/components/morph-text";
 import { useMinedReceipt } from "@/components/transaction-status";
 import { Button } from "@/components/ui/button";
 import { isUserRejection } from "@/lib/0xui-utils";
@@ -312,7 +313,7 @@ export function TransactionButton({
       >
         {busy && <Loader2Icon aria-hidden className="animate-spin" />}
         {phase === "success" && <CheckIcon aria-hidden />}
-        {label}
+        <MorphText>{label}</MorphText>
       </Button>
       {!hideStatus && (
         <>

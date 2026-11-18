@@ -1,0 +1,28 @@
+import { useEffect, useState } from "react";
+import { MorphText } from "@/components/morph-text";
+import { Button } from "@/components/ui/button";
+import { demo } from "./demo";
+
+const labels = ["Send 0.01 ETH", "Confirm in wallet…", "Pending…", "Done"];
+
+export const Labels = demo(() => {
+  const [step, setStep] = useState(0);
+  return (
+    <Button onClick={() => setStep((s) => (s + 1) % labels.length)}>
+      <MorphText>{labels[step]}</MorphText>
+    </Button>
+  );
+});
+
+export const Numbers = demo(() => {
+  const [block, setBlock] = useState(21_345_678);
+  useEffect(() => {
+    const timer = setInterval(() => setBlock((b) => b + 1), 2000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <span className="text-2xl font-semibold tabular-nums">
+      <MorphText>{block.toLocaleString("en")}</MorphText>
+    </span>
+  );
+});

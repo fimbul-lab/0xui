@@ -2,6 +2,7 @@ import { ChevronDownIcon } from "lucide-react";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { formatUnits, type Address } from "viem";
 import { useChainId, useConnection } from "wagmi";
+import { MorphText } from "@/components/morph-text";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
 import { useTokenBalances, type Token } from "@/components/token-select";
@@ -225,7 +226,7 @@ export function Portfolio({
         {title && <h3 className="font-semibold">{title}</h3>}
         {phase === "ready" && (
           <span className="text-2xl font-semibold tabular-nums">
-            {money.format(total)}
+            <MorphText>{money.format(total)}</MorphText>
             {unpriced > 0 && <span className="sr-only">, plus {unpriced} tokens without a price</span>}
           </span>
         )}

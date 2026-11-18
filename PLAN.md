@@ -235,6 +235,19 @@ These are fast and they lock in the conventions before the big components.
   - Extract the "Show more" button, which is now duplicated in Portfolio, TransactionHistory and TokenSelect.
   - A `showUnlisted` mode for indexer data that carries its own token metadata.
 
+### Text morphing (2026-11-18)
+- **`@0xui/morph-text`:** `MorphText` wraps `TextMorph` from [torph](https://github.com/lochie/torph). Text that changes in place morphs: shared characters slide, digits roll by place value.
+- **Where:**
+  - Button labels across phases: `transaction-button` (so also `approve-button`, `send`, `swap`), `batch-transaction`, `sign-message`, `add-token`, and the Read button in `contract-form`.
+  - Live values: `block-number`, `gas-price`, the chain name in `chain-selector`, the rate and price impact in `swap`, the total in `portfolio`, the fiat line in `token-input`.
+  - `token-amount` takes `animate` (off by default). `balance` turns it on. List rows in `portfolio` and `token-select` leave it off, since each instance measures and splits its text.
+- **Not morphed:** status lines and alerts. They are sentences in live regions, and torph never wraps text.
+- **jsdom:** torph throws without the Web Animations API, so `MorphText` renders a plain `span` there. Tests query labels as before, and never run the animation.
+- **Children:** strings and numbers are joined into one label (`Approve {symbol}`). torph throws on a React element, so children that hold one render as-is.
+- **Follow-ups:**
+  - torph is `0.1.x`. Pin or re-check on upgrade.
+  - It injects one `<style>` element, which a strict CSP blocks.
+
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).
 - Document the shadcn registry MCP (`npx shadcn registry:mcp`) so agents can browse and install 0xui.

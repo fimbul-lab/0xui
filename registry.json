@@ -24,6 +24,7 @@
         "dialog",
         "tabs",
         "@0xui/chain-badge",
+        "@0xui/morph-text",
         "@0xui/use-mounted",
         "@0xui/0xui-utils"
       ]
@@ -45,6 +46,21 @@
       "registryDependencies": [
         "button",
         "@0xui/use-copy"
+      ]
+    },
+    {
+      "name": "morph-text",
+      "type": "registry:component",
+      "title": "Morph Text",
+      "description": "Text that morphs when it changes: shared characters slide to their new place and digits roll by place value. Used across 0xui for phase labels ('Confirm in wallet…' to 'Pending…') and live numbers such as block height, gas and balances. Strings and numbers animate; any other child renders as-is. Screen readers get the plain text, prefers-reduced-motion is respected, and it renders plain text where the Web Animations API is missing (jsdom tests). Wraps TextMorph from torph.",
+      "files": [
+        {
+          "path": "registry/default/components/morph-text.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "torph"
       ]
     },
     {
@@ -160,6 +176,7 @@
         "viem"
       ],
       "registryDependencies": [
+        "@0xui/morph-text",
         "@0xui/0xui-utils"
       ]
     },
@@ -178,7 +195,8 @@
         "wagmi"
       ],
       "registryDependencies": [
-        "@0xui/explorer-link"
+        "@0xui/explorer-link",
+        "@0xui/morph-text"
       ]
     },
     {
@@ -196,6 +214,9 @@
         "wagmi",
         "viem",
         "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/morph-text"
       ]
     },
     {
@@ -329,6 +350,7 @@
         "button",
         "@0xui/connect-wallet",
         "@0xui/transaction-status",
+        "@0xui/morph-text",
         "@0xui/0xui-utils"
       ]
     },
@@ -393,7 +415,8 @@
         "@0xui/amount-input",
         "@0xui/token-select",
         "@0xui/balance",
-        "@0xui/token-amount"
+        "@0xui/token-amount",
+        "@0xui/morph-text"
       ]
     },
     {
@@ -477,6 +500,7 @@
         "button",
         "@0xui/connect-wallet",
         "@0xui/copy-button",
+        "@0xui/morph-text",
         "@0xui/0xui-utils"
       ]
     },
@@ -519,6 +543,7 @@
       ],
       "registryDependencies": [
         "button",
+        "@0xui/morph-text",
         "@0xui/0xui-utils"
       ]
     },
@@ -565,7 +590,8 @@
         "@0xui/token-input",
         "@0xui/token-select",
         "@0xui/approve-button",
-        "@0xui/transaction-button"
+        "@0xui/transaction-button",
+        "@0xui/morph-text"
       ]
     },
     {
@@ -587,6 +613,7 @@
       "registryDependencies": [
         "button",
         "@0xui/connect-wallet",
+        "@0xui/morph-text",
         "@0xui/0xui-utils"
       ]
     },
@@ -608,7 +635,8 @@
       ],
       "registryDependencies": [
         "button",
-        "@0xui/transaction-button"
+        "@0xui/transaction-button",
+        "@0xui/morph-text"
       ]
     },
     {
@@ -631,6 +659,7 @@
         "@0xui/token-select",
         "@0xui/token-icon",
         "@0xui/token-amount",
+        "@0xui/morph-text",
         "@0xui/token-list"
       ]
     },

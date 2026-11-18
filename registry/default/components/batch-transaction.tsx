@@ -12,6 +12,7 @@ import {
 } from "wagmi";
 import { getPublicClient, waitForCallsStatus } from "wagmi/actions";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
+import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/ui/button";
 import { isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
@@ -233,7 +234,7 @@ export function BatchTransaction({
       >
         {busy && <Loader2Icon aria-hidden className="animate-spin" />}
         {batch.phase === "success" && <CheckIcon aria-hidden />}
-        {label}
+        <MorphText>{label}</MorphText>
       </Button>
       <p role="status" className="text-xs text-muted-foreground">
         {batch.phase === "cancelled"

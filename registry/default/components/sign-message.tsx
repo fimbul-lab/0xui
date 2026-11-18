@@ -9,6 +9,7 @@ import {
 } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { CopyButton } from "@/components/copy-button";
+import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/ui/button";
 import { isUserRejection, truncateAddress } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
@@ -162,7 +163,7 @@ export function SignMessage({
       >
         {busy && <Loader2Icon aria-hidden className="animate-spin" />}
         {flow.phase === "signed" && <CheckIcon aria-hidden />}
-        {label}
+        <MorphText>{label}</MorphText>
       </Button>
       <p role="status" className="text-sm text-muted-foreground empty:hidden">
         {statusText[flow.phase] ?? ""}

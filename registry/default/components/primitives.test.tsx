@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { parseUnits } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestConfig, renderWithWagmi } from "../../../test/wagmi";
@@ -9,6 +9,7 @@ import { ChainBadge } from "./chain-badge";
 import { CopyButton } from "./copy-button";
 import { ExplorerLink } from "./explorer-link";
 import { GasPrice, formatGasPrice, gasTone } from "./gas-price";
+import { MorphText } from "./morph-text";
 import { TokenAmount, formatFiat } from "./token-amount";
 import { TokenIcon } from "./token-icon";
 
@@ -224,5 +225,36 @@ describe("GasPrice", () => {
     );
     const price = await screen.findByText(/50 gwei/);
     expect(price.closest("[data-tone]")).toHaveAttribute("data-tone", "high");
+  });
+});
+
+describe("MorphText", () => {
+  it("shows text and follows it when it changes", () => {
+    const { rerender } = render(<MorphText>Confirm in wallet…</MorphText>);
+    expect(screen.getByText("Confirm in wallet…")).toBeInTheDocument();
+
+    rerender(<MorphText>Pending…</MorphText>);
+    expect(screen.getByText("Pending…")).toBeInTheDocument();
+    expect(screen.queryByText("Confirm in wallet…")).not.toBeInTheDocument();
+  });
+
+  it("renders numbers", () => {
+    render(<MorphText>{42}</MorphText>);
+    expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("joins mixed text into one label", () => {
+    const symbol = "USDC";
+    render(<MorphText>Approve {symbol}</MorphText>);
+    expect(screen.getByText("Approve USDC")).toBeInTheDocument();
+  });
+
+  it("renders elements as they are", () => {
+    render(
+      <MorphText>
+        <strong>Swap</strong>
+      </MorphText>
+    );
+    expect(screen.getByText("Swap").tagName).toBe("STRONG");
   });
 });

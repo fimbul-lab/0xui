@@ -22,6 +22,7 @@ import { useState, type ComponentType, type ReactNode } from "react";
 import { type Chain } from "viem";
 import { useChainId, useChains, useConnection, useSwitchChain } from "wagmi";
 import { ChainIcon, type ChainIconProps } from "@/components/chain-badge";
+import { MorphText } from "@/components/morph-text";
 import { useMounted } from "@/hooks/use-mounted";
 import { isUserRejection } from "@/lib/0xui-utils";
 
@@ -203,7 +204,7 @@ function TriggerContent({
       )}
       <div className="flex items-center gap-2">
         <span suppressHydrationWarning className={cn(iconOnly && "sr-only")}>
-          {chainName}
+          <MorphText disabled={iconOnly}>{chainName}</MorphText>
         </span>
         {ChevronIcon && (
           <span

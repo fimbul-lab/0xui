@@ -10,6 +10,7 @@ import {
 } from "viem";
 import { useConnection } from "wagmi";
 import { ApproveButton } from "@/components/approve-button";
+import { MorphText } from "@/components/morph-text";
 import { TokenInput, type TokenInputState } from "@/components/token-input";
 import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
@@ -260,7 +261,7 @@ export function Swap({
           </span>
         ) : rate ? (
           <button type="button" onClick={() => setInvertRate((v) => !v)} className="hover:text-foreground">
-            {rate}
+            <MorphText>{rate}</MorphText>
           </button>
         ) : sellAmount && (isLoading || isStale) ? (
           <span>Fetching quote…</span>
@@ -269,7 +270,7 @@ export function Swap({
         )}
         {impact !== undefined && rate && (
           <span className={cn(impact > 15 ? "text-destructive" : impact > 5 && "text-amber-600 dark:text-amber-400")}>
-            Price impact {impact.toFixed(2)}%
+            <MorphText>{`Price impact ${impact.toFixed(2)}%`}</MorphText>
           </span>
         )}
       </div>

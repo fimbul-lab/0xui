@@ -95,6 +95,7 @@ export function Balance({
   chainId,
   refreshInterval,
   symbol: symbolProp,
+  animate = true,
   className,
   ...format
 }: BalanceProps) {
@@ -145,6 +146,7 @@ export function Balance({
         value={value!}
         decimals={decimals!}
         symbol={symbolProp ?? symbol}
+        animate={animate}
         {...format}
       />
     </span>

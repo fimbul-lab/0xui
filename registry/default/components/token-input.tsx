@@ -6,6 +6,7 @@ import {
   type AmountState,
 } from "@/components/amount-input";
 import { useTokenBalance } from "@/components/balance";
+import { MorphText } from "@/components/morph-text";
 import { TokenAmount, formatFiat } from "@/components/token-amount";
 import {
   TokenSelect,
@@ -135,7 +136,9 @@ export function TokenInput({
         )}
       </div>
       <div className="flex min-h-5 items-center justify-between gap-2 text-sm text-muted-foreground">
-        <span className="tabular-nums">{fiat}</span>
+        <span className="tabular-nums">
+          <MorphText>{fiat}</MorphText>
+        </span>
         {current.insufficient ? (
           <span role="alert" className="text-destructive">
             Insufficient {token?.symbol} balance
@@ -145,7 +148,7 @@ export function TokenInput({
           token && (
             <span className="flex items-center gap-1">
               Balance:
-              <TokenAmount value={max} decimals={decimals} />
+              <TokenAmount value={max} decimals={decimals} animate />
               {!readOnly && max > 0n && (
                 <button
                   type="button"

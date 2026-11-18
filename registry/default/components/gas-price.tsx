@@ -2,6 +2,7 @@ import { FuelIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import { formatGwei } from "viem";
 import { useGasPrice } from "wagmi";
+import { MorphText } from "@/components/morph-text";
 import { cn } from "@/lib/utils";
 
 export type GasTone = "low" | "medium" | "high";
@@ -99,7 +100,7 @@ export function GasPrice({
       ) : (
         <span>
           <span className="sr-only">Gas price </span>
-          {formatGasPrice(gasPrice, locale)} gwei
+          <MorphText>{`${formatGasPrice(gasPrice, locale)} gwei`}</MorphText>
           {tone && <span className="sr-only">, {tone}</span>}
         </span>
       )}

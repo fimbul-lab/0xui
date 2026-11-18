@@ -12,6 +12,7 @@ import {
   type Address,
 } from "viem";
 import { usePublicClient } from "wagmi";
+import { MorphText } from "@/components/morph-text";
 import { TransactionButton, type ContractRequest } from "@/components/transaction-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -251,7 +252,7 @@ export function ContractFunction({ address, fn, chainId, defaultOpen = false }: 
         {isRead(fn) ? (
           <>
             <Button type="submit" variant="outline" size="sm" className="self-start" disabled={read.isPending}>
-              {read.isPending ? "Reading…" : "Read"}
+              <MorphText>{read.isPending ? "Reading…" : "Read"}</MorphText>
             </Button>
             {read.isSuccess && (
               <pre aria-label="Result" className="overflow-auto rounded-lg bg-muted/50 p-3 font-mono text-xs">

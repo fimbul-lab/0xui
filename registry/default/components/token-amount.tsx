@@ -3,6 +3,7 @@ import {
   formatTokenAmount,
   type FormatTokenAmountOptions,
 } from "@/lib/0xui-utils";
+import { MorphText } from "@/components/morph-text";
 import { cn } from "@/lib/utils";
 
 export type TokenAmountProps = FormatTokenAmountOptions & {
@@ -16,6 +17,8 @@ export type TokenAmountProps = FormatTokenAmountOptions & {
   price?: number;
   /** ISO 4217 currency for the fiat value. */
   currency?: string;
+  /** Morph the amount and fiat value when they change. Leave off in long lists. */
+  animate?: boolean;
   className?: string;
 };
 
@@ -45,6 +48,7 @@ export function TokenAmount({
   maxDecimals,
   compact,
   locale,
+  animate = false,
   className,
 }: TokenAmountProps) {
   const formatted = formatTokenAmount(value, decimals, {
@@ -53,6 +57,8 @@ export function TokenAmount({
     locale,
   });
   const exact = `${formatUnits(value, decimals)}${symbol ? ` ${symbol}` : ""}`;
+  const fiat =
+    price === undefined ? undefined : formatFiat(value, decimals, price, { currency, locale });
 
   return (
     <span
@@ -60,12 +66,12 @@ export function TokenAmount({
       className={cn("inline-flex flex-col", className)}
     >
       <span title={exact} className="tabular-nums">
-        {formatted}
+        {animate ? <MorphText>{formatted}</MorphText> : formatted}
         {symbol && <span className="ml-1 text-muted-foreground">{symbol}</span>}
       </span>
-      {price !== undefined && (
+      {fiat !== undefined && (
         <span className="text-sm text-muted-foreground tabular-nums">
-          {formatFiat(value, decimals, price, { currency, locale })}
+          {animate ? <MorphText>{fiat}</MorphText> : fiat}
         </span>
       )}
     </span>

@@ -36,6 +36,7 @@
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
+    "torph": "^0.1.4",
     "viem": "^2.55.18",
     "wagmi": "^3.7.6"
   },

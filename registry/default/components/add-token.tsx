@@ -2,6 +2,7 @@ import { CheckIcon, Loader2Icon, WalletIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import type { Address } from "viem";
 import { useConnection, useWatchAsset } from "wagmi";
+import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/ui/button";
 import { isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
@@ -76,9 +77,11 @@ export function AddToken({
         ) : (
           <WalletIcon aria-hidden />
         )}
-        {phase === "added"
-          ? `${token.symbol} added`
-          : (children ?? `Add ${token.symbol} to wallet`)}
+        <MorphText>
+          {phase === "added"
+            ? `${token.symbol} added`
+            : (children ?? `Add ${token.symbol} to wallet`)}
+        </MorphText>
       </Button>
       <span role="status" className="text-xs text-muted-foreground empty:hidden">
         {phase === "adding"
