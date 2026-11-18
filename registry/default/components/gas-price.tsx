@@ -1,11 +1,15 @@
 import { FuelIcon } from "lucide-react";
 import type { ComponentType } from "react";
+import { SkeletonBox } from "skullet/react";
 import { formatGwei } from "viem";
 import { useGasPrice } from "wagmi";
 import { MorphText } from "@/components/morph-text";
 import { cn } from "@/lib/utils";
 
 export type GasTone = "low" | "medium" | "high";
+
+/** SkeletonBox is a block by default. This one sits in a line of text. */
+const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
 
 export type GasPriceProps = {
   /** Chain to read. Defaults to the current chain. */
@@ -96,7 +100,11 @@ export function GasPrice({
       {isError ? (
         <span>Gas unavailable</span>
       ) : gasPrice === undefined ? (
-        <span>Loading gas…</span>
+        <span>
+          {/* About the width of "12.3 gwei". */}
+          <SkeletonBox width="9ch" height="1em" style={inlineBox} />
+          <span className="sr-only">Loading gas price</span>
+        </span>
       ) : (
         <span>
           <span className="sr-only">Gas price </span>

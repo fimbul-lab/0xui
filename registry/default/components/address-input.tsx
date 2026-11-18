@@ -10,6 +10,7 @@ import { normalize } from "viem/ens";
 import { useEnsAddress, useEnsName } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { AddressAvatar } from "@/components/address-avatar";
+import { MorphText } from "@/components/morph-text";
 import { truncateAddress } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
@@ -222,7 +223,9 @@ export function AddressInput({
           state.phase === "valid" && value.includes(".") && "font-mono"
         )}
       >
-        {message}
+        {/* The hint morphs: "Looking up name…" into the address, or a name
+            appearing for a pasted address. Errors are announced as-is. */}
+        {showError ? message : <MorphText>{message}</MorphText>}
       </p>
     </div>
   );

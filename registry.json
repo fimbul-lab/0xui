@@ -7,7 +7,7 @@
       "name": "chain-selector",
       "type": "registry:component",
       "title": "Chain Selector",
-      "description": "Network switcher for wagmi apps, as a popover (ChainSelector) or dialog (ChainSelectorDialog). Shows the current chain with its icon, lists every chain in the wagmi config (optionally grouped into mainnet/testnet tabs), marks the active chain, shows a per-row spinner while switching, and surfaces wallet errors inline; a rejected request shows as cancelled, not as an error. Wraps useSwitchChain, useChains and useChainId. Flags a wallet on an unsupported chain as 'Wrong network', and takes a chainMeta slot for per-chain detail. Icon slots are swappable or can be hidden; iconOnly mode keeps an accessible label.",
+      "description": "Network switcher for wagmi apps, as a popover (ChainSelector) or dialog (ChainSelectorDialog). Shows the current chain with its icon, lists every chain in the wagmi config (optionally grouped into mainnet/testnet tabs), marks the active chain, shows a per-row spinner while switching, and surfaces wallet errors inline; a rejected request shows as cancelled, not as an error. Wraps useSwitchChain, useChains and useChainId. Flags a wallet on an unsupported chain as 'Wrong network', and takes a chainMeta slot for per-chain detail. Icon slots are swappable or can be hidden; iconOnly mode keeps an accessible label. Before hydration the trigger is a skeleton (skullet) in its own shape, so server HTML never shows wallet state and nothing moves when the chain appears.",
       "files": [
         {
           "path": "registry/default/components/chain-selector.tsx",
@@ -17,7 +17,8 @@
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "popover",
@@ -64,6 +65,22 @@
       ]
     },
     {
+      "name": "responsive-dialog",
+      "type": "registry:component",
+      "title": "Responsive Dialog",
+      "description": "A dialog that becomes a bottom drawer on small screens, where a centered panel is out of thumb reach. Same title, description and content in both. mode forces 'dialog' or 'drawer'; 'auto' switches on a media query (below 640px by default). Used by the wallet picker and the token picker. Built on the shadcn Dialog and Drawer. Exports useMediaQuery, which is false on the server and where matchMedia is missing.",
+      "files": [
+        {
+          "path": "registry/default/components/responsive-dialog.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "registryDependencies": [
+        "dialog",
+        "drawer"
+      ]
+    },
+    {
       "name": "explorer-link",
       "type": "registry:component",
       "title": "Explorer Link",
@@ -86,7 +103,7 @@
       "name": "address",
       "type": "registry:component",
       "title": "Address",
-      "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234…abcd, with a copy button and an optional block-explorer link. Inline or pill variant. Full address on hover and for screen readers. Exports useAddressName.",
+      "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234…abcd, with a copy button and an optional block-explorer link. Inline or pill variant. The text morphs from the address to the ENS name when it resolves (MorphText). Full address on hover and for screen readers. Exports useAddressName.",
       "files": [
         {
           "path": "registry/default/components/address.tsx",
@@ -100,7 +117,8 @@
       "registryDependencies": [
         "@0xui/copy-button",
         "@0xui/explorer-link",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/morph-text"
       ]
     },
     {
@@ -126,7 +144,7 @@
       "name": "chain-badge",
       "type": "registry:component",
       "title": "Chain Badge",
-      "description": "Static chain chip: chain icon plus name for a chainId, with the name read from the wagmi config ('Chain <id>' for unknown chains). Icon-only mode keeps an accessible label. Also exports ChainIcon, the web3icons network logo with a placeholder for unknown chains, which other 0xui components reuse.",
+      "description": "Static chain chip: chain icon plus name for a chainId, with the name read from the wagmi config ('Chain <id>' for unknown chains). Icon-only mode keeps an accessible label. Also exports ChainIcon, the web3icons network logo, a skeleton (skullet) while it loads and a '?' for unknown chains, which other 0xui components reuse.",
       "files": [
         {
           "path": "registry/default/components/chain-badge.tsx",
@@ -135,7 +153,8 @@
       ],
       "dependencies": [
         "wagmi",
-        "@web3icons/react"
+        "@web3icons/react",
+        "skullet"
       ],
       "registryDependencies": [
         "avatar"
@@ -145,7 +164,7 @@
       "name": "token-icon",
       "type": "registry:component",
       "title": "Token Icon",
-      "description": "Token logo with fallbacks: the token list's logoURI (ipfs:// is resolved through a gateway), then the built-in web3icons icon for the symbol, then the symbol's first letters. Optional chain badge in the corner via chainId. Labelled by the symbol for screen readers. Size in px.",
+      "description": "Token logo with fallbacks: the token list's logoURI (ipfs:// is resolved through a gateway), then the built-in web3icons icon for the symbol, then the symbol's first letters. A skeleton (skullet) stands in while a logo or icon loads. Optional chain badge in the corner via chainId. Labelled by the symbol for screen readers. Size in px.",
       "files": [
         {
           "path": "registry/default/components/token-icon.tsx",
@@ -153,7 +172,8 @@
         }
       ],
       "dependencies": [
-        "@web3icons/react"
+        "@web3icons/react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/0xui-utils",
@@ -184,7 +204,7 @@
       "name": "block-number",
       "type": "registry:component",
       "title": "Block Number",
-      "description": "Live block indicator: status dot plus the latest block number, updated as blocks arrive (useBlockNumber with watch). Doubles as an RPC health check. data-phase is loading, live or error, and the dot turns red with 'RPC unavailable' when the RPC fails. Optional explorer link. Exports useLiveBlockNumber.",
+      "description": "Live block indicator: status dot plus the latest block number, updated as blocks arrive (useBlockNumber with watch). Doubles as an RPC health check. A skeleton (skullet) stands in for the number while loading. data-phase is loading, live or error, and the dot turns red with 'RPC unavailable' when the RPC fails. Optional explorer link. Exports useLiveBlockNumber.",
       "files": [
         {
           "path": "registry/default/components/block-number.tsx",
@@ -192,7 +212,8 @@
         }
       ],
       "dependencies": [
-        "wagmi"
+        "wagmi",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/explorer-link",
@@ -203,7 +224,7 @@
       "name": "gas-price",
       "type": "registry:component",
       "title": "Gas Price",
-      "description": "Current gas price in gwei with three significant digits (useGasPrice, refreshed on an interval). Optional low/medium/high tone from per-chain gwei thresholds, exposed as data-tone. Loading and error states. Exports useGasPriceInfo, formatGasPrice and gasTone.",
+      "description": "Current gas price in gwei with three significant digits (useGasPrice, refreshed on an interval). Optional low/medium/high tone from per-chain gwei thresholds, exposed as data-tone. Skeleton (skullet) while loading and an error state. Exports useGasPriceInfo, formatGasPrice and gasTone.",
       "files": [
         {
           "path": "registry/default/components/gas-price.tsx",
@@ -213,7 +234,8 @@
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/morph-text"
@@ -223,7 +245,7 @@
       "name": "connect-wallet",
       "type": "registry:component",
       "title": "Connect Wallet",
-      "description": "Wallet picker for wagmi: 'Connect wallet' button plus dialog listing the config's connectors and EIP-6963 browser extensions with their icons. Recent wallet first, then installed (badged), max N shown with an 'Other wallets' overflow, generic injected hidden when extensions announce themselves. Per-wallet spinner while connecting, a rejected request shows as cancelled (not an error), other errors inline. Exports ConnectWalletDialog (bring your own trigger), useConnectWallet and useWalletOptions. data-phase: idle | connecting | cancelled | error.",
+      "description": "Wallet picker for wagmi: 'Connect wallet' button plus dialog listing the config's connectors and EIP-6963 browser extensions with their icons. Recent wallet first, then installed (badged), max N shown with an 'Other wallets' overflow, generic injected hidden when extensions announce themselves. Per-wallet spinner while connecting, a rejected request shows as cancelled (not an error), other errors inline. Exports ConnectWalletDialog (bring your own trigger), useConnectWallet and useWalletOptions. data-phase: idle | connecting | cancelled | error. On small screens the picker opens as a bottom drawer (mode: auto, dialog or drawer).",
       "files": [
         {
           "path": "registry/default/components/connect-wallet.tsx",
@@ -237,7 +259,7 @@
       ],
       "registryDependencies": [
         "button",
-        "dialog",
+        "@0xui/responsive-dialog",
         "avatar",
         "@0xui/0xui-utils"
       ]
@@ -246,7 +268,7 @@
       "name": "balance",
       "type": "registry:component",
       "title": "Balance",
-      "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton, '—' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
+      "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton (skullet), '—' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
       "files": [
         {
           "path": "registry/default/components/balance.tsx",
@@ -255,7 +277,8 @@
       ],
       "dependencies": [
         "wagmi",
-        "viem"
+        "viem",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/token-amount"
@@ -265,7 +288,7 @@
       "name": "account",
       "type": "registry:component",
       "title": "Account",
-      "description": "Connected-account button: avatar plus ENS name or truncated address, optional balance. Opens a popover panel with the balance, current chain, copy address, explorer link, connector name and disconnect, plus a children slot for app links. Renders nothing when disconnected. Exports useConnectedAccount.",
+      "description": "Connected-account button: avatar plus ENS name or truncated address (morphing from one to the other when the name resolves), optional balance. Opens a popover panel with the balance, current chain, copy address, explorer link, connector name and disconnect, plus a children slot for app links. Renders nothing when disconnected. Exports useConnectedAccount. When more than one wallet is connected, the panel lists the others under 'Switch account' (useConnections, useSwitchConnection).",
       "files": [
         {
           "path": "registry/default/components/account.tsx",
@@ -284,14 +307,15 @@
         "@0xui/chain-badge",
         "@0xui/copy-button",
         "@0xui/explorer-link",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/morph-text"
       ]
     },
     {
       "name": "wallet-button",
       "type": "registry:component",
       "title": "Wallet Button",
-      "description": "The one wallet button for an app header: ConnectWallet when disconnected, Account when connected, and a pulsing placeholder during SSR and while wagmi restores a previous connection, so returning users never see a flash of 'Connect wallet'. Exports useWalletButtonPhase (restoring | disconnected | connected).",
+      "description": "The one wallet button for an app header: ConnectWallet when disconnected, Account when connected, and a skeleton placeholder (skullet) during SSR and while wagmi restores a previous connection, so returning users never see a flash of 'Connect wallet'. Exports useWalletButtonPhase (restoring | disconnected | connected).",
       "files": [
         {
           "path": "registry/default/components/wallet-button.tsx",
@@ -299,7 +323,8 @@
         }
       ],
       "dependencies": [
-        "wagmi"
+        "wagmi",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/connect-wallet",
@@ -334,7 +359,7 @@
       "name": "transaction-button",
       "type": "registry:component",
       "title": "Transaction Button",
-      "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet…', 'Pending…', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error.",
+      "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet…', 'Pending…', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error. With simulate it dry-runs the call (useSimulateContract, useCall) and shows the revert reason on a disabled button before the wallet opens. Exports useTransactionSimulation and revertReason.",
       "files": [
         {
           "path": "registry/default/components/transaction-button.tsx",
@@ -376,7 +401,7 @@
       "name": "token-select",
       "type": "registry:component",
       "title": "Token Select",
-      "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading state; and pagination (50 rows per page, infinite scroll plus a Show more button) so 400-token lists stay fast. Accepts balances from an indexer via the balances prop, which skips RPC reads. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type.",
+      "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading skeleton measured from the real rows (skullet) while the list downloads; and pagination (50 rows per page, infinite scroll plus a Show more button) so 400-token lists stay fast. Accepts balances from an indexer via the balances prop, which skips RPC reads. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type. On small screens the picker opens as a bottom drawer (mode: auto, dialog or drawer).",
       "files": [
         {
           "path": "registry/default/components/token-select.tsx",
@@ -386,11 +411,12 @@
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "button",
-        "dialog",
+        "@0xui/responsive-dialog",
         "@0xui/token-icon",
         "@0xui/token-amount",
         "@0xui/token-list",
@@ -423,7 +449,7 @@
       "name": "address-input",
       "type": "registry:component",
       "title": "Address Input",
-      "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found.",
+      "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, a hint line that morphs between 'Looking up…', the name and the address (MorphText), strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found.",
       "files": [
         {
           "path": "registry/default/components/address-input.tsx",
@@ -437,14 +463,15 @@
       ],
       "registryDependencies": [
         "@0xui/address-avatar",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/morph-text"
       ]
     },
     {
       "name": "approve-button",
       "type": "registry:component",
       "title": "Approve Button",
-      "description": "ERC-20 approval gate: reads the allowance (useReadContract allowance) and shows an 'Approve <symbol>' TransactionButton until it covers the amount, then renders children (your action); skips straight to children when already approved. Exact amount by default, unlimited (maxUint256) opt-in. Refetches the allowance after approval. Exports useAllowance.",
+      "description": "ERC-20 approval gate: reads the allowance (useReadContract allowance) and shows an 'Approve <symbol>' TransactionButton until it covers the amount, then renders children (your action); skips straight to children when already approved. Exact amount by default, unlimited (maxUint256) opt-in. Refetches the allowance after approval. Exports useAllowance. For tokens that reject a non-zero to non-zero allowance change (mainnet USDT, or any token with resetFirst) it first sends 'Reset <token> approval' to set the allowance to 0.",
       "files": [
         {
           "path": "registry/default/components/approve-button.tsx",
@@ -643,7 +670,7 @@
       "name": "portfolio",
       "type": "registry:block",
       "title": "Portfolio",
-      "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop, keyed by chainId:address, address or symbol. Spam filtering: likely spam (looksLikeSpam or your own isSpam, e.g. scanner verdicts), tokens without a price and dust under minValue are collapsed under a Hidden tokens disclosure with the reason, and left out of the total. Pagination (pageSize with Show more). Accepts balances from an indexer (balances prop) instead of RPC reads. Skeleton rows while loading, plus empty, error and disconnected states. Exports usePortfolio and hiddenReason.",
+      "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop, keyed by chainId:address, address or symbol. Spam filtering: likely spam (looksLikeSpam or your own isSpam, e.g. scanner verdicts), tokens without a price and dust under minValue are collapsed under a Hidden tokens disclosure with the reason, and left out of the total. Pagination (pageSize with Show more). Accepts balances from an indexer (balances prop) instead of RPC reads. Loading skeleton measured from the real layout (skullet): from sample rows over RPC, or from your own data's exact shape when isLoading is set, so nothing moves on reveal. Empty, error and disconnected states. locale prop for server rendering. Exports usePortfolio and hiddenReason. Takes holdings from an indexer with their own token metadata; tokens off the list are hidden as 'Not on the token list' unless showUnlisted is set.",
       "files": [
         {
           "path": "registry/default/components/portfolio.tsx",
@@ -653,7 +680,8 @@
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/token-select",
@@ -690,7 +718,7 @@
       "name": "ens-profile",
       "type": "registry:component",
       "title": "ENS Profile",
-      "description": "Profile card for an ENS name (forward) or address (primary name): avatar, name, address with copy, description, and website / X / GitHub / email links from text records, read on mainnet. Loading skeleton and not-found state. Exports useEnsProfile, which can read arbitrary text records.",
+      "description": "Profile card for an ENS name (forward) or address (primary name): avatar, name, address with copy, description, and website / X / GitHub / email links from text records, read on mainnet. Loading skeleton measured from the real layout (skullet) and a not-found state. Exports useEnsProfile, which can read arbitrary text records.",
       "files": [
         {
           "path": "registry/default/components/ens-profile.tsx",
@@ -701,7 +729,8 @@
         "wagmi",
         "viem",
         "@tanstack/react-query",
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/address",
@@ -712,7 +741,7 @@
       "name": "nft-card",
       "type": "registry:component",
       "title": "NFT Card",
-      "description": "Card for an ERC-721 or ERC-1155 token: reads tokenURI or uri (with {id} substitution) and the collection name in one batch, fetches metadata from HTTP, IPFS (configurable gateway), Arweave or inline data: URIs, and shows the image, name, collection, token id and optional traits. Skeleton while loading and a placeholder for missing images or tokens. Exports useNft, fetchNftMetadata, resolveUri and expandTokenUri.",
+      "description": "Card for an ERC-721 or ERC-1155 token: reads tokenURI or uri (with {id} substitution) and the collection name in one batch, fetches metadata from HTTP, IPFS (configurable gateway), Arweave or inline data: URIs, and shows the image, name, collection, token id and optional traits. Skeleton measured from the real layout (skullet) while loading and a placeholder for missing images or tokens. Exports useNft, fetchNftMetadata, resolveUri and expandTokenUri.",
       "files": [
         {
           "path": "registry/default/components/nft-card.tsx",
@@ -723,7 +752,8 @@
         "wagmi",
         "viem",
         "@tanstack/react-query",
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/0xui-utils"

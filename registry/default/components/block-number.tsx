@@ -1,9 +1,13 @@
+import { SkeletonBox } from "skullet/react";
 import { useBlockNumber } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
 import { MorphText } from "@/components/morph-text";
 import { cn } from "@/lib/utils";
 
 export type BlockNumberPhase = "loading" | "live" | "error";
+
+/** SkeletonBox is a block by default. This one sits in a line of text. */
+const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
 
 export type BlockNumberProps = {
   /** Chain to watch. Defaults to the current chain. */
@@ -65,7 +69,11 @@ export function BlockNumber({
       {phase === "error" ? (
         <span>RPC unavailable</span>
       ) : formatted === undefined ? (
-        <span>Loading block…</span>
+        <span>
+          {/* About the width of "21,000,000". */}
+          <SkeletonBox width="10ch" height="1em" style={inlineBox} />
+          <span className="sr-only">Loading block…</span>
+        </span>
       ) : explorer ? (
         <ExplorerLink block={blockNumber!} chainId={chainId} icon={false}>
           <span className="sr-only">Block </span>

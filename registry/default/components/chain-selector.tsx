@@ -19,6 +19,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { useState, type ComponentType, type ReactNode } from "react";
+import { SkeletonBox } from "skullet/react";
 import { type Chain } from "viem";
 import { useChainId, useChains, useConnection, useSwitchChain } from "wagmi";
 import { ChainIcon, type ChainIconProps } from "@/components/chain-badge";
@@ -190,6 +191,11 @@ function TriggerContent({
       {unsupported && (
         <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />
       )}
+      {/* Before mount the chain isn't known: a skeleton in the trigger's own
+          shape, so the name and icon arrive without moving anything. */}
+      {!mounted && ChainIcon && (
+        <SkeletonBox width="1.5rem" height="1.5rem" radius="9999px" style={{ flexShrink: 0 }} />
+      )}
       {mounted && currentChain && ChainIcon && (
         <div className="size-6">
           <ChainIcon
@@ -203,9 +209,23 @@ function TriggerContent({
         </div>
       )}
       <div className="flex items-center gap-2">
-        <span suppressHydrationWarning className={cn(iconOnly && "sr-only")}>
-          <MorphText disabled={iconOnly}>{chainName}</MorphText>
-        </span>
+        {mounted ? (
+          <span className={cn(iconOnly && "sr-only")}>
+            <MorphText disabled={iconOnly}>{chainName}</MorphText>
+          </span>
+        ) : (
+          <span className={cn(iconOnly && "sr-only")}>
+            <span className="sr-only">{chainName}</span>
+            {/* About the width of "Ethereum", inline so it takes a line of text's height. */}
+            {!iconOnly && (
+              <SkeletonBox
+                width="4.5em"
+                height="1em"
+                style={{ display: "inline-block", verticalAlign: "middle" }}
+              />
+            )}
+          </span>
+        )}
         {ChevronIcon && (
           <span
             className={cn(
@@ -347,7 +367,14 @@ function ChainListContent({
   monoColor?: string;
 }) {
   if (!mounted) {
-    return <p className="text-sm text-muted-foreground">Loading chains...</p>;
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="sr-only">Loading chains</span>
+        {[0, 1, 2].map((row) => (
+          <SkeletonBox key={row} width="100%" height="2.25rem" />
+        ))}
+      </div>
+    );
   }
 
   const { mainnet, testnet } = groupByNetwork

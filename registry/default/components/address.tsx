@@ -3,6 +3,7 @@ import { useEnsName } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { CopyButton } from "@/components/copy-button";
 import { ExplorerLink } from "@/components/explorer-link";
+import { MorphText } from "@/components/morph-text";
 import { truncateAddress } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +65,10 @@ export function Address({
       title={checksummed}
       className={cn(!name && "font-mono tabular-nums", "truncate")}
     >
-      <span aria-hidden>{text}</span>
+      {/* Morphs from the address to the ENS name when it resolves. */}
+      <span aria-hidden>
+        <MorphText>{text}</MorphText>
+      </span>
       <span className="sr-only">{name ? `${name}, ${checksummed}` : checksummed}</span>
     </span>
   );

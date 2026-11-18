@@ -1,5 +1,6 @@
 import { TokenIcon as Web3TokenIcon } from "@web3icons/react/dynamic";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { SkeletonBox } from "skullet/react";
 import { ChainIcon } from "@/components/chain-badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { resolveUri } from "@/lib/0xui-utils";
@@ -41,13 +42,7 @@ export function TokenIcon({
       symbol={symbol.toLowerCase()}
       variant={variant}
       className="size-full rounded-full"
-      fallback={
-        <Avatar className="size-full">
-          <AvatarFallback className="text-[0.6em] font-medium uppercase">
-            {symbol.slice(0, 2)}
-          </AvatarFallback>
-        </Avatar>
-      }
+      fallback={<Letters symbol={symbol} />}
     />
   );
 
@@ -76,6 +71,29 @@ export function TokenIcon({
 }
 
 /**
+ * The symbol's first letters. web3icons shows this both while an icon loads
+ * and when it has none, so it starts as a skeleton and settles on the letters
+ * only if no icon has turned up.
+ */
+function Letters({ symbol }: { symbol: string }) {
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <Avatar className="size-full">
+      {settled ? (
+        <AvatarFallback className="text-[0.6em] font-medium uppercase">{symbol.slice(0, 2)}</AvatarFallback>
+      ) : (
+        <SkeletonBox width="100%" height="100%" radius="9999px" />
+      )}
+    </Avatar>
+  );
+}
+
+/**
  * A token-list logo. These go dead often, so on error show `fallback`. The
  * fallback only mounts after a failure: rendering it while the logo loads
  * would fetch a built-in icon for every row of a long list.
@@ -90,7 +108,9 @@ function ListLogo({ src, fallback }: { src: string; fallback: ReactNode }) {
         alt=""
         onLoadingStatusChange={(status) => status === "error" && setFailed(true)}
       />
-      <AvatarFallback className="animate-pulse" />
+      <AvatarFallback className="bg-transparent">
+        <SkeletonBox width="100%" height="100%" radius="9999px" />
+      </AvatarFallback>
     </Avatar>
   );
 }

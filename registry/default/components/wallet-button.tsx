@@ -1,3 +1,4 @@
+import { SkeletonBox } from "skullet/react";
 import { useConnection } from "wagmi";
 import { Account, type AccountProps } from "@/components/account";
 import {
@@ -43,11 +44,10 @@ export function WalletButton({
       <span
         data-slot="wallet-button"
         data-phase={phase}
-        className={cn(
-          "inline-block h-10 w-36 animate-pulse rounded-full bg-muted",
-          className
-        )}
+        // The size of the default "Connect wallet" button.
+        className={cn("inline-flex h-10 w-[8.3rem]", className)}
       >
+        <SkeletonBox width="100%" height="100%" radius="9999px" />
         <span className="sr-only">Restoring wallet connection</span>
       </span>
     );

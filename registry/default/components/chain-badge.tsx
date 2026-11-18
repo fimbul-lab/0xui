@@ -1,5 +1,6 @@
 import { NetworkIcon } from "@web3icons/react/dynamic";
-import type { ComponentProps, ComponentType } from "react";
+import { useEffect, useState, type ComponentProps, type ComponentType } from "react";
+import { SkeletonBox } from "skullet/react";
 import { useChains } from "wagmi";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -34,10 +35,24 @@ export function ChainIcon({
   );
 }
 
+/**
+ * web3icons shows this both while an icon loads and when it has none. So it
+ * starts as a skeleton and settles on the "?" only if no icon has turned up.
+ */
 function ChainIconFallback({ className }: { className?: string }) {
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <Avatar className={cn("size-6", className)}>
-      <AvatarFallback className="text-xs">?</AvatarFallback>
+      {settled ? (
+        <AvatarFallback className="text-xs">?</AvatarFallback>
+      ) : (
+        <SkeletonBox width="100%" height="100%" radius="9999px" />
+      )}
     </Avatar>
   );
 }

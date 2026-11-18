@@ -8,18 +8,16 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
+import { Skeleton } from "skullet/react";
 import { erc20Abi, formatUnits, type Address } from "viem";
 import { useBalance, useChainId, useConnection, useReadContracts } from "wagmi";
+import {
+  ResponsiveDialog,
+  type ResponsiveDialogMode,
+} from "@/components/responsive-dialog";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { truncateAddress } from "@/lib/0xui-utils";
 import { NATIVE_TOKEN_ADDRESS, getTokenPrice, isNativeToken, type TokenInfo, type TokenPrices } from "@/lib/token-list";
 import { cn } from "@/lib/utils";
@@ -220,7 +218,65 @@ export type TokenSelectDialogProps = {
    */
   balances?: ReadonlyMap<string, bigint> | Record<string, bigint>;
   title?: ReactNode;
+  /** `auto` is a bottom drawer on small screens and a dialog otherwise. `dialog` and `drawer` force one. */
+  mode?: ResponsiveDialogMode;
 };
+
+const noop = () => {};
+
+/** Stand-in rows the loading skeleton is measured from. Never shown as text. */
+const sampleTokens: Token[] = ["Sample token", "Another one", "Third token name", "Fourth", "Fifth token", "Sixth one"].map(
+  (name, index) => ({
+    chainId: 0,
+    address: `0x${String(index + 1).padStart(40, "0")}`,
+    name,
+    symbol: "TKN",
+    decimals: 18,
+  })
+);
+
+/** One row of the token list. */
+function TokenRow({
+  token,
+  balance,
+  selected = false,
+  showAddress = false,
+  onSelect,
+}: {
+  token: Token;
+  balance?: bigint;
+  selected?: boolean;
+  /** Show the contract address next to the name, for address searches. */
+  showAddress?: boolean;
+  onSelect: (token: Token) => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-current={selected || undefined}
+        onClick={() => onSelect(token)}
+        className={cn(
+          "flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left outline-none",
+          "hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+          selected && "bg-muted"
+        )}
+      >
+        <TokenIcon symbol={token.symbol} src={token.logoURI} size={32} />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-medium">{token.symbol}</span>
+          <span className="truncate text-xs text-muted-foreground">
+            {token.name}
+            {!isNativeToken(token) && showAddress && <> · {truncateAddress(token.address)}</>}
+          </span>
+        </span>
+        {balance !== undefined && balance > 0n && (
+          <TokenAmount value={balance} decimals={token.decimals} compact className="text-sm" />
+        )}
+      </button>
+    </li>
+  );
+}
 
 /** The token picker on its own. Use it to open the picker from your own trigger. */
 export function TokenSelectDialog({
@@ -237,6 +293,7 @@ export function TokenSelectDialog({
   pageSize = 50,
   balances: balancesProp,
   title = "Select a token",
+  mode,
 }: TokenSelectDialogProps) {
   const currentChainId = useChainId();
   const chainId = chainIdProp ?? currentChainId;
@@ -308,14 +365,15 @@ export function TokenSelectDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(36rem,85vh)] flex-col sm:max-w-md" onKeyDown={onKeyDown}>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">
-            Search by name, symbol or address.
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      description="Search by name, symbol or address."
+      mode={mode}
+      className="flex max-h-[min(36rem,85vh)] flex-col sm:max-w-md"
+      onKeyDown={onKeyDown}
+    >
 
         <label className="flex items-center gap-2 rounded-lg border px-3 focus-within:ring-3 focus-within:ring-ring/50">
           <SearchIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
@@ -347,64 +405,53 @@ export function TokenSelectDialog({
           </div>
         )}
 
-        {results.length === 0 ? (
+        {results.length === 0 && !isLoading ? (
           <p role="status" className="py-6 text-center text-sm text-muted-foreground">
-            {isLoading
-              ? "Loading tokens…"
-              : query
-                ? `No tokens match “${query}”.`
-                : "No tokens on this network."}
+            {query ? `No tokens match “${query}”.` : "No tokens on this network."}
           </p>
         ) : (
-          <ul ref={listRef} aria-label="Tokens" className="-mx-2 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
-            {results.slice(0, visible).map((token) => {
-              const balance = balances.get(key(token));
-              const selected = value !== undefined && key(value) === key(token);
-              return (
-                <li key={key(token)}>
-                  <button
-                    type="button"
-                    aria-current={selected || undefined}
-                    onClick={() => select(token)}
-                    className={cn(
-                      "flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left outline-none",
-                      "hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-                      selected && "bg-muted"
-                    )}
-                  >
-                    <TokenIcon symbol={token.symbol} src={token.logoURI} size={32} />
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-medium">{token.symbol}</span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {token.name}
-                        {!isNativeToken(token) && query.startsWith("0x") && (
-                          <> · {truncateAddress(token.address)}</>
-                        )}
-                      </span>
-                    </span>
-                    {balance !== undefined && balance > 0n && (
-                      <TokenAmount
-                        value={balance}
-                        decimals={token.decimals}
-                        compact
-                        className="text-sm"
-                      />
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-            {results.length > visible && (
-              <LoadMore
-                shown={visible}
-                total={results.length}
-                onLoadMore={() => setVisible((v) => v + pageSize)}
-              />
+          <div className="-mx-2 flex min-h-0 flex-col gap-0.5 overflow-y-auto">
+            {results.length > 0 && (
+              <ul ref={listRef} aria-label="Tokens" className="flex shrink-0 flex-col gap-0.5">
+                {results.slice(0, visible).map((token) => (
+                  <TokenRow
+                    key={key(token)}
+                    token={token}
+                    balance={balances.get(key(token))}
+                    selected={value !== undefined && key(value) === key(token)}
+                    showAddress={query.startsWith("0x")}
+                    onSelect={select}
+                  />
+                ))}
+                {results.length > visible && (
+                  <LoadMore
+                    shown={visible}
+                    total={results.length}
+                    onLoadMore={() => setVisible((v) => v + pageSize)}
+                  />
+                )}
+              </ul>
             )}
-          </ul>
+            {/* While the list downloads: sample rows, measured into a skeleton
+                the shape of real ones, under whatever is already known (the
+                native currency, usually). */}
+            {isLoading && (
+              <>
+                <p role="status" className="sr-only">
+                  Loading tokens…
+                </p>
+                <Skeleton loading className="shrink-0">
+                  <ul className="flex flex-col gap-0.5">
+                    {sampleTokens.map((token) => (
+                      <TokenRow key={key(token)} token={token} onSelect={noop} />
+                    ))}
+                  </ul>
+                </Skeleton>
+              </>
+            )}
+          </div>
         )}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
 
@@ -430,6 +477,7 @@ export function TokenSelect({
   pageSize,
   balances,
   title,
+  mode,
   placeholder = "Select token",
   className,
   variant = "outline",
@@ -466,6 +514,7 @@ export function TokenSelect({
         pageSize={pageSize}
         balances={balances}
         title={title}
+        mode={mode}
       />
     </>
   );

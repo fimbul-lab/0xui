@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AtSignIcon, CodeXmlIcon, GlobeIcon, MailIcon, type LucideIcon } from "lucide-react";
+import { Skeleton } from "skullet/react";
 import type { Address as AddressType } from "viem";
 import { normalize } from "viem/ens";
 import { useEnsAddress, useEnsAvatar, useEnsName, usePublicClient } from "wagmi";
@@ -80,6 +81,13 @@ const links: Record<string, { icon: LucideIcon; label: string; href: (v: string)
   email: { icon: MailIcon, label: "Email", href: (v) => `mailto:${v}` },
 };
 
+/** Stand-in the loading skeleton is measured from. Never shown as text. */
+const sampleProfile = {
+  name: "sample-name.eth",
+  address: "0x0000000000000000000000000000000000000001",
+  avatar: undefined,
+} as const;
+
 export type EnsProfileProps = {
   /** Look up the primary name of this address. */
   address?: AddressType;
@@ -99,61 +107,59 @@ export function EnsProfile({ address, name, records, className }: EnsProfileProp
   const profile = useEnsProfile({ address, name, records });
   const phase = profile.isLoading ? "loading" : profile.notFound ? "not-found" : "ready";
   const linkKeys = Object.keys(links).filter((key) => profile.records[key]);
+  // While loading, the header is drawn from a stand-in and measured into a skeleton.
+  const shown =
+    phase === "loading" ? { ...sampleProfile, address: profile.address ?? sampleProfile.address } : profile;
 
   return (
     <article
       data-slot="ens-profile"
       data-phase={phase}
-      aria-busy={phase === "loading" || undefined}
-      className={cn("flex w-full max-w-sm flex-col gap-4 rounded-2xl border p-5", className)}
+      className={cn("w-full max-w-sm rounded-2xl border p-5", className)}
     >
-      <header className="flex items-center gap-3">
-        {profile.address ? (
-          <AddressAvatar address={profile.address} src={profile.avatar} size={56} />
-        ) : (
-          <span className="size-14 shrink-0 animate-pulse rounded-full bg-muted" />
-        )}
-        <div className="flex min-w-0 flex-col gap-0.5">
-          {phase === "loading" ? (
-            <span className="h-5 w-32 animate-pulse rounded bg-muted" />
-          ) : (
-            <h3 className="truncate text-lg font-semibold">{profile.name ?? "No ENS name"}</h3>
+      <Skeleton loading={phase === "loading"} label="Loading ENS profile">
+        <div className="flex flex-col gap-4">
+          <header className="flex items-center gap-3">
+            {shown.address && <AddressAvatar address={shown.address} src={shown.avatar} size={56} />}
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h3 className="truncate text-lg font-semibold">{shown.name ?? "No ENS name"}</h3>
+              {shown.address && (
+                <Address address={shown.address} ens={false} className="text-sm text-muted-foreground" />
+              )}
+            </div>
+          </header>
+
+          {phase === "not-found" && name && (
+            <p className="text-sm text-muted-foreground">{name} doesn't point to an address.</p>
           )}
-          {profile.address && (
-            <Address address={profile.address} ens={false} className="text-sm text-muted-foreground" />
+
+          {profile.records.description && <p className="text-sm">{profile.records.description}</p>}
+
+          {linkKeys.length > 0 && (
+            <ul className="flex flex-col gap-1.5 text-sm">
+              {linkKeys.map((key) => {
+                const link = links[key]!;
+                const value = profile.records[key]!;
+                const Icon = link.icon;
+                return (
+                  <li key={key}>
+                    <a
+                      href={link.href(value)}
+                      target={key === "email" ? undefined : "_blank"}
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <Icon aria-hidden className="size-4 shrink-0" />
+                      <span className="sr-only">{link.label}: </span>
+                      {link.text ? link.text(value) : value}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
-      </header>
-
-      {phase === "not-found" && name && (
-        <p className="text-sm text-muted-foreground">{name} doesn't point to an address.</p>
-      )}
-
-      {profile.records.description && <p className="text-sm">{profile.records.description}</p>}
-
-      {linkKeys.length > 0 && (
-        <ul className="flex flex-col gap-1.5 text-sm">
-          {linkKeys.map((key) => {
-            const link = links[key]!;
-            const value = profile.records[key]!;
-            const Icon = link.icon;
-            return (
-              <li key={key}>
-                <a
-                  href={link.href(value)}
-                  target={key === "email" ? undefined : "_blank"}
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
-                >
-                  <Icon aria-hidden className="size-4 shrink-0" />
-                  <span className="sr-only">{link.label}: </span>
-                  {link.text ? link.text(value) : value}
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      </Skeleton>
     </article>
   );
 }

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ImageOffIcon } from "lucide-react";
 import { useState } from "react";
+import { Skeleton } from "skullet/react";
 import { parseAbi, type Address } from "viem";
 import { useReadContracts } from "wagmi";
 import { resolveUri } from "@/lib/0xui-utils";
@@ -116,56 +117,51 @@ export function NftCard({ contract, tokenId, chainId, gateway, showAttributes = 
     <article
       data-slot="nft-card"
       data-phase={phase}
-      aria-busy={phase === "loading" || undefined}
-      className={cn("flex w-full max-w-64 flex-col overflow-hidden rounded-2xl border", className)}
+      className={cn("w-full max-w-64 overflow-hidden rounded-2xl border", className)}
     >
-      <div className="relative aspect-square bg-muted">
-        {phase === "loading" ? (
-          <div className="size-full animate-pulse" />
-        ) : nft.image && !imageFailed ? (
-          <img
-            src={nft.image}
-            alt={title}
-            loading="lazy"
-            onError={() => setImageFailed(true)}
-            className="size-full object-cover"
-          />
-        ) : (
-          <div className="flex size-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
-            <ImageOffIcon aria-hidden className="size-6" />
-            {phase === "not-found"
-              ? "Token not found"
-              : phase === "metadata-error"
-                ? "Metadata unavailable"
-                : "No image"}
-          </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-0.5 p-3">
-        {phase === "loading" ? (
-          <>
-            <span className="h-4 w-3/4 animate-pulse rounded bg-muted" />
-            <span className="mt-1 h-3 w-1/2 animate-pulse rounded bg-muted" />
-          </>
-        ) : (
-          <>
-            <h3 className="truncate text-sm font-semibold">{title}</h3>
-            <p className="truncate text-xs text-muted-foreground">
-              {nft.collection ?? "Unknown collection"} · #{tokenId.toString()}
-            </p>
-          </>
-        )}
-        {showAttributes && nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
-          <dl className="mt-2 flex flex-wrap gap-1.5">
-            {nft.metadata.attributes.map((attr, i) => (
-              <div key={i} className="rounded-md bg-muted px-2 py-1 text-xs">
-                <dt className="text-muted-foreground">{attr.trait_type ?? "Trait"}</dt>
-                <dd className="font-medium">{String(attr.value)}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </div>
+      {/* While loading, the card is laid out with stand-in text and measured into a skeleton. */}
+      <Skeleton loading={phase === "loading"} label="Loading NFT">
+        <div className="relative aspect-square bg-muted">
+          {phase === "loading" ? (
+            // One block for the image, not a bar per element.
+            <div skullet-block="" className="size-full" />
+          ) : nft.image && !imageFailed ? (
+            <img
+              src={nft.image}
+              alt={title}
+              loading="lazy"
+              onError={() => setImageFailed(true)}
+              className="size-full object-cover"
+            />
+          ) : (
+            <div className="flex size-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
+              <ImageOffIcon aria-hidden className="size-6" />
+              {phase === "not-found"
+                ? "Token not found"
+                : phase === "metadata-error"
+                  ? "Metadata unavailable"
+                  : "No image"}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col gap-0.5 p-3">
+          <h3 className="truncate text-sm font-semibold">{phase === "loading" ? "Sample token name" : title}</h3>
+          <p className="truncate text-xs text-muted-foreground">
+            {phase === "loading" ? "Sample collection" : (nft.collection ?? "Unknown collection")} · #
+            {tokenId.toString()}
+          </p>
+          {showAttributes && nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
+            <dl className="mt-2 flex flex-wrap gap-1.5">
+              {nft.metadata.attributes.map((attr, i) => (
+                <div key={i} className="rounded-md bg-muted px-2 py-1 text-xs">
+                  <dt className="text-muted-foreground">{attr.trait_type ?? "Trait"}</dt>
+                  <dd className="font-medium">{String(attr.value)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      </Skeleton>
     </article>
   );
 }

@@ -1,9 +1,13 @@
+import { SkeletonBox } from "skullet/react";
 import { erc20Abi, type Address } from "viem";
 import { useBalance, useConnection, useReadContracts } from "wagmi";
 import { TokenAmount, type TokenAmountProps } from "@/components/token-amount";
 import { cn } from "@/lib/utils";
 
 export type BalancePhase = "idle" | "loading" | "ready" | "error";
+
+/** SkeletonBox is a block by default. This one sits in a line of text. */
+const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
 
 export type UseTokenBalanceParameters = {
   /** Whose balance. Defaults to the connected account. */
@@ -113,11 +117,10 @@ export function Balance({
       <span
         data-slot="balance"
         data-phase={phase}
-        className={cn(
-          "inline-block h-[1em] w-16 animate-pulse rounded bg-muted align-middle",
-          className
-        )}
+        className={cn("inline-block align-middle", className)}
       >
+        {/* About the width of "0.1234 ETH" at the current font size. */}
+        <SkeletonBox width="5.5em" height="1em" style={inlineBox} />
         <span className="sr-only">Loading balance</span>
       </span>
     );
