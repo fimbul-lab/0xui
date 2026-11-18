@@ -70,7 +70,7 @@
       "name": "address",
       "type": "registry:component",
       "title": "Address",
-      "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234\u2026abcd, with a copy button and an optional block-explorer link. Inline or pill variant. Full address on hover and for screen readers. Exports useAddressName.",
+      "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234…abcd, with a copy button and an optional block-explorer link. Inline or pill variant. Full address on hover and for screen readers. Exports useAddressName.",
       "files": [
         {
           "path": "registry/default/components/address.tsx",
@@ -225,7 +225,7 @@
       "name": "balance",
       "type": "registry:component",
       "title": "Balance",
-      "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton, '\u2014' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
+      "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton, '—' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
       "files": [
         {
           "path": "registry/default/components/balance.tsx",
@@ -313,7 +313,7 @@
       "name": "transaction-button",
       "type": "registry:component",
       "title": "Transaction Button",
-      "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet\u2026', 'Pending\u2026', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error.",
+      "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet…', 'Pending…', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error.",
       "files": [
         {
           "path": "registry/default/components/transaction-button.tsx",
@@ -572,7 +572,7 @@
       "name": "batch-transaction",
       "type": "registry:component",
       "title": "Batch Transaction",
-      "description": "Runs several calls (e.g. approve + swap) as one action: a single wallet prompt via EIP-5792 wallet_sendCalls when the wallet reports atomic support (useCapabilities), else one transaction per call, waiting for each. Step list with per-step status, step-counting labels ('Confirm 2 of 3 in wallet\u2026'), network switch, rejection shown as cancelled. mode: auto | atomic | sequential. Exports useBatchTransaction.",
+      "description": "Runs several calls (e.g. approve + swap) as one action: a single wallet prompt via EIP-5792 wallet_sendCalls when the wallet reports atomic support (useCapabilities), else one transaction per call, waiting for each. Step list with per-step status, step-counting labels ('Confirm 2 of 3 in wallet…'), network switch, rejection shown as cancelled. mode: auto | atomic | sequential. Exports useBatchTransaction.",
       "files": [
         {
           "path": "registry/default/components/batch-transaction.tsx",
@@ -615,7 +615,7 @@
       "name": "portfolio",
       "type": "registry:block",
       "title": "Portfolio",
-      "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop. Pagination (pageSize with Show more). Accepts balances from an indexer (balances prop) instead of RPC reads. Skeleton rows while loading, plus empty, error and disconnected states. Exports usePortfolio.",
+      "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop, keyed by chainId:address, address or symbol. Spam filtering: likely spam (looksLikeSpam or your own isSpam, e.g. scanner verdicts), tokens without a price and dust under minValue are collapsed under a Hidden tokens disclosure with the reason, and left out of the total. Pagination (pageSize with Show more). Accepts balances from an indexer (balances prop) instead of RPC reads. Skeleton rows while loading, plus empty, error and disconnected states. Exports usePortfolio and hiddenReason.",
       "files": [
         {
           "path": "registry/default/components/portfolio.tsx",
@@ -624,12 +624,14 @@
       ],
       "dependencies": [
         "wagmi",
-        "viem"
+        "viem",
+        "lucide-react"
       ],
       "registryDependencies": [
         "@0xui/token-select",
         "@0xui/token-icon",
-        "@0xui/token-amount"
+        "@0xui/token-amount",
+        "@0xui/token-list"
       ]
     },
     {
@@ -744,7 +746,7 @@
       "name": "0xui-utils",
       "type": "registry:lib",
       "title": "0xui utils",
-      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234\u2026abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) isUserRejection (detects a dismissed wallet prompt) and resolveUri (ipfs:// and ar:// to HTTP).",
+      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234…abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) isUserRejection (detects a dismissed wallet prompt) and resolveUri (ipfs:// and ar:// to HTTP).",
       "files": [
         {
           "path": "registry/default/lib/0xui-utils.ts",
@@ -759,7 +761,7 @@
       "name": "token-list",
       "type": "registry:lib",
       "title": "Token list",
-      "description": "Token list standard (tokenlists.org, as used by Uniswap) for 0xui: TokenInfo and TokenList types (including tags and extensions such as Uniswap's bridgeInfo), parseTokenList (validates, drops non-EVM entries such as Solana tokens, checksums addresses), fetchTokenList (http, ipfs, ar), mergeTokenLists, nativeToken(chain) (lists don't include ETH), applyTokenFilters (allowlist/whitelist and blocklist by address or chainId:address), NATIVE_TOKEN_ADDRESS and UNISWAP_DEFAULT_LIST.",
+      "description": "Token list standard (tokenlists.org, as used by Uniswap) for 0xui: TokenInfo and TokenList types (including tags and extensions such as Uniswap's bridgeInfo), parseTokenList (validates, drops non-EVM entries such as Solana tokens, checksums addresses), fetchTokenList (http, ipfs, ar), mergeTokenLists, nativeToken(chain) (lists don't include ETH), applyTokenFilters (allowlist/whitelist and blocklist by address or chainId:address), TokenPrices and getTokenPrice (prices keyed by chainId:address, address or symbol; address keys win), looksLikeSpam (cheap scam-token heuristic: claim/airdrop text, links, domain symbols, invisible characters, lookalike letters), NATIVE_TOKEN_ADDRESS and UNISWAP_DEFAULT_LIST.",
       "files": [
         {
           "path": "registry/default/lib/token-list.ts",

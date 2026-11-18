@@ -9,8 +9,10 @@ import { useTokenBalance } from "@/components/balance";
 import { TokenAmount, formatFiat } from "@/components/token-amount";
 import {
   TokenSelect,
+  getTokenPrice,
   isNativeToken,
   type Token,
+  type TokenPrices,
 } from "@/components/token-select";
 import { cn } from "@/lib/utils";
 
@@ -34,10 +36,10 @@ export type TokenInputProps = {
   tokens?: readonly Token[];
   /** Symbols or addresses shown as quick picks in the token picker. */
   popular?: readonly string[];
-  /** Price of one token, for the fiat line. Defaults to `prices[token.symbol]`. */
+  /** Price of one token, for the fiat line. Defaults to the token's entry in `prices`. */
   price?: number;
-  /** Price per symbol: the fiat line, and sorting held tokens in the picker by value. */
-  prices?: Record<string, number>;
+  /** Prices keyed by `chainId:address`, address or symbol: the fiat line, and sorting held tokens in the picker by value. */
+  prices?: TokenPrices;
   currency?: string;
   /** Check the amount against the balance and offer Max. Turn off for "you receive" panels. */
   checkBalance?: boolean;
@@ -67,7 +69,7 @@ export function TokenInput({
   className,
 }: TokenInputProps) {
   const id = useId();
-  const price = priceProp ?? (token ? prices?.[token.symbol] : undefined);
+  const price = priceProp ?? (token ? getTokenPrice(prices, token) : undefined);
   const decimals = token?.decimals ?? 18;
   const { value: balance } = useTokenBalance({
     token: token && !isNativeToken(token) ? token.address : undefined,

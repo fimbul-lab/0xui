@@ -11,7 +11,7 @@ import {
 import { useConnection } from "wagmi";
 import { ApproveButton } from "@/components/approve-button";
 import { TokenInput, type TokenInputState } from "@/components/token-input";
-import { isNativeToken, type Token } from "@/components/token-select";
+import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
 import { cn } from "@/lib/utils";
 
@@ -110,8 +110,8 @@ export type SwapProps = {
   defaultSellToken?: Token;
   defaultBuyToken?: Token;
   popular?: readonly string[];
-  /** Price per token symbol, for fiat lines. */
-  prices?: Record<string, number>;
+  /** Prices keyed by `chainId:address`, address or symbol, for fiat lines. */
+  prices?: TokenPrices;
   onSubmitted?: (hash: Hash) => void;
   onSuccess?: (receipt: TransactionReceipt) => void;
   title?: ReactNode;

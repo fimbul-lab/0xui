@@ -1,5 +1,7 @@
+import type { TokenPrices } from "@/lib/token-list";
+
 /** Fixed prices for demos. A real app would fetch these. */
-export const demoPrices: Record<string, number> = {
+export const demoPrices: TokenPrices = {
   ETH: 3150,
   WETH: 3150,
   USDC: 1,

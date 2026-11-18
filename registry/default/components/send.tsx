@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { erc20Abi, type Address, type Hash, type TransactionReceipt } from "viem";
 import { AddressInput, type AddressInputState } from "@/components/address-input";
 import { TokenInput, type TokenInputState } from "@/components/token-input";
-import { isNativeToken, type Token } from "@/components/token-select";
+import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
 import { TransactionStatus } from "@/components/transaction-status";
 import { cn } from "@/lib/utils";
@@ -50,8 +50,8 @@ export type SendProps = {
   defaultToken?: Token;
   /** Symbols or addresses for quick picks. */
   popular?: readonly string[];
-  /** Price per token symbol, for the fiat line. */
-  prices?: Record<string, number>;
+  /** Prices keyed by `chainId:address`, address or symbol, for the fiat line. */
+  prices?: TokenPrices;
   /** Called once the wallet returns a hash. */
   onSubmitted?: (hash: Hash) => void;
   onSuccess?: (receipt: TransactionReceipt) => void;

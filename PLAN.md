@@ -224,6 +224,17 @@ These are fast and they lock in the conventions before the big components.
 - **Bring your own data:** `balances` on TokenSelect and Portfolio, `transactions` on TransactionHistory, and `initialEvents` on EventFeed. Each skips the matching RPC reads.
 - **Docs:** a new "Indexed data" guide recommends an index of the chain for production: your own Postgres (current state) + ClickHouse (history), or Goldsky (subgraphs, or Mirror into your own Postgres/ClickHouse). "In production" callouts on the relevant pages.
 
+### Spam and prices (2026-10-13)
+- **Prices by address:** `getTokenPrice(prices, token)` looks up `chainId:address`, then the address, then the symbol. Symbol keys priced copycats as the real token. Portfolio, Token Select, Token Input, Send and Swap all use it.
+- **Portfolio spam filtering:**
+  - Hidden reasons: `spam` (`isSpam`, default `looksLikeSpam`), `unpriced` (`hideUnpriced`, default on) and `dust` (`minValue`, default 0.5).
+  - Hidden rows are left out of the total and collapsed under "Hidden tokens (N)" with the reason, so a false positive costs a click. Spam rows don't load the token's logo. The native currency is never hidden.
+- **`looksLikeSpam`:** catches claim/airdrop text, links, domain symbols, invisible characters and lookalike letters. It flags 0 of the 1,598 EVM tokens on Uniswap's default list.
+- **Scanner verdicts:** these go through `isSpam` from the app's server. The docs stay vendor-neutral.
+- **Follow-ups:**
+  - Extract the "Show more" button, which is now duplicated in Portfolio, TransactionHistory and TokenSelect.
+  - A `showUnlisted` mode for indexer data that carries its own token metadata.
+
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).
 - Document the shadcn registry MCP (`npx shadcn registry:mcp`) so agents can browse and install 0xui.

@@ -147,3 +147,50 @@ export function applyTokenFilters<T extends Pick<TokenInfo, "chainId" | "address
   const blocked = blocklist ? matcher(blocklist) : () => false;
   return tokens.filter((t) => allowed(t) && !blocked(t));
 }
+
+/**
+ * Prices in your currency, keyed by `chainId:address`, address or symbol.
+ * Prefer address keys: spam tokens copy the symbols of real ones, and one
+ * symbol can mean different tokens on different chains.
+ */
+export type TokenPrices = Readonly<Record<string, number>>;
+
+/** A token's price from `prices`. Address keys win over the symbol. */
+export function getTokenPrice(
+  prices: TokenPrices | undefined,
+  token: Pick<TokenInfo, "chainId" | "address" | "symbol">
+) {
+  if (!prices) return undefined;
+  const lower = token.address.toLowerCase();
+  return (
+    prices[`${token.chainId}:${lower}`] ??
+    prices[`${token.chainId}:${token.address}`] ??
+    prices[lower] ??
+    prices[token.address] ??
+    prices[token.symbol]
+  );
+}
+
+// "Visit x.com to claim", links, and Telegram handles: phishing airdrops.
+const SPAM_TEXT = /https?:\/\/|www\.|t\.me\/|\b(claim|claimable|visit|airdrop|rewards?|voucher|bonus)\b/i;
+// A domain as the symbol, e.g. "ETHGIFT.COM". Names can be real projects (Ether.fi, io.net).
+const DOMAIN_SYMBOL = /\.(com|io|org|net|xyz|app|site|top|gift|cc|vip|me|live|pro|club|fun)$/i;
+const INVISIBLE = /[​-‏⁠﻿]/;
+const LATIN = /\p{Script=Latin}/u;
+const LOOKALIKE = /[\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Armenian}\p{Script=Cherokee}]/u;
+
+/**
+ * Cheap checks for scam tokens: names that advertise a site or a claim,
+ * invisible characters, and Latin text mixed with lookalike letters (a
+ * Cyrillic "С" in "USDС"). Catches the common airdrop spam, not everything:
+ * for verdicts on every token, use a scanning service from your server.
+ */
+export function looksLikeSpam(token: Pick<TokenInfo, "name" | "symbol">) {
+  const text = `${token.name} ${token.symbol}`;
+  return (
+    SPAM_TEXT.test(text) ||
+    DOMAIN_SYMBOL.test(token.symbol) ||
+    INVISIBLE.test(text) ||
+    [token.name, token.symbol].some((s) => LATIN.test(s) && LOOKALIKE.test(s))
+  );
+}

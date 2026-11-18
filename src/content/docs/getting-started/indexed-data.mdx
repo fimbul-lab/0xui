@@ -13,7 +13,7 @@ Out of the box, 0xui components read straight from the chain over RPC. That need
 | Event history (`historyBlocks`) | Providers cap `eth_getLogs` ranges, so you only see recent blocks. |
 | Transaction history | Only what this browser recorded: per device, and nothing from other apps. |
 | Portfolios across chains | One set of reads per chain, per user, per page view. |
-| Spam tokens | RPC can't tell a real USDC from a copy. |
+| Spam tokens | RPC can't tell a real USDC from a copy. Portfolio hides the obvious ones; verdicts for the rest need a scanner. |
 
 **We recommend putting an index of the chain behind your app** and passing its data into the components. Every data-heavy component accepts it through a prop and then skips its RPC reads.
 
@@ -26,6 +26,7 @@ Out of the box, 0xui components read straight from the chain over RPC. That need
 | [Transaction History](/components/transaction-history/) | `transactions` | The account's transactions, from any device or app |
 | [Event Feed](/components/event-feed/) | `initialEvents` | Past events. New ones still stream in over RPC. |
 | [`useTokenList`](/getting-started/token-lists/) | `allowlist` / `blocklist` | Tokens you've verified, or flagged as spam |
+| [Portfolio](/blocks/portfolio/#spam) | `isSpam` | Spam verdicts from a scanning service or your own rules |
 
 ```tsx
 function Holdings({ address }: { address: Address }) {

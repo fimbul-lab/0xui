@@ -1,18 +1,18 @@
 ---
 title: Portfolio
-description: Token holdings with total value, sorted largest first.
+description: Token holdings with total value, sorted largest first, with spam kept out.
 ---
 
 import { Aside, Card } from "@astrojs/starlight/components";
 import { Default } from "@/demos/portfolio";
 
-Holdings for a token list: total value on top, then one row per token with amount and value, largest first. All balances are read in one batch.
+Holdings for a token list: total value on top, then one row per token with amount and value, largest first. Likely spam, tokens without a price and dust are collapsed under "Hidden tokens". All balances are read in one batch.
 
 <Card>
   <Default client:load />
 </Card>
 
-Tokens use the [token list standard](/getting-started/token-lists/). The demo uses Uniswap's default list, loaded live with `useTokenList`.
+Tokens use the [token list standard](/getting-started/token-lists/). The demo uses Uniswap's default list, loaded live with `useTokenList`, and prices for a handful of tokens, so the rest of the wallet sits under "Hidden tokens".
 
 ## Installation
 
@@ -28,9 +28,60 @@ import { Portfolio } from "@/components/portfolio";
 <Portfolio tokens={tokenList.tokens} prices={prices} />;
 ```
 
-It shows the connected account's holdings, or pass `address` for anyone's. Only tokens on `chainId` (the current chain by default) are read. Tokens without a price are listed with "—" and left out of the total.
+It shows the connected account's holdings, or pass `address` for anyone's. Only tokens on `chainId` (the current chain by default) are read.
 
-Headless: `usePortfolio({ tokens, prices })` returns sorted `rows`, `total` and `unpriced`.
+Headless: `usePortfolio({ tokens, prices })` returns the shown `rows`, the `hidden` ones (each with its reason), and the `total`.
+
+## Prices
+
+Key prices by `chainId:address` (or plain address) when you can:
+
+```tsx
+const prices = {
+  "1:0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": 1, // USDC on Ethereum
+  "1:0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE": 3150, // ETH
+};
+```
+
+Symbol keys (`{ USDC: 1 }`) also work and are handy for demos, but a symbol is whatever the token's deployer typed: a fake "USDC" would get the real one's price. Address keys win when both are given. The same lookup, `getTokenPrice(prices, token)`, is used by Token Select, Token Input, Send and Swap.
+
+## Spam
+
+Wallets collect junk: airdropped tokens that advertise a "claim" site, copies of real tokens, and worthless dust. Portfolio hides a holding when, checked in this order:
+
+| Reason | Shown as | Rule |
+| --- | --- | --- |
+| `spam` | "Likely spam" | `isSpam(token)` is true. Defaults to `looksLikeSpam`. |
+| `unpriced` | "No price" | No price for the token. Turn off with `hideUnpriced={false}`. |
+| `dust` | "Under $0.50" | Worth less than `minValue` (default `0.5`). |
+
+Hidden rows are left out of the total, and listed with their reason under a collapsed "Hidden tokens (N)" so a false positive costs a click, not a missing balance. Spam rows show the symbol's letters instead of the token's logo. The chain's native currency is never hidden.
+
+Before any of this, only tokens in your list are shown at all, so tokens airdropped outside the list never appear. Spam can still come from the list itself or from tokens you add.
+
+`looksLikeSpam` (from `@/lib/token-list`) is a cheap check for the common cases: names with links or "claim"/"airdrop"/"rewards", a domain as the symbol, invisible characters, and Latin text mixed with lookalike letters (a Cyrillic "С" in "USDС"). It flags none of the 1,600 tokens on Uniswap's default list. It can't spot a well-named copy, which is why prices matter most: a copy has no price under its own address, so it's hidden as unpriced.
+
+### Adding your own verdicts
+
+For wallet-grade filtering, check tokens against a scanning service, or rules in your indexer, from your server (they need an API key), and pass the verdicts in:
+
+```tsx
+const { data: flagged = new Set<string>() } = useQuery({
+  queryKey: ["spam", chainId, address],
+  queryFn: async () => {
+    const addresses: string[] = await fetch(`/api/spam/${chainId}/${address}`).then((r) => r.json());
+    return new Set(addresses.map((a) => a.toLowerCase()));
+  },
+});
+
+<Portfolio
+  tokens={tokens}
+  prices={prices}
+  isSpam={(token) => looksLikeSpam(token) || flagged.has(token.address.toLowerCase())}
+/>;
+```
+
+Keep `looksLikeSpam` in the check unless you mean to replace it. Other filters: a `blocklist` on [`useTokenList`](/getting-started/token-lists/) removes tokens everywhere, not just here, and `minValue={0}` with `hideUnpriced={false}` turns hiding off.
 
 <Aside type="tip" title="In production">
 Over RPC, a portfolio costs one balance read per token, per user, per chain. We recommend an [index of the chain](/getting-started/indexed-data/), either your own (Postgres + ClickHouse) or a service like Goldsky. Pass its balances in:
@@ -40,26 +91,30 @@ Over RPC, a portfolio costs one balance read per token, per user, per chain. We 
 ```
 </Aside>
 
-
 ## States
 
 | `data-phase` | What the user sees |
 | --- | --- |
 | `idle` | "Connect a wallet to see its tokens." |
 | `loading` | Three skeleton rows. |
-| `ready` | Total and rows. |
+| `ready` | Total and rows, and "Hidden tokens (N)" when some are hidden. |
 | `empty` | "No tokens from this list in this wallet." |
 | `error` | Couldn't load balances. |
+
+Each row has `data-hidden` set to its reason when it's hidden.
 
 ## Props
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `tokens` | `Token[]` | — | Tokens to check. |
-| `prices` | `Record<symbol, number>` | — | Prices for values and the total. |
+| `prices` | `Record<string, number>` | — | Prices by `chainId:address`, address or symbol. |
 | `address` | `Address` | connected | Whose holdings. |
 | `chainId` | `number` | current | Chain to read. |
 | `hideZero` | `boolean` | `true` | Hide empty balances. |
+| `isSpam` | `(token) => boolean` | `looksLikeSpam` | Flags scam tokens. |
+| `hideUnpriced` | `boolean` | `true` | Hide tokens without a price. |
+| `minValue` | `number` | `0.5` | Hide holdings worth less than this. |
 | `currency` | `string` | `"USD"` | Currency for values. |
 | `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
 | `pageSize` | `number` | `10` | Rows per page, with "Show more". |

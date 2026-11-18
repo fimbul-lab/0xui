@@ -365,6 +365,66 @@ describe("Portfolio", () => {
     renderWithWagmi(<Portfolio tokens={[eth]} />);
     expect(screen.getByText("Connect a wallet to see its tokens.")).toBeInTheDocument();
   });
+
+  it("hides spam, unpriced tokens and dust, out of the total", async () => {
+    const user = userEvent.setup();
+    const token = (n: number, symbol: string, name = symbol): Token => ({
+      chainId: 1,
+      address: `0x${n.toString(16).padStart(40, "0")}`,
+      symbol,
+      name,
+      decimals: 0,
+    });
+    const real = token(1, "UNI", "Uniswap");
+    const fake = token(2, "UNI", "Visit uni-claim.com to claim"); // copies UNI, gets its price
+    const copycat = token(3, "UNI", "Uniswap"); // same name and symbol, different address
+    const meme = token(4, "MEME");
+    const dust = token(5, "DUST");
+    const tokens = [real, fake, copycat, meme, dust];
+    renderWithWagmi(
+      <Portfolio
+        tokens={tokens}
+        chainId={1}
+        balances={Object.fromEntries(tokens.map((t) => [t.address, 10n]))}
+        prices={{ [`1:${real.address}`]: 10, [fake.address]: 10, DUST: 0.01 }}
+      />
+    );
+
+    // Total and the one row: the fake UNI, also worth $100, is left out.
+    expect(await screen.findAllByText("$100.00")).toHaveLength(2);
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+    const toggle = screen.getByRole("button", { name: "Hidden tokens (4)" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(toggle);
+    const hidden = within(screen.getByRole("list", { name: "Hidden tokens" }));
+    expect(hidden.getByText("Visit uni-claim.com to claim").closest("li")).toHaveTextContent("Likely spam");
+    expect(hidden.getAllByText("No price")).toHaveLength(2);
+    expect(hidden.getByText("Under $0.50")).toBeInTheDocument();
+  });
+
+  it("takes your own spam verdicts and thresholds", async () => {
+    const flagged: Token = { ...usdc, address: "0x0000000000000000000000000000000000000bad", name: "USD Coin" };
+    renderWithWagmi(
+      <Portfolio
+        tokens={[usdc, flagged]}
+        chainId={1}
+        balances={{ [usdc.address]: 100n, [flagged.address]: 100n }}
+        prices={{ USDC: 1 }}
+        isSpam={(t) => t.address === flagged.address}
+        minValue={0}
+      />
+    );
+
+    expect(await screen.findByRole("button", { name: "Hidden tokens (1)" })).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("always shows the native currency", async () => {
+    renderWithWagmi(<Portfolio tokens={[eth]} chainId={1} balances={{ [eth.address]: 1n }} />);
+    expect(await screen.findByText("Ether")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Hidden tokens/ })).not.toBeInTheDocument();
+  });
 });
 
 describe("TransactionHistory", () => {

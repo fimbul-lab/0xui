@@ -9,7 +9,9 @@ import { useTokenList } from "../hooks/use-token-list";
 import {
   NATIVE_TOKEN_ADDRESS,
   applyTokenFilters,
+  getTokenPrice,
   isNativeToken,
+  looksLikeSpam,
   mergeTokenLists,
   nativeToken,
   parseTokenList,
@@ -141,5 +143,44 @@ describe("useTokenList", () => {
     // One retry before giving up.
     await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 4_000 });
     expect(result.current.tokens).toEqual([expect.objectContaining({ symbol: "ETH" })]);
+  });
+});
+
+describe("getTokenPrice", () => {
+  const token = { chainId: 1, address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC" } as const;
+
+  it("prefers address keys over the symbol, in any casing", () => {
+    expect(getTokenPrice({ USDC: 2 }, token)).toBe(2);
+    expect(getTokenPrice({ USDC: 2, [token.address.toLowerCase()]: 1 }, token)).toBe(1);
+    expect(getTokenPrice({ [token.address.toLowerCase()]: 1, [`1:${token.address}`]: 0.99 }, token)).toBe(0.99);
+    expect(getTokenPrice(undefined, token)).toBeUndefined();
+  });
+
+  it("doesn't price a copycat when prices are keyed by address", () => {
+    const fake = { ...token, address: "0x000000000000000000000000000000000000dEaD" } as const;
+    expect(getTokenPrice({ [`1:${token.address}`]: 1 }, fake)).toBeUndefined();
+  });
+});
+
+describe("looksLikeSpam", () => {
+  it.each([
+    ["Visit usdc-gift.com to claim", "USDC"],
+    ["$ ETH Rewards", "ETH"],
+    ["Tether", "USDT.COM"],
+    ["https://t.me/scam", "SCAM"],
+    ["USD Coin", "USDС"], // Cyrillic С
+    ["USD​Coin", "USDC"],
+  ])("flags %s (%s)", (name, symbol) => {
+    expect(looksLikeSpam({ name, symbol })).toBe(true);
+  });
+
+  it.each([
+    ["USD Coin", "USDC"],
+    ["Ether.fi", "ETHFI"],
+    ["io.net", "IO"],
+    ["MAGIC•INTERNET•MONEY", "MIM"],
+    ["Tether USD", "USD₮0"],
+  ])("leaves %s (%s) alone", (name, symbol) => {
+    expect(looksLikeSpam({ name, symbol })).toBe(false);
   });
 });

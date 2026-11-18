@@ -21,12 +21,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { truncateAddress } from "@/lib/0xui-utils";
-import { NATIVE_TOKEN_ADDRESS, isNativeToken, type TokenInfo } from "@/lib/token-list";
+import { NATIVE_TOKEN_ADDRESS, getTokenPrice, isNativeToken, type TokenInfo, type TokenPrices } from "@/lib/token-list";
 import { cn } from "@/lib/utils";
 
 /** A token-list entry (https://tokenlists.org). Same as `TokenInfo`. */
 export type Token = TokenInfo;
-export { NATIVE_TOKEN_ADDRESS, isNativeToken };
+export { NATIVE_TOKEN_ADDRESS, getTokenPrice, isNativeToken, type TokenPrices };
 
 const key = (token: Pick<Token, "address">) => token.address.toLowerCase();
 
@@ -113,12 +113,12 @@ export function useTokenBalances(
 export function sortByHoldings(
   tokens: readonly Token[],
   balances: ReadonlyMap<string, bigint>,
-  prices: Record<string, number> = {}
+  prices: TokenPrices = {}
 ) {
   return tokens
     .map((token, index) => {
       const balance = balances.get(key(token)) ?? 0n;
-      const price = prices[token.symbol];
+      const price = getTokenPrice(prices, token);
       const value =
         balance > 0n && price !== undefined
           ? Number(formatUnits(balance, token.decimals)) * price
@@ -208,8 +208,8 @@ export type TokenSelectDialogProps = {
   popular?: readonly string[];
   /** Read and show the connected account's balances. */
   showBalances?: boolean;
-  /** Price per symbol. Held tokens are sorted by value when given. */
-  prices?: Record<string, number>;
+  /** Prices keyed by `chainId:address`, address or symbol. Held tokens are sorted by value when given. */
+  prices?: TokenPrices;
   /** The token list is still loading, e.g. `useTokenList(…).isLoading`. */
   isLoading?: boolean;
   /** Rows per page. More load as you scroll, or with "Show more". Keeps 400-token lists fast. */
