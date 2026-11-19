@@ -68,7 +68,7 @@ Shared helpers: `0xui-utils` (address and amount formatting, explorer links), `u
 
 ### Shielded (preview)
 
-Components for private balances. They talk to a shielded engine, and only a mock engine exists so far.
+Components for private balances. They talk to a shielded engine, and only a mock engine exists so far. Not for real funds: `shielded-account` has not had a security review. The docs site leaves these out of its sidebar, search, `llms.txt` and agent skill until a real engine works; [/shielded/](https://0xui.io/shielded/) links them all.
 
 | Item | Description |
 | --- | --- |

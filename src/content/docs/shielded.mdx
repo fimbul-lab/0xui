@@ -1,0 +1,18 @@
+---
+title: Shielded (preview)
+description: Components for private balances, shields and proofs. Unlisted while they run on a mock engine only.
+tableOfContents: false
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import ComponentIndex from "@/components/docs/ComponentIndex.astro";
+
+These components show and move private balances: an account with a recovery phrase, a shield from the public wallet into the private balance, scan progress, proofs and the state of every private token. They talk to a privacy protocol through a [shielded engine](/components/shielded-engine/), so the same components can run on Railgun, Kohaku or another protocol.
+
+<Aside type="caution" title="Not ready for real funds">
+  Only the [mock engine](/components/mock-shielded-engine/) exists. It imitates the Railgun SDK without a network or real funds, so nothing here can shield real tokens yet. `shielded-account` handles a recovery phrase and a password and has not had a security review. The engine interface will still change as the real engines are built.
+
+These pages are left out of the sidebar, search, `llms.txt` and the agent skill until a real engine works. They still install with the shadcn CLI, for trying them out.
+</Aside>
+
+<ComponentIndex section="shielded" />

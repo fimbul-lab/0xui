@@ -2,7 +2,7 @@
 // /llms-full.txt. Pure functions, so the endpoints in src/pages and the tests
 // share them.
 
-import { gettingStarted, groupComponents } from "../docs-nav.mjs";
+import { gettingStarted, groupComponents, unlistedPages } from "../docs-nav.mjs";
 
 export const site = "https://0xui.io";
 
@@ -31,14 +31,14 @@ export function markdownPath(id: string) {
   return /^(getting-started|components|blocks)(\/[a-z0-9-]+)?$/.test(id) ? `/${id}.md` : undefined;
 }
 
-/** Every page except the landing page, in sidebar order. */
+/** Every listed page except the landing page, in sidebar order. Unlisted pages are left out. */
 export function docSections(docs: DocPage[]): DocSection[] {
   const byId = new Map(docs.map((doc) => [doc.id, doc]));
   const pick = (ids: string[]) =>
     ids.map((id) => byId.get(id)).filter((doc): doc is DocPage => Boolean(doc));
   const names = (section: string) =>
     docs
-      .filter((doc) => doc.id.startsWith(`${section}/`))
+      .filter((doc) => doc.id.startsWith(`${section}/`) && !unlistedPages.has(doc.id))
       .map((doc) => doc.id.slice(section.length + 1));
 
   return [

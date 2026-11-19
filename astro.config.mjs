@@ -44,6 +44,7 @@ export default defineConfig({
           items: group.items.map((name) => `components/${name}`),
         })),
       ],
+      routeMiddleware: "./src/route-middleware.ts",
       components: {
         Head: "./src/components/docs/Head.astro",
         Footer: "./src/components/docs/Footer.astro",

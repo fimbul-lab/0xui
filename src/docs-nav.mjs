@@ -72,22 +72,6 @@ const groups = [
     ],
   },
   {
-    label: "Shielded",
-    icon: "shield",
-    blurb: "Private accounts, balances, scans and proofs. A preview that runs on a mock engine.",
-    items: [
-      "shielded-engine",
-      "mock-shielded-engine",
-      "shielded-account",
-      "shielded-balance",
-      "shielded-sync-status",
-      "shielded-transaction-status",
-      "proof-progress",
-      "shielded-address",
-      "privacy-badge",
-    ],
-  },
-  {
     label: "Utilities",
     icon: "wrench",
     blurb: "Small pieces the other components are built from, and tools for browser agents.",
@@ -96,15 +80,48 @@ const groups = [
 ];
 
 /**
+ * The shielded preview: pages that build and open by URL, but are listed
+ * nowhere else. Not in the sidebar, the overviews, search, llms.txt, WebMCP
+ * or the agent skill, so neither people nor agents install them by accident.
+ * They run on the mock engine only, and `shielded-account` still needs its
+ * security review. List them again once a real engine works (PLAN.md, phase 5).
+ * The `/shielded/` page links them all.
+ */
+export const shieldedPreview = {
+  blocks: ["shield"],
+  components: [
+    "shielded-engine",
+    "mock-shielded-engine",
+    "shielded-account",
+    "shielded-balance",
+    "shielded-sync-status",
+    "shielded-transaction-status",
+    "proof-progress",
+    "shielded-address",
+    "privacy-badge",
+  ],
+};
+
+/** Ids of the unlisted pages, like `components/shielded-balance`. */
+export const unlistedPages = new Set([
+  "shielded",
+  ...shieldedPreview.blocks.map((name) => `blocks/${name}`),
+  ...shieldedPreview.components.map((name) => `components/${name}`),
+]);
+
+/**
  * The groups, plus a "More" group for any page nobody sorted into one, so a
- * new component never goes missing from the sidebar or the overview.
+ * new component never goes missing from the sidebar or the overview. Unlisted
+ * pages are left out.
  *
  * @param {string[]} names Every component page name (file name without `.mdx`).
  * @returns {ComponentGroup[]}
  */
 export function groupComponents(names) {
   const listed = new Set(groups.flatMap((group) => group.items));
-  const unsorted = names.filter((name) => !listed.has(name)).sort();
+  const unsorted = names
+    .filter((name) => !listed.has(name) && !unlistedPages.has(`components/${name}`))
+    .sort();
   return unsorted.length
     ? [...groups, { label: "More", blurb: "", icon: "ellipsis", items: unsorted }]
     : groups;

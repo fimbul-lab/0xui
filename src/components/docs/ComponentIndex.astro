@@ -4,28 +4,44 @@
  *
  *   <ComponentIndex section="components" />   grouped as in the sidebar
  *   <ComponentIndex section="blocks" />
+ *   <ComponentIndex section="shielded" />     the unlisted shielded preview
  */
 import { getCollection } from "astro:content";
-import { groupComponents } from "../../docs-nav.mjs";
+import { groupComponents, shieldedPreview, unlistedPages } from "../../docs-nav.mjs";
 import GroupIcon from "./GroupIcon.astro";
 
 interface Props {
-  section: "components" | "blocks";
+  section: "components" | "blocks" | "shielded";
 }
 
 const { section } = Astro.props;
 
 const docs = await getCollection("docs");
-const pages = new Map(
+const pages = new Map(docs.map((doc) => [doc.id, doc.data]));
+const names = (dir: string) =>
   docs
-    .filter((doc) => doc.id.startsWith(`${section}/`))
-    .map((doc) => [doc.id.slice(section.length + 1), doc.data]),
-);
+    .filter((doc) => doc.id.startsWith(`${dir}/`) && !unlistedPages.has(doc.id))
+    .map((doc) => doc.id.slice(dir.length + 1));
+const ids = (dir: string, list: string[]) => list.map((name) => `${dir}/${name}`);
 
+// Items are page ids, like `components/balance`.
 const groups =
   section === "components"
-    ? groupComponents([...pages.keys()])
-    : [{ label: "", blurb: "", icon: "", items: [...pages.keys()].sort() }];
+    ? groupComponents(names("components")).map((group) => ({
+        ...group,
+        items: ids("components", group.items),
+      }))
+    : section === "blocks"
+      ? [{ label: "", blurb: "", icon: "", items: ids("blocks", names("blocks").sort()) }]
+      : [
+          { label: "Block", blurb: "", icon: "", items: ids("blocks", shieldedPreview.blocks) },
+          {
+            label: "Components",
+            blurb: "",
+            icon: "",
+            items: ids("components", shieldedPreview.components),
+          },
+        ];
 ---
 
 <div class="index not-content">
@@ -43,13 +59,13 @@ const groups =
         )}
         <ul>
           {group.items
-            .filter((name) => pages.has(name))
-            .map((name) => (
+            .filter((id) => pages.has(id))
+            .map((id) => (
               <li>
-                <a href={`/${section}/${name}/`}>
-                  <span class="title">{pages.get(name)!.title}</span>
-                  <span class="slug">{name}</span>
-                  <span class="description">{pages.get(name)!.description}</span>
+                <a href={`/${id}/`}>
+                  <span class="title">{pages.get(id)!.title}</span>
+                  <span class="slug">{id.split("/").pop()}</span>
+                  <span class="description">{pages.get(id)!.description}</span>
                 </a>
               </li>
             ))}

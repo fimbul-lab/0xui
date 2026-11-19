@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import registry from "../../registry.json";
+import { unlistedPages } from "../docs-nav.mjs";
 import {
   docSections,
   llmsTxt,
@@ -31,6 +32,8 @@ function loadDocs(): DocPage[] {
 }
 
 const docs = loadDocs();
+const listed = docs.filter((doc) => !unlistedPages.has(doc.id));
+const unlisted = docs.filter((doc) => unlistedPages.has(doc.id));
 
 /** Lines outside code fences. */
 function prose(markdown: string) {
@@ -93,36 +96,49 @@ describe("mdxToMarkdown", () => {
   });
 });
 
-test("the overview pages list every page in their section", () => {
-  const components = pageMarkdown(
-    docs.find((doc) => doc.id === "components")!,
-    docs,
-    registry.items,
-  );
-  for (const doc of docs.filter((doc) => doc.id.startsWith("components/"))) {
-    expect(components).toContain(`(https://0xui.io/${doc.id}.md)`);
+test("the overview pages list every listed page in their section, and no unlisted one", () => {
+  for (const section of ["components", "blocks"]) {
+    const overview = pageMarkdown(
+      docs.find((doc) => doc.id === section)!,
+      docs,
+      registry.items,
+    );
+    for (const doc of docs.filter((doc) => doc.id.startsWith(`${section}/`))) {
+      const link = `(https://0xui.io/${doc.id}.md)`;
+      if (unlistedPages.has(doc.id)) expect(overview).not.toContain(link);
+      else expect(overview).toContain(link);
+    }
   }
 });
 
-test("llms.txt links every page and every registry item", () => {
+test("llms.txt links every listed page and registry item, and no unlisted one", () => {
   const text = llmsTxt(docs, registry.items);
-  for (const doc of docs) expect(text).toContain(`(https://0xui.io/${doc.id}.md)`);
-  for (const item of registry.items.filter((item) => item.type !== "registry:example")) {
+  for (const doc of listed) expect(text).toContain(`(https://0xui.io/${doc.id}.md)`);
+  for (const doc of unlisted) expect(text).not.toContain(`/${doc.id}.md)`);
+  const unlistedNames = new Set(unlisted.map((doc) => doc.id.split("/")[1]));
+  for (const item of registry.items.filter(
+    (item) => item.type !== "registry:example" && !unlistedNames.has(item.name),
+  )) {
     expect(text.includes(`/${item.name}.md)`) || text.includes(`/r/${item.name}.json)`)).toBe(true);
   }
 });
 
-test("every page is in a section, once", () => {
+test("every listed page is in a section, once", () => {
   const ids = docSections(docs).flatMap((section) => section.pages.map((page) => page.id));
-  expect(ids.toSorted()).toEqual(docs.map((doc) => doc.id).toSorted());
+  expect(ids.toSorted()).toEqual(listed.map((doc) => doc.id).toSorted());
 });
 
-test("the skill names every component and block", () => {
+test("every unlisted page exists", () => {
+  const ids = new Set(docs.map((doc) => doc.id));
+  expect([...unlistedPages].filter((id) => id !== "shielded" && !ids.has(id))).toEqual([]);
+});
+
+test("the skill names every listed component and block, and no unlisted one", () => {
   const skill = readFileSync(join(process.cwd(), "skills/0xui/SKILL.md"), "utf8");
-  const names = docs
-    .filter((doc) => /^(components|blocks)\//.test(doc.id))
-    .map((doc) => doc.id.split("/")[1]);
-  expect(names.filter((name) => !skill.includes(`\`${name}\``))).toEqual([]);
+  const names = (pages: DocPage[]) =>
+    pages.filter((doc) => /^(components|blocks)\//.test(doc.id)).map((doc) => doc.id.split("/")[1]);
+  expect(names(listed).filter((name) => !skill.includes(`\`${name}\``))).toEqual([]);
+  expect(names(unlisted).filter((name) => skill.includes(`\`${name}\``))).toEqual([]);
 });
 
 test("markdownPath covers docs pages only", () => {

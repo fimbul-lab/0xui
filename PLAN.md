@@ -539,7 +539,7 @@ export interface ShieldedEngine {
 
 **Step 3 results (2026-11-18)**
 
-Three new registry items and one changed component, each with docs, live demos and tests. Not committed yet.
+Three new registry items and one changed component, each with docs, live demos and tests. Committed 2026-11-19.
 
 | Item | Type | Exports |
 |---|---|---|
@@ -602,6 +602,10 @@ The planned union ran from `idle` to `spendable` in one type. As built, each pie
 - **Wrap step for ETH** in the shield block.
 - **Shield to another private address.** `ShieldDraft` always shields to the engine's own account.
 - **Flow after the first click.** The input stays editable through the wallet steps and sits empty above the status card afterwards. Four directions are prototyped at `/prototypes/shield-flow` (`src/prototypes/shield-flow/`, temporary, deleted once one is chosen).
+
+*Unlisted until step 5 (owner, 2026-11-19)*
+
+The shielded pages and the `shield` block are unlisted: they build, open by URL and install with the shadcn CLI, but are left out of the sidebar, the overviews, search, `llms.txt`, WebMCP and the agent skill. Only the mock engine exists and `shielded-account` has had no security review, so neither people nor agents should pick them up for a real app. `/shielded/` links them all and every page carries a preview banner. The list lives in `shieldedPreview` in `src/docs-nav.mjs`; list them again once a real engine works and the review is done.
 
 *Decisions after step 3 (owner, 2026-11-18)*
 - **Batch approve and shield** in one wallet prompt with EIP-5792, only when the wallet reports atomic batching as `supported`. `ready` (the wallet would first upgrade the account) and `unsupported` fall back to separate prompts.

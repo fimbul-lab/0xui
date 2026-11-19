@@ -48,8 +48,7 @@ Prefer a block or component over hand-rolled wagmi calls: they already handle ca
 | Follow a transaction | `transaction-status` (inline), `transaction-toast` (Sonner) |
 | Past transactions, contract events | `transaction-history`, `event-feed` |
 | Forms for any contract from its ABI | `contract-form` |
-| Whole features | blocks: `swap`, `send`, `portfolio`, `shield` |
-| Private (shielded) balances, preview on a mock engine | `shielded-engine`, `mock-shielded-engine`, `shielded-account`, `shielded-balance`, `shielded-sync-status`, `shielded-transaction-status`, `proof-progress`, `shielded-address`, `privacy-badge` |
+| Whole features | blocks: `swap`, `send`, `portfolio` |
 | Building blocks | `copy-button`, `responsive-dialog`, `morph-text` |
 | Let browser agents read the wallet (WebMCP) | `agent-tools` |
 

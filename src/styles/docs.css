@@ -532,6 +532,25 @@
     color: var(--sl-color-white);
   }
 
+  /* ── Banner (unlisted preview pages) ────────────────────────────────── */
+
+  .sl-banner {
+    border-bottom: 1px solid var(--docs-line);
+    background-color: var(--docs-surface);
+    box-shadow: none;
+    font-size: 0.8125rem;
+    color: var(--sl-color-gray-2);
+  }
+  .sl-banner a {
+    color: var(--sl-color-white);
+    text-decoration: underline;
+    text-decoration-color: var(--docs-line-strong);
+    text-underline-offset: 0.2em;
+  }
+  .sl-banner a:hover {
+    text-decoration-color: currentColor;
+  }
+
   /* ── Asides ─────────────────────────────────────────────────────────── */
 
   .starlight-aside {
