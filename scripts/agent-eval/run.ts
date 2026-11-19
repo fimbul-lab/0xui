@@ -239,7 +239,8 @@ async function listFiles(dir: string, base = dir): Promise<string[]> {
 type Registry = Map<string, string[]>; // item name -> file paths relative to registry/default
 
 async function loadRegistry(): Promise<Registry> {
-  const index = JSON.parse(await readFile(join(ROOT, "public/r/registry.json"), "utf8"));
+  // The source manifest: the built index leaves out the unlisted items.
+  const index = JSON.parse(await readFile(join(ROOT, "registry.json"), "utf8"));
   const reg: Registry = new Map();
   for (const item of index.items as { name: string; files?: { path: string }[] }[]) {
     reg.set(

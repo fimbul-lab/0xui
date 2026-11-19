@@ -81,8 +81,9 @@ const groups = [
 
 /**
  * The shielded preview: pages that build and open by URL, but are listed
- * nowhere else. Not in the sidebar, the overviews, search, llms.txt, WebMCP
- * or the agent skill, so neither people nor agents install them by accident.
+ * nowhere else. Not in the sidebar, the overviews, search, llms.txt, WebMCP,
+ * the agent skill or the registry index (scripts/unlist-registry.mjs), so
+ * neither people nor agents install them by accident.
  * They run on the mock engine only, and `shielded-account` still needs its
  * security review. List them again once a real engine works (PLAN.md, phase 5).
  * The `/shielded/` page links them all.
@@ -108,6 +109,17 @@ export const unlistedPages = new Set([
   ...shieldedPreview.blocks.map((name) => `blocks/${name}`),
   ...shieldedPreview.components.map((name) => `components/${name}`),
 ]);
+
+/**
+ * Whether a registry item belongs to an unlisted page: the item itself, like
+ * `shielded-balance`, or its example, `shielded-balance-demo`.
+ *
+ * @param {string} name Registry item name.
+ */
+export function isUnlistedItem(name) {
+  const page = name.replace(/-demo$/, "");
+  return unlistedPages.has(`blocks/${page}`) || unlistedPages.has(`components/${page}`);
+}
 
 /**
  * The groups, plus a "More" group for any page nobody sorted into one, so a

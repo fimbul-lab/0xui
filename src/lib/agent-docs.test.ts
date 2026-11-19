@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import registry from "../../registry.json";
-import { unlistedPages } from "../docs-nav.mjs";
+import { isUnlistedItem, unlistedPages } from "../docs-nav.mjs";
 import {
   docSections,
   llmsTxt,
@@ -139,6 +139,15 @@ test("the skill names every listed component and block, and no unlisted one", ()
     pages.filter((doc) => /^(components|blocks)\//.test(doc.id)).map((doc) => doc.id.split("/")[1]);
   expect(names(listed).filter((name) => !skill.includes(`\`${name}\``))).toEqual([]);
   expect(names(unlisted).filter((name) => skill.includes(`\`${name}\``))).toEqual([]);
+});
+
+test("the registry index leaves out the unlisted items and their examples, and nothing else", () => {
+  const names = (pages: DocPage[]) =>
+    pages.filter((doc) => /^(components|blocks)\//.test(doc.id)).map((doc) => doc.id.split("/")[1]);
+  const hidden = new Set(names(unlisted).flatMap((name) => [name, `${name}-demo`]));
+  const items = registry.items.map((item) => item.name);
+  expect(items.filter(isUnlistedItem)).toEqual(items.filter((name) => hidden.has(name)));
+  expect(names(unlisted).filter((name) => !items.includes(name))).toEqual([]);
 });
 
 test("markdownPath covers docs pages only", () => {
