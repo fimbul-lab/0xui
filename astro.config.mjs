@@ -5,7 +5,7 @@ import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { registryResolver } from "./scripts/registry-resolver.mjs";
 import { readdirSync } from "node:fs";
-import { groupComponents } from "./src/docs-nav.mjs";
+import { gettingStarted, groupComponents } from "./src/docs-nav.mjs";
 
 const componentGroups = groupComponents(
   readdirSync(new URL("./src/content/docs/components", import.meta.url))
@@ -15,12 +15,12 @@ const componentGroups = groupComponents(
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://0xui.dev",
   integrations: [
     react(),
     starlight({
       title: "0xui",
-      description:
-        "Copy-paste web3 React components built on wagmi, viem, Base UI and Tailwind.",
+      description: "Copy-paste web3 React components built on wagmi, viem, Base UI and Tailwind.",
       social: [
         {
           icon: "github",
@@ -31,14 +31,7 @@ export default defineConfig({
       sidebar: [
         {
           label: "Getting started",
-          items: [
-            { label: "Installation", slug: "getting-started/installation" },
-            { label: "Conventions", slug: "getting-started/conventions" },
-            { label: "Hello dapp", slug: "getting-started/hello-dapp" },
-            { label: "Token lists", slug: "getting-started/token-lists" },
-            { label: "Indexed data", slug: "getting-started/indexed-data" },
-            { label: "Sign in with Ethereum", slug: "getting-started/siwe" },
-          ],
+          items: gettingStarted,
         },
         {
           label: "Blocks",
@@ -52,6 +45,7 @@ export default defineConfig({
         })),
       ],
       components: {
+        Head: "./src/components/docs/Head.astro",
         Header: "./src/components/docs/Header.astro",
         Hero: "./src/components/docs/Hero.astro",
         PageTitle: "./src/components/docs/PageTitle.astro",

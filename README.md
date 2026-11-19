@@ -99,6 +99,8 @@ bun run lint
 | `registry.json` | Registry manifest. `bun run registry:build` writes `public/r/*.json`. |
 | `src/content/docs/` | Docs pages (Astro Starlight). |
 | `src/demos/` | Live demos. Each export is one Astro island wrapped in a demo wallet. |
+| `skills/0xui/SKILL.md` | Agent skill, served at `/.well-known/agent-skills/`. List new components in its table (a test checks). |
+| `src/lib/agent-docs.ts` | Markdown for agents: `/<page>.md`, `/llms.txt`, `/llms-full.txt`. `src/lib/webmcp.ts` registers the WebMCP tools. |
 | `scripts/smoke-install.sh` | Installs every item into a fresh shadcn app and builds it. Runs in CI. |
 
 In this repo, `@/…` imports resolve to `registry/default/` first and then `src/`, so registry code uses the same import paths it will have after install.

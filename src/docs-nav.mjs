@@ -10,6 +10,17 @@
  * @typedef {{ label: string; blurb: string; icon: string; items: string[] }} ComponentGroup
  */
 
+/** Getting started pages, in reading order. */
+export const gettingStarted = [
+  { label: "Installation", slug: "getting-started/installation" },
+  { label: "Conventions", slug: "getting-started/conventions" },
+  { label: "Hello dapp", slug: "getting-started/hello-dapp" },
+  { label: "Token lists", slug: "getting-started/token-lists" },
+  { label: "Indexed data", slug: "getting-started/indexed-data" },
+  { label: "Sign in with Ethereum", slug: "getting-started/siwe" },
+  { label: "AI agents", slug: "getting-started/agents" },
+];
+
 /** @type {ComponentGroup[]} */
 const groups = [
   {

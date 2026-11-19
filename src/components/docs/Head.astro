@@ -1,0 +1,15 @@
+---
+import Default from "@astrojs/starlight/components/Head.astro";
+import { markdownPath } from "@/lib/agent-docs";
+
+const markdown = markdownPath(Astro.locals.starlightRoute.id);
+---
+
+<Default />
+<link rel="alternate" type="text/markdown" href={markdown ?? "/llms.txt"} title="Markdown" />
+
+<script>
+  import { registerDocsTools } from "@/lib/webmcp";
+
+  registerDocsTools();
+</script>

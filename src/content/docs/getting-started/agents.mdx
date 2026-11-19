@@ -1,0 +1,52 @@
+---
+title: AI agents
+description: Give your coding agent the 0xui docs as Markdown, a skill, the shadcn MCP server or in-browser tools.
+---
+
+0xui is built to be read by agents as well as people. Pick whichever fits how your agent works. They all serve the same docs.
+
+## Agent skill
+
+The skill tells an agent how to set up 0xui, which component fits which job, and the rules the components follow. Install it with the [skills CLI](https://github.com/vercel-labs/skills):
+
+```bash
+npx skills add https://0xui.dev
+```
+
+The site publishes it at [`/.well-known/agent-skills/index.json`](/.well-known/agent-skills/index.json), following the [Agent Skills discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc). You can also install it from GitHub with `npx skills add Matsfjeldstad/0xui --skill 0xui`.
+
+## Markdown docs
+
+Every page has a Markdown version without the live demos. Use **Copy page** at the top of a page to paste it into a chat, or point your agent at:
+
+| URL | What it returns |
+| --- | --- |
+| [`/llms.txt`](/llms.txt) | Setup and a one-line description of every page, grouped like the sidebar. Start here. |
+| [`/llms-full.txt`](/llms-full.txt) | Every page in one file. |
+| Any page URL + `.md` | One page, like [`/components/balance.md`](/components/balance.md). |
+| `/r/<name>.json` | The registry item: dependencies and the full source of every file. |
+
+Each HTML page also links its Markdown version with `<link rel="alternate" type="text/markdown">`.
+
+## shadcn MCP server
+
+The [shadcn MCP server](https://ui.shadcn.com/docs/mcp) lets an agent browse, search and install items from any registry in your `components.json`, including `@0xui`. Add the [0xui registry](/getting-started/installation/#2-add-the-0xui-registry) first, then set up your client:
+
+```bash
+npx shadcn@latest mcp init --client claude
+```
+
+Other clients: `cursor`, `vscode`, `codex` and `opencode`. Then ask in plain words, like "add a wallet button and an ETH balance to the header using @0xui".
+
+## WebMCP
+
+In a browser with [WebMCP](https://webmachinelearning.github.io/webmcp/), this site registers tools the browser's agent can call instead of reading pages:
+
+| Tool | What it does |
+| --- | --- |
+| `list_docs` | Every page with a one-line description. |
+| `search_docs` | Full-text search, returning page ids and excerpts. |
+| `get_doc` | One page as Markdown, by id, name or URL. |
+| `get_registry_item` | What `shadcn add` installs for an item, with its source. |
+
+The tools only read the docs. They don't change anything in your browser or your project.
