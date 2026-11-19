@@ -1,0 +1,46 @@
+---
+/**
+ * Icon for a docs group, by lucide name (see `icon` in src/docs-nav.mjs).
+ * Rendered to static SVG: no client JS. Decorative, the label says it all.
+ *
+ *   <GroupIcon name="wallet" />
+ */
+import {
+  ArrowRightLeft,
+  BookOpen,
+  CircleUserRound,
+  Coins,
+  Ellipsis,
+  LayoutGrid,
+  LayoutTemplate,
+  Network,
+  Shield,
+  Wallet,
+  Wrench,
+} from "lucide-react";
+
+interface Props {
+  name: string | undefined;
+  class?: string;
+}
+
+const icons = {
+  "arrow-right-left": ArrowRightLeft,
+  "book-open": BookOpen,
+  "circle-user-round": CircleUserRound,
+  coins: Coins,
+  ellipsis: Ellipsis,
+  "layout-grid": LayoutGrid,
+  "layout-template": LayoutTemplate,
+  network: Network,
+  shield: Shield,
+  wallet: Wallet,
+  wrench: Wrench,
+} as const;
+
+const { name, class: className } = Astro.props;
+const Icon = name ? icons[name as keyof typeof icons] : undefined;
+if (name && !Icon) throw new Error(`GroupIcon: no icon "${name}". Add it to the map.`);
+---
+
+{Icon && <Icon className={className} size={14} strokeWidth={1.75} aria-hidden="true" />}

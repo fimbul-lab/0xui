@@ -56,6 +56,7 @@ export default defineConfig({
         Hero: "./src/components/docs/Hero.astro",
         PageTitle: "./src/components/docs/PageTitle.astro",
         SiteTitle: "./src/components/docs/SiteTitle.astro",
+        Sidebar: "./src/components/docs/Sidebar.astro",
         ThemeSelect: "./src/components/docs/ThemeToggle.astro",
       },
       expressiveCode: {

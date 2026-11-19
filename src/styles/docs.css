@@ -231,8 +231,30 @@
     padding: 0.25rem var(--sl-sidebar-item-padding-inline);
   }
   .sidebar-content .top-level > li > a.large::after {
-    content: " \2192";
+    content: "\2192";
+    margin-inline-start: -0.25rem;
     color: var(--sl-color-gray-4);
+  }
+  /* Top-level icon, a step quieter than the label it leads. */
+  .sidebar-content summary .group-label,
+  .sidebar-content .top-level > li > a.large {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .sidebar-content summary .group-label > *,
+  .sidebar-content .top-level > li > a.large > * {
+    margin-inline-end: 0;
+  }
+  .sidebar-content .group-icon {
+    flex-shrink: 0;
+    color: var(--sl-color-gray-4);
+    transition: color 120ms var(--docs-ease);
+  }
+  .sidebar-content summary:hover .group-icon,
+  .sidebar-content .top-level > li > a.large:hover .group-icon,
+  .sidebar-content .top-level > li > a.large[aria-current="page"] .group-icon {
+    color: var(--sl-color-gray-2);
   }
   .sidebar-content summary .caret {
     width: 0.875rem;

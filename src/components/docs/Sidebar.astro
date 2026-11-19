@@ -1,0 +1,23 @@
+---
+/**
+ * Starlight's sidebar with an icon in front of each group label.
+ *
+ * Starlight has no icon option for groups, so this renders the tree itself.
+ * The markup and class names copy Starlight's SidebarSublist (0.41), so its
+ * styles and docs.css still apply. Recheck on a Starlight upgrade. Overriding
+ * MobileMenuFooter would need it imported from here too.
+ */
+import MobileMenuFooter from "@astrojs/starlight/components/MobileMenuFooter.astro";
+import SidebarPersister from "@astrojs/starlight/components/SidebarPersister.astro";
+import SidebarSublist from "./SidebarSublist.astro";
+
+const { sidebar } = Astro.locals.starlightRoute;
+---
+
+<SidebarPersister>
+  <SidebarSublist sublist={sidebar} />
+</SidebarPersister>
+
+<div class="md:sl-hidden">
+  <MobileMenuFooter />
+</div>

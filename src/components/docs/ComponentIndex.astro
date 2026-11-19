@@ -7,6 +7,7 @@
  */
 import { getCollection } from "astro:content";
 import { groupComponents } from "../../docs-nav.mjs";
+import GroupIcon from "./GroupIcon.astro";
 
 interface Props {
   section: "components" | "blocks";
@@ -24,7 +25,7 @@ const pages = new Map(
 const groups =
   section === "components"
     ? groupComponents([...pages.keys()])
-    : [{ label: "", blurb: "", items: [...pages.keys()].sort() }];
+    : [{ label: "", blurb: "", icon: "", items: [...pages.keys()].sort() }];
 ---
 
 <div class="index not-content">
@@ -33,7 +34,10 @@ const groups =
       <section>
         {group.label && (
           <header>
-            <h2 id={group.label.toLowerCase()}>{group.label}</h2>
+            <h2 id={group.label.toLowerCase()}>
+              <GroupIcon name={group.icon || undefined} class="icon" />
+              {group.label}
+            </h2>
             {group.blurb && <p>{group.blurb}</p>}
           </header>
         )}
@@ -68,12 +72,19 @@ const groups =
     margin-bottom: 0.75rem;
   }
   h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-family: var(--__sl-font-mono);
     font-size: 0.6875rem;
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--sl-color-white);
+  }
+  h2 :global(.icon) {
+    flex-shrink: 0;
+    color: var(--sl-color-gray-4);
   }
   header p {
     font-size: 0.8125rem;

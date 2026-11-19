@@ -4,27 +4,35 @@
 //
 // No Node APIs here: this file is also bundled into the pages.
 
-/** @typedef {{ label: string; blurb: string; items: string[] }} ComponentGroup */
+/**
+ * `icon` is a lucide icon name, rendered by src/components/docs/GroupIcon.astro.
+ *
+ * @typedef {{ label: string; blurb: string; icon: string; items: string[] }} ComponentGroup
+ */
 
 /** @type {ComponentGroup[]} */
 const groups = [
   {
     label: "Wallet",
+    icon: "wallet",
     blurb: "Connect, show the account, sign.",
     items: ["wallet-button", "connect-wallet", "account", "sign-message"],
   },
   {
     label: "Network",
+    icon: "network",
     blurb: "Pick a chain, guard against the wrong one, show its pulse.",
     items: ["chain-selector", "network-guard", "chain-badge", "block-number", "gas-price"],
   },
   {
     label: "Identity",
+    icon: "circle-user-round",
     blurb: "Addresses, ENS names and avatars.",
     items: ["address", "address-input", "address-avatar", "ens-profile", "explorer-link"],
   },
   {
     label: "Tokens",
+    icon: "coins",
     blurb: "Balances, amounts and token pickers.",
     items: [
       "token-input",
@@ -39,6 +47,7 @@ const groups = [
   },
   {
     label: "Transactions",
+    icon: "arrow-right-left",
     blurb: "Send, approve, track and read contracts.",
     items: [
       "transaction-button",
@@ -53,6 +62,7 @@ const groups = [
   },
   {
     label: "Shielded",
+    icon: "shield",
     blurb: "Private accounts, balances, scans and proofs. A preview that runs on a mock engine.",
     items: [
       "shielded-engine",
@@ -68,6 +78,7 @@ const groups = [
   },
   {
     label: "Utilities",
+    icon: "wrench",
     blurb: "Small pieces the other components are built from.",
     items: ["copy-button", "responsive-dialog", "morph-text"],
   },
@@ -83,5 +94,21 @@ const groups = [
 export function groupComponents(names) {
   const listed = new Set(groups.flatMap((group) => group.items));
   const unsorted = names.filter((name) => !listed.has(name)).sort();
-  return unsorted.length ? [...groups, { label: "More", blurb: "", items: unsorted }] : groups;
+  return unsorted.length
+    ? [...groups, { label: "More", blurb: "", icon: "ellipsis", items: unsorted }]
+    : groups;
 }
+
+/**
+ * Icon for every top-level sidebar entry, by label: the sections and the
+ * "Components" link in astro.config.mjs, and the component groups above.
+ *
+ * @type {Record<string, string>}
+ */
+export const groupIcons = {
+  "Getting started": "book-open",
+  Blocks: "layout-template",
+  Components: "layout-grid",
+  ...Object.fromEntries(groups.map((group) => [group.label, group.icon])),
+  More: "ellipsis",
+};
