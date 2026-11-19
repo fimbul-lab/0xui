@@ -16,11 +16,13 @@
     "deploy": "bun run build && wrangler deploy",
     "eval:agents": "bun scripts/agent-eval/run.ts",
     "readme:banner": "bun scripts/readme/build.ts",
+    "icons": "bun scripts/icons.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.3",
+    "@astrojs/sitemap": "3.7.3",
     "@astrojs/starlight": "^0.41.7",
     "@astrojs/starlight-tailwind": "^5.0.0",
     "@base-ui/react": "^1.9.0",

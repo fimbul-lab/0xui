@@ -128,6 +128,19 @@ export function groupComponents(names) {
 }
 
 /**
+ * Label of the group a component is sorted into, like "Wallet". Undefined
+ * for unlisted and unsorted components.
+ *
+ * @param {string} name Component page name, like `wallet-button`.
+ */
+export function groupOf(name) {
+  return groups.find((group) => group.items.includes(name))?.label;
+}
+
+/** Every listed component, in sidebar order. */
+export const listedComponents = groups.flatMap((group) => group.items);
+
+/**
  * Icon for every top-level sidebar entry, by label: the sections and the
  * "Components" link in astro.config.mjs, and the component groups above.
  *

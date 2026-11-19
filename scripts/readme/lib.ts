@@ -1,15 +1,17 @@
-// Shared helpers for the README banners.
+// Shared helpers for the README banners and the social cards (src/lib/og.ts).
 //
 // Text is outlined to paths from the Geist variable fonts the docs site uses,
 // so a banner renders the same on GitHub (where an <img> SVG cannot load
-// fonts) as it does on 0xui.io.
-import { fileURLToPath } from "node:url";
+// fonts) as it does on 0xui.io, and a card renders without installed fonts.
+import { createRequire } from "node:module";
 import * as fontkit from "fontkit";
 
-const FONTS = fileURLToPath(new URL("../../node_modules/@fontsource-variable", import.meta.url));
+// Resolved like an import rather than by relative path, so this also works
+// from the bundle Astro builds the social card endpoint into.
+const require = createRequire(import.meta.url);
 const files = {
-  sans: `${FONTS}/geist/files/geist-latin-wght-normal.woff2`,
-  mono: `${FONTS}/geist-mono/files/geist-mono-latin-wght-normal.woff2`,
+  sans: require.resolve("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2"),
+  mono: require.resolve("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2"),
 };
 
 type Family = keyof typeof files;
@@ -358,8 +360,13 @@ export function svg(o: {
   defs?: string;
   body: string;
   radius?: number;
+  /** The hairline around the edge. Off for images that are cropped to the edge. */
+  border?: boolean;
 }): string {
-  const { width: w, height: h, radius = 24 } = o;
+  const { width: w, height: h, radius = 24, border = true } = o;
+  const edge = border
+    ? `\n<rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${radius - 0.5}" stroke="${c.lineStrong}"/>`
+    : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" fill="none" role="img" aria-labelledby="t d">
 <title id="t">${o.title}</title>
 <desc id="d">${o.desc}</desc>
@@ -368,8 +375,7 @@ export function svg(o: {
 <g clip-path="url(#frame)">
 <rect width="${w}" height="${h}" fill="${c.bg}"/>
 ${o.body}
-</g>
-<rect x="0.5" y="0.5" width="${w - 1}" height="${h - 1}" rx="${radius - 0.5}" stroke="${c.lineStrong}"/>
+</g>${edge}
 </svg>
 `;
 }

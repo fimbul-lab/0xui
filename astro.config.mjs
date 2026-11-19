@@ -2,8 +2,10 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import { registryResolver } from "./scripts/registry-resolver.mjs";
+import { sitemapOptions } from "./scripts/sitemap.mjs";
 import { readdirSync } from "node:fs";
 import { gettingStarted, groupComponents } from "./src/docs-nav.mjs";
 
@@ -18,9 +20,31 @@ export default defineConfig({
   site: "https://0xui.io",
   integrations: [
     react(),
+    // Before Starlight, which otherwise adds its own without these options.
+    sitemap(sitemapOptions()),
     starlight({
       title: "0xui",
       description: "Copy-paste web3 React components built on wagmi, viem, Base UI and Tailwind.",
+      // The SVG favicon is Starlight's default. These are for what cannot use
+      // it: old browsers and anything that asks for /favicon.ico, iOS home
+      // screens, and Android. Drawn by `bun run icons`.
+      head: [
+        { tag: "link", attrs: { rel: "icon", href: "/favicon.ico", sizes: "32x32" } },
+        { tag: "link", attrs: { rel: "apple-touch-icon", href: "/apple-touch-icon.png" } },
+        { tag: "link", attrs: { rel: "manifest", href: "/site.webmanifest" } },
+        {
+          tag: "meta",
+          attrs: { name: "theme-color", content: "#0a0a0a", media: "(prefers-color-scheme: dark)" },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "theme-color",
+            content: "#ffffff",
+            media: "(prefers-color-scheme: light)",
+          },
+        },
+      ],
       social: [
         {
           icon: "github",
