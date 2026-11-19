@@ -1,6 +1,7 @@
 // Serves the static docs. Runs before the assets only for page routes (see
 // wrangler.jsonc), to answer `Accept: text/markdown` with the page's
-// Markdown and to advertise the agent entry points on every page.
+// Markdown, to advertise the agent entry points on every page, and to send
+// www to the bare domain.
 
 import { agentLinks, markdownFor, prefersMarkdown } from "./negotiate";
 
@@ -21,6 +22,14 @@ function withHeaders(response: Response, headers: Record<string, string>) {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // One address per page: www.0xui.io/x goes to 0xui.io/x for good.
+    if (url.hostname.startsWith("www.")) {
+      url.hostname = url.hostname.slice(4);
+      url.protocol = "https:";
+      return Response.redirect(url.href, 301);
+    }
+
     const readable = request.method === "GET" || request.method === "HEAD";
 
     if (readable && prefersMarkdown(request.headers.get("Accept"))) {

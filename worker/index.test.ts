@@ -54,6 +54,15 @@ describe("worker", () => {
     expect(response.headers.get("Vary")).toBe("Accept");
   });
 
+  test("redirects www to the bare domain, keeping the path and query", async () => {
+    const response = await worker.fetch(
+      new Request("http://www.0xui.io/components/balance/?tab=props"),
+      env,
+    );
+    expect(response.status).toBe(301);
+    expect(response.headers.get("Location")).toBe("https://0xui.io/components/balance/?tab=props");
+  });
+
   test("answers the home page with llms.txt", async () => {
     expect(await (await get("/", "text/markdown")).text()).toBe("# 0xui");
   });
