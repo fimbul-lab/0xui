@@ -35,6 +35,8 @@ This adds two files:
 - `lib/wagmi-config.ts`: chains, connectors and transports. Edit it to match your app.
 - `components/web3-provider.tsx`: `WagmiProvider` and a TanStack `QueryClientProvider`.
 
+Paths follow the aliases in your `components.json`, so a Vite app gets `src/lib/wagmi-config.ts`.
+
 Wrap your app once:
 
 ```tsx title="app.tsx"
@@ -62,6 +64,12 @@ If you already have a wagmi setup, skip this step. Every 0xui component reads fr
 <Install name="chain-selector" />
 
 Shared helpers (`@0xui/0xui-utils`, `@0xui/use-mounted`, …) and shadcn primitives (`popover`, `dialog`, …) install automatically as dependencies.
+
+### If the CLI asks to overwrite a file
+
+A later install can ask to overwrite a shadcn primitive you never edited, like `components/ui/dialog.tsx`. In projects without React Server Components (Vite, for one), the shadcn CLI adds or drops the `"use client"` line depending on what else it installs, and that line is the whole difference. Answer either way: the install finishes and the component works.
+
+Without a terminal (CI, a coding agent) the CLI can't ask. It stops there, exits with code 0 and leaves the install half done. Pass `--overwrite` to skip the question. It also replaces your own edits to any file the install touches, so check with `--dry-run` first if you have changed 0xui files.
 
 ## Using an AI agent
 

@@ -24,7 +24,9 @@ When the browser you're driving exposes WebMCP tools on 0xui.io (`search_docs`, 
 
 3. If the app has no `WagmiProvider`, run `npx shadcn@latest add @0xui/wagmi-config` and wrap the app in the `Web3Provider` it adds. Edit `lib/wagmi-config.ts` for the app's chains.
 
-Setup is done when `npx shadcn@latest add @0xui/<name>` writes files into the project.
+Run every `add` with `--overwrite`. Without a terminal the CLI can stop at an "overwrite?" question about a shadcn `ui/` file, exit 0 and leave the install half done. `--overwrite` replaces local edits to the files it installs, so when the project has customized 0xui files, read `--dry-run` first.
+
+An install is done when the item's own file exists, like `components/wallet-button.tsx` for `@0xui/wallet-button`.
 
 ## Pick a component
 
@@ -52,7 +54,7 @@ Prefer a block or component over hand-rolled wagmi calls: they already handle ca
 | Building blocks | `copy-button`, `responsive-dialog`, `morph-text` |
 | Let browser agents read the wallet (WebMCP) | `agent-tools` |
 
-Install several at once: `npx shadcn@latest add @0xui/wallet-button @0xui/balance`. Dependencies between items install with them.
+Install several at once: `npx shadcn@latest add @0xui/wallet-button @0xui/balance --overwrite`. Dependencies between items install with them.
 
 ## Write code the way 0xui does
 

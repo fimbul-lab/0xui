@@ -218,7 +218,7 @@ To install, the project needs shadcn with the Base UI flavor (\`npx shadcn@lates
 { "registries": { "@0xui": "${site}/r/{name}.json" } }
 \`\`\`
 
-Then \`${installCommand(["<name>"])}\`. Start with \`@0xui/wagmi-config\` when the app has no \`WagmiProvider\` yet.
+Then \`${installCommand(["<name>"])}\`. Start with \`@0xui/wagmi-config\` when the app has no \`WagmiProvider\` yet. Without a terminal, add \`--overwrite\`: otherwise the CLI can stop at an overwrite question, exit 0 and leave the install half done.
 
 Every page below is Markdown. Append \`.md\` to any docs URL for its Markdown, read everything at once at ${site}/llms-full.txt, or install the agent skill: \`npx skills add ${site}\`.`;
 
