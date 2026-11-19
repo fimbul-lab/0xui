@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "0xui",
-  "homepage": "https://github.com/Matsfjeldstad/0xui",
+  "homepage": "https://github.com/fimbul-lab/0xui",
   "items": [
     {
       "name": "chain-selector",

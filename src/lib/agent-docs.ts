@@ -195,7 +195,7 @@ export function pageMarkdown(page: DocPage, docs: DocPage[], registry: RegistryI
     ? [
         `Install: \`${installCommand([item.name])}\``,
         `Registry JSON: ${site}/r/${item.name}.json`,
-        source && `Source: https://github.com/Matsfjeldstad/0xui/blob/main/${source}`,
+        source && `Source: https://github.com/fimbul-lab/0xui/blob/main/${source}`,
       ].filter(Boolean)
     : [];
 

@@ -25,7 +25,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/Matsfjeldstad/0xui",
+          href: "https://github.com/fimbul-lab/0xui",
         },
       ],
       sidebar: [
