@@ -1,4 +1,4 @@
-import { ClipboardPasteIcon, Loader2Icon } from "lucide-react";
+import { ClipboardPasteIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
 import {
   useEffect,
   useId,
@@ -11,7 +11,12 @@ import { useEnsAddress, useEnsName } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { AddressAvatar } from "@/components/address-avatar";
 import { MorphText } from "@/components/morph-text";
-import { truncateAddress } from "@/lib/0xui-utils";
+import {
+  SHIELDED_ADDRESS_LENGTH,
+  SHIELDED_ADDRESS_PREFIX,
+  isShieldedAddress,
+  truncateAddress,
+} from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type AddressInputPhase =
@@ -28,6 +33,8 @@ export type AddressInputState = {
   address: Address | undefined;
   /** ENS name typed or found for the address. */
   ensName: string | undefined;
+  /** The private (`0zk…`) address, when the input is one and `shielded` is on. `address` is then undefined. */
+  shieldedAddress: string | undefined;
   /** Why the input is invalid, for display. */
   error: string | undefined;
 };
@@ -51,12 +58,20 @@ function normalizeName(value: string) {
 
 /**
  * Validate an address or resolve an ENS name (on mainnet). Lookups wait for
- * typing to pause. Mixed-case addresses must match their checksum.
+ * typing to pause. Mixed-case addresses must match their checksum. With
+ * `shielded`, private `0zk…` addresses are accepted too and checked against
+ * their own checksum; they are never sent to a resolver.
  */
-export function useAddressInput(value: string, { debounce = 300 } = {}) {
+export function useAddressInput(
+  value: string,
+  { debounce = 300, shielded = false }: { debounce?: number; shielded?: boolean } = {}
+) {
   const text = value.trim();
   const looksLikeAddress = /^0x[0-9a-fA-F]*$/.test(text);
-  const isName = !looksLikeAddress && text.includes(".");
+  // An ENS name may start with "0zk" too; a private address never has a dot.
+  const looksShielded =
+    text.toLowerCase().startsWith(SHIELDED_ADDRESS_PREFIX) && !text.includes(".");
+  const isName = !looksLikeAddress && !looksShielded && text.includes(".");
   const name = isName ? normalizeName(text) : undefined;
   const debouncedName = useDebounced(name, debounce);
   const nameSettled = debouncedName === name;
@@ -74,8 +89,31 @@ export function useAddressInput(value: string, { debounce = 300 } = {}) {
   });
 
   const state = ((): AddressInputState => {
-    const base = { address: undefined, ensName: undefined, error: undefined };
+    const base = {
+      address: undefined,
+      ensName: undefined,
+      shieldedAddress: undefined,
+      error: undefined,
+    };
     if (!text) return { ...base, phase: "empty" };
+    if (looksShielded) {
+      if (!shielded)
+        return { ...base, phase: "invalid", error: "Private (0zk) addresses can't be used here." };
+      if (isShieldedAddress(text)) return { ...base, phase: "valid", shieldedAddress: text };
+      if (text.length < SHIELDED_ADDRESS_LENGTH)
+        return {
+          ...base,
+          phase: "incomplete",
+          error: `Enter the full ${SHIELDED_ADDRESS_LENGTH}-character private address.`,
+        };
+      if (text.length > SHIELDED_ADDRESS_LENGTH)
+        return { ...base, phase: "invalid", error: "Private address is too long." };
+      return {
+        ...base,
+        phase: "invalid",
+        error: "Checksum doesn't match. Check the private address for typos.",
+      };
+    }
     if (looksLikeAddress) {
       if (validAddress)
         return { ...base, phase: "valid", address: validAddress, ensName: reverse.data ?? undefined };
@@ -91,7 +129,13 @@ export function useAddressInput(value: string, { debounce = 300 } = {}) {
       if (!ens.data) return { ...base, phase: "not-found", ensName: name, error: `No address found for ${name}.` };
       return { ...base, phase: "valid", address: ens.data, ensName: name };
     }
-    return { ...base, phase: "incomplete", error: "Enter an address (0x…) or ENS name." };
+    return {
+      ...base,
+      phase: "incomplete",
+      error: shielded
+        ? "Enter an address (0x…), an ENS name or a private address (0zk…)."
+        : "Enter an address (0x…) or ENS name.",
+    };
   })();
 
   return state;
@@ -110,6 +154,8 @@ export type AddressInputProps = Omit<
   label?: string;
   /** Show a paste button while the input is empty. */
   showPaste?: boolean;
+  /** Also accept private `0zk…` addresses. The result is then in `state.shieldedAddress`. */
+  shielded?: boolean;
 };
 
 /**
@@ -123,7 +169,8 @@ export function AddressInput({
   onResolve,
   label = "Recipient",
   showPaste = true,
-  placeholder = "Address or ENS name",
+  shielded = false,
+  placeholder = shielded ? "Address, ENS name or 0zk address" : "Address or ENS name",
   className,
   id,
   onBlur,
@@ -133,20 +180,23 @@ export function AddressInput({
   const inputId = id ?? fallbackId;
   const messageId = `${inputId}-message`;
   const [touched, setTouched] = useState(false);
-  const state = useAddressInput(value);
+  const state = useAddressInput(value, { shielded });
 
   // Report each new validation result, including async ENS resolution.
   useEffect(() => {
     onResolve?.(state);
     // Fire on result changes only, not when the caller passes a new callback.
-  }, [state.phase, state.address, state.ensName]);
+  }, [state.phase, state.address, state.ensName, state.shieldedAddress]);
 
   const showError =
     state.error !== undefined &&
     (state.phase === "not-found" || (touched && state.phase !== "resolving"));
 
   const message =
-    state.phase === "valid" && state.ensName && value.includes(".")
+    state.shieldedAddress
+      ? // Start and end, so a pasted address can be checked against its source.
+        `Private address ${truncateAddress(state.shieldedAddress, { start: 9, end: 6 })}`
+      : state.phase === "valid" && state.ensName && value.includes(".")
       ? truncateAddress(state.address!)
       : state.phase === "valid" && state.ensName
         ? state.ensName
@@ -169,6 +219,9 @@ export function AddressInput({
         )}
       >
         {state.address && <AddressAvatar address={state.address} size={22} />}
+        {state.shieldedAddress && (
+          <EyeOffIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        )}
         <input
           id={inputId}
           type="text"

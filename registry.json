@@ -336,7 +336,7 @@
       "name": "transaction-status",
       "type": "registry:component",
       "title": "Transaction Status",
-      "description": "Inline card for one transaction hash: what it does (children), steps from submitted to included in block N to N of M confirmations, the hash with copy, and an explorer link. Reverted transactions are shown with their receipt instead of throwing like wagmi's useWaitForTransactionReceipt. Exports useTransactionStatus and useMinedReceipt. data-phase: pending | confirming | confirmed | reverted | error.",
+      "description": "Inline card for one transaction hash: what it does (children), steps from submitted to included in block N to N of M confirmations, the hash with copy, and an explorer link. Reverted transactions are shown with their receipt instead of throwing like wagmi's useWaitForTransactionReceipt. Exports useTransactionStatus, useMinedReceipt and StepIcon. data-phase: pending | confirming | confirmed | reverted | error.",
       "files": [
         {
           "path": "registry/default/components/transaction-status.tsx",
@@ -449,7 +449,7 @@
       "name": "address-input",
       "type": "registry:component",
       "title": "Address Input",
-      "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, a hint line that morphs between 'Looking up…', the name and the address (MorphText), strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found.",
+      "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, a hint line that morphs between 'Looking up…', the name and the address (MorphText), strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found. With the shielded prop it also accepts private 0zk addresses (Railgun format), validated by length and bech32m checksum and reported as state.shieldedAddress; they are never sent to a resolver.",
       "files": [
         {
           "path": "registry/default/components/address-input.tsx",
@@ -872,6 +872,85 @@
       ]
     },
     {
+      "name": "shielded-account",
+      "type": "registry:component",
+      "title": "Shielded Account",
+      "description": "The private (shielded) account in every state, on a ShieldedEngine: create one with a password (creation takes seconds and says so), show the recovery phrase once, hidden until revealed, and keep the way forward closed until the user confirms they saved it; import a 12 or 24 word recovery phrase; unlock with a password (wrong password shown inline); lock again. Buttons name what is missing (Enter a password, Use at least 8 characters, Passwords don't match). The phrase field is closed to spell checkers, autocomplete and password managers. Renders children once unlocked, so it can gate the private part of an app. SSR-safe. Exports useShieldedAccountFlow, ShieldedAccountCreateForm, ShieldedAccountImportForm, ShieldedAccountUnlockForm, RecoveryPhrase, ShieldedAccountSummary, passwordBlocker and phraseBlocker. data-phase: none | creating | backup | importing | locked | unlocking | unlocked.",
+      "files": [
+        {
+          "path": "registry/default/components/shielded-account.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/shielded-engine",
+        "@0xui/shielded-address",
+        "@0xui/privacy-badge",
+        "@0xui/copy-button",
+        "@0xui/use-mounted"
+      ]
+    },
+    {
+      "name": "shielded-transaction-status",
+      "type": "registry:component",
+      "title": "Shielded Transaction Status",
+      "description": "Inline card that follows one shield from the public chain into the private balance: submitted, included in block N, found by the private account, then the standby period with a countdown until the funds are spendable. A mined transaction alone is never shown as done: success comes from the ShieldedEngine seeing the funds, not from the receipt. Asks the engine to scan as soon as the transaction is mined. Handles restricted funds, reverted transactions and RPC errors. Shows the amount that arrived after the fee, the hash with copy and an explorer link. Card variant with every step, or a one-line variant for under a form. Exports useShieldedTransactionStatus, shieldedStatusText and formatWait. data-phase: pending | confirmed | standby | spendable | restricted | reverted | error.",
+      "files": [
+        {
+          "path": "registry/default/components/shielded-transaction-status.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/shielded-engine",
+        "@0xui/transaction-status",
+        "@0xui/copy-button",
+        "@0xui/explorer-link",
+        "@0xui/token-amount",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "shield",
+      "type": "registry:block",
+      "title": "Shield",
+      "description": "Shield block: move an ERC-20 from the connected wallet into a private (shielded) balance through a ShieldedEngine. TokenInput with wallet balance, a quote showing the protocol fee, the amount received privately and how long until it is spendable, and a line saying how many wallet prompts to expect. Then the wallet steps, one click each: the signature the protocol needs (free, a dismissed prompt is a cancel), the approval, the shield. With a wallet that reports EIP-5792 atomic batching as supported, approval and shield are one prompt (exact approval, leftover allowance cleared first, every receipt checked); other wallets get separate prompts, with a reset first for tokens like USDT. What is sent is frozen when the user starts, so it always matches what was on screen. Two variants over the same flow: 'in-place' locks the form and steps through the prompts on one button, then follows the shield in one line; 'collapse' folds the form into a summary with a step list, then shows the status card until the user asks to shield more. The button names the blocker (Unlock your private account / Enter an amount / Insufficient balance / Wrap ETH to shield it / Switch network / Fetching quote). Exports useShieldFlow, useShieldQuote, shieldSteps, shieldStepCopy, describeShieldSteps, shieldBlocker, formatFeePercent, ShieldSummary, ShieldStepList and ShieldQuoteRows. data-phase: idle | signing | approving | shielding | cancelled | error.",
+      "files": [
+        {
+          "path": "registry/default/components/shield.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/shielded-engine",
+        "@0xui/shielded-transaction-status",
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/approve-button",
+        "@0xui/transaction-status",
+        "@0xui/connect-wallet",
+        "@0xui/token-amount",
+        "@0xui/privacy-badge",
+        "@0xui/morph-text",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
       "name": "wagmi-config",
       "type": "registry:lib",
       "title": "wagmi config + provider",
@@ -896,7 +975,7 @@
       "name": "0xui-utils",
       "type": "registry:lib",
       "title": "0xui utils",
-      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234…abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) isUserRejection (detects a dismissed wallet prompt) and resolveUri (ipfs:// and ar:// to HTTP).",
+      "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234…abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) isUserRejection (detects a dismissed wallet prompt), resolveUri (ipfs:// and ar:// to HTTP), isShieldedAddress (private 0zk address check: length, alphabet and bech32m checksum) and encodeBech32m.",
       "files": [
         {
           "path": "registry/default/lib/0xui-utils.ts",
@@ -972,7 +1051,7 @@
       "name": "shielded-engine",
       "type": "registry:lib",
       "title": "Shielded engine",
-      "description": "The contract between 0xui's shielded (private transaction) components and a privacy protocol such as Railgun: lib/shielded-engine.ts holds the ShieldedEngine interface and its types (five neutral balance states, staged sync state, proof stages, account status, unshield draft, proved operation), and ShieldedProvider puts an engine in context. Hooks: useShieldedEngine, useShieldedAccount (status and private address) and useShieldedState (subscribe to one engine event, SSR-safe). Protocol names stay inside the engine. Pair with @0xui/mock-shielded-engine until a real engine is wired up.",
+      "description": "The contract between 0xui's shielded (private transaction) components and a privacy protocol such as Railgun: lib/shielded-engine.ts holds the ShieldedEngine interface and its types (five neutral balance states, staged sync state, proof stages, account status, shield draft, quote and prepared call, shielded transaction, unshield draft, proved operation), and ShieldedProvider puts an engine in context. Hooks: useShieldedEngine, useShieldedAccount (status and private address) and useShieldedState (subscribe to one engine event, SSR-safe). Protocol names stay inside the engine. Pair with @0xui/mock-shielded-engine until a real engine is wired up.",
       "files": [
         {
           "path": "registry/default/lib/shielded-engine.ts",
@@ -991,7 +1070,7 @@
       "name": "mock-shielded-engine",
       "type": "registry:lib",
       "title": "Mock shielded engine",
-      "description": "In-memory ShieldedEngine for demos, tests and building UI before a real privacy engine exists: no network, no cryptography, no funds. Behaves like the Railgun SDK did on Sepolia: two-pass scans whose progress goes backwards, balances that only change when a scan finishes, a 60 s standby for shielded funds, change that can get stuck as incomplete, staged proofs with a slow first circuit download, and a 25 bps fee each way on bigint amounts. Realistic delays (6 s account creation, 40 s first scan, 13 s proof) with a speed option (Infinity for tests). simulate.* produces every state on demand: shield, unshield, addFunds, failNextSync, failNextProof, failNextRetry, keepIncomplete.",
+      "description": "In-memory ShieldedEngine for demos, tests and building UI before a real privacy engine exists: no network, no cryptography, no funds. Behaves like the Railgun SDK did on Sepolia: two-pass scans whose progress goes backwards, balances that only change when a scan finishes, a 60 s standby for shielded funds, change that can get stuck as incomplete, staged proofs with a slow first circuit download, and a 25 bps fee each way on bigint amounts. Realistic delays (6 s account creation, 40 s first scan, 13 s proof) with a speed option (Infinity for tests). simulate.* produces every state on demand: shield, unshield, addFunds, failNextSync, failNextProof, failNextRetry, keepIncomplete. Also implements quoteShield (fee, amount received, standby, spender to approve, whether a signature is needed), prepareShield (asks the wallet for a signature, returns the call) and getTransaction, and its 0zk address carries a valid checksum.",
       "files": [
         {
           "path": "registry/default/lib/mock-shielded-engine.ts",
@@ -1002,7 +1081,8 @@
         "viem"
       ],
       "registryDependencies": [
-        "@0xui/shielded-engine"
+        "@0xui/shielded-engine",
+        "@0xui/0xui-utils"
       ]
     }
   ]

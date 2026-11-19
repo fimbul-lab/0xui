@@ -1,7 +1,10 @@
 import { parseEther } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { isShieldedAddress } from "./0xui-utils";
 import {
   MOCK_MNEMONIC,
+  MOCK_SHIELD_CONTRACT,
+  MOCK_SHIELD_MESSAGE,
   MOCK_TIMINGS,
   createMockShieldedEngine,
   type MockShieldedEngine,
@@ -50,9 +53,10 @@ describe("account", () => {
     expect(engine.account.status()).toBe("unlocked");
   });
 
-  it("has a 127-character 0zk address once unlocked", async () => {
+  it("has a 127-character 0zk address with a valid checksum once unlocked", async () => {
     const engine = await unlocked();
-    expect(engine.account.address()).toMatch(/^0zk1[a-z0-9]{123}$/);
+    expect(engine.account.address()).toMatch(/^0zk1q[a-z0-9]{122}$/);
+    expect(isShieldedAddress(engine.account.address()!)).toBe(true);
   });
 
   it("creates an account, returns the phrase once, and takes about six seconds", async () => {
@@ -274,6 +278,95 @@ describe("shield and unshield", () => {
     const engine = await unlocked();
     await engine.simulate.addFunds({ token: usdc, amount: 9n, state: "incomplete" });
     expect(amountsOf(engine, usdc)?.incomplete).toBe(9n);
+  });
+});
+
+describe("shielding through the interface", () => {
+  const hash = `0x${"ab".repeat(32)}` as const;
+  const draft = { chainId: 1, token: weth, amount: parseEther("0.01") };
+
+  it("quotes the fee, what arrives and the standby period", async () => {
+    const engine = createMockShieldedEngine();
+    expect(await engine.quoteShield(draft)).toEqual({
+      fee: parseEther("0.000025"),
+      received: parseEther("0.009975"),
+      standby: 60,
+      // Everything the UI needs to lay out the wallet steps before the first one.
+      spender: MOCK_SHIELD_CONTRACT,
+      needsSignature: true,
+    });
+    // The standby period follows the speed, so a demo's countdown matches what happens.
+    expect((await createMockShieldedEngine({ speed: 4 }).quoteShield(draft)).standby).toBe(15);
+    await expect(engine.quoteShield({ ...draft, amount: 0n })).rejects.toThrow("Enter an amount");
+  });
+
+  it("asks the wallet for one signature and returns a call for it to send", async () => {
+    const engine = await unlocked();
+    const sign = vi.fn().mockResolvedValue("0x1234");
+    const prepared = await engine.prepareShield(draft, { sign });
+
+    expect(sign).toHaveBeenCalledExactlyOnceWith(MOCK_SHIELD_MESSAGE);
+    expect(prepared.transaction).toMatchObject({ to: MOCK_SHIELD_CONTRACT, value: 0n });
+    expect(prepared.transaction.data).toMatch(/^0x[0-9a-f]{128}$/);
+    // Preparing moves nothing.
+    expect(amountsOf(engine)).toBeUndefined();
+  });
+
+  it("can imitate a protocol that needs no signature", async () => {
+    const engine = await unlocked({ shieldSignature: false });
+    expect((await engine.quoteShield(draft)).needsSignature).toBe(false);
+    const sign = vi.fn();
+    await engine.prepareShield(draft, { sign });
+    expect(sign).not.toHaveBeenCalled();
+  });
+
+  it("passes a declined signature on, and needs an unlocked account", async () => {
+    const engine = await unlocked();
+    const declined = Object.assign(new Error("User rejected the request."), { code: 4001 });
+    await expect(
+      engine.prepareShield(draft, { sign: () => Promise.reject(declined) })
+    ).rejects.toBe(declined);
+
+    engine.account.lock();
+    const sign = vi.fn();
+    await expect(engine.prepareShield(draft, { sign })).rejects.toThrow("Unlock the private account");
+    expect(sign).not.toHaveBeenCalled();
+  });
+
+  it("reports a shield by its public hash only once a scan has found it", async () => {
+    vi.useFakeTimers();
+    const engine = createMockShieldedEngine();
+    void engine.account.unlock("password");
+    await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan + 100);
+    expect(engine.getTransaction(1, hash)).toBeUndefined();
+
+    void engine.simulate.shield({ ...draft, hash });
+    await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.repeatScan - 100);
+    expect(engine.getTransaction(1, hash)).toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(200);
+    const found = engine.getTransaction(1, hash);
+    expect(found).toEqual({
+      kind: "shield",
+      token: weth,
+      amount: parseEther("0.009975"),
+      state: "pending",
+    });
+    // Any casing of the hash, and the same object until something changes.
+    expect(engine.getTransaction(1, hash.toUpperCase().replace("0X", "0x") as typeof hash)).toBe(found);
+    void engine.sync(1);
+    await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.repeatScan + 100);
+    expect(engine.getTransaction(1, hash)).toBe(found);
+
+    await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.standby + MOCK_TIMINGS.repeatScan);
+    expect(engine.getTransaction(1, hash)).toMatchObject({ state: "spendable" });
+  });
+
+  it("forgets what it found when the account locks", async () => {
+    const engine = await unlocked({ funds: [{ token: weth, amount: 5n, state: "restricted", hash }] });
+    expect(engine.getTransaction(1, hash)).toMatchObject({ state: "restricted", amount: 5n });
+    engine.account.lock();
+    expect(engine.getTransaction(1, hash)).toBeUndefined();
   });
 });
 

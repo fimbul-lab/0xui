@@ -37,6 +37,11 @@ export function useAllowance({ token, spender, owner, chainId }: UseAllowancePar
  */
 const RESET_FIRST = new Set(["1:0xdac17f958d2ee523a2206206994597c13d831ec7"]);
 
+/** True for a token whose leftover allowance must be set to 0 before it can be raised. */
+export function requiresAllowanceReset(chainId: number, token: Address) {
+  return RESET_FIRST.has(`${chainId}:${token.toLowerCase()}`);
+}
+
 export type ApproveButtonProps = Omit<
   TransactionButtonProps,
   "contract" | "transaction" | "children" | "chainId"
@@ -86,7 +91,7 @@ export function ApproveButton({
 
   const checking = status === "connected" && allowance.isPending;
   const reset =
-    (resetFirst ?? RESET_FIRST.has(`${chainId}:${token.address.toLowerCase()}`)) &&
+    (resetFirst ?? requiresAllowanceReset(chainId, token.address)) &&
     allowance.data !== undefined &&
     allowance.data > 0n;
 

@@ -2,8 +2,10 @@ import { UserRejectedRequestError, SwitchChainError, parseUnits } from "viem";
 import { mainnet } from "viem/chains";
 import { describe, expect, it } from "vitest";
 import {
+  encodeBech32m,
   formatTokenAmount,
   getExplorerUrl,
+  isShieldedAddress,
   isUserRejection,
   parseAmount,
   truncateAddress,
@@ -125,5 +127,57 @@ describe("isUserRejection", () => {
     );
     expect(isUserRejection(new Error("boom"))).toBe(false);
     expect(isUserRejection(null)).toBe(false);
+  });
+});
+
+describe("isShieldedAddress", () => {
+  // From the Railgun engine's own address tests.
+  const real = [
+    "0zk1q8hxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kfrv7j6fe3z53llhxknrs97q8pjxaagwthzc0df99rzmhl2xnlxmgv9akv32sua0kg0zpzts",
+    "0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkumpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkwrfm4m",
+    "0zk1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqunpd9kxwatwqyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqhshkca",
+  ];
+
+  it("accepts real addresses", () => {
+    for (const address of real) expect(isShieldedAddress(address)).toBe(true);
+  });
+
+  it("rejects a single wrong character anywhere", () => {
+    const address = real[0]!;
+    for (const index of [4, 40, 90, 126]) {
+      const swapped = address[index] === "q" ? "p" : "q";
+      const typo = address.slice(0, index) + swapped + address.slice(index + 1);
+      expect(isShieldedAddress(typo)).toBe(false);
+    }
+  });
+
+  it("rejects the wrong length, prefix, casing or alphabet", () => {
+    const address = real[0]!;
+    expect(isShieldedAddress(address.slice(0, -1))).toBe(false);
+    expect(isShieldedAddress(`${address}q`)).toBe(false);
+    expect(isShieldedAddress(address.replace("0zk", "0zz"))).toBe(false);
+    expect(isShieldedAddress(address.toUpperCase())).toBe(false);
+    // "b", "i" and "o" are not in the alphabet.
+    expect(isShieldedAddress(address.slice(0, 20) + "b" + address.slice(21))).toBe(false);
+    expect(isShieldedAddress("")).toBe(false);
+    expect(isShieldedAddress("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")).toBe(false);
+  });
+});
+
+describe("encodeBech32m", () => {
+  const alphabet = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+  const words = (text: string) => Array.from(text, (char) => alphabet.indexOf(char));
+
+  it("matches the BIP-350 test vectors", () => {
+    expect(encodeBech32m("a", [])).toBe("a1lqfn3a");
+    expect(encodeBech32m("abcdef", words("l7aum6echk45nj3s0wdvt2fg8x9yrzpq"))).toBe(
+      "abcdef1l7aum6echk45nj3s0wdvt2fg8x9yrzpqzd3ryx"
+    );
+  });
+
+  it("round-trips through isShieldedAddress", () => {
+    const address = encodeBech32m("0zk", [0, ...Array.from({ length: 116 }, (_, i) => i % 32)]);
+    expect(address).toHaveLength(127);
+    expect(isShieldedAddress(address)).toBe(true);
   });
 });

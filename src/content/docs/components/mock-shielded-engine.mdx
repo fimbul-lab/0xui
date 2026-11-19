@@ -55,6 +55,7 @@ Creating the engine starts no timers, so it is safe to create during server rend
 | `chains` | `number[]` | `[1]` | Chains scanned automatically after unlock. Others scan when `sync` is called. |
 | `funds` | `MockFunds[]` | `[]` | What the account holds: `{ token, amount, state?, chainId? }`. |
 | `circuitsCached` | `boolean` | `false` | Skip the slow first circuit download. |
+| `shieldSignature` | `boolean` | `true` | Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. |
 
 ### Timings
 
@@ -79,7 +80,7 @@ Measured against the Railgun SDK on Sepolia, except where marked as a guess.
 
 | Method | What it does |
 | --- | --- |
-| `shield({ token, amount, outcome? })` | Funds arrive less the fee, `pending` for the standby period, then `spendable` or, with `outcome: "restricted"`, restricted. |
+| `shield({ token, amount, outcome?, hash? })` | Funds arrive less the fee, `pending` for the standby period, then `spendable` or, with `outcome: "restricted"`, restricted. |
 | `unshield({ token, amount, change? })` | Spends whole notes. The remainder comes back as change: `proving`, then `spendable` or, with `change: "incomplete"`, stuck. |
 | `addFunds({ token, amount, state })` | Puts funds straight into any state. |
 | `failNextSync(message?)` | The next scan stops a third of the way in with an error. |
@@ -87,7 +88,7 @@ Measured against the Railgun SDK on Sepolia, except where marked as a guess.
 | `failNextRetry(message?)` | The next `retryProofs` rejects. |
 | `keepIncomplete(keep?)` | While on, `retryProofs` finishes but changes nothing. |
 
-`shield` and `unshield` resolve with `{ fee, received }`.
+`shield` and `unshield` resolve with `{ fee, received }`. Pass `hash` to `shield` (or to `addFunds`, or a `funds` entry) and `getTransaction` reports on that public transaction. This is how the [Shield](/blocks/shield/) block's demo tells the mock that the shield was sent.
 
 ```ts
 const { received } = await engine.simulate.shield({ token: WETH, amount: parseEther("0.01") });
@@ -125,4 +126,8 @@ await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan);
 
 ## What it doesn't do
 
-It never produces a transaction, a valid address or a valid proof. The address is 127 characters and starts with `0zk`, but encodes nothing. The recovery phrase is the public BIP-39 test vector.
+It never produces a real transaction, account or proof.
+
+- `quoteShield` names `MOCK_SHIELD_CONTRACT` as the spender, and `prepareShield` asks the wallet to sign `MOCK_SHIELD` and returns a call to it. No contract lives at that address. Don't send it on a real chain.
+- The address is 127 characters, starts with `0zk` and has a valid checksum, so it passes address validation. It holds no keys.
+- The recovery phrase is the public BIP-39 test vector.

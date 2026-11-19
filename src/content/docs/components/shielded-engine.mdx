@@ -83,9 +83,17 @@ interface ShieldedEngine {
 
   getSync(chainId: number): ShieldedSync;
   getBalances(chainId: number): readonly ShieldedTokenBalance[] | undefined;
+  getTransaction(chainId: number, hash: Hash): ShieldedTransaction | undefined;
 
   sync(chainId: number): Promise<void>;
   retryProofs(chainId: number): Promise<void>;
+
+  quoteShield(draft: ShieldDraft): Promise<ShieldQuote>;
+  prepareShield(
+    draft: ShieldDraft,
+    options: { sign(message: string): Promise<Hex> }
+  ): Promise<PreparedShield>;
+
   prove(
     draft: PrivateDraft,
     options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
@@ -126,13 +134,33 @@ type ShieldedSync = {
 
 `sync(chainId)` resolves when the scan settles. A failed scan is reported through `getSync`, not by rejecting.
 
+### Shielding
+
+```ts
+type ShieldDraft = { chainId: number; token: Address; amount: bigint };
+type ShieldQuote = {
+  fee: bigint;
+  received: bigint;
+  standby: number; // seconds
+  spender?: Address; // contract to approve before the shield is sent
+  needsSignature: boolean; // prepareShield will ask the wallet to sign
+};
+type PreparedShield = { transaction: { to; data?; value? } };
+```
+
+- `quoteShield` signs and sends nothing. It lets the UI show the cost first, and lay out every wallet step before the first one: `spender` says whether an approval is needed, `needsSignature` whether a signature is.
+- `prepareShield` builds the transaction. The public wallet sends it; the engine never does. Some protocols derive a one-off key from a wallet signature: the engine then calls `sign(message)`, at most once, and a rejected signature rejects the promise with the wallet's error.
+- `getTransaction(chainId, hash)` is how the UI knows a shield really arrived. It returns nothing until a scan has found the funds, then `{ kind: "shield", token, amount, state }`. A mined receipt alone is not proof.
+
+See the [Shield](/blocks/shield/) block and [Shielded Transaction Status](/components/shielded-transaction-status/).
+
 ### Proofs
 
 `prove` reports stages (`loading-circuits`, `proving`, `verifying`), not a percentage: provers don't report a real one. See [Proof Progress](/components/proof-progress/).
 
 ## Not in the interface yet
 
-These are planned and arrive with the components that need them: preparing a shield transaction, fee estimates, submitting a proved operation, private transfers, relayers, and capability flags per engine.
+These are planned and arrive with the components that need them: fee estimates for private operations, submitting a proved operation, private transfers, relayers, and capability flags per engine.
 
 ## Writing an engine
 
@@ -142,3 +170,4 @@ An engine is any object that implements `ShieldedEngine`. Keep the protocol SDK,
 - Map the SDK's balance buckets onto the five states.
 - Scan after `unlock`, and again on an interval, since most SDKs don't push balance changes.
 - Honor the `AbortSignal` in `prove` and reject with its reason.
+- In `prepareShield`, refuse to return a transaction an ordinary wallet can't send as a plain call (an EIP-7702 transaction, for one). Throw instead of dropping fields.

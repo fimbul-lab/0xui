@@ -9,13 +9,14 @@ import {
   erc20Abi,
   hexToBytes,
   parseAbi,
+  toHex,
   zeroAddress,
   type Address,
   type Chain,
   type Hex,
 } from "viem";
 import { vi } from "vitest";
-import { createConfig, type Config } from "wagmi";
+import { createConfig, createConnector, type Config } from "wagmi";
 import { connect } from "wagmi/actions";
 import { mainnet, sepolia } from "wagmi/chains";
 import { mock, type MockParameters } from "wagmi/connectors";
@@ -71,11 +72,42 @@ function stubWalletRpc(rpc: RpcResponses) {
  * Use `features` to make the "wallet" reject or fail, e.g.
  * `{ switchChainError: true }` for a user rejection.
  */
+/**
+ * The mock wallet, reporting the given EIP-5792 capabilities per chain id,
+ * e.g. `{ 1: { atomic: { status: "supported" } } }`.
+ */
+function withCapabilities(
+  wallet: ReturnType<typeof mock>,
+  capabilities: Record<number, unknown>
+): ReturnType<typeof mock> {
+  return createConnector((config) => {
+    const connector = wallet(config);
+    return {
+      ...connector,
+      async getProvider(params) {
+        const provider = await connector.getProvider(params);
+        return {
+          ...provider,
+          request: (args: { method: string; params?: unknown }) =>
+            args.method === "wallet_getCapabilities"
+              ? Promise.resolve(
+                  Object.fromEntries(
+                    Object.entries(capabilities).map(([id, value]) => [toHex(Number(id)), value])
+                  )
+                )
+              : provider.request(args as never),
+        } as typeof provider;
+      },
+    };
+  });
+}
+
 export function createTestConfig({
   features,
   rpc = {},
   accounts = testAccounts,
   wallets = [accounts],
+  capabilities,
 }: {
   features?: MockParameters["features"];
   rpc?: RpcResponses;
@@ -83,6 +115,8 @@ export function createTestConfig({
   accounts?: readonly [Address, ...Address[]];
   /** One mock wallet per entry, each with its own accounts. Defaults to a single wallet with `accounts`. */
   wallets?: readonly (readonly [Address, ...Address[]])[];
+  /** EIP-5792 capabilities the wallet reports, by chain id. Without it the wallet can't batch. */
+  capabilities?: Record<number, unknown>;
 } = {}) {
   stubWalletRpc(rpc);
   const transport = custom(
@@ -91,7 +125,10 @@ export function createTestConfig({
   );
   return createConfig({
     chains: [withoutMulticall(mainnet), withoutMulticall(sepolia)],
-    connectors: wallets.map((walletAccounts) => mock({ accounts: walletAccounts, features })),
+    connectors: wallets.map((walletAccounts) => {
+      const wallet = mock({ accounts: walletAccounts, features });
+      return capabilities ? withCapabilities(wallet, capabilities) : wallet;
+    }),
     transports: { [mainnet.id]: transport, [sepolia.id]: transport },
     // Fast block/receipt polling so tests don't wait 4s per poll.
     pollingInterval: 20,

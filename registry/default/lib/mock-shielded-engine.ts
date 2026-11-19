@@ -1,4 +1,5 @@
-import type { Address } from "viem";
+import { encodeAbiParameters, type Address, type Hash } from "viem";
+import { encodeBech32m } from "@/lib/0xui-utils";
 import {
   SHIELDED_BALANCE_STATES,
   type ShieldedAccountStatus,
@@ -8,6 +9,7 @@ import {
   type ShieldedEvent,
   type ShieldedSync,
   type ShieldedSyncStage,
+  type ShieldedTransaction,
 } from "@/lib/shielded-engine";
 
 /**
@@ -46,6 +48,12 @@ export const MOCK_FEE_BPS = 25n;
 export const MOCK_MNEMONIC =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
+/** The message the mock asks the public wallet to sign before a shield. */
+export const MOCK_SHIELD_MESSAGE = "MOCK_SHIELD";
+
+/** Where the mock's shield transactions go, and the spender to approve. No contract lives here. */
+export const MOCK_SHIELD_CONTRACT: Address = "0x00000000000000000000000000000000005111e1";
+
 /** How long a mock proof stays valid. */
 const PROOF_LIFETIME = 240_000;
 
@@ -57,6 +65,8 @@ export type MockFunds = {
   state?: ShieldedBalanceState;
   /** Defaults to the first of `chains`. */
   chainId?: number;
+  /** The public transaction that shielded them, so `getTransaction` can report on it. */
+  hash?: Hash;
 };
 
 export type MockShieldedEngineOptions = {
@@ -77,6 +87,8 @@ export type MockShieldedEngineOptions = {
   funds?: readonly MockFunds[];
   /** Pretend the circuit files are already downloaded, so the first proof is as fast as the rest. */
   circuitsCached?: boolean;
+  /** Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. */
+  shieldSignature?: boolean;
 };
 
 /** Controls that only the mock has: make things happen, or make the next thing fail. */
@@ -90,6 +102,8 @@ export type MockSimulate = {
     amount: bigint;
     chainId?: number;
     outcome?: "spendable" | "restricted";
+    /** The public transaction that shielded them, so `getTransaction` can report on it. */
+    hash?: Hash;
   }): Promise<{ fee: bigint; received: bigint }>;
   /**
    * Spend from the spendable balance to a public address. The recipient gets
@@ -117,13 +131,15 @@ export type MockSimulate = {
 
 export type MockShieldedEngine = ShieldedEngine & { simulate: MockSimulate };
 
-type Note = { token: Address; amount: bigint; state: ShieldedBalanceState };
+type Note = { token: Address; amount: bigint; state: ShieldedBalanceState; hash?: Hash };
 
 type ChainState = {
   /** What the account really holds. Only a scan copies it into `balances`. */
   notes: Note[];
   sync: ShieldedSync;
   balances: readonly ShieldedTokenBalance[] | undefined;
+  /** Public transactions the last scan found, by lower-case hash. */
+  transactions: Map<string, ShieldedTransaction>;
   /** A scan has finished at least once, so the next one is a short repeat scan. */
   scanned: boolean;
   scan: Promise<void> | undefined;
@@ -152,18 +168,21 @@ const REPEAT_SCAN = [...ramp("notes", 0, 1, 3), ...ramp("transactions", 0, 1, 2)
 
 const IDLE: ShieldedSync = Object.freeze({ stage: "notes", status: "idle", progress: 0 });
 
-const BECH32 = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-
-/** A 127-character address shaped like a Railgun `0zk` address. Not a valid encoding of anything. */
+/**
+ * A 127-character `0zk` address with a valid checksum, so it passes
+ * `isShieldedAddress`. The payload is noise derived from the seed: it
+ * holds no keys.
+ */
 function mockAddress(seed: string) {
   let state = 2166136261;
   for (let i = 0; i < seed.length; i++) state = Math.imul(state ^ seed.charCodeAt(i), 16777619);
-  let address = "0zk1q";
-  while (address.length < 127) {
+  // 117 five-bit words. The first is 0, as in a real address (version byte 01).
+  const words = [0];
+  while (words.length < 117) {
     state = (Math.imul(state, 1664525) + 1013904223) | 0;
-    address += BECH32[(state >>> 27) & 31];
+    words.push((state >>> 27) & 31);
   }
-  return address;
+  return encodeBech32m("0zk", words);
 }
 
 function toBalances(notes: readonly Note[]): ShieldedTokenBalance[] {
@@ -217,6 +236,7 @@ export function createMockShieldedEngine({
   chains: autoChains = [1],
   funds = [],
   circuitsCached = false,
+  shieldSignature = true,
 }: MockShieldedEngineOptions = {}): MockShieldedEngine {
   if (!(speed > 0)) throw new RangeError("speed must be greater than 0.");
 
@@ -250,9 +270,10 @@ export function createMockShieldedEngine({
       chain = {
         notes: funds
           .filter((fund) => (fund.chainId ?? defaultChain) === chainId)
-          .map(({ token, amount, state = "spendable" }) => ({ token, amount, state })),
+          .map(({ token, amount, state = "spendable", hash }) => ({ token, amount, state, hash })),
         sync: IDLE,
         balances: undefined,
+        transactions: new Map(),
         scanned: false,
         scan: undefined,
         nextSyncFailure: undefined,
@@ -307,11 +328,26 @@ export function createMockShieldedEngine({
     }
 
     chain.scanned = true;
+    let changed = false;
     const balances = toBalances(chain.notes);
     if (!chain.balances || !sameBalances(chain.balances, balances)) {
       chain.balances = balances;
-      emit("balances");
+      changed = true;
     }
+    for (const note of chain.notes) {
+      if (!note.hash) continue;
+      const key = note.hash.toLowerCase();
+      // A new object only when the state moved, so the reference is stable in between.
+      if (chain.transactions.get(key)?.state === note.state) continue;
+      chain.transactions.set(key, {
+        kind: "shield",
+        token: note.token,
+        amount: note.amount,
+        state: note.state,
+      });
+      changed = true;
+    }
+    if (changed) emit("balances");
     // The SDK's "complete" event carries progress 0.
     setSync(chain, { stage: "transactions", status: "synced", progress: 0 });
   }
@@ -353,6 +389,7 @@ export function createMockShieldedEngine({
     for (const chain of chainStates.values()) {
       chain.sync = IDLE;
       chain.balances = undefined;
+      chain.transactions = new Map();
       chain.scan = undefined;
     }
     emit("sync");
@@ -416,7 +453,39 @@ export function createMockShieldedEngine({
 
     getSync: (chainId) => chainOf(chainId).sync,
     getBalances: (chainId) => chainOf(chainId).balances,
+    getTransaction: (chainId, hash) => chainOf(chainId).transactions.get(hash.toLowerCase()),
     sync: scan,
+
+    // Fees are read once when a real engine starts, so a quote costs nothing.
+    async quoteShield(draft) {
+      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      const fee = feeOn(draft.amount);
+      return {
+        fee,
+        received: draft.amount - fee,
+        standby: Math.round(timings.standby / speed / 1_000),
+        spender: MOCK_SHIELD_CONTRACT,
+        needsSignature: shieldSignature,
+      };
+    },
+
+    async prepareShield(draft, { sign }) {
+      requireUnlocked();
+      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      // A real engine turns this signature into a one-off key. The mock only asks for it.
+      if (shieldSignature) await sign(MOCK_SHIELD_MESSAGE);
+      requireUnlocked();
+      return {
+        transaction: {
+          to: MOCK_SHIELD_CONTRACT,
+          data: encodeAbiParameters(
+            [{ type: "address" }, { type: "uint256" }],
+            [draft.token, draft.amount]
+          ),
+          value: 0n,
+        },
+      };
+    },
 
     async retryProofs(chainId) {
       requireUnlocked();
@@ -464,9 +533,9 @@ export function createMockShieldedEngine({
     },
 
     simulate: {
-      async shield({ token, amount, chainId = defaultChain, outcome = "spendable" }) {
+      async shield({ token, amount, chainId = defaultChain, outcome = "spendable", hash }) {
         const fee = feeOn(amount);
-        const note: Note = { token, amount: amount - fee, state: "pending" };
+        const note: Note = { token, amount: amount - fee, state: "pending", hash };
         chainOf(chainId).notes.push(note);
         later(timings.standby, chainId, () => {
           note.state = outcome;
@@ -501,8 +570,8 @@ export function createMockShieldedEngine({
         return { fee, received: amount - fee };
       },
 
-      addFunds({ token, amount, state = "spendable", chainId = defaultChain }) {
-        chainOf(chainId).notes.push({ token, amount, state });
+      addFunds({ token, amount, state = "spendable", chainId = defaultChain, hash }) {
+        chainOf(chainId).notes.push({ token, amount, state, hash });
         return scan(chainId);
       },
 

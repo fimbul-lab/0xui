@@ -1,0 +1,104 @@
+---
+title: Shielded Account
+description: Create, import, unlock and lock the private account, with a recovery phrase step that can't be skipped.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Create, Gate } from "@/demos/shielded-account";
+
+A private balance belongs to a private account: a recovery phrase, encrypted on the device with a password. It is separate from the connected wallet. This component is that account in whatever state it is in.
+
+The demo account is locked. Its password is `password`.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+It talks to a [shielded engine](/components/shielded-engine/), which holds the recovery phrase. These demos run on the [mock engine](/components/mock-shielded-engine/).
+
+<Aside type="caution" title="Before you ship this">
+  A recovery phrase in a browser can be read by any script on the page, including extensions and compromised dependencies. Review your own setup (content security policy, third-party scripts, where the engine stores the encrypted phrase) before real funds depend on it. This component has not had an independent security review.
+</Aside>
+
+## Installation
+
+<Install name="shielded-account" />
+
+## Usage
+
+```tsx
+import { ShieldedAccount } from "@/components/shielded-account";
+
+<ShieldedProvider engine={engine}>
+  <ShieldedAccount />
+</ShieldedProvider>;
+```
+
+## Examples
+
+### Creating an account
+
+Creation takes about six seconds with the Railgun SDK, so the form says so and stays disabled meanwhile. Then the recovery phrase is shown, once:
+
+- The words are hidden until the user asks for them, and are not in the page before that.
+- **Continue** stays disabled until the user has revealed the phrase and ticked that they saved it.
+- `onUnlocked` does not fire, and `children` do not render, until then.
+
+<Preview>
+  <Create client:load />
+</Preview>
+
+Importing asks for the 12 or 24 words and a new password. The phrase field is closed to spell checkers, autocomplete and password managers.
+
+### Gating the private part of your app
+
+With `children`, the component shows them once the account is unlocked and the account forms until then.
+
+<Preview>
+  <Gate client:load />
+</Preview>
+
+```tsx
+<ShieldedAccount>
+  <ShieldedBalance token={weth} chainId={1} />
+</ShieldedAccount>
+```
+
+### Headless
+
+```tsx
+import { useShieldedAccountFlow } from "@/components/shielded-account";
+
+const { phase, address, mnemonic, error, create, confirmBackup, importAccount, unlock, lock } =
+  useShieldedAccountFlow();
+```
+
+- `create`, `importAccount` and `unlock` resolve to `true` when they worked. A failure lands in `error`.
+- `mnemonic` is set only while `phase` is `backup`. Call `confirmBackup()` once the user has saved it; the hook then drops it.
+
+The forms are exported for your own layout: `ShieldedAccountCreateForm`, `ShieldedAccountImportForm`, `ShieldedAccountUnlockForm`, `RecoveryPhrase` and `ShieldedAccountSummary`. So are the rules behind the buttons, `passwordBlocker` and `phraseBlocker`.
+
+## States
+
+| `data-phase` | What the user sees |
+| --- | --- |
+| `none` | "Create a private account", with a link to import a recovery phrase instead. |
+| `creating` | The form disabled, "Creating account…", "This takes a few seconds." |
+| `backup` | The recovery phrase, hidden until revealed, and a checkbox to confirm it is saved. |
+| `importing` | The import form disabled, "Importing account…". |
+| `locked` | A password field and **Unlock**. A wrong password shows under the field. |
+| `unlocking` | "Unlocking…". |
+| `unlocked` | `children`, or a line with the private address and **Lock**. |
+
+Every submit button names what is missing: "Enter a password", "Use at least 8 characters", "Passwords don't match", "Enter all 12 or 24 words (5 so far)".
+
+Nothing renders on the server. The account lives in the browser, and a locked account should not flash the "create" form while the page hydrates.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `children` | `ReactNode` | — | Shown once unlocked, in place of the address line. |
+| `onUnlocked` | `(address: string) => void` | — | Called when the account becomes usable: unlocked, imported, or created and backed up. |

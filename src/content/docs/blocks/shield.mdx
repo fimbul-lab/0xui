@@ -1,0 +1,199 @@
+---
+title: Shield
+description: Move an ERC-20 from the connected wallet into a private balance, with the fee, the wait and every wallet step shown.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Collapse } from "@/demos/shield";
+
+Shielding moves tokens from a public wallet into a private balance. This block is the whole flow: amount, what it costs, the wallet prompts one click at a time, and then the funds followed until they can be spent.
+
+Connect the **Demo Wallet** and shield some WETH. The demo's private account is already unlocked, its standby period is 20 seconds, not the real 60, and nothing is broadcast.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+<Aside type="caution" title="Preview">
+  This runs on the [mock engine](/components/mock-shielded-engine/). A Railgun engine is planned. Until then the block can't move real funds.
+</Aside>
+
+It is built from [Token Input](/components/token-input/) and [Shielded Transaction Status](/components/shielded-transaction-status/), on a [shielded engine](/components/shielded-engine/).
+
+## Installation
+
+<Install name="shield" />
+
+## Usage
+
+```tsx
+import { Shield } from "@/components/shield";
+import { ShieldedAccount } from "@/components/shielded-account";
+
+<ShieldedProvider engine={engine}>
+  <ShieldedAccount>
+    <Shield tokens={tokens} chainId={1} />
+  </ShieldedAccount>
+</ShieldedProvider>;
+```
+
+Tokens use the [token list standard](/getting-started/token-lists/). Only tokens on `chainId` are offered.
+
+## What the user goes through
+
+Before anything is signed, the form shows the protocol fee, what arrives privately, how long until it can be spent, and how many wallet prompts to expect.
+
+Then the wallet steps. Each takes one click, and the click that starts the shield is the click for the first step.
+
+| Step | When | What it is |
+| --- | --- | --- |
+| Sign | The engine needs it | A free signature some protocols derive a one-off key from. It sends nothing. |
+| Reset approval | Tokens like USDT, with a leftover allowance | Sets the old allowance to zero, which those tokens require before raising it. |
+| Approve | The allowance is too low | Approves exactly the amount being shielded. |
+| Shield | Always | The shield transaction. |
+
+With a wallet that batches, approve and shield are one step. See below.
+
+The shield is frozen when the user starts: the amount, the token and the quote. What is sent is what was on screen then.
+
+A dismissed wallet prompt is a cancel, not an error. The step stays where it is, ready for another try.
+
+## Two prompts, with three as the fallback
+
+When the wallet can send several calls as one atomic transaction ([EIP-5792](https://eips.ethereum.org/EIPS/eip-5792)), the approval and the shield go out together as "Approve and shield". A shield is then two wallet prompts: the signature and the batch. Otherwise it is three.
+
+| Wallet reports | Prompts | Steps |
+| --- | --- | --- |
+| `atomic: supported` | 2 | Sign, approve and shield together |
+| `atomic: ready` | 3 | Sign, approve, shield. The wallet would first ask to upgrade the account, which the user didn't ask for. |
+| nothing, or `unsupported` | 3 | Sign, approve, shield |
+| any, with enough allowance | 2 | Sign, shield |
+
+Details that matter:
+
+- **Atomic only.** A wallet that batches without atomicity could approve and then fail to shield, leaving an allowance behind. It gets separate prompts.
+- **Exact approval.** The amount being shielded, nothing more.
+- **Leftover allowance.** A batch sets a leftover allowance to zero first. It costs no extra prompt there.
+- **Every receipt is read.** A wallet can report a batch as done while a call in it reverted. The block checks each receipt before it treats anything as shielded.
+- **One click per prompt.** The block never opens a second prompt from the click that opened the first. Popup wallets need a user gesture for each.
+
+`onSubmitted` fires when the wallet returns the shield's hash. For a batch that is once it is mined, because a batch has no transaction hash before that.
+
+## Variants
+
+Both run the same flow. They differ in what happens to the form once the shield starts.
+
+### In place
+
+The default, shown at the top. The form stays where it is and locks. The button steps through the wallet prompts, with one segment per prompt along its edge. When the shield is sent the form is free again at once, and the shield is followed in one line under it.
+
+Nothing on the page moves. Good when people shield often.
+
+```tsx
+<Shield tokens={tokens} chainId={1} variant="in-place" />
+```
+
+### Collapse
+
+The form folds into a summary line, with **Edit** to go back, and the wallet steps are listed under it. When the shield is sent, the full status card takes the form's place. **Shield more** brings the form back, and the card stays under it.
+
+It explains more and moves more. Good when shielding is new to your users.
+
+<Preview>
+  <Collapse client:load />
+</Preview>
+
+```tsx
+<Shield tokens={tokens} chainId={1} variant="collapse" />
+```
+
+## Native currency
+
+ETH can't be shielded directly: the button reads "Wrap ETH to shield it". Shield the wrapped token instead. A wrap step inside the block is planned.
+
+0xui uses the wrapped token in both directions. Going out, the Railgun SDK builds its native-token unshield as an EIP-7702 transaction on networks that support it, which an ordinary wallet can't send as a plain call. The wrapped token goes through a call any wallet can send, and using it on the way in as well keeps one token on both sides.
+
+## With the mock engine
+
+A real engine finds a shield by scanning the chain. The mock has no chain, so tell it:
+
+```tsx
+<Shield
+  tokens={tokens}
+  chainId={1}
+  onSubmitted={(hash, draft) => engine.simulate.shield({ ...draft, hash })}
+/>
+```
+
+## States
+
+The form's button always names the blocker:
+
+| Situation | Button |
+| --- | --- |
+| Wallet not connected | Connect wallet |
+| No private account | Create a private account first |
+| Account locked | Unlock your private account |
+| Native token selected | Wrap ETH to shield it |
+| No amount | Enter an amount |
+| Amount above the wallet balance | Insufficient WETH balance |
+| Wallet on another network | Switch to Ethereum |
+| Quote or allowance loading | Fetching quote… |
+| Quote failed | Can't shield this amount, plus the reason |
+| Ready | Shield WETH |
+
+`data-phase` on the root follows the wallet step in progress. `data-variant` holds the variant.
+
+| `data-phase` | Meaning |
+| --- | --- |
+| `idle` | On the form. |
+| `signing` | The signature step. |
+| `approving` | The approval step, or the reset before it. |
+| `shielding` | The step that sends the shield, alone or batched. |
+| `cancelled` | The last prompt was dismissed. The step is ready to retry. |
+| `error` | The last step failed, with the reason shown. |
+
+After sending, [Shielded Transaction Status](/components/shielded-transaction-status/) carries its own `data-phase`, from `pending` to `spendable`.
+
+## Build your own
+
+The flow is a hook. The two variants are thin shells over it.
+
+```tsx
+import {
+  useShieldFlow,
+  useShieldQuote,
+  shieldBlocker,
+  shieldStepCopy,
+  describeShieldSteps,
+} from "@/components/shield";
+
+const { quote } = useShieldQuote(draft); // fee, received, standby, spender, needsSignature
+const flow = useShieldFlow({ draft, quote, onSubmitted });
+
+flow.plannedSteps; // ["sign", "batch"], before anything starts
+describeShieldSteps(flow.plannedSteps); // "Two wallet prompts: sign, approve and shield together."
+
+flow.start(); // freezes the draft and opens the first wallet prompt
+flow.steps; // [{ kind: "sign", state: "done" }, { kind: "batch", state: "ready" }]
+flow.act(); // opens the wallet for the current step
+flow.leave(); // back to the form
+```
+
+`shieldSteps` is the pure rule behind the plan. `ShieldSummary`, `ShieldStepList` and `ShieldQuoteRows` are the parts the variants are made of.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tokens` | `Token[]` | — | ERC-20 tokens to offer. |
+| `chainId` | `number` | — | Chain to shield on. Required. |
+| `variant` | `"in-place" \| "collapse"` | `"in-place"` | What happens to the form once the shield starts. |
+| `defaultToken` | `Token` | first on `chainId` | Initial token. |
+| `popular` | `string[]` | — | Quick picks. |
+| `prices` | `Record<symbol, number>` | — | Fiat values. |
+| `onSubmitted` | `(hash, draft) => void` | — | Called with the shield transaction's hash. |
+| `onSpendable` | `(transaction) => void` | — | Called when the shielded funds become spendable. |
+| `title` | `ReactNode` | `"Shield"` | Heading. `null` hides it. |

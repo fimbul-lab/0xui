@@ -271,7 +271,7 @@ These are fast and they lock in the conventions before the big components.
 
 ### Phase 5: Shielded transactions (planned 2026-11-18)
 
-Components for private balances and transfers: shield, private send, unshield. Railgun first, Kohaku second. Step 1 (spike) and step 2 (interface, mock, primitives) are done. Steps 3 to 6 are planned. Everything shipped so far runs on the mock engine.
+Components for private balances and transfers: shield, private send, unshield. Railgun first, Kohaku second. Step 1 (spike), step 2 (interface, mock, primitives) and step 3 (account and shield) are done. Steps 4 to 6 are planned. Everything shipped so far runs on the mock engine.
 
 **Research findings (2026-11-18)**
 
@@ -366,7 +366,7 @@ export interface ShieldedEngine {
    - Kohaku Privacy Pools in the browser: sync and read a balance.
    - Output: the Vite polyfill config, measured scan and proof times, artifact sizes, and the interface revised against both. If the Railgun SDK cannot run in a worker, stop and re-plan around Reloaded.
 2. ✅ **Interface, mock, primitives.** Done 2026-11-18, see "Step 2 results". `shielded-engine` (types, `ShieldedProvider`, `useShieldedEngine`) → `mock-shielded-engine` → `shielded-address` → `privacy-badge` → `shielded-balance` → `shielded-sync-status` → `proof-progress`.
-3. **Account and shield.** `shielded-account` (create, import, unlock, lock) → `address-input` accepts `0zk` → `shield` block (approve, sign shield key, send, standby countdown) → `shielded-transaction-status`.
+3. ✅ **Account and shield.** Done 2026-11-18, see "Step 3 results". `shielded-account` (create, import, unlock, lock) → `address-input` accepts `0zk` → `shield` block (approve, sign shield key, send, standby countdown) → `shielded-transaction-status`.
 4. **Private spend.** `unshield` block → `private-send` block → exit to origin for pending and restricted funds → `privacy-hints` (pure rules over history and the draft).
    - **Unlisted private tokens.** A private balance in a token the app's list lacks cannot be shown yet, since `shielded-balance` takes symbol and decimals as props. Railway Wallet resolves these with a chain read for `decimals` and a CoinGecko call by address, which tells both which token the account holds. Leave the lookup to the app and document the tradeoff; do not build it into the component.
 5. **Real engines.** `railgun-engine` → a "Shielded setup" guide (polyfills, worker, RPC and POI node config, GPL note) → one opt-in live Sepolia demo → `kohaku-engine`.
@@ -537,7 +537,96 @@ export interface ShieldedEngine {
 - `proof-progress` changes height as the hint under the running step appears and goes.
 - The docs demos shorten some delays (first scan, standby) and say so on the page.
 
+**Step 3 results (2026-11-18)**
+
+Three new registry items and one changed component, each with docs, live demos and tests. Not committed yet.
+
+| Item | Type | Exports |
+|---|---|---|
+| `shielded-account` | component | `ShieldedAccount`, `useShieldedAccountFlow`, `ShieldedAccountCreateForm`, `ShieldedAccountImportForm`, `ShieldedAccountUnlockForm`, `RecoveryPhrase`, `ShieldedAccountSummary`, `passwordBlocker`, `phraseBlocker`, `ShieldedAccountPhase` |
+| `shielded-transaction-status` | component | `ShieldedTransactionStatus`, `useShieldedTransactionStatus`, `formatWait`, `ShieldedTxStatusPhase` |
+| `shield` | block | `Shield`, `useShield`, `useShieldQuote`, `shieldBlocker`, `formatFeePercent`, `ShieldPhase` |
+| `address-input` | changed | `shielded` prop, `state.shieldedAddress` |
+
+*Added to the interface*
+```ts
+export type ShieldDraft = { chainId: number; token: Address; amount: bigint };
+export type ShieldQuote = { fee: bigint; received: bigint; standby: number }; // standby in seconds
+export type PublicCall = { to: Address; data?: Hex; value?: bigint };
+export type PreparedShield = { transaction: PublicCall; spender?: Address };
+export type ShieldedTransaction = { kind: "shield"; token: Address; amount: bigint; state: ShieldedBalanceState };
+
+// on ShieldedEngine
+getTransaction(chainId: number, hash: Hash): ShieldedTransaction | undefined;
+quoteShield(draft: ShieldDraft): Promise<ShieldQuote>;
+prepareShield(draft: ShieldDraft, options: { sign(message: string): Promise<Hex> }): Promise<PreparedShield>;
+```
+
+*Changes to the sketch, and why*
+- **`prepareShield` takes a `sign` callback.** Railgun derives the shield key from a wallet signature; other protocols need none. The engine calls `sign(message)` at most once, so the component never knows the message or whether one is needed. A rejected signature must reject with the wallet's error, which the block shows as a cancel.
+- **`prepareShield` returns `{ transaction, spender }`, not `PublicCall[]`.** Same shape as a swap quote, so the existing `approve-button` does the allowance check, the USDT reset and the approval. The engine does not build approve calls.
+- **`quoteShield` is new.** The fee, the amount received and the standby period have to be on screen before anything is signed. It maps to the fee read at `loadProvider` for Railgun and to `estimateShield` for Kohaku.
+- **`getTransaction(chainId, hash)` is new.** It is what makes "a receipt is not proof" possible: it returns nothing until a scan has found the funds, then the state they are in. Changes ride on the `balances` event. The record has `kind: "shield"` only; step 4 adds the private kinds.
+- **The order is sign, approve, send,** not approve, sign, send. The spender is only known once the engine has built the transaction, and the signature is free, so it goes first.
+
+*`ShieldPhase` is smaller than planned*
+```ts
+export type ShieldPhase = "idle" | "preparing" | "signing" | "ready" | "cancelled" | "error";
+export type ShieldedTxStatusPhase = "pending" | "confirmed" | "standby" | "spendable" | "restricted" | "reverted" | "error";
+```
+The planned union ran from `idle` to `spendable` in one type. As built, each piece owns its own phases: the block covers what it does itself (building the transaction and the signature), the approve and send buttons keep `TxPhase`, and the status card covers everything after sending. One state machine per component, none duplicated.
+
+*Component decisions*
+- **The shield block first composed existing components** (`approve-button`, `transaction-button`). Replaced on 2026-11-19, see "Shield flow, as built".
+- **Native currency is blocked** with "Wrap ETH to shield it". Open: a wrap step inside the block.
+- **`shielded-transaction-status` nudges the engine.** When the public transaction is mined it calls `engine.sync(chainId)` once, since the engine does not know a shield was sent. After that it relies on the engine's own polling.
+- **The countdown is an estimate.** It runs from the mined block's timestamp plus the quote's standby. The step completes only when the engine says `spendable`; past zero it reads "any moment now".
+- **`shielded-account` holds the phrase only during backup.** `create` returns it, the hook keeps it until `confirmBackup`, then drops it. The words are not in the DOM until the user reveals them. `onUnlocked` and `children` wait for the backup step.
+- **The import field** turns off spell check, autocomplete and autocapitalize, and opts out of password managers.
+- **Password rule:** at least 8 characters, typed twice. No strength meter.
+- **`shielded-account` renders nothing on the server,** so a locked account does not flash the create form while hydrating.
+- **`address-input` validates `0zk` addresses by checksum.** Railgun addresses are bech32m with prefix `0zk` and 127 characters (confirmed in the engine source). The check is in `0xui-utils` (`isShieldedAddress`), tested against addresses from the engine's own test suite and the BIP-350 vectors. A private address is never sent to an ENS resolver. Without `shielded`, a pasted `0zk` address is turned down by name.
+- **`transaction-status` now exports `StepIcon`,** reused by the new status card.
+
+*Mock*
+- Implements `quoteShield` (instant; the standby it reports follows `speed`), `prepareShield` (asks for a signature of `MOCK_SHIELD`, returns a call to `MOCK_SHIELD_CONTRACT`) and `getTransaction`.
+- `simulate.shield`, `simulate.addFunds` and `funds` entries take a `hash`, so a demo can tell the mock that the shield the wallet sent has arrived.
+- Its `0zk` address now has a valid checksum, so it passes `isShieldedAddress`.
+
+*Checks*
+- Lint, typecheck, tests, build and the smoke install pass. 40 new tests, 302 in total. Key behaviours were mutation-checked: a mined receipt shown as done, a stale built transaction reused, the backup step skipped, the checksum skipped. Each broke a test.
+- Driven in headless Chrome with the Demo Wallet: quote, signature, approval, shield, standby countdown, spendable, private balance updated; account creation at its real six seconds with the backup step; restricted status; a pasted `0zk` address. No console errors.
+- Not done: a real screen reader pass, and the security review `shielded-account` needs before release.
+
+*Open after step 3*
+- **Wrap step for ETH** in the shield block.
+- **Shield to another private address.** `ShieldDraft` always shields to the engine's own account.
+- **Flow after the first click.** The input stays editable through the wallet steps and sits empty above the status card afterwards. Four directions are prototyped at `/prototypes/shield-flow` (`src/prototypes/shield-flow/`, temporary, deleted once one is chosen).
+
+*Decisions after step 3 (owner, 2026-11-18)*
+- **Batch approve and shield** in one wallet prompt with EIP-5792, only when the wallet reports atomic batching as `supported`. `ready` (the wallet would first upgrade the account) and `unsupported` fall back to separate prompts.
+- **One click per wallet prompt.** No chained prompts from a single click: popup wallets need a user gesture for each. The one exception is a shield that takes exactly one prompt, where the form's button may open the wallet directly.
+- **No shield key caching for now.** The signature is asked for on every shield. So a Railgun shield is two prompts on a batching wallet and three otherwise. Revisit in step 5, together with whether signatures from passkey and contract wallets repeat.
+- **Built** in the `shield` block (2026-11-19): `useBatchedShield` sends the approval and the shield as one EIP-5792 batch when the wallet reports `supported` and the token needs an allowance. It approves the exact amount, clears a leftover allowance first, waits for the batch's call status, reads every receipt, and only then reports the shield's hash. `onSubmitted` therefore fires once the batch is mined. Other wallets keep `approve-button` in front of the shield button. Six tests cover it; the test wallet in `test/wagmi.tsx` takes `capabilities`.
+- **`batch-transaction` still treats `ready` as atomic.** Only the shield block applies the stricter rule. Open: align the two.
+
+*Shield flow, as built (2026-11-19)*
+
+Four directions were prototyped behind a picker; the owner chose two, and both ship as variants of the block. The prototype is deleted.
+
+- **One flow hook, two shells.** `useShieldFlow` runs the shield as a list of wallet steps (`sign`, `reset`, `approve`, `shield`, `batch`), one click each. `variant="in-place"` (default) locks the form and steps through the prompts on one button, then follows the shield in one line. `variant="collapse"` folds the form into a summary with a step list, then shows the status card until "Shield more".
+- **The plan is known before the first prompt.** For that the quote grew two fields: `spender` (moved here from `PreparedShield`) and `needsSignature`. With the allowance and the wallet's capabilities they give the steps up front, so the form can say "Two wallet prompts: sign, approve and shield together."
+- **The click that starts the shield opens the first prompt.** No extra click to leave the form, in either variant. After that, one click per prompt.
+- **The draft is frozen at start,** with its quote. This replaces "a changed amount discards the built transaction": the amount can no longer change mid-flow.
+- **The block sends the transactions itself** and no longer composes `approve-button` and `transaction-button`. It needed one stepper over all steps. `approve-button` now exports `requiresAllowanceReset`, so the USDT rule lives in one place.
+- **`ShieldPhase` is now `idle | signing | approving | shielding | cancelled | error`.** `useShield` and `useBatchedShield` are gone; `useShieldFlow` covers both.
+- **`shielded-transaction-status` has a `line` variant** and exports `shieldedStatusText`.
+- **Mock:** `shieldSignature: false` imitates a protocol that needs no signature. With a batching wallet that is a single prompt, opened straight from the form.
+- **Motion:** content swaps fade and rise over 200 ms, ease-out; the collapse variant animates its height; the summary amount shrinks from the input's size. All of it stops under reduced motion. It uses `tw-animate-css` classes, which shadcn installs.
+
 **Shield and spend phases** (exported like `TxPhase`)
+
+The plan before step 3. `ShieldPhase` was built smaller, see "Step 3 results". `PrivateTxPhase` is still the plan for step 4.
 ```ts
 export type ShieldPhase =
   | "idle" | "approving" | "signing" | "confirming" | "pending"

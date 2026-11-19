@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address, Hash, Hex } from "viem";
 
 /**
  * The contract between 0xui's shielded components and a privacy protocol.
@@ -88,6 +88,48 @@ export const PROOF_STAGES = [
 /** `none`: no private account on this device. `locked`: one exists, encrypted. */
 export type ShieldedAccountStatus = "none" | "locked" | "unlocked";
 
+/** Move tokens from a public wallet into the account's private balance. */
+export type ShieldDraft = {
+  chainId: number;
+  /** ERC-20 contract. Native currency is shielded as its wrapped token. */
+  token: Address;
+  /** Amount leaving the public wallet. The protocol fee comes out of it. */
+  amount: bigint;
+};
+
+/** What a shield costs and yields. Known before anything is signed. */
+export type ShieldQuote = {
+  /** Protocol fee, taken from the amount. */
+  fee: bigint;
+  /** What arrives in the private balance. */
+  received: bigint;
+  /** Seconds the funds stay `pending` before they can be spent. */
+  standby: number;
+  /** Contract that must be allowed to spend the token before the shield is sent. */
+  spender?: Address;
+  /** True when `prepareShield` will ask the wallet for a signature. */
+  needsSignature: boolean;
+};
+
+/** A transaction for the public wallet to send. */
+export type PublicCall = { to: Address; data?: Hex; value?: bigint };
+
+/** A shield, ready for the public wallet. */
+export type PreparedShield = {
+  /** The shield transaction. The quote's `spender` must be approved before it is sent. */
+  transaction: PublicCall;
+};
+
+/** A public transaction as the private side sees it, once a scan has found it. */
+export type ShieldedTransaction = {
+  kind: "shield";
+  token: Address;
+  /** What arrived in the private balance, after the fee. */
+  amount: bigint;
+  /** Where those funds are now. */
+  state: ShieldedBalanceState;
+};
+
 /** Move tokens from the private balance to a public address. */
 export type UnshieldDraft = {
   kind: "unshield";
@@ -151,8 +193,17 @@ export interface ShieldedEngine {
   getBalances(chainId: number): readonly ShieldedTokenBalance[] | undefined;
 
   /**
+   * What the private side knows about a public transaction, e.g. a shield.
+   * `undefined` until a scan has found it: a mined transaction is not yet
+   * a private balance. Changes are announced with the `balances` event.
+   * Returns the same object until it changes.
+   */
+  getTransaction(chainId: number, hash: Hash): ShieldedTransaction | undefined;
+
+  /**
    * Scan a chain now. Engines scan on their own after `unlock` and on an
-   * interval; call this to retry a failed scan or to refresh early. Resolves
+   * interval; call this to retry a failed scan, to refresh early, or once a
+   * shield is mined so the engine finds it without waiting. Resolves
    * when the scan settles. A failure is reported through `getSync`, not by
    * rejecting.
    */
@@ -164,6 +215,28 @@ export interface ShieldedEngine {
    * `proving`. Rejects if the attempt itself failed.
    */
   retryProofs(chainId: number): Promise<void>;
+
+  /**
+   * What a shield costs and what the wallet will be asked for: fee, amount
+   * received, standby period, the spender to approve, and whether a signature
+   * is needed. Signs nothing and sends nothing, so the UI can lay out every
+   * wallet step before the first one.
+   */
+  quoteShield(draft: ShieldDraft): Promise<ShieldQuote>;
+
+  /**
+   * Build the transaction that shields `draft` into this account. The
+   * public wallet sends it; the engine never does.
+   *
+   * Some protocols derive a one-off key from a wallet signature. The engine
+   * then calls `sign` with the message, at most once, and its quote says so
+   * with `needsSignature`. A rejected signature must reject this promise
+   * with the wallet's error.
+   */
+  prepareShield(
+    draft: ShieldDraft,
+    options: { sign(message: string): Promise<Hex> }
+  ): Promise<PreparedShield>;
 
   /**
    * Generate the proof for a private operation. `onStage` is called as each

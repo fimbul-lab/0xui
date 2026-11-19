@@ -36,7 +36,7 @@ npx shadcn@latest add @0xui/chain-selector
 | `token-input` | Swap panel: amount, token picker, fiat, balance with Max, insufficient state. |
 | `token-select` | Searchable token picker with recent/popular tokens and balances. |
 | `amount-input` | Decimal amount input with string state and decimal clamping. |
-| `address-input` | Address or ENS input with resolution and checksum validation. |
+| `address-input` | Address or ENS input with resolution and checksum validation. Optionally accepts private `0zk` addresses. |
 | `approve-button` | ERC-20 approval gate in front of your action. |
 | `network-guard` | "Switch to X" notice for chain-specific content. |
 | `sign-message` | Sign messages or typed data, with optional verification. |
@@ -72,6 +72,9 @@ Components for private balances. They talk to a shielded engine, and only a mock
 | --- | --- |
 | `shielded-engine` | The interface between the components and a privacy protocol, with its provider and hooks. |
 | `mock-shielded-engine` | In-memory engine for demos and tests. No network, no funds. |
+| `shield` | Shield block: fee, wait and wallet prompts up front, then sign, approve and shield one click at a time (approve and shield in one prompt on batching wallets), and the funds followed until spendable. Two variants. |
+| `shielded-account` | Create, import, unlock and lock the private account, with a recovery phrase step. |
+| `shielded-transaction-status` | Follows a shield from the public chain into the private balance. |
 | `shielded-balance` | Private balance of a token, split into spendable, pending, proving, incomplete and restricted. |
 | `shielded-sync-status` | Scan progress with a bar that never moves backwards, and a retry. |
 | `proof-progress` | Proof generation as stages, with cancel and retry. |

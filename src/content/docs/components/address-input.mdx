@@ -5,7 +5,7 @@ description: Recipient field that takes an address or ENS name, resolves names, 
 
 import Install from "@/components/docs/Install.astro";
 import Preview from "@/components/docs/Preview.astro";
-import { Default } from "@/demos/address-input";
+import { Default, Shielded } from "@/demos/address-input";
 
 Type or paste an address or an ENS name. Names resolve on mainnet once typing pauses, with the avatar and resolved address shown. Mixed-case addresses must match their checksum, which catches most single-character typos. Problems show after the field loses focus, not while typing.
 
@@ -34,6 +34,27 @@ const [recipient, setRecipient] = useState<Address>();
 
 Always send to `state.address`, never to the raw text. It is `undefined` until the input is a valid address or a resolved name.
 
+## Private addresses
+
+With `shielded`, the field also accepts a private `0zk…` address, for a recipient inside a private balance. It is checked by length and by its own checksum, so one wrong character is caught. The result is in `state.shieldedAddress`, and `state.address` stays `undefined`.
+
+<Preview>
+  <Shielded client:load />
+</Preview>
+
+```tsx
+<AddressInput
+  value={text}
+  onValueChange={setText}
+  shielded
+  onResolve={(state) => setRecipient(state.shieldedAddress ?? state.address)}
+/>
+```
+
+A private address is never sent to an ENS resolver or any other lookup. Without `shielded`, a pasted `0zk` address is turned down with "Private (0zk) addresses can't be used here."
+
+The format is Railgun's: `0zk`, 127 characters, bech32m. `isShieldedAddress` in `lib/0xui-utils` is the same check on its own.
+
 ## States
 
 `data-phase` on the root holds the current state.
@@ -58,5 +79,6 @@ Also accepts `<input>` props.
 | `onResolve` | `(state) => void` | — | Called when validation settles on a new result. |
 | `label` | `string` | `"Recipient"` | Accessible label. |
 | `showPaste` | `boolean` | `true` | Paste button while empty. |
+| `shielded` | `boolean` | `false` | Also accept private `0zk…` addresses. |
 
-Headless: `useAddressInput(value)` returns the same state.
+Headless: `useAddressInput(value, { shielded })` returns the same state.

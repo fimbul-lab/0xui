@@ -137,3 +137,55 @@ export function resolveUri(uri: string, gateway = "https://ipfs.io/ipfs/") {
   if (uri.startsWith("ar://")) return `https://arweave.net/${uri.slice(5)}`;
   return uri;
 }
+
+const BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+const BECH32M_CONSTANT = 0x2bc830a3;
+const BECH32_GENERATORS = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+
+function bech32Polymod(values: readonly number[]) {
+  let checksum = 1;
+  for (const value of values) {
+    const top = checksum >>> 25;
+    checksum = ((checksum & 0x1ffffff) << 5) ^ value;
+    for (let i = 0; i < 5; i++) {
+      if ((top >>> i) & 1) checksum ^= BECH32_GENERATORS[i]!;
+    }
+  }
+  return checksum;
+}
+
+function bech32PrefixWords(prefix: string) {
+  const codes = Array.from(prefix, (char) => char.charCodeAt(0));
+  return [...codes.map((code) => code >>> 5), 0, ...codes.map((code) => code & 31)];
+}
+
+/**
+ * Encode 5-bit words as a bech32m string (BIP-350): prefix, `1`, the words,
+ * then a six-character checksum.
+ */
+export function encodeBech32m(prefix: string, words: readonly number[]) {
+  const polymod =
+    bech32Polymod([...bech32PrefixWords(prefix), ...words, 0, 0, 0, 0, 0, 0]) ^ BECH32M_CONSTANT;
+  const checksum = Array.from({ length: 6 }, (_, i) => (polymod >>> (5 * (5 - i))) & 31);
+  return `${prefix}1${[...words, ...checksum].map((word) => BECH32_CHARSET[word]).join("")}`;
+}
+
+/** Prefix and length of a private (shielded) address, as Railgun encodes them. */
+export const SHIELDED_ADDRESS_PREFIX = "0zk";
+export const SHIELDED_ADDRESS_LENGTH = 127;
+
+/**
+ * True for a well-formed private address: `0zk1…`, 127 characters, lower
+ * case, with a matching bech32m checksum. One mistyped or missing character
+ * fails the checksum. Like a checksummed 0x address, it says nothing about
+ * who holds the keys.
+ */
+export function isShieldedAddress(value: string) {
+  if (value.length !== SHIELDED_ADDRESS_LENGTH) return false;
+  if (!value.startsWith(`${SHIELDED_ADDRESS_PREFIX}1`)) return false;
+  const words = Array.from(value.slice(SHIELDED_ADDRESS_PREFIX.length + 1), (char) =>
+    BECH32_CHARSET.indexOf(char)
+  );
+  if (words.includes(-1)) return false;
+  return bech32Polymod([...bech32PrefixWords(SHIELDED_ADDRESS_PREFIX), ...words]) === BECH32M_CONSTANT;
+}

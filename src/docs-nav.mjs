@@ -53,12 +53,14 @@ const groups = [
   },
   {
     label: "Shielded",
-    blurb: "Private balances, scans and proofs. A preview that runs on a mock engine.",
+    blurb: "Private accounts, balances, scans and proofs. A preview that runs on a mock engine.",
     items: [
       "shielded-engine",
       "mock-shielded-engine",
+      "shielded-account",
       "shielded-balance",
       "shielded-sync-status",
+      "shielded-transaction-status",
       "proof-progress",
       "shielded-address",
       "privacy-badge",

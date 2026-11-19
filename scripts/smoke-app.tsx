@@ -42,10 +42,13 @@ import { WalletButton } from "@/components/wallet-button";
 import { Web3Provider } from "@/components/web3-provider";
 import { PrivacyBadge } from "@/components/privacy-badge";
 import { ProofProgress, useProof } from "@/components/proof-progress";
+import { Shield } from "@/components/shield";
+import { ShieldedAccount } from "@/components/shielded-account";
 import { ShieldedAddress } from "@/components/shielded-address";
 import { ShieldedBalance } from "@/components/shielded-balance";
 import { ShieldedProvider, useShieldedAccount } from "@/components/shielded-provider";
 import { ShieldedSyncStatus } from "@/components/shielded-sync-status";
+import { ShieldedTransactionStatus } from "@/components/shielded-transaction-status";
 import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
 
 const address = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
@@ -103,6 +106,18 @@ function Shielded() {
         Prove
       </button>
       <ProofProgress phase={proof.phase} stage={proof.stage} error={proof.error} onCancel={proof.cancel} />
+      <ShieldedAccount>
+        <Shield
+          tokens={tokens}
+          chainId={1}
+          onSubmitted={(hash, draft) => shieldedEngine.simulate.shield({ ...draft, hash })}
+        />
+        <Shield tokens={tokens} chainId={1} variant="collapse" />
+      </ShieldedAccount>
+      <ShieldedAccount />
+      <ShieldedTransactionStatus hash={`0x${"ab".repeat(32)}`} chainId={1} standby={60} />
+      <ShieldedTransactionStatus hash={`0x${"ab".repeat(32)}`} chainId={1} variant="line" />
+      <AddressInput value="" onValueChange={() => {}} shielded />
     </>
   );
 }

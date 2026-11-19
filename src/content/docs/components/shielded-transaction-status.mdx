@@ -1,0 +1,109 @@
+---
+title: Shielded Transaction Status
+description: Follows a shield from the public chain until the funds are spendable in the private balance.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Restricted, Line } from "@/demos/shielded-transaction-status";
+
+A shield is not done when its transaction is mined. The private account has to find the funds by scanning, and then they wait out a standby period before they can be spent. This card follows all of it, and only calls the shield done at the end.
+
+Connect the **Demo Wallet** and shield. The demo's standby period is 20 seconds, not the real 60. The demo hash isn't on chain, so its explorer link won't resolve.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+It reads the public receipt through wagmi and the private side from a [shielded engine](/components/shielded-engine/). These demos run on the [mock engine](/components/mock-shielded-engine/).
+
+## Installation
+
+<Install name="shielded-transaction-status" />
+
+## Usage
+
+```tsx
+import { ShieldedTransactionStatus } from "@/components/shielded-transaction-status";
+
+<ShieldedTransactionStatus hash={hash} chainId={1} standby={quote.standby} token={weth}>
+  Shield 0.5 WETH
+</ShieldedTransactionStatus>;
+```
+
+`standby` is the number of seconds from the engine's shield quote. With it, the last step counts down from the block the transaction was mined in. The countdown is an estimate: the step only completes when the engine reports the funds as spendable.
+
+The [Shield](/blocks/shield/) block renders this card for you after sending.
+
+## A receipt is not proof
+
+When we ran the Railgun SDK on Sepolia, a transaction sent the wrong way was mined with status `success` and moved nothing. So this component takes the public receipt only as far as "confirmed". Everything after that comes from the engine:
+
+- Once the transaction is mined, it asks the engine to scan (`engine.sync`), so the funds show up without waiting for the engine's next scan.
+- `engine.getTransaction(chainId, hash)` returns nothing until a scan has found the funds. Then it says which state they are in.
+- `onSpendable` fires when that state is `spendable`.
+
+## Examples
+
+### Restricted funds
+
+A shield can end with funds that are in the private balance but can't be spent privately.
+
+<Preview>
+  <Restricted client:load />
+</Preview>
+
+### One line
+
+For under a form, where a card is too much. Same states, in a sentence.
+
+<Preview>
+  <Line client:load />
+</Preview>
+
+```tsx
+<ShieldedTransactionStatus variant="line" hash={hash} chainId={1} standby={60} token={weth}>
+  Shield 0.5 WETH
+</ShieldedTransactionStatus>
+```
+
+`shieldedStatusText(phase, secondsLeft)` returns the sentence on its own.
+
+### Headless
+
+```tsx
+import { useShieldedTransactionStatus } from "@/components/shielded-transaction-status";
+
+const { phase, receipt, transaction, secondsLeft } = useShieldedTransactionStatus({
+  hash,
+  chainId: 1,
+  standby: 60,
+});
+```
+
+`formatWait(seconds)` turns `secondsLeft` into "45 s" or "about 2 min".
+
+## States
+
+| `data-phase` | Heading | Meaning |
+| --- | --- | --- |
+| `pending` | Shield pending | Sent, not mined yet. |
+| `confirmed` | Confirmed, updating private balance | Mined. The private account has not found the funds yet. |
+| `standby` | Shielded, not spendable yet | In the private balance, waiting out the standby period. |
+| `spendable` | Shielded and spendable | Done. |
+| `restricted` | Shielded, but restricted | The funds can only go back to the address they came from. |
+| `reverted` | Shield reverted | Nothing was shielded. |
+| `error` | Couldn't track shield | The transaction wasn't found or the RPC failed. |
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `hash` | `Hash` | — | The shield transaction. |
+| `chainId` | `number` | — | Chain it was sent on. Required. |
+| `standby` | `number` | — | Seconds funds stay pending, from the shield quote. Enables the countdown. |
+| `token` | `{ symbol, decimals }` | — | To show the amount that arrived. |
+| `title` | `ReactNode` | per phase | Heading override. |
+| `children` | `ReactNode` | — | What the transaction does. |
+| `onSpendable` | `(transaction) => void` | — | Called once when the funds become spendable. |
+| `variant` | `"card" \| "line"` | `"card"` | Every step, or one line of status. |
