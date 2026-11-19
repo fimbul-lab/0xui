@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/copy-button.md
 import { CheckIcon, CopyIcon } from "lucide-react";
 import type { ComponentProps, ComponentType } from "react";
 import { Button } from "@/components/ui/button";

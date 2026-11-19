@@ -4,7 +4,7 @@
 
 import { gettingStarted, groupComponents } from "../docs-nav.mjs";
 
-export const site = "https://0xui.dev";
+export const site = "https://0xui.io";
 
 export interface DocPage {
   /** Content collection id, like `components/balance`. A section's overview is `components`. */
@@ -21,7 +21,7 @@ export interface DocSection {
   pages: DocPage[];
 }
 
-/** URL of a page's Markdown, like `https://0xui.dev/components/balance.md`. */
+/** URL of a page's Markdown, like `https://0xui.io/components/balance.md`. */
 export function markdownUrl(id: string) {
   return `${site}/${id}.md`;
 }
@@ -225,7 +225,9 @@ Every page below is Markdown. Append \`.md\` to any docs URL for its Markdown, r
 /** `/llms.txt`, as https://llmstxt.org describes it. */
 export function llmsTxt(docs: DocPage[], registry: RegistryItem[]) {
   const documented = new Set(docs.map((doc) => doc.id.split("/")[1]));
-  const extras = registry.filter((item) => !documented.has(item.name));
+  const extras = registry.filter(
+    (item) => !documented.has(item.name) && item.type !== "registry:example",
+  );
 
   return [
     "# 0xui",
@@ -238,6 +240,7 @@ export function llmsTxt(docs: DocPage[], registry: RegistryItem[]) {
     `## Registry\n\nItems without a docs page. Other components install them as dependencies.\n\n${extras
       .map((item) => `- [${item.name}](${site}/r/${item.name}.json): ${item.description ?? ""}`)
       .join("\n")}`,
+    `## Examples\n\nEvery component and block has a runnable example: \`${installCommand(["<name>-demo"])}\`, or read it at ${site}/r/<name>-demo.json. The shadcn MCP server finds them by name.`,
     `## Optional\n\n- [Full docs](${site}/llms-full.txt): every page above in one file.\n- [Registry index](${site}/r/registry.json): every item with its dependencies.\n- [Agent skill](${site}/.well-known/agent-skills/0xui/SKILL.md): how to build with 0xui.`,
   ]
     .join("\n\n")

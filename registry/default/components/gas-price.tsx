@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/gas-price.md
 import { FuelIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import { SkeletonBox } from "skullet/react";

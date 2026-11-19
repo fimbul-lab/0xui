@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/nft-card.md
 import { useQuery } from "@tanstack/react-query";
 import { ImageOffIcon } from "lucide-react";
 import { useState } from "react";

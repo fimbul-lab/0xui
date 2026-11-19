@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/morph-text.md
 import type { ReactNode } from "react";
 import { TextMorph, type TextMorphProps } from "torph/react";
 

@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/address-avatar.md
 import type { Address } from "viem";
 import { normalize } from "viem/ens";
 import { useEnsAvatar, useEnsName } from "wagmi";

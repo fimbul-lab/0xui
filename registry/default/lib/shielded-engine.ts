@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/shielded-engine.md
 import type { Address, Hash, Hex } from "viem";
 
 /**

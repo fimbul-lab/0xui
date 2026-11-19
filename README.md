@@ -11,7 +11,7 @@ Add the registry to `components.json`:
 ```json
 {
   "registries": {
-    "@0xui": "https://0xui.dev/r/{name}.json"
+    "@0xui": "https://0xui.io/r/{name}.json"
   }
 }
 ```
@@ -101,6 +101,10 @@ bun run lint
 | `src/demos/` | Live demos. Each export is one Astro island wrapped in a demo wallet. |
 | `skills/0xui/SKILL.md` | Agent skill, served at `/.well-known/agent-skills/`. List new components in its table (a test checks). |
 | `src/lib/agent-docs.ts` | Markdown for agents: `/<page>.md`, `/llms.txt`, `/llms-full.txt`. `src/lib/webmcp.ts` registers the WebMCP tools. |
+| `registry/default/examples/` | A `<name>-demo` example per component, found by the shadcn MCP server. |
+| `src/lib/props.ts` | Props from the TypeScript types: `/props/<name>.json`, and a test that fails when a docs Props table lists a prop the code doesn't have. |
+| `worker/`, `wrangler.jsonc` | Cloudflare Worker in front of the static site: answers `Accept: text/markdown` and adds `Link` headers. Deploy with `bun run deploy`. |
+| `scripts/agent-eval/` | Agent evals: Claude Code builds tasks in a fresh app with the skill, then a checker grades it. `bun run eval:agents`. |
 | `scripts/smoke-install.sh` | Installs every item into a fresh shadcn app and builds it. Runs in CI. |
 
 In this repo, `@/…` imports resolve to `registry/default/` first and then `src/`, so registry code uses the same import paths it will have after install.

@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/getting-started/installation.md
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { WagmiProvider, type Config, type State } from "wagmi";

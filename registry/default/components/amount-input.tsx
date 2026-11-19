@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/amount-input.md
 import {
   useId,
   type ClipboardEvent,

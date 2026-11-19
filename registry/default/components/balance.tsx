@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/balance.md
 import { SkeletonBox } from "skullet/react";
 import { erc20Abi, type Address } from "viem";
 import { useBalance, useConnection, useReadContracts } from "wagmi";

@@ -137,6 +137,7 @@ Also accepts shadcn `Button` props.
 | `successLabel` | `ReactNode` | `"Done"` | Label after success. |
 | `resetAfter` | `number \| false` | `4000` | Back to idle after success, in ms. |
 | `hideStatus` | `boolean` | `false` | Hide the status line. |
+| `agentConfirm` | `string \| false` | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. |
 | `onSubmitted` | `(hash) => void` | — | Wallet returned a hash. |
 | `onSuccess` | `(receipt) => void` | — | Mined successfully. |
 | `onError` | `(error) => void` | — | Failed or reverted. Not called on cancel. |

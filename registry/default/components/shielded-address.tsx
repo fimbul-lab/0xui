@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/shielded-address.md
 import { CopyButton } from "@/components/copy-button";
 import { cn } from "@/lib/utils";
 

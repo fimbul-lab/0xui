@@ -73,5 +73,7 @@ Also accepts shadcn `Button` props.
 | `onSigned` | `(signature) => void` | — | Called with the signature. |
 | `showMessage` | `boolean` | `false` | Show what is being signed. |
 | `showSignature` | `boolean` | `false` | Show the signature with copy. |
+| `children` | `ReactNode` | `"Sign message"` | Label. |
+| `agentConfirm` | `string \| false` | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. |
 
 Headless: `useSignFlow(request, { verify })`.

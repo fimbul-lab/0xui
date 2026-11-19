@@ -26,6 +26,27 @@ Async components export their state as a union type, such as `type TxPhase = "id
 [data-phase="pending"] { opacity: 0.8; }
 ```
 
+When an action fails, `data-error` says why, as one stable word next to `data-phase`:
+
+| `data-error` | Meaning |
+| --- | --- |
+| `user-rejected` | The person dismissed the wallet prompt. Not an error. |
+| `reverted` | The transaction or call reverted. |
+| `insufficient-funds` | Not enough native currency for the value and gas. |
+| `wrong-chain` | The wallet is on, or can't switch to, the wrong chain. |
+| `no-wallet` | No wallet or connector is available. |
+| `unsupported` | The wallet doesn't support the request, like batching. |
+| `network` | The RPC failed or timed out. |
+| `unknown` | Anything else. Read the message. |
+
+`errorCode(phase, error)` in `0xui-utils` produces it, for your own components too.
+
+## Agents
+
+Buttons that send, sign or approve carry `data-agent-confirm` with a sentence saying what they do, like "Send 0.1 ETH: sends a transaction on Ethereum from your wallet". Browser agents treat it as "a person must approve this first". Override the sentence with `agentConfirm`, or pass `agentConfirm={false}` to drop it.
+
+Together with `data-phase` and `data-error`, an agent can drive a 0xui interface and know what happened without reading the page. [Agent Tools](/components/agent-tools/) also gives agents the wallet state directly.
+
 ## Web3 rules
 
 - **Amounts are `bigint`** from end to end. Formatting goes through viem `formatUnits` / `parseUnits`, never `Number()`.

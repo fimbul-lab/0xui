@@ -1,23 +1,15 @@
+// Docs: https://0xui.io/components/transaction-status.md
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import type { Hash, TransactionReceipt } from "viem";
-import {
-  useChainId,
-  usePublicClient,
-  useTransactionConfirmations,
-} from "wagmi";
+import { useChainId, usePublicClient, useTransactionConfirmations } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
 import { ExplorerLink } from "@/components/explorer-link";
-import { truncateAddress } from "@/lib/0xui-utils";
+import { errorCode, truncateAddress } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
-export type TxStatusPhase =
-  | "pending"
-  | "confirming"
-  | "confirmed"
-  | "reverted"
-  | "error";
+export type TxStatusPhase = "pending" | "confirming" | "confirmed" | "reverted" | "error";
 
 /**
  * Wait for a transaction to be mined. Unlike wagmi's
@@ -69,11 +61,7 @@ export function useTransactionStatus({
     },
   });
 
-  const confirmationCount = mined
-    ? confirmations > 1
-      ? Number(count.data ?? 1n)
-      : 1
-    : 0;
+  const confirmationCount = mined ? (confirmations > 1 ? Number(count.data ?? 1n) : 1) : 0;
 
   const phase: TxStatusPhase = receipt.isError
     ? "error"
@@ -156,8 +144,7 @@ export function TransactionStatus({
   if (status.required > 1 && phase !== "reverted") {
     steps.push({
       label: `${status.confirmations} of ${status.required} confirmations`,
-      state:
-        phase === "confirmed" ? "done" : phase === "confirming" ? "active" : "todo",
+      state: phase === "confirmed" ? "done" : phase === "confirming" ? "active" : "todo",
     });
   }
 
@@ -165,6 +152,7 @@ export function TransactionStatus({
     <div
       data-slot="transaction-status"
       data-phase={phase}
+      data-error={errorCode(phase, status.error)}
       className={cn("flex flex-col gap-3 rounded-xl border p-4 text-sm", className)}
     >
       <div className="flex flex-col gap-1">
@@ -173,7 +161,7 @@ export function TransactionStatus({
           className={cn(
             "font-medium",
             phase === "confirmed" && "text-emerald-600 dark:text-emerald-400",
-            (phase === "reverted" || phase === "error") && "text-destructive"
+            (phase === "reverted" || phase === "error") && "text-destructive",
           )}
         >
           {title ?? headings[phase]}
@@ -194,8 +182,8 @@ export function TransactionStatus({
 
       {phase === "error" && (
         <p role="alert" className="text-destructive">
-          The transaction wasn't found or the RPC stopped responding. Check the
-          explorer for its current state.
+          The transaction wasn't found or the RPC stopped responding. Check the explorer for its
+          current state.
         </p>
       )}
 

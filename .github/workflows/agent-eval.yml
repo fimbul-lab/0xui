@@ -1,0 +1,38 @@
+name: Agent eval
+
+# Gives Claude Code a fresh shadcn app with the 0xui skill and registry, runs
+# each task in scripts/agent-eval/tasks.ts, and grades the result.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Claude model id
+        default: claude-sonnet-5-5
+      task:
+        description: Task id (blank runs all)
+        default: ""
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run registry:build
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: Run agent eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODEL: ${{ inputs.model || 'claude-sonnet-5-5' }}
+          TASK: ${{ inputs.task }}
+        run: bun run eval:agents --model "$MODEL" --out "$RUNNER_TEMP/agent-eval" ${TASK:+--task "$TASK"}
+      - if: always()
+        run: cat "$RUNNER_TEMP/agent-eval/summary.md" >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-results
+          path: ${{ runner.temp }}/agent-eval
+          if-no-files-found: ignore

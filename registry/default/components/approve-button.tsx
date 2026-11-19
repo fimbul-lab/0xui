@@ -1,10 +1,8 @@
+// Docs: https://0xui.io/components/approve-button.md
 import type { ReactNode } from "react";
 import { erc20Abi, maxUint256, type Address } from "viem";
 import { useConnection, useReadContract } from "wagmi";
-import {
-  TransactionButton,
-  type TransactionButtonProps,
-} from "@/components/transaction-button";
+import { TransactionButton, type TransactionButtonProps } from "@/components/transaction-button";
 
 export type UseAllowanceParameters = {
   /** ERC-20 contract. */
@@ -108,6 +106,12 @@ export function ApproveButton({
         args: [spender, reset ? 0n : unlimited ? maxUint256 : amount],
       }}
       disabledReason={checking ? "Checking allowance…" : buttonProps.disabledReason}
+      agentConfirm={
+        buttonProps.agentConfirm ??
+        (reset
+          ? `Reset ${token.symbol} approval: sets ${spender}'s allowance to 0`
+          : `Approve ${token.symbol}: lets ${spender} spend ${unlimited ? `all of your ${token.symbol}` : `the ${token.symbol} this action needs`}`)
+      }
       successLabel={reset ? "Approval reset" : "Approved"}
       resetAfter={false}
       onSuccess={async (receipt) => {

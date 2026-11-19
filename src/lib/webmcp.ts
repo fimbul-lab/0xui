@@ -48,7 +48,7 @@ const stripTags = (html: string) =>
 
 /** The page id in a docs or Markdown URL, like `components/balance`. */
 function pageId(url: string) {
-  return new URL(url, "https://0xui.dev").pathname.replace(/^\/|\/$|\.md$/g, "");
+  return new URL(url, "https://0xui.io").pathname.replace(/^\/|\/$|\.md$/g, "");
 }
 
 export function docsTools({

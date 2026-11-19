@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/event-feed.md
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
 import { isAddress, type Abi, type Address, type Log } from "viem";

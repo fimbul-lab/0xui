@@ -152,7 +152,7 @@ Each phase ends with something shippable: components live on the docs site and i
 - CI (GitHub Actions): `lint`, `check`, `test`, `build`, `registry:build`, plus a smoke job that runs `shadcn add` of every item into a fresh Vite app and runs `tsc`.
 
 **Phase 0 follow-ups**
-- **Registry domain.** The docs and README use `https://0xui.dev/r/{name}.json` as a placeholder. Set the real domain (and Astro `site`) when the docs deploy. Later, list `@0xui` in the shadcn registry index so users don't need the `components.json` entry.
+- **Registry domain.** The docs live at `https://0xui.io`, set in the docs, README, registry and Astro `site`. Later, list `@0xui` in the shadcn registry index so users don't need the `components.json` entry.
 - **`@web3icons/react/dynamic` emits about 2k lazy chunks** (every token and network icon) in a consumer's build. They are never loaded unless used, but they slow builds and add noise. Consider a static per-chain import map.
 - **Radix**: dropped 2026-11-18. 0xui targets the Base UI flavor of shadcn only, and the Radix smoke job is gone.
 - **Docs demos share one wagmi config**, so switching chain in one demo moves every demo on the page. Fine for now. Give each island its own config if it starts to confuse.

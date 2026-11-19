@@ -1,0 +1,80 @@
+---
+title: Agent Tools
+description: WebMCP tools that let browser agents read the wallet, its balances and chains, without clicking through your app.
+---
+
+import Install from "@/components/docs/Install.astro";
+
+Registers [WebMCP](https://webmachinelearning.github.io/webmcp/) tools with the browser, so an agent working in your app can ask for the connected wallet, its balances and the supported chains directly. It reads from your wagmi config. In browsers without WebMCP it does nothing.
+
+The tools read, except `switch_chain`, which opens the wallet's own prompt. Sending and signing stay with the person: 0xui buttons mark those with [`data-agent-confirm`](/getting-started/conventions/#agents).
+
+## Installation
+
+<Install name="agent-tools" />
+
+## Usage
+
+Render it once, inside your `Web3Provider`:
+
+```tsx
+import { AgentTools } from "@/components/agent-tools";
+
+<Web3Provider>
+  <AgentTools />
+  <App />
+</Web3Provider>;
+```
+
+## Tools
+
+| Tool | Input | Returns |
+| --- | --- | --- |
+| `get_wallet` | — | Connection status, address, wallet name, chain, and whether the chain is supported. |
+| `list_chains` | — | The app's chains, with the current one marked. |
+| `get_balance` | `token?`, `address?`, `chain?` | Native or ERC-20 balance as a decimal string, raw value and symbol. |
+| `get_gas_price` | `chain?` | Gas price in wei and gwei. |
+| `switch_chain` | `chain` | The chain switched to. The wallet asks the person first. |
+
+`chain` takes an id or a name, like `8453` or `"Base"`. An unsupported chain fails with the list of supported ones.
+
+## Examples
+
+### Your own tools
+
+Add tools for your app's own data next to the wallet tools. Keep the array stable, like a module constant or `useMemo`, since a new array registers everything again.
+
+```tsx
+import { AgentTools, type AgentTool } from "@/components/agent-tools";
+
+const tools: AgentTool[] = [
+  {
+    name: "get_positions",
+    title: "Get open positions",
+    description: "Lists the connected account's open positions.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true },
+    execute: async () => fetchPositions(),
+  },
+];
+
+<AgentTools tools={tools} />;
+```
+
+### Headless
+
+```tsx
+import { useAgentTools, walletAgentTools } from "@/components/agent-tools";
+
+useAgentTools({ enabled: agentsAllowed });
+
+// Or the tool list itself, to hand to your own model:
+const tools = walletAgentTools(config);
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tools` | `AgentTool[]` | — | Your own tools, registered next to the wallet tools. |
+| `enabled` | `boolean` | `true` | Register nothing while `false`, e.g. until the person opts in. |

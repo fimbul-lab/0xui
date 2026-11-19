@@ -1,0 +1,7 @@
+# Agents and AI crawlers are welcome. Every page has a Markdown version:
+# https://0xui.io/llms.txt lists them all.
+User-agent: *
+Content-Signal: search=yes, ai-input=yes
+Allow: /
+
+Sitemap: https://0xui.io/sitemap-index.xml

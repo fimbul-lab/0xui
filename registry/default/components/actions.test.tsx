@@ -46,13 +46,20 @@ describe("ApproveButton", () => {
       <ApproveButton token={usdc} spender={router} amount={parseUnits("50", 6)} chainId={1}>
         <button>Swap</button>
       </ApproveButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
-    await user.click(await screen.findByRole("button", { name: "Approve USDC" }));
+    const approve = await screen.findByRole("button", { name: "Approve USDC" });
+    expect(approve).toHaveAttribute(
+      "data-agent-confirm",
+      `Approve USDC: lets ${router} spend the USDC this action needs`,
+    );
+    await user.click(approve);
 
-    expect(await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 }),
+    ).toBeInTheDocument();
   });
 
   it("skips approval when the allowance already covers the amount", async () => {
@@ -63,7 +70,7 @@ describe("ApproveButton", () => {
       <ApproveButton token={usdc} spender={router} amount={parseUnits("50", 6)} chainId={1}>
         <button>Swap</button>
       </ApproveButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -73,7 +80,10 @@ describe("ApproveButton", () => {
 
   it("resets a leftover USDT allowance to 0 before approving", async () => {
     const user = userEvent.setup();
-    const usdt = { address: "0xdAC17F958D2ee523a2206206994597C13D831ec7" as Address, symbol: "USDT" };
+    const usdt = {
+      address: "0xdAC17F958D2ee523a2206206994597C13D831ec7" as Address,
+      symbol: "USDT",
+    };
     let allowance = parseUnits("5", 6);
     const approved: bigint[] = [];
     const chain = fakeChainRpc();
@@ -94,14 +104,18 @@ describe("ApproveButton", () => {
       <ApproveButton token={usdt} spender={router} amount={parseUnits("50", 6)} chainId={1}>
         <button>Swap</button>
       </ApproveButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
     await user.click(await screen.findByRole("button", { name: "Reset USDT approval" }));
-    await user.click(await screen.findByRole("button", { name: "Approve USDT" }, { timeout: 5_000 }));
+    await user.click(
+      await screen.findByRole("button", { name: "Approve USDT" }, { timeout: 5_000 }),
+    );
 
-    expect(await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 }),
+    ).toBeInTheDocument();
     expect(approved).toEqual([0n, parseUnits("50", 6)]);
   });
 });
@@ -120,7 +134,7 @@ describe("NetworkGuard", () => {
       <NetworkGuard chainId={11155111} mode="replace">
         Content
       </NetworkGuard>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -141,6 +155,10 @@ describe("NetworkGuard", () => {
     await user.click(await screen.findByRole("button", { name: "Switch to Sepolia" }));
     expect(await screen.findByText("Switch cancelled in wallet.")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Wrong network" })).toHaveAttribute(
+      "data-error",
+      "user-rejected",
+    );
   });
 });
 
@@ -163,7 +181,7 @@ describe("SignMessage", () => {
     const config = signerConfig();
     renderWithWagmi(
       <SignMessage message="Sign in to 0xui" verify showMessage onSigned={onSigned} />,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -193,8 +211,18 @@ describe("SignMessage", () => {
     renderWithWagmi(<SignMessage message="hello" />, { config });
     await act(() => connectMock(config));
 
-    await user.click(screen.getByRole("button", { name: "Sign message" }));
+    const button = screen.getByRole("button", { name: "Sign message" });
+    expect(button).toHaveAttribute(
+      "data-agent-confirm",
+      "Sign message: signs a message with your wallet",
+    );
+    await user.click(button);
     expect(await screen.findByText("Cancelled in wallet.")).toBeInTheDocument();
+    expect(button.closest("[data-slot=sign-message]")).toHaveAttribute("data-phase", "cancelled");
+    expect(button.closest("[data-slot=sign-message]")).toHaveAttribute(
+      "data-error",
+      "user-rejected",
+    );
   });
 
   it("asks to connect first", async () => {

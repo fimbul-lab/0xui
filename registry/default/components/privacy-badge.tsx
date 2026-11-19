@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/privacy-badge.md
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
 import { cn } from "@/lib/utils";

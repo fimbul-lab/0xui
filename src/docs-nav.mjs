@@ -90,8 +90,8 @@ const groups = [
   {
     label: "Utilities",
     icon: "wrench",
-    blurb: "Small pieces the other components are built from.",
-    items: ["copy-button", "responsive-dialog", "morph-text"],
+    blurb: "Small pieces the other components are built from, and tools for browser agents.",
+    items: ["copy-button", "responsive-dialog", "morph-text", "agent-tools"],
   },
 ];
 

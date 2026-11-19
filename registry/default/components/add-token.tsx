@@ -1,18 +1,16 @@
+// Docs: https://0xui.io/components/add-token.md
 import { CheckIcon, Loader2Icon, WalletIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import type { Address } from "viem";
 import { useConnection, useWatchAsset } from "wagmi";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/ui/button";
-import { isUserRejection } from "@/lib/0xui-utils";
+import { errorCode, isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type AddTokenPhase = "idle" | "adding" | "added" | "cancelled" | "error";
 
-export type AddTokenProps = Omit<
-  ComponentProps<typeof Button>,
-  "onClick" | "children"
-> & {
+export type AddTokenProps = Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
   /** ERC-20 to add. Wallets show `logoURI` as the token icon. */
   token: { address: Address; symbol: string; decimals: number; logoURI?: string };
   children?: ReactNode;
@@ -50,6 +48,7 @@ export function AddToken({
     <span
       data-slot="add-token"
       data-phase={phase}
+      data-error={errorCode(phase, watch.error)}
       className={cn("inline-flex flex-col gap-1", className)}
     >
       <Button

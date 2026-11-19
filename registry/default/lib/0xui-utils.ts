@@ -14,11 +14,9 @@ import {
  */
 export function truncateAddress(
   address: string,
-  { start = 6, end = 4 }: { start?: number; end?: number } = {}
+  { start = 6, end = 4 }: { start?: number; end?: number } = {},
 ) {
-  const value = isAddress(address, { strict: false })
-    ? getAddress(address)
-    : address;
+  const value = isAddress(address, { strict: false }) ? getAddress(address) : address;
   if (value.length <= start + end + 1) return value;
   return `${value.slice(0, start)}…${value.slice(-end)}`;
 }
@@ -40,7 +38,7 @@ export type FormatTokenAmountOptions = {
 export function formatTokenAmount(
   value: bigint,
   decimals: number,
-  { maxDecimals = 4, compact = false, locale }: FormatTokenAmountOptions = {}
+  { maxDecimals = 4, compact = false, locale }: FormatTokenAmountOptions = {},
 ) {
   const formatter = new Intl.NumberFormat(locale, {
     maximumFractionDigits: maxDecimals,
@@ -54,7 +52,7 @@ export function formatTokenAmount(
   const roundsToZero = !/[1-9]/.test(formatted);
   if (!isZero && roundsToZero) {
     const smallest = formatter.format(
-      `${value < 0n ? "-" : ""}${10 ** -maxDecimals}` as Intl.StringNumericLiteral
+      `${value < 0n ? "-" : ""}${10 ** -maxDecimals}` as Intl.StringNumericLiteral,
     );
     return value < 0n ? `>${smallest}` : `<${smallest}`;
   }
@@ -81,8 +79,7 @@ export function parseAmount(input: string, decimals: number) {
     const groupSeparator = decimalSeparator === "," ? "." : ",";
     text = text.split(groupSeparator).join("").replace(decimalSeparator, ".");
   } else if (lastComma !== -1) {
-    const isGrouping =
-      text.indexOf(",") !== lastComma || /,\d{3}$/.test(text);
+    const isGrouping = text.indexOf(",") !== lastComma || /,\d{3}$/.test(text);
     text = isGrouping ? text.split(",").join("") : text.replace(",", ".");
   }
 
@@ -101,7 +98,7 @@ export type ExplorerTarget =
 /** Link to an address, transaction or block on the chain's default block explorer. */
 export function getExplorerUrl(
   chain: Pick<Chain, "blockExplorers"> | undefined,
-  target: ExplorerTarget
+  target: ExplorerTarget,
 ) {
   const base = chain?.blockExplorers?.default.url.replace(/\/$/, "");
   if (!base) return undefined;
@@ -121,11 +118,76 @@ export function isUserRejection(error: unknown) {
       error.walk(
         (e) =>
           e instanceof UserRejectedRequestError ||
-          (e as { code?: unknown }).code === UserRejectedRequestError.code
-      )
+          (e as { code?: unknown }).code === UserRejectedRequestError.code,
+      ),
     );
   }
   return (error as { code?: unknown }).code === UserRejectedRequestError.code;
+}
+
+/**
+ * Why an action failed, as one stable word. Components set it as `data-error`
+ * next to `data-phase`, so tests, styles and browser agents can tell a
+ * cancelled prompt from a revert or a wrong network without reading the message.
+ */
+export type ErrorCode =
+  | "user-rejected"
+  | "reverted"
+  | "insufficient-funds"
+  | "wrong-chain"
+  | "no-wallet"
+  | "unsupported"
+  | "network"
+  | "unknown";
+
+const errorNames: [ErrorCode, string[]][] = [
+  ["reverted", ["ContractFunctionRevertedError", "ExecutionRevertedError"]],
+  ["insufficient-funds", ["InsufficientFundsError"]],
+  [
+    "wrong-chain",
+    [
+      "ChainMismatchError",
+      "ConnectorChainMismatchError",
+      "ChainNotConfiguredError",
+      "SwitchChainNotSupportedError",
+    ],
+  ],
+  ["no-wallet", ["ProviderNotFoundError", "ConnectorNotFoundError", "ConnectorNotConnectedError"]],
+  ["unsupported", ["MethodNotSupportedRpcError", "UnsupportedProviderMethodError"]],
+  [
+    "network",
+    ["HttpRequestError", "TimeoutError", "WebSocketRequestError", "LimitExceededRpcError"],
+  ],
+];
+
+/** The `data-error` for a component in `phase` that failed with `error`. */
+export function errorCode(phase: string, error?: unknown): ErrorCode | undefined {
+  if (phase === "cancelled") return "user-rejected";
+  if (phase === "reverted") return "reverted";
+  if (phase !== "error") return undefined;
+  if (!error) return "unknown";
+  if (isUserRejection(error)) return "user-rejected";
+
+  // viem and wagmi errors each chain their causes; walk them by name, since
+  // wagmi's errors don't extend viem's BaseError.
+  const names = new Set<string>();
+  for (let e: unknown = error, depth = 0; e && depth < 10; depth++) {
+    names.add((e as { name?: string }).name ?? "");
+    if (/insufficient funds/i.test((e as { message?: string }).message ?? "")) {
+      return "insufficient-funds";
+    }
+    e = (e as { cause?: unknown }).cause;
+  }
+  return errorNames.find(([, list]) => list.some((name) => names.has(name)))?.[0] ?? "unknown";
+}
+
+/**
+ * Text for `data-agent-confirm`, which browser agents read as "a person must
+ * approve this first". Leads with the button's label when it's plain text.
+ */
+export function agentConfirmText(label: unknown, effect: string) {
+  if (typeof label === "string" && label.trim()) return `${label.trim()}: ${effect}`;
+  return effect.charAt(0).toUpperCase() + effect.slice(1);
 }
 
 /**
@@ -184,8 +246,10 @@ export function isShieldedAddress(value: string) {
   if (value.length !== SHIELDED_ADDRESS_LENGTH) return false;
   if (!value.startsWith(`${SHIELDED_ADDRESS_PREFIX}1`)) return false;
   const words = Array.from(value.slice(SHIELDED_ADDRESS_PREFIX.length + 1), (char) =>
-    BECH32_CHARSET.indexOf(char)
+    BECH32_CHARSET.indexOf(char),
   );
   if (words.includes(-1)) return false;
-  return bech32Polymod([...bech32PrefixWords(SHIELDED_ADDRESS_PREFIX), ...words]) === BECH32M_CONSTANT;
+  return (
+    bech32Polymod([...bech32PrefixWords(SHIELDED_ADDRESS_PREFIX), ...words]) === BECH32M_CONSTANT
+  );
 }

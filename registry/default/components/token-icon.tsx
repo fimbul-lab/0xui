@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/token-icon.md
 import { TokenIcon as Web3TokenIcon } from "@web3icons/react/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";

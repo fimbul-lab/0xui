@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/transaction-toast.md
 import { useCallback, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { Hash, TransactionReceipt } from "viem";

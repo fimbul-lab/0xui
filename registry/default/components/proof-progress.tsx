@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/proof-progress.md
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useShieldedEngine } from "@/components/shielded-provider";
@@ -9,6 +10,7 @@ import {
   type ProvedOperation,
 } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
+import { errorCode } from "@/lib/0xui-utils";
 
 /** While a proof runs, the phase is the stage it is in. */
 export type ProofPhase = "idle" | ProofStage | "done" | "cancelled" | "error";
@@ -125,7 +127,7 @@ export type ProofStepState = "done" | "active" | "failed" | "todo";
 /** The state of each stage's step, for a given phase. */
 export function proofStepStates(
   phase: ProofPhase,
-  stage?: ProofStage
+  stage?: ProofStage,
 ): Record<ProofStage, ProofStepState> {
   const reached = isStage(phase) ? phase : stage;
   const reachedIndex = reached ? PROOF_STAGES.indexOf(reached) : -1;
@@ -216,6 +218,7 @@ export function ProofProgress({
     <div
       data-slot="proof-progress"
       data-phase={phase}
+      data-error={errorCode(phase, error)}
       className={cn("flex w-full flex-col gap-3 rounded-xl border p-4 text-sm", className)}
     >
       <div className="flex flex-col gap-1">
@@ -224,7 +227,7 @@ export function ProofProgress({
           className={cn(
             "font-medium",
             phase === "done" && "text-emerald-600 dark:text-emerald-400",
-            phase === "error" && "text-destructive"
+            phase === "error" && "text-destructive",
           )}
         >
           {title ?? headings[phase]}

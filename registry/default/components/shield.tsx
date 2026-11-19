@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/blocks/shield.md
 import { useQuery } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
@@ -19,16 +20,13 @@ import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { PrivacyBadge } from "@/components/privacy-badge";
 import { useShieldedAccount, useShieldedEngine } from "@/components/shielded-provider";
-import {
-  ShieldedTransactionStatus,
-  formatWait,
-} from "@/components/shielded-transaction-status";
+import { ShieldedTransactionStatus, formatWait } from "@/components/shielded-transaction-status";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenInput, type TokenInputState } from "@/components/token-input";
 import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
 import { StepIcon } from "@/components/transaction-status";
 import { Button } from "@/components/ui/button";
-import { isUserRejection } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, isUserRejection, type ErrorCode } from "@/lib/0xui-utils";
 import type {
   PreparedShield,
   PublicCall,
@@ -256,7 +254,11 @@ export function useShieldFlow({
   }>();
   const [index, setIndex] = useState(0);
   const [stepPhase, setStepPhase] = useState<ShieldStepPhase>("ready");
-  const [problem, setProblem] = useState<{ kind: "cancelled" | "error"; message?: string }>();
+  const [problem, setProblem] = useState<{
+    kind: "cancelled" | "error";
+    message?: string;
+    code?: ErrorCode;
+  }>();
 
   const prepared = useRef<PreparedShield>(undefined);
   // Bumped whenever the flow is left. Work from an older run stops when it notices.
@@ -348,7 +350,8 @@ export function useShieldFlow({
           : {
               kind: "error",
               message: (error as { shortMessage?: string }).shortMessage ?? error.message,
-            }
+              code: errorCode("error", error),
+            },
       );
     }
   };
@@ -531,7 +534,7 @@ export function ShieldSummary({
     <div
       className={cn(
         "flex items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3",
-        className
+        className,
       )}
     >
       <div className="flex min-w-0 flex-col">
@@ -798,6 +801,7 @@ export function Shield({
       data-slot="shield"
       data-variant={variant}
       data-phase={phase}
+      data-error={flow.problem?.code ?? errorCode(phase)}
       className={cn("flex w-full max-w-md flex-col gap-3", className)}
     >
       {title && <h3 className="text-lg font-semibold">{title}</h3>}
@@ -816,10 +820,7 @@ export function Shield({
             amount={running ? flow.active!.draft.amount : draft?.amount}
             token={running ? shown?.token : token}
             // Space is held for the quote, so nothing below shifts as it arrives.
-            className={cn(
-              "transition-opacity duration-200",
-              !running && !quote && "opacity-50"
-            )}
+            className={cn("transition-opacity duration-200", !running && !quote && "opacity-50")}
           />
           <div className="flex flex-col gap-2">
             <Button
@@ -827,7 +828,7 @@ export function Shield({
               // While a prompt is open the button is the progress display, so it keeps full strength.
               className={cn(
                 "relative h-11 w-full overflow-hidden",
-                flow.busy && "disabled:opacity-100"
+                flow.busy && "disabled:opacity-100",
               )}
               disabled={running ? flow.busy : !action}
               aria-busy={flow.busy || undefined}
@@ -848,7 +849,7 @@ export function Shield({
                         state === "done" && "opacity-90",
                         state === "active" && "animate-pulse opacity-90 motion-reduce:animate-none",
                         state === "ready" && "opacity-50",
-                        state === "todo" && "opacity-20"
+                        state === "todo" && "opacity-20",
                       )}
                     />
                   ))}
@@ -936,9 +937,24 @@ export function Shield({
             <div className={cn("flex flex-col gap-3", enter)}>
               {input}
               {draft && quote && (
-                <ShieldQuoteRows quote={quote} amount={draft.amount} token={token} className={enter} />
+                <ShieldQuoteRows
+                  quote={quote}
+                  amount={draft.amount}
+                  token={token}
+                  className={enter}
+                />
               )}
-              <Button size="lg" className="h-11 w-full" disabled={!action} onClick={action}>
+              <Button
+                size="lg"
+                className="h-11 w-full"
+                disabled={!action}
+                onClick={action}
+                data-agent-confirm={
+                  action && connected
+                    ? agentConfirmText(label, "asks your wallet to approve or send a transaction")
+                    : undefined
+                }
+              >
                 <MorphText>{label}</MorphText>
               </Button>
               {flow.plannedSteps && (

@@ -82,7 +82,7 @@ describe("mdxToMarkdown", () => {
       '<Aside type="tip" title="In production">\nSee [indexed data](/getting-started/indexed-data/#option-2).\n</Aside>',
     );
     expect(markdown).toBe(
-      "> **Tip: In production**\n>\n> See [indexed data](https://0xui.dev/getting-started/indexed-data.md#option-2).",
+      "> **Tip: In production**\n>\n> See [indexed data](https://0xui.io/getting-started/indexed-data.md#option-2).",
     );
   });
 
@@ -100,14 +100,14 @@ test("the overview pages list every page in their section", () => {
     registry.items,
   );
   for (const doc of docs.filter((doc) => doc.id.startsWith("components/"))) {
-    expect(components).toContain(`(https://0xui.dev/${doc.id}.md)`);
+    expect(components).toContain(`(https://0xui.io/${doc.id}.md)`);
   }
 });
 
 test("llms.txt links every page and every registry item", () => {
   const text = llmsTxt(docs, registry.items);
-  for (const doc of docs) expect(text).toContain(`(https://0xui.dev/${doc.id}.md)`);
-  for (const item of registry.items) {
+  for (const doc of docs) expect(text).toContain(`(https://0xui.io/${doc.id}.md)`);
+  for (const item of registry.items.filter((item) => item.type !== "registry:example")) {
     expect(text.includes(`/${item.name}.md)`) || text.includes(`/r/${item.name}.json)`)).toBe(true);
   }
 });

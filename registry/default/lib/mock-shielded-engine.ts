@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/mock-shielded-engine.md
 import { encodeAbiParameters, type Address, type Hash } from "viem";
 import { encodeBech32m } from "@/lib/0xui-utils";
 import {

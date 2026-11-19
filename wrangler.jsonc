@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "0xui-docs",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-19",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    // Page routes only. Files (anything with a dot: /_astro/*, /r/*.json,
+    // /llms.txt, *.md) skip the Worker.
+    "run_worker_first": ["/*", "!/*.*"]
+  }
+}

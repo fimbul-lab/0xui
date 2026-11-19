@@ -15,7 +15,7 @@ const componentGroups = groupComponents(
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://0xui.dev",
+  site: "https://0xui.io",
   integrations: [
     react(),
     starlight({

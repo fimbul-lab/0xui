@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/transaction-history.md
 import { CheckIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address, Hash } from "viem";

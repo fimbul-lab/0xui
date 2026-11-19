@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/getting-started/token-lists.md
 import { getAddress, isAddress, type Address, type Chain } from "viem";
 import { resolveUri } from "@/lib/0xui-utils";
 

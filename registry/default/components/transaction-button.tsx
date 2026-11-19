@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/transaction-button.md
 import { CheckIcon, Loader2Icon } from "lucide-react";
 import {
   useCallback,
@@ -7,12 +8,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import {
-  BaseError,
-  ContractFunctionRevertedError,
-  type Hash,
-  type TransactionReceipt,
-} from "viem";
+import { BaseError, ContractFunctionRevertedError, type Hash, type TransactionReceipt } from "viem";
 import {
   useCall,
   useChains,
@@ -27,7 +23,7 @@ import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { useMinedReceipt } from "@/components/transaction-status";
 import { Button } from "@/components/ui/button";
-import { isUserRejection } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type TxPhase =
@@ -41,9 +37,7 @@ export type TxPhase =
   | "error";
 
 /** Arguments for `writeContract`: `{ address, abi, functionName, args, value? }`. */
-export type ContractRequest = Parameters<
-  ReturnType<typeof useWriteContract>["mutateAsync"]
->[0];
+export type ContractRequest = Parameters<ReturnType<typeof useWriteContract>["mutateAsync"]>[0];
 
 /** Arguments for `sendTransaction`: `{ to, value?, data? }`. */
 export type TransactionRequest = Parameters<
@@ -100,8 +94,7 @@ export function useTransactionFlow({
       refetchInterval: 4_000,
     },
   });
-  const enoughConfirmations =
-    confirmations <= 1 || Number(confirmed.data ?? 0n) >= confirmations;
+  const enoughConfirmations = confirmations <= 1 || Number(confirmed.data ?? 0n) >= confirmations;
 
   const phase: TxPhase =
     hash && step === "pending"
@@ -155,7 +148,7 @@ export function useTransactionFlow({
   };
 
   const execute = async (
-    request: { contract: ContractRequest } | { transaction: TransactionRequest }
+    request: { contract: ContractRequest } | { transaction: TransactionRequest },
   ) => {
     setError(undefined);
     setHash(undefined);
@@ -293,6 +286,12 @@ export type TransactionButtonProps = Omit<
     resetAfter?: number | false;
     /** Hide the status line under the button. */
     hideStatus?: boolean;
+    /**
+     * What a browser agent must ask a person before pressing the button, set
+     * as `data-agent-confirm`. Defaults to the label plus what it does. Pass
+     * `false` to drop it.
+     */
+    agentConfirm?: string | false;
   };
 
 const statusText: Partial<Record<TxPhase, string>> = {
@@ -324,6 +323,7 @@ export function TransactionButton({
   successLabel = "Done",
   resetAfter = 4000,
   hideStatus = false,
+  agentConfirm,
   disabled,
   className,
   ...buttonProps
@@ -344,15 +344,13 @@ export function TransactionButton({
     return () => clearTimeout(timer);
   }, [phase, resetAfter, reset]);
 
-  const busy =
-    phase === "switching" || phase === "confirming" || phase === "pending";
+  const busy = phase === "switching" || phase === "confirming" || phase === "pending";
 
   const simulation = useTransactionSimulation({
     contract,
     transaction,
     chainId: flow.targetChain?.id,
-    enabled:
-      simulate && !flow.wrongChain && !disabledReason && !busy && phase !== "success",
+    enabled: simulate && !flow.wrongChain && !disabledReason && !busy && phase !== "success",
   });
   // The transaction just sent may have changed what the next one would do.
   const resimulate = simulation.refetch;
@@ -405,6 +403,7 @@ export function TransactionButton({
     <div
       data-slot="transaction-button"
       data-phase={phase}
+      data-error={errorCode(phase, flow.error)}
       className={cn("inline-flex flex-col gap-2", className)}
     >
       <Button
@@ -412,6 +411,15 @@ export function TransactionButton({
         disabled={disabled || busy || !action}
         aria-busy={busy || undefined}
         onClick={action}
+        data-agent-confirm={
+          agentConfirm === false
+            ? undefined
+            : (agentConfirm ??
+              agentConfirmText(
+                children,
+                `sends a transaction on ${flow.targetChain?.name ?? "the selected network"} from your wallet`,
+              ))
+        }
       >
         {busy && <Loader2Icon aria-hidden className="animate-spin" />}
         {phase === "success" && <CheckIcon aria-hidden />}
@@ -419,10 +427,7 @@ export function TransactionButton({
       </Button>
       {!hideStatus && (
         <>
-          <p
-            role="status"
-            className="text-sm text-muted-foreground empty:hidden"
-          >
+          <p role="status" className="text-sm text-muted-foreground empty:hidden">
             {statusText[phase] ?? ""}
           </p>
           {message && (

@@ -1,17 +1,13 @@
+// Docs: https://0xui.io/components/sign-message.md
 import { CheckIcon, Loader2Icon } from "lucide-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 import type { Hex, SignableMessage, TypedDataDefinition } from "viem";
-import {
-  useConnection,
-  usePublicClient,
-  useSignMessage,
-  useSignTypedData,
-} from "wagmi";
+import { useConnection, usePublicClient, useSignMessage, useSignTypedData } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { CopyButton } from "@/components/copy-button";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/ui/button";
-import { isUserRejection, truncateAddress } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, isUserRejection, truncateAddress } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type SignPhase =
@@ -34,7 +30,7 @@ export type SignRequest =
  */
 export function useSignFlow(
   request: SignRequest,
-  { verify = false, onSigned }: { verify?: boolean; onSigned?: (signature: Hex) => void } = {}
+  { verify = false, onSigned }: { verify?: boolean; onSigned?: (signature: Hex) => void } = {},
 ) {
   const { address } = useConnection();
   const client = usePublicClient();
@@ -80,10 +76,7 @@ export function useSignFlow(
   return { phase, signature, error, sign, reset, isConnected: Boolean(address) };
 }
 
-export type SignMessageProps = Omit<
-  ComponentProps<typeof Button>,
-  "onClick" | "children"
-> &
+export type SignMessageProps = Omit<ComponentProps<typeof Button>, "onClick" | "children"> &
   SignRequest & {
     /** Check the signature against the connected address after signing. */
     verify?: boolean;
@@ -94,6 +87,12 @@ export type SignMessageProps = Omit<
     /** Show the signature with a copy button after signing. */
     showSignature?: boolean;
     children?: ReactNode;
+    /**
+     * What a browser agent must ask a person before pressing the button, set
+     * as `data-agent-confirm`. Defaults to the label plus what it does. Pass
+     * `false` to drop it.
+     */
+    agentConfirm?: string | false;
   };
 
 const statusText: Partial<Record<SignPhase, string>> = {
@@ -116,6 +115,7 @@ export function SignMessage({
   showMessage = false,
   showSignature = false,
   children = "Sign message",
+  agentConfirm,
   className,
   disabled,
   ...buttonProps
@@ -148,6 +148,7 @@ export function SignMessage({
     <div
       data-slot="sign-message"
       data-phase={flow.phase}
+      data-error={errorCode(flow.phase, flow.error)}
       className={cn("inline-flex flex-col gap-2", className)}
     >
       {showMessage && preview && (
@@ -160,6 +161,17 @@ export function SignMessage({
         disabled={disabled || busy}
         aria-busy={busy || undefined}
         onClick={flow.isConnected ? flow.sign : () => setConnectOpen(true)}
+        data-agent-confirm={
+          agentConfirm === false
+            ? undefined
+            : (agentConfirm ??
+              agentConfirmText(
+                children,
+                typedData
+                  ? "signs typed data with your wallet"
+                  : "signs a message with your wallet",
+              ))
+        }
       >
         {busy && <Loader2Icon aria-hidden className="animate-spin" />}
         {flow.phase === "signed" && <CheckIcon aria-hidden />}

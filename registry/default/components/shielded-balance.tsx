@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/shielded-balance.md
 import { Loader2Icon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";

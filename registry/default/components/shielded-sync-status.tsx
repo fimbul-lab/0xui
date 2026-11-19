@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/shielded-sync-status.md
 import { CheckIcon, Loader2Icon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useShieldedEngine, useShieldedState } from "@/components/shielded-provider";

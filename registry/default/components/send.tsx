@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/blocks/send.md
 import { useState, type ReactNode } from "react";
 import { erc20Abi, type Address, type Hash, type TransactionReceipt } from "viem";
 import { AddressInput, type AddressInputState } from "@/components/address-input";

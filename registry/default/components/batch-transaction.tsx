@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/batch-transaction.md
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 import type { Address, Hex } from "viem";
@@ -14,7 +15,7 @@ import { getPublicClient, waitForCallsStatus } from "wagmi/actions";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/ui/button";
-import { isUserRejection } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type BatchCall = {
@@ -69,12 +70,12 @@ export function useBatchTransaction({
   const [step, setStep] = useState(0);
   const [error, setError] = useState<Error>();
 
-  const atomicStatus = (capabilities.data as { atomic?: { status?: string } } | undefined)?.atomic?.status;
+  const atomicStatus = (capabilities.data as { atomic?: { status?: string } } | undefined)?.atomic
+    ?.status;
   const atomic =
     mode === "atomic" ||
     (mode === "auto" && (atomicStatus === "supported" || atomicStatus === "ready"));
-  const wrongChain =
-    connection.status === "connected" && connection.chainId !== chainId;
+  const wrongChain = connection.status === "connected" && connection.chainId !== chainId;
   const targetChain = chains.find((c) => c.id === chainId);
 
   const fail = (e: unknown) => {
@@ -161,15 +162,18 @@ export function useBatchTransaction({
   };
 }
 
-export type BatchTransactionProps = Omit<
-  ComponentProps<typeof Button>,
-  "onClick" | "children"
-> & {
+export type BatchTransactionProps = Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
   calls: readonly BatchCall[];
   chainId: number;
   mode?: BatchMode;
   /** Button label. */
   children?: ReactNode;
+  /**
+   * What a browser agent must ask a person before pressing the button, set
+   * as `data-agent-confirm`. Defaults to the label plus what it does. Pass
+   * `false` to drop it.
+   */
+  agentConfirm?: string | false;
 };
 
 /**
@@ -182,13 +186,15 @@ export function BatchTransaction({
   chainId,
   mode = "auto",
   children = "Confirm",
+  agentConfirm,
   className,
   disabled,
   ...buttonProps
 }: BatchTransactionProps) {
   const [connectOpen, setConnectOpen] = useState(false);
   const batch = useBatchTransaction({ calls, chainId, mode });
-  const busy = batch.phase === "switching" || batch.phase === "confirming" || batch.phase === "pending";
+  const busy =
+    batch.phase === "switching" || batch.phase === "confirming" || batch.phase === "pending";
   const total = calls.length;
   const current = Math.min(batch.step + 1, total);
 
@@ -200,7 +206,10 @@ export function BatchTransaction({
   } else if (batch.phase === "switching") {
     label = "Switching network…";
   } else if (batch.phase === "confirming") {
-    label = batch.atomic || total === 1 ? "Confirm in wallet…" : `Confirm ${current} of ${total} in wallet…`;
+    label =
+      batch.atomic || total === 1
+        ? "Confirm in wallet…"
+        : `Confirm ${current} of ${total} in wallet…`;
   } else if (batch.phase === "pending") {
     label = batch.atomic || total === 1 ? "Pending…" : `Pending ${current} of ${total}…`;
   } else if (batch.phase === "success") {
@@ -215,6 +224,7 @@ export function BatchTransaction({
     <div
       data-slot="batch-transaction"
       data-phase={batch.phase}
+      data-error={errorCode(batch.phase, batch.error)}
       data-atomic={batch.atomic || undefined}
       className={cn("flex flex-col gap-3", className)}
     >
@@ -231,6 +241,15 @@ export function BatchTransaction({
         disabled={disabled || busy || !action}
         aria-busy={busy || undefined}
         onClick={action}
+        data-agent-confirm={
+          agentConfirm === false
+            ? undefined
+            : (agentConfirm ??
+              agentConfirmText(
+                children,
+                `sends ${calls.length} calls on ${batch.targetChain?.name ?? "the selected network"} from your wallet`,
+              ))
+        }
       >
         {busy && <Loader2Icon aria-hidden className="animate-spin" />}
         {batch.phase === "success" && <CheckIcon aria-hidden />}
@@ -264,9 +283,16 @@ export function BatchTransaction({
 
 function StepIcon({ state }: { state: StepState }) {
   const className = "size-4 shrink-0";
-  if (state === "done") return <CheckIcon aria-label="Done" className={cn(className, "text-emerald-500")} />;
-  if (state === "failed") return <XIcon aria-label="Failed" className={cn(className, "text-destructive")} />;
+  if (state === "done")
+    return <CheckIcon aria-label="Done" className={cn(className, "text-emerald-500")} />;
+  if (state === "failed")
+    return <XIcon aria-label="Failed" className={cn(className, "text-destructive")} />;
   if (state === "active")
-    return <Loader2Icon aria-label="In progress" className={cn(className, "animate-spin text-muted-foreground")} />;
+    return (
+      <Loader2Icon
+        aria-label="In progress"
+        className={cn(className, "animate-spin text-muted-foreground")}
+      />
+    );
   return <CircleIcon aria-label="Not started" className={cn(className, "text-muted-foreground")} />;
 }

@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/ens-profile.md
 import { useQuery } from "@tanstack/react-query";
 import { AtSignIcon, CodeXmlIcon, GlobeIcon, MailIcon, type LucideIcon } from "lucide-react";
 import { Skeleton } from "skullet/react";

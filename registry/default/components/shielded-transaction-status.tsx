@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/shielded-transaction-status.md
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Hash } from "viem";
 import { useBlock } from "wagmi";

@@ -10,7 +10,7 @@ description: Give your coding agent the 0xui docs as Markdown, a skill, the shad
 The skill tells an agent how to set up 0xui, which component fits which job, and the rules the components follow. Install it with the [skills CLI](https://github.com/vercel-labs/skills):
 
 ```bash
-npx skills add https://0xui.dev
+npx skills add https://0xui.io
 ```
 
 The site publishes it at [`/.well-known/agent-skills/index.json`](/.well-known/agent-skills/index.json), following the [Agent Skills discovery RFC](https://github.com/cloudflare/agent-skills-discovery-rfc). You can also install it from GitHub with `npx skills add Matsfjeldstad/0xui --skill 0xui`.
@@ -25,8 +25,10 @@ Every page has a Markdown version without the live demos. Use **Copy page** at t
 | [`/llms-full.txt`](/llms-full.txt) | Every page in one file. |
 | Any page URL + `.md` | One page, like [`/components/balance.md`](/components/balance.md). |
 | `/r/<name>.json` | The registry item: dependencies and the full source of every file. |
+| `/r/<name>-demo.json` | A runnable example for every component and block. |
+| `/props/<name>.json` | The component's props, generated from its TypeScript types. |
 
-Each HTML page also links its Markdown version with `<link rel="alternate" type="text/markdown">`.
+A request for a page with `Accept: text/markdown` gets the Markdown instead of the HTML. Each HTML page also links its Markdown version with `<link rel="alternate" type="text/markdown">`, and every response links `/llms.txt` and the skill index in its `Link` header.
 
 ## shadcn MCP server
 
@@ -36,7 +38,7 @@ The [shadcn MCP server](https://ui.shadcn.com/docs/mcp) lets an agent browse, se
 npx shadcn@latest mcp init --client claude
 ```
 
-Other clients: `cursor`, `vscode`, `codex` and `opencode`. Then ask in plain words, like "add a wallet button and an ETH balance to the header using @0xui".
+Other clients: `cursor`, `vscode`, `codex` and `opencode`. Then ask in plain words, like "add a wallet button and an ETH balance to the header using @0xui". The server finds each component's example as `<name>-demo`.
 
 ## WebMCP
 
@@ -50,3 +52,11 @@ In a browser with [WebMCP](https://webmachinelearning.github.io/webmcp/), this s
 | `get_registry_item` | What `shadcn add` installs for an item, with its source. |
 
 The tools only read the docs. They don't change anything in your browser or your project.
+
+## In your app
+
+0xui components are built so agents can drive the apps you make with them, too:
+
+- [Agent Tools](/components/agent-tools/) registers WebMCP tools for the wallet: who is connected, balances, chains, gas.
+- Buttons that send, sign or approve carry `data-agent-confirm`, so a browser agent asks a person before pressing them.
+- `data-phase` and `data-error` say what state a component is in and why an action failed. See [Conventions](/getting-started/conventions/#state).

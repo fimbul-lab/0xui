@@ -1,4 +1,10 @@
-import { useCallback, useSyncExternalStore, type KeyboardEventHandler, type ReactNode } from "react";
+// Docs: https://0xui.io/components/responsive-dialog.md
+import {
+  useCallback,
+  useSyncExternalStore,
+  type KeyboardEventHandler,
+  type ReactNode,
+} from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,12 +32,12 @@ export function useMediaQuery(query: string) {
       media.addEventListener("change", onChange);
       return () => media.removeEventListener("change", onChange);
     },
-    [query]
+    [query],
   );
   return useSyncExternalStore(
     subscribe,
     () => typeof window.matchMedia === "function" && window.matchMedia(query).matches,
-    () => false
+    () => false,
   );
 }
 
@@ -54,6 +60,7 @@ export type ResponsiveDialogProps = {
   className?: string;
   onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
   "data-phase"?: string;
+  "data-error"?: string;
   children: ReactNode;
 };
 
@@ -72,6 +79,7 @@ export function ResponsiveDialog({
   className,
   onKeyDown,
   "data-phase": phase,
+  "data-error": error,
   children,
 }: ResponsiveDialogProps) {
   const small = useMediaQuery(drawerQuery);
@@ -80,7 +88,7 @@ export function ResponsiveDialog({
   if (drawer) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-        <DrawerContent data-phase={phase} onKeyDown={onKeyDown}>
+        <DrawerContent data-phase={phase} data-error={error} onKeyDown={onKeyDown}>
           <DrawerHeader>
             <DrawerTitle>{title}</DrawerTitle>
             <DrawerDescription className="sr-only">{description}</DrawerDescription>
@@ -95,7 +103,12 @@ export function ResponsiveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={className} data-phase={phase} onKeyDown={onKeyDown}>
+      <DialogContent
+        className={className}
+        data-phase={phase}
+        data-error={error}
+        onKeyDown={onKeyDown}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="sr-only">{description}</DialogDescription>

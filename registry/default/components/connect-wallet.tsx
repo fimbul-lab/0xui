@@ -1,25 +1,12 @@
+// Docs: https://0xui.io/components/connect-wallet.md
 import { WalletIcon } from "@web3icons/react/dynamic";
 import { ChevronRightIcon, Loader2Icon } from "lucide-react";
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
-import {
-  useConfig,
-  useConnect,
-  useConnectors,
-  type Connector,
-} from "wagmi";
+import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useConfig, useConnect, useConnectors, type Connector } from "wagmi";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  ResponsiveDialog,
-  type ResponsiveDialogMode,
-} from "@/components/responsive-dialog";
+import { ResponsiveDialog, type ResponsiveDialogMode } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { isUserRejection } from "@/lib/0xui-utils";
+import { errorCode, isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type ConnectPhase = "idle" | "connecting" | "cancelled" | "error";
@@ -86,8 +73,7 @@ export function useConnectWallet({
 
   // We always pass a Connector, but the variable type also allows a connector factory.
   const pendingConnector = isPending ? variables?.connector : undefined;
-  const pendingId =
-    pendingConnector && "id" in pendingConnector ? pendingConnector.id : undefined;
+  const pendingId = pendingConnector && "id" in pendingConnector ? pendingConnector.id : undefined;
   const phase: ConnectPhase = isPending
     ? "connecting"
     : isUserRejection(error)
@@ -149,14 +135,12 @@ export function ConnectWalletDialog({
     onOpenChange?.(next);
   };
 
-  const { wallets, connect, phase, pendingId, error, reset } = useConnectWallet(
-    {
-      onConnect: (connector) => {
-        setOpen(false);
-        onConnect?.(connector);
-      },
-    }
-  );
+  const { wallets, connect, phase, pendingId, error, reset } = useConnectWallet({
+    onConnect: (connector) => {
+      setOpen(false);
+      onConnect?.(connector);
+    },
+  });
 
   // Fresh state every time the dialog opens.
   useEffect(() => {
@@ -179,58 +163,51 @@ export function ConnectWalletDialog({
       mode={mode}
       className="sm:max-w-sm"
       data-phase={phase}
+      data-error={errorCode(phase, error)}
     >
-        {wallets.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No wallets found. Install a browser wallet such as MetaMask or Rabby,
-            then reload the page.
-          </p>
-        ) : (
-          <ul className="-mx-2 flex flex-col gap-1">
-            {visible.map((wallet) => (
-              <li key={wallet.id}>
-                <WalletRow
-                  wallet={wallet}
-                  pending={wallet.id === pendingId}
-                  disabled={phase === "connecting"}
-                  onSelect={() => connect(wallet)}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
+      {wallets.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No wallets found. Install a browser wallet such as MetaMask or Rabby, then reload the
+          page.
+        </p>
+      ) : (
+        <ul className="-mx-2 flex flex-col gap-1">
+          {visible.map((wallet) => (
+            <li key={wallet.id}>
+              <WalletRow
+                wallet={wallet}
+                pending={wallet.id === pendingId}
+                disabled={phase === "connecting"}
+                onSelect={() => connect(wallet)}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
 
-        {hiddenCount > 0 && (
-          <Button
-            variant="ghost"
-            className="-mt-2 self-start"
-            onClick={() => setShowAll(true)}
-          >
-            Other wallets ({hiddenCount})
-          </Button>
-        )}
+      {hiddenCount > 0 && (
+        <Button variant="ghost" className="-mt-2 self-start" onClick={() => setShowAll(true)}>
+          Other wallets ({hiddenCount})
+        </Button>
+      )}
 
-        <div aria-live="polite" className="text-sm empty:hidden">
-          {phase === "connecting" && pendingName && (
-            <p className="text-muted-foreground">
-              Confirm the connection in {pendingName}.
-            </p>
-          )}
-          {phase === "cancelled" && (
-            <p className="text-muted-foreground">
-              Request cancelled. Try again or pick another wallet.
-            </p>
-          )}
-        </div>
-        {phase === "error" && error && (
-          <p role="alert" className="text-sm text-destructive">
-            {(error as { shortMessage?: string }).shortMessage ?? error.message}
+      <div aria-live="polite" className="text-sm empty:hidden">
+        {phase === "connecting" && pendingName && (
+          <p className="text-muted-foreground">Confirm the connection in {pendingName}.</p>
+        )}
+        {phase === "cancelled" && (
+          <p className="text-muted-foreground">
+            Request cancelled. Try again or pick another wallet.
           </p>
         )}
+      </div>
+      {phase === "error" && error && (
+        <p role="alert" className="text-sm text-destructive">
+          {(error as { shortMessage?: string }).shortMessage ?? error.message}
+        </p>
+      )}
 
-        {footer && (
-          <p className="text-xs text-muted-foreground">{footer}</p>
-        )}
+      {footer && <p className="text-xs text-muted-foreground">{footer}</p>}
     </ResponsiveDialog>
   );
 }
@@ -255,7 +232,7 @@ function WalletRow({
       className={cn(
         "flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm font-medium outline-none",
         "hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60",
-        pending && "bg-muted disabled:opacity-100"
+        pending && "bg-muted disabled:opacity-100",
       )}
     >
       <WalletOptionIcon wallet={wallet} />
@@ -268,10 +245,7 @@ function WalletRow({
       {pending ? (
         <Loader2Icon aria-hidden className="size-4 shrink-0 animate-spin" />
       ) : (
-        <ChevronRightIcon
-          aria-hidden
-          className="size-4 shrink-0 text-muted-foreground"
-        />
+        <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
       )}
     </button>
   );
@@ -296,20 +270,12 @@ export function WalletOptionIcon({
   // Decorative: the wallet name is always next to it.
   const fallback = (
     <Avatar aria-hidden className={cn("size-8 rounded-lg", className)}>
-      <AvatarFallback className="rounded-lg text-xs">
-        {initials(wallet.name)}
-      </AvatarFallback>
+      <AvatarFallback className="rounded-lg text-xs">{initials(wallet.name)}</AvatarFallback>
     </Avatar>
   );
 
   if (wallet.icon) {
-    return (
-      <img
-        src={wallet.icon}
-        alt=""
-        className={cn("size-8 shrink-0 rounded-lg", className)}
-      />
-    );
+    return <img src={wallet.icon} alt="" className={cn("size-8 shrink-0 rounded-lg", className)} />;
   }
   return (
     <WalletIcon
@@ -331,10 +297,7 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-export type ConnectWalletProps = Omit<
-  ComponentProps<typeof Button>,
-  "onClick"
-> &
+export type ConnectWalletProps = Omit<ComponentProps<typeof Button>, "onClick"> &
   Pick<
     ConnectWalletDialogProps,
     | "open"
@@ -369,11 +332,7 @@ export function ConnectWallet({
 
   return (
     <>
-      <Button
-        aria-haspopup="dialog"
-        {...buttonProps}
-        onClick={() => setOpen(true)}
-      >
+      <Button aria-haspopup="dialog" {...buttonProps} onClick={() => setOpen(true)}>
         {children}
       </Button>
       <ConnectWalletDialog

@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/getting-started/installation.md
 import { createConfig, http } from "wagmi";
 import { mainnet, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";

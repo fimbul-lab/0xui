@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/block-number.md
 import { SkeletonBox } from "skullet/react";
 import { useBlockNumber } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";

@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/address.md
 import { getAddress, type Address as AddressType } from "viem";
 import { useEnsName } from "wagmi";
 import { mainnet } from "wagmi/chains";

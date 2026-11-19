@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/shielded-account.md
 import { Loader2Icon, LockIcon } from "lucide-react";
 import { useEffect, useId, useState, type ComponentProps, type ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";

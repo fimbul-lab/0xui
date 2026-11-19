@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/wallet-button.md
 import { SkeletonBox } from "skullet/react";
 import { useConnection } from "wagmi";
 import { Account, type AccountProps } from "@/components/account";

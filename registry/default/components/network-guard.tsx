@@ -1,9 +1,10 @@
+// Docs: https://0xui.io/components/network-guard.md
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useChains, useConnection, useSwitchChain } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { useMounted } from "@/hooks/use-mounted";
-import { isUserRejection } from "@/lib/0xui-utils";
+import { errorCode, isUserRejection } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type NetworkGuardPhase = "ok" | "wrong-network" | "switching";
@@ -61,19 +62,14 @@ export type NetworkGuardProps = {
  * network the content doesn't support. Renders children as-is when the
  * network is right or no wallet is connected.
  */
-export function NetworkGuard({
-  chainId,
-  mode = "banner",
-  children,
-  className,
-}: NetworkGuardProps) {
+export function NetworkGuard({ chainId, mode = "banner", children, className }: NetworkGuardProps) {
   const guard = useNetworkGuard(chainId);
   if (!guard.wrongNetwork) return <>{children}</>;
 
   const names = guard.allowedChains.map((c) => c.name);
   const supported =
     names.length <= 1
-      ? names[0] ?? "a different network"
+      ? (names[0] ?? "a different network")
       : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
 
   const notice = (
@@ -82,12 +78,22 @@ export function NetworkGuard({
       aria-label="Wrong network"
       data-slot="network-guard"
       data-phase={guard.phase}
+      data-error={
+        guard.cancelled
+          ? "user-rejected"
+          : guard.error
+            ? errorCode("error", guard.error)
+            : undefined
+      }
       className={cn(
         "flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm",
-        className
+        className,
       )}
     >
-      <TriangleAlertIcon aria-hidden className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <TriangleAlertIcon
+        aria-hidden
+        className="size-4 shrink-0 text-amber-600 dark:text-amber-400"
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="font-medium">This works on {supported}.</p>
         <p className="text-muted-foreground" aria-live="polite">

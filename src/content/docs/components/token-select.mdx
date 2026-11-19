@@ -92,5 +92,6 @@ Also accepts shadcn `Button` props for the trigger.
 | `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
 | `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom drawer on small screens, dialog otherwise. Or force one. |
 | `placeholder` | `string` | `"Select token"` | Trigger text with nothing selected. |
+| `title` | `ReactNode` | `"Select a token"` | Picker title. |
 
 Recent picks are kept in `localStorage` per chain (4 max). If storage is blocked, they're simply not saved.

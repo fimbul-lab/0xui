@@ -5,12 +5,12 @@ const llms = `# 0xui
 
 ## Components: Tokens
 
-- [Balance](https://0xui.dev/components/balance.md): Native or ERC-20 balance.
-- [Token Input](https://0xui.dev/components/token-input.md): Swap panel with amount and token picker.
+- [Balance](https://0xui.io/components/balance.md): Native or ERC-20 balance.
+- [Token Input](https://0xui.io/components/token-input.md): Swap panel with amount and token picker.
 
 ## Blocks
 
-- [Swap](https://0xui.dev/blocks/swap.md): Swap form with quotes and an approval step.
+- [Swap](https://0xui.io/blocks/swap.md): Swap form with quotes and an approval step.
 `;
 
 const files: Record<string, string> = {
@@ -36,7 +36,7 @@ describe("get_doc", () => {
   test.each([
     "balance",
     "components/balance",
-    "https://0xui.dev/components/balance/",
+    "https://0xui.io/components/balance/",
     "/components/balance.md",
     "Balance",
   ])("finds the page from %s", async (page) => {

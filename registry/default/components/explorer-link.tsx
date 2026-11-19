@@ -1,3 +1,4 @@
+// Docs: https://0xui.io/components/explorer-link.md
 import { ExternalLinkIcon } from "lucide-react";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
 import { useChainId, useChains } from "wagmi";

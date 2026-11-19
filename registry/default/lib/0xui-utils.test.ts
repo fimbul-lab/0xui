@@ -1,8 +1,19 @@
-import { UserRejectedRequestError, SwitchChainError, parseUnits } from "viem";
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  HttpRequestError,
+  InsufficientFundsError,
+  SwitchChainError,
+  UserRejectedRequestError,
+  erc20Abi,
+  parseUnits,
+} from "viem";
 import { mainnet } from "viem/chains";
 import { describe, expect, it } from "vitest";
 import {
+  agentConfirmText,
   encodeBech32m,
+  errorCode,
   formatTokenAmount,
   getExplorerUrl,
   isShieldedAddress,
@@ -13,9 +24,7 @@ import {
 
 describe("truncateAddress", () => {
   it("checksums and truncates", () => {
-    expect(
-      truncateAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
-    ).toBe("0xd8dA…6045");
+    expect(truncateAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045")).toBe("0xd8dA…6045");
   });
 
   it("respects custom lengths", () => {
@@ -23,7 +32,7 @@ describe("truncateAddress", () => {
       truncateAddress("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", {
         start: 4,
         end: 6,
-      })
+      }),
     ).toBe("0xd8…A96045");
   });
 
@@ -36,21 +45,17 @@ describe("formatTokenAmount", () => {
   const usdc = (n: string) => parseUnits(n, 6);
 
   it("formats with grouping and max decimals", () => {
-    expect(formatTokenAmount(usdc("1234.56789"), 6, { locale: "en-US" })).toBe(
-      "1,234.5678"
-    );
+    expect(formatTokenAmount(usdc("1234.56789"), 6, { locale: "en-US" })).toBe("1,234.5678");
   });
 
   it("rounds toward zero, never up", () => {
-    expect(formatTokenAmount(usdc("0.99999"), 6, { locale: "en-US" })).toBe(
-      "0.9999"
-    );
+    expect(formatTokenAmount(usdc("0.99999"), 6, { locale: "en-US" })).toBe("0.9999");
   });
 
   it("keeps precision beyond Number.MAX_SAFE_INTEGER", () => {
-    expect(
-      formatTokenAmount(123456789012345678901234n, 0, { locale: "en-US" })
-    ).toBe("123,456,789,012,345,678,901,234");
+    expect(formatTokenAmount(123456789012345678901234n, 0, { locale: "en-US" })).toBe(
+      "123,456,789,012,345,678,901,234",
+    );
   });
 
   it("shows dust as a lower bound", () => {
@@ -62,9 +67,7 @@ describe("formatTokenAmount", () => {
   });
 
   it("supports compact notation", () => {
-    expect(
-      formatTokenAmount(usdc("1250000"), 6, { compact: true, locale: "en-US" })
-    ).toBe("1.25M");
+    expect(formatTokenAmount(usdc("1250000"), 6, { compact: true, locale: "en-US" })).toBe("1.25M");
   });
 });
 
@@ -84,31 +87,22 @@ describe("parseAmount", () => {
     expect(parseAmount(input, decimals)).toBe(expected);
   });
 
-  it.each(["", " ", ".", "abc", "1.2.3", "-1", "1e18"])(
-    "rejects %j",
-    (input) => {
-      expect(parseAmount(input, 18)).toBeUndefined();
-    }
-  );
+  it.each(["", " ", ".", "abc", "1.2.3", "-1", "1e18"])("rejects %j", (input) => {
+    expect(parseAmount(input, 18)).toBeUndefined();
+  });
 });
 
 describe("getExplorerUrl", () => {
   it("builds address, tx and block links", () => {
     expect(getExplorerUrl(mainnet, { address: "0xabc" })).toBe(
-      "https://etherscan.io/address/0xabc"
+      "https://etherscan.io/address/0xabc",
     );
-    expect(getExplorerUrl(mainnet, { tx: "0xdef" })).toBe(
-      "https://etherscan.io/tx/0xdef"
-    );
-    expect(getExplorerUrl(mainnet, { block: 1n })).toBe(
-      "https://etherscan.io/block/1"
-    );
+    expect(getExplorerUrl(mainnet, { tx: "0xdef" })).toBe("https://etherscan.io/tx/0xdef");
+    expect(getExplorerUrl(mainnet, { block: 1n })).toBe("https://etherscan.io/block/1");
   });
 
   it("returns undefined without an explorer", () => {
-    expect(getExplorerUrl({ blockExplorers: undefined }, { tx: "0x" })).toBe(
-      undefined
-    );
+    expect(getExplorerUrl({ blockExplorers: undefined }, { tx: "0x" })).toBe(undefined);
     expect(getExplorerUrl(undefined, { tx: "0x" })).toBe(undefined);
   });
 });
@@ -122,9 +116,7 @@ describe("isUserRejection", () => {
   });
 
   it("ignores other errors", () => {
-    expect(isUserRejection(new SwitchChainError(new Error("boom")))).toBe(
-      false
-    );
+    expect(isUserRejection(new SwitchChainError(new Error("boom")))).toBe(false);
     expect(isUserRejection(new Error("boom"))).toBe(false);
     expect(isUserRejection(null)).toBe(false);
   });
@@ -171,7 +163,7 @@ describe("encodeBech32m", () => {
   it("matches the BIP-350 test vectors", () => {
     expect(encodeBech32m("a", [])).toBe("a1lqfn3a");
     expect(encodeBech32m("abcdef", words("l7aum6echk45nj3s0wdvt2fg8x9yrzpq"))).toBe(
-      "abcdef1l7aum6echk45nj3s0wdvt2fg8x9yrzpqzd3ryx"
+      "abcdef1l7aum6echk45nj3s0wdvt2fg8x9yrzpqzd3ryx",
     );
   });
 
@@ -179,5 +171,50 @@ describe("encodeBech32m", () => {
     const address = encodeBech32m("0zk", [0, ...Array.from({ length: 116 }, (_, i) => i % 32)]);
     expect(address).toHaveLength(127);
     expect(isShieldedAddress(address)).toBe(true);
+  });
+});
+
+describe("errorCode", () => {
+  it("reads cancelled and reverted from the phase", () => {
+    expect(errorCode("cancelled")).toBe("user-rejected");
+    expect(errorCode("reverted")).toBe("reverted");
+    expect(errorCode("pending", new Error("ignored"))).toBeUndefined();
+  });
+
+  it("classifies wrapped viem errors", () => {
+    const rejected = new SwitchChainError(new UserRejectedRequestError(new Error("nope")));
+    expect(errorCode("error", rejected)).toBe("user-rejected");
+    expect(
+      errorCode("error", new BaseError("send failed", { cause: new InsufficientFundsError() })),
+    ).toBe("insufficient-funds");
+    expect(
+      errorCode(
+        "error",
+        new BaseError("call failed", {
+          cause: new ContractFunctionRevertedError({ abi: erc20Abi, functionName: "transfer" }),
+        }),
+      ),
+    ).toBe("reverted");
+    expect(errorCode("error", new HttpRequestError({ url: "https://rpc.example" }))).toBe(
+      "network",
+    );
+  });
+
+  it("reads wagmi errors by name, and falls back to unknown", () => {
+    const mismatch = Object.assign(new Error("wrong chain"), {
+      name: "ConnectorChainMismatchError",
+    });
+    expect(errorCode("error", mismatch)).toBe("wrong-chain");
+    expect(errorCode("error", new Error("odd"))).toBe("unknown");
+    expect(errorCode("error")).toBe("unknown");
+  });
+});
+
+describe("agentConfirmText", () => {
+  it("leads with a text label", () => {
+    expect(agentConfirmText("Send 1 ETH", "sends a transaction")).toBe(
+      "Send 1 ETH: sends a transaction",
+    );
+    expect(agentConfirmText(null, "sends a transaction")).toBe("Sends a transaction");
   });
 });

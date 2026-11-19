@@ -3,10 +3,14 @@ import Default from "@astrojs/starlight/components/Head.astro";
 import { markdownPath } from "@/lib/agent-docs";
 
 const markdown = markdownPath(Astro.locals.starlightRoute.id);
+// Chrome only exposes WebMCP to pages with an origin trial token, until it ships.
+// Register at https://developer.chrome.com/origintrials and set it at build time.
+const originTrial = import.meta.env.PUBLIC_WEBMCP_ORIGIN_TRIAL;
 ---
 
 <Default />
 <link rel="alternate" type="text/markdown" href={markdown ?? "/llms.txt"} title="Markdown" />
+{originTrial && <meta http-equiv="origin-trial" content={originTrial} />}
 
 <script>
   import { registerDocsTools } from "@/lib/webmcp";
