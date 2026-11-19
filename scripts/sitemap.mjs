@@ -12,19 +12,31 @@ const git = (/** @type {string[]} */ ...args) =>
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "ignore"],
+    timeout: 60_000,
+    // Fail rather than wait for a password nobody will type.
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
   });
 
 /**
- * Last commit date of every file in the repo. Empty without git, and in a
- * shallow clone (most CI), where every file would get the newest commit's
- * date: no date is better than a wrong one.
+ * Last commit date of every file in the repo. A shallow clone (Cloudflare's
+ * build, most CI) only knows the newest commit, which would date every file
+ * today, so the rest of the history is fetched first. Empty if that fails or
+ * there is no git: no date is better than a wrong one.
  */
 function commitDates() {
   /** @type {Map<string, string>} */
   const dates = new Map();
   let log = "";
   try {
-    if (git("rev-parse", "--is-shallow-repository").trim() === "true") return dates;
+    const shallow = () => git("rev-parse", "--is-shallow-repository").trim() === "true";
+    if (shallow()) {
+      try {
+        git("fetch", "--unshallow", "--quiet");
+      } catch {
+        // Checked below.
+      }
+      if (shallow()) return dates;
+    }
     log = git("log", "--format=@%cI", "--name-only");
   } catch {
     return dates;
