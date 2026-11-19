@@ -494,7 +494,8 @@ export function TokenSelect({
         aria-haspopup="dialog"
         aria-label={value ? `${value.symbol}, change token` : placeholder}
         onClick={() => setOpen(true)}
-        className={cn("h-10 gap-2 rounded-full pr-3", value && "pl-1.5", className)}
+        // A logo sits close to the pill's edge; bare text needs more room on the curve.
+        className={cn("h-10 gap-2 rounded-full pr-3", value ? "pl-1.5" : "pl-4", className)}
         {...buttonProps}
       >
         {value && <TokenIcon symbol={value.symbol} src={value.logoURI} size={28} />}

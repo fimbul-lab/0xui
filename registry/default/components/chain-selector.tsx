@@ -153,10 +153,23 @@ function chainIconProps(
   return { chainId, variant, monoColor, className };
 }
 
-const triggerClassName = (iconOnly?: boolean, unsupported?: boolean) =>
+const triggerClassName = ({
+  iconOnly,
+  unsupported,
+  ChainIcon,
+  ChevronIcon,
+}: {
+  iconOnly?: boolean;
+  unsupported?: boolean;
+  ChainIcon?: unknown;
+  ChevronIcon?: unknown;
+}) =>
   cn(
-    "flex items-center gap-2 justify-between border transition-all w-fit py-2 pl-1.5 px-3 rounded-full hover:bg-accent/10 active:scale-97 cursor-pointer",
-    iconOnly ? "min-w-fit gap-1 py-1 px-1 pl-1" : "min-w-30",
+    "flex items-center gap-2 justify-between border transition-all w-fit py-2 px-3 rounded-full hover:bg-accent/10 active:scale-97 cursor-pointer",
+    iconOnly ? "min-w-fit gap-1 p-1" : "min-w-30",
+    // Bare text needs more room on the pill's curve than an icon does.
+    !iconOnly && !ChainIcon && !unsupported && "pl-4",
+    !iconOnly && !ChevronIcon && "pr-4",
     unsupported && "border-destructive/50 text-destructive"
   );
 
@@ -476,7 +489,7 @@ export function ChainSelector(props: ChainSelectorProps) {
   return (
     <Popover open={s.open} onOpenChange={s.onOpenChange}>
       <PopoverTrigger
-        className={triggerClassName(s.iconOnly, s.unsupported)}
+        className={triggerClassName(s)}
         aria-label={s.ariaLabel}
         title={s.tooltipTitle}
       >
@@ -525,7 +538,7 @@ export function ChainSelectorDialog(props: ChainSelectorProps) {
   return (
     <Dialog open={s.open} onOpenChange={s.onOpenChange}>
       <DialogTrigger
-        className={triggerClassName(s.iconOnly, s.unsupported)}
+        className={triggerClassName(s)}
         aria-label={s.ariaLabel}
         title={s.tooltipTitle}
       >

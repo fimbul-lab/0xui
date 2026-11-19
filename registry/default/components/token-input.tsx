@@ -130,7 +130,7 @@ export function TokenInput({
           />
         ) : (
           token && (
-            <span className="shrink-0 rounded-full border px-3 py-2 text-sm font-semibold">
+            <span className="inline-flex h-10 shrink-0 items-center rounded-full border px-4 text-sm font-semibold">
               {token.symbol}
             </span>
           )
