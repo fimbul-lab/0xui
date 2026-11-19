@@ -4,6 +4,8 @@ Web3 React components you copy into your app. Built on [wagmi](https://wagmi.sh)
 
 Every component handles the states real wallets produce: pending, cancelled in wallet, wrong network, error. Each one exports its hook, so you can keep the logic and bring your own UI.
 
+Built by [Fimbul Labs](https://fimbul.io).
+
 ## Install
 
 Add the registry to `components.json`:

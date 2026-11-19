@@ -2,6 +2,7 @@
   "name": "0xui",
   "type": "module",
   "version": "0.0.1",
+  "author": "Fimbul Labs (https://fimbul.io)",
   "scripts": {
     "dev": "shadcn build && astro dev",
     "start": "astro dev",
