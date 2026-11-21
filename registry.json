@@ -738,6 +738,40 @@
       ]
     },
     {
+      "name": "add-liquidity",
+      "type": "registry:block",
+      "title": "Add Liquidity",
+      "description": "Add liquidity block for concentrated liquidity pools (Uniswap v3 style new-position flow): optional FeeTierSelect, PriceRange on the pool's liquidity chart, two TokenInputs linked by the exact deposit ratio (type either, the other fills; one side locks for single-sided ranges / range orders), balances, ApproveButton for each ERC-20, and a mint button naming the blocker. Bring your own transaction via getTransaction(MintRequest), or use v3Mint({ positionManager, weth }) for NonfungiblePositionManager.mint (native ETH via multicall + refundETH). Exports useDepositAmounts, withSlippage, v3Mint and MintRequest/GetMintTransaction types.",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": [
+        "blocks"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/add-liquidity.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "wagmi",
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/price-range",
+        "@0xui/fee-tier-select",
+        "@0xui/liquidity-chart",
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/balance",
+        "@0xui/approve-button",
+        "@0xui/transaction-button",
+        "@0xui/concentrated-liquidity",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
       "name": "batch-transaction",
       "type": "registry:component",
       "title": "Batch Transaction",
@@ -2561,6 +2595,26 @@
       "files": [
         {
           "path": "registry/default/examples/fee-tier-select-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "add-liquidity-demo",
+      "type": "registry:example",
+      "title": "Add Liquidity demo",
+      "description": "USDC/WETH 0.05% position on made-up liquidity, minted through Uniswap v3's position manager.",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": [
+        "blocks"
+      ],
+      "registryDependencies": [
+        "@0xui/add-liquidity",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/add-liquidity-demo.tsx",
           "type": "registry:example"
         }
       ]

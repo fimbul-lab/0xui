@@ -325,10 +325,20 @@ export function priceRangeToTicks(
 
 /**
  * A range of ±`percent` around the current tick, snapped to the spacing and
- * at least one spacing wide on each side. `percent` is a price move, so
- * +10% / −10% is ±953 ticks, not symmetric in price but in log price.
+ * at least one spacing wide on each side, in the price as displayed:
+ * pass `invert` when prices are shown in token0 per token1.
  */
-export function rangeAroundTick(currentTick: number, percent: number, tickSpacing: number) {
+export function rangeAroundTick(
+  currentTick: number,
+  percent: number,
+  tickSpacing: number,
+  { invert = false }: { invert?: boolean } = {}
+): { tickLower: number; tickUpper: number } {
+  // Symmetric in the displayed price: mirror the ticks, build, mirror back.
+  if (invert) {
+    const r = rangeAroundTick(-currentTick, percent, tickSpacing);
+    return { tickLower: -r.tickUpper || 0, tickUpper: -r.tickLower || 0 };
+  }
   const { min, max } = usableTickBounds(tickSpacing);
   const up = Math.log(1 + percent / 100) / LOG_BASE;
   const down = Math.log(Math.max(1e-9, 1 - percent / 100)) / LOG_BASE;

@@ -79,6 +79,13 @@ describe("ticks and prices", () => {
     const { tickLower, tickUpper } = rangeAroundTick(-195775, 10, 10);
     expect(tickToPrice(tickUpper, 0, 0) / tickToPrice(-195775, 0, 0)).toBeGreaterThanOrEqual(1.1 - 1e-6);
     expect(tickToPrice(tickLower, 0, 0) / tickToPrice(-195775, 0, 0)).toBeLessThanOrEqual(0.9 + 1e-6);
+    // Inverted, the same ±10% is symmetric in the displayed (1/p) price.
+    const inv = rangeAroundTick(-195775, 10, 10, { invert: true });
+    const shown = (t: number) => 1 / tickToPrice(t, 0, 0);
+    expect(shown(inv.tickLower) / shown(-195775)).toBeGreaterThanOrEqual(1.1 - 1e-6);
+    expect(shown(inv.tickLower) / shown(-195775)).toBeLessThan(1.102);
+    expect(shown(inv.tickUpper) / shown(-195775)).toBeLessThanOrEqual(0.9 + 1e-6);
+    expect(shown(inv.tickUpper) / shown(-195775)).toBeGreaterThan(0.898);
     const tight = rangeAroundTick(5, 0.001, 10);
     expect(tight).toEqual({ tickLower: 0, tickUpper: 10 });
   });

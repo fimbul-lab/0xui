@@ -51,7 +51,7 @@ Prefer a block or component over hand-rolled wagmi calls: they already handle ca
 | Past transactions, contract events | `transaction-history`, `event-feed` |
 | Forms for any contract from its ABI | `contract-form` |
 | Concentrated liquidity (Uniswap v3/v4 style): set a price range, pool depth, position status, fee tier | `price-range`, `liquidity-chart`, `depth-chart`, `range-indicator`, `fee-tier-select` (math in `concentrated-liquidity`) |
-| Whole features | blocks: `swap`, `send`, `portfolio` |
+| Whole features | blocks: `swap`, `send`, `portfolio`, `add-liquidity` |
 | Building blocks | `copy-button`, `responsive-dialog`, `morph-text` |
 | Let browser agents read the wallet (WebMCP) | `agent-tools` |
 

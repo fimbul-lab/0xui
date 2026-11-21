@@ -77,7 +77,7 @@ export function usePriceRange({
 }) {
   const { tick, tickSpacing, decimals0, decimals1 } = pool;
   const [inner, setInner] = useState<TickRange>(
-    () => defaultValue ?? rangeAroundTick(tick, tickSpacing <= 1 ? 0.1 : 10, tickSpacing)
+    () => defaultValue ?? rangeAroundTick(tick, tickSpacing <= 1 ? 0.1 : 10, tickSpacing, { invert })
   );
   const range = value ?? inner;
   const setRange = (next: TickRange) => {
@@ -125,10 +125,10 @@ export function usePriceRange({
       setTick(key, range[key] + direction * (invert ? -1 : 1) * tickSpacing);
     },
     applyPreset: (preset: RangePreset) =>
-      setRange("full" in preset ? { tickLower: min, tickUpper: max } : rangeAroundTick(tick, preset.percent, tickSpacing)),
+      setRange("full" in preset ? { tickLower: min, tickUpper: max } : rangeAroundTick(tick, preset.percent, tickSpacing, { invert })),
     isPreset: (preset: RangePreset) => {
       if ("full" in preset) return full;
-      const r = rangeAroundTick(tick, preset.percent, tickSpacing);
+      const r = rangeAroundTick(tick, preset.percent, tickSpacing, { invert });
       return r.tickLower === range.tickLower && r.tickUpper === range.tickUpper;
     },
   };

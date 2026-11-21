@@ -663,10 +663,11 @@ Data stays bring-your-own, like `getQuote` in Swap: components take `PoolState` 
 | `depth-chart` | Order-book style cumulative depth both sides, ±2% headline figures, window buttons, crosshair, screen reader table. |
 | `range-indicator` | In range / Out of range / Closed, log-scale bar with the price marker. |
 | `fee-tier-select` | Fee tier radio cards with liquidity share and "Not created". |
+| `add-liquidity` (block) | Fee tier, price range and two linked `TokenInput`s (exact deposit ratio, one side locks for single-sided ranges), balances, approvals for both tokens, mint. Bring-your-own `getTransaction`, or `v3Mint({ positionManager, weth })` (native ETH via `multicall(mint, refundETH)`). |
 
 **Next, in order**
 
-1. `add-liquidity` block: fee tier, price range and two `TokenInput`s linked by `getDependentAmount` (typing one fills the other; one side locks when the range is single-sided), approvals for both tokens, bring-your-own `getMintTransaction` (v3 NonfungiblePositionManager `mint`, v4 PositionManager `modifyLiquidities` with Permit2). Slippage setting, and a "create pool + set starting price" step when the tier has no pool.
+1. `add-liquidity` follow-ups: a `v4Mint` (PositionManager `modifyLiquidities` with Permit2), a slippage setting in the UI, and a "create pool + set starting price" step when the tier has no pool.
 2. `position-card`: pair, fee, `range-indicator`, liquidity value, uncollected fees, and Collect / Increase / Remove actions. A `positions` list on top of it, like the Portfolio block.
 3. `remove-liquidity`: percentage slider (25/50/75/Max), the tokens you get back, collect fees with it.
 4. `liquidity-shape` (DLMM-style): Spot / Curve / Bid-Ask distribution over N bins, previewed on the liquidity chart. Covers Meteora-style bin AMMs and splitting a v3 deposit across several ranges.

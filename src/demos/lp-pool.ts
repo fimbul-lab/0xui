@@ -1,5 +1,6 @@
 import {
   getLiquidityBins,
+  getSqrtRatioAtTick,
   priceToTick,
   ticksFromPositions,
   tickToPrice,
@@ -34,10 +35,10 @@ export function createDemoPool({
   price = 3150,
   tickSpacing = 10,
   seed = 7,
-}: { price?: number; tickSpacing?: number; seed?: number } = {}) {
+  decimals0: d0 = demoToken0.decimals,
+  decimals1: d1 = demoToken1.decimals,
+}: { price?: number; tickSpacing?: number; seed?: number; decimals0?: number; decimals1?: number } = {}) {
   const rand = random(seed);
-  const { decimals: d0 } = demoToken0;
-  const { decimals: d1 } = demoToken1;
   const tick = priceToTick(price, d0, d1) + 3;
   const snap = (t: number) => Math.round(t / tickSpacing) * tickSpacing;
   const positions: { tickLower: number; tickUpper: number; liquidity: bigint }[] = [];
@@ -62,7 +63,14 @@ export function createDemoPool({
   positions.push({ tickLower: min, tickUpper: max, liquidity: 40_000_000_000_000_000n });
 
   const { ticks, liquidity } = ticksFromPositions(positions, tick);
-  const pool: PoolState = { tick, liquidity, tickSpacing, decimals0: d0, decimals1: d1 };
+  const pool: PoolState = {
+    tick,
+    sqrtPriceX96: getSqrtRatioAtTick(tick),
+    liquidity,
+    tickSpacing,
+    decimals0: d0,
+    decimals1: d1,
+  };
   return {
     pool,
     ticks,
@@ -73,3 +81,9 @@ export function createDemoPool({
 }
 
 export const demoPool = createDemoPool();
+
+/**
+ * USDC/WETH 0.05% in real mainnet order: USDC sorts first, so it's token0
+ * and the pool's price is ETH per USDC. Interfaces invert it for display.
+ */
+export const demoUsdcEthPool = createDemoPool({ price: 1 / 3150, decimals0: 6, decimals1: 18 });
