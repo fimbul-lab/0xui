@@ -11,7 +11,7 @@ import { Default } from "@/demos/shielded-engine";
 The shielded components show private balances, scan progress and proofs. They don't know which privacy protocol is behind them. They talk to a **shielded engine**: a small interface that wraps one protocol SDK and reports its state in neutral terms.
 
 <Aside type="caution" title="Preview">
-  Only the [mock engine](/components/mock-shielded-engine/) exists today. It imitates the Railgun SDK's behaviour without a network or real funds. A Railgun engine is planned, and the interface will grow as the shield, unshield and private send components are built.
+  Two engines exist. The [mock engine](/components/mock-shielded-engine/) imitates the Railgun SDK's behaviour without a network or real funds. The [Privacy Pools engine](/components/privacy-pools-engine/) shields into and unshields from the real Privacy Pools contracts. The interface will grow as the unshield and private send components are built.
 </Aside>
 
 Everything below runs on the mock. Unlock it, then use the buttons to make things happen.
@@ -69,6 +69,7 @@ const syncing = useShieldedState("sync", (e) => e.getSync(1).status === "syncing
 ```ts
 interface ShieldedEngine {
   id: string;
+  shieldsNative?: boolean;
 
   account: {
     status(): "none" | "locked" | "unlocked";
@@ -98,6 +99,8 @@ interface ShieldedEngine {
     draft: PrivateDraft,
     options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
   ): Promise<ProvedOperation>;
+  quote(draft: PrivateDraft): Promise<PrivateQuote>;
+  submit(operation: ProvedOperation): Promise<{ hash: Hash }>;
 }
 ```
 
@@ -150,6 +153,8 @@ type PreparedShield = { transaction: { to; data?; value? } };
 
 - `quoteShield` signs and sends nothing. It lets the UI show the cost first, and lay out every wallet step before the first one: `spender` says whether an approval is needed, `needsSignature` whether a signature is.
 - `prepareShield` builds the transaction. The public wallet sends it; the engine never does. Some protocols derive a one-off key from a wallet signature: the engine then calls `sign(message)`, at most once, and a rejected signature rejects the promise with the wallet's error.
+- `shieldsNative` says the protocol takes native currency as it is. A draft then carries the native token's address and the transaction carries the amount as its `value`. Without it, native currency is held as its wrapped token.
+- `account.address()` may stay `null` on a protocol that has no private address, like Privacy Pools v1.
 - `getTransaction(chainId, hash)` is how the UI knows a shield really arrived. It returns nothing until a scan has found the funds, then `{ kind: "shield", token, amount, state }`. A mined receipt alone is not proof.
 
 See the [Shield](/blocks/shield/) block and [Shielded Transaction Status](/components/shielded-transaction-status/).
@@ -158,9 +163,27 @@ See the [Shield](/blocks/shield/) block and [Shielded Transaction Status](/compo
 
 `prove` reports stages (`loading-circuits`, `proving`, `verifying`), not a percentage: provers don't report a real one. See [Proof Progress](/components/proof-progress/).
 
+### Private operations
+
+An unshield moves tokens from the private balance to a public address. It takes three calls:
+
+```ts
+const draft = { kind: "unshield", chainId: 1, token, amount, recipient } as const;
+
+const { fee, received } = await engine.quote(draft);
+const operation = await engine.prove(draft, { onStage });
+const { hash } = await engine.submit(operation);
+```
+
+- `quote` says what the operation costs now. It proves nothing. It rejects when the draft can't be done, with a message fit to show.
+- `prove` returns a `ProvedOperation`: the draft, the fee the proof commits to in `quote`, and `expiresAt`. The fee can differ from an earlier `quote`, so show the operation's own.
+- `submit` sends it. The engine does this itself, through the protocol's relayer where there is one, so the public wallet is not involved. It resolves when the transaction is broadcast, not mined. A proof can be submitted once.
+
+After `submit`, call `sync` once the transaction is mined, as after a shield.
+
 ## Not in the interface yet
 
-These are planned and arrive with the components that need them: fee estimates for private operations, submitting a proved operation, private transfers, relayers, and capability flags per engine.
+These are planned and arrive with the components that need them: private transfers, a choice of relayer, and capability flags per engine.
 
 ## Writing an engine
 

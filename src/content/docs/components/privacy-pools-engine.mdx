@@ -1,0 +1,202 @@
+---
+title: Privacy Pools Engine
+description: A shielded engine on the deployed Privacy Pools contracts. It shields real funds, follows them, and unshields them through a relayer.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+
+A [shielded engine](/components/shielded-engine/) for [Privacy Pools](https://privacypools.com) v1 by 0xbow, built on its public SDK, `@0xbow/privacy-pools-core-sdk`. With it the [Shield](/blocks/shield/) block deposits into the real contracts, and `prove` and `submit` withdraw from them.
+
+<Aside type="caution" title="Use test networks">
+  This engine handles a recovery phrase and builds transactions that move funds. It has not had a security review. Unshielding was tested up to a proof the real verifier accepts, not with a withdrawal on chain. If one fails, the same recovery phrase opens the account at privacypools.com. Whether you may use a privacy protocol depends on where you are.
+</Aside>
+
+There is no live demo here. A shield needs a wallet with Sepolia funds, and the docs' Demo Wallet sends nothing. Install the example and run it.
+
+## How Privacy Pools works
+
+- **Deposit.** Funds go to the Entrypoint contract, which takes a vetting fee and passes the rest to the asset's pool.
+- **Review.** An Association Set Provider (ASP), run by 0xbow, screens each deposit. Until it approves, the deposit is `pending`. After, it is `spendable`.
+- **Withdraw.** An approved deposit can be withdrawn to any address with a zero-knowledge proof, through a relayer, which sends the transaction and keeps a fee.
+- **Exit.** A deposit that is not approved can always go back to the address it came from, in public. Not in this engine yet.
+
+The private account is a recovery phrase. Every deposit's secrets come from it, so the phrase alone finds the funds again on any device.
+
+## Installation
+
+<Install name="privacy-pools-engine" />
+
+This also installs `assert` and `buffer`. The SDK's browser build calls both, and bundlers no longer stand in for Node's own. Your bundler may still warn that `fs` was left out: that file is only loaded outside the browser.
+
+## Usage
+
+```tsx
+import { Shield } from "@/components/shield";
+import { ShieldedAccount } from "@/components/shielded-account";
+import { ShieldedProvider } from "@/components/shielded-provider";
+import {
+  PRIVACY_POOLS_NATIVE,
+  PRIVACY_POOLS_SEPOLIA,
+  createPrivacyPoolsEngine,
+} from "@/lib/privacy-pools-engine";
+
+const engine = createPrivacyPoolsEngine({
+  chains: {
+    11155111: { ...PRIVACY_POOLS_SEPOLIA, rpcUrl: "https://your-sepolia-rpc" },
+  },
+});
+
+const eth = { chainId: 11155111, address: PRIVACY_POOLS_NATIVE, name: "Ether", symbol: "ETH", decimals: 18 };
+
+<ShieldedProvider engine={engine}>
+  <ShieldedAccount>
+    <Shield tokens={[eth]} chainId={11155111} />
+  </ShieldedAccount>
+</ShieldedProvider>;
+```
+
+Create the engine once, outside render. Creating it reads storage and nothing else. Scanning starts on unlock.
+
+## Unshield
+
+An unshield needs two more things: the chain's `relayerUrl`, which `PRIVACY_POOLS_SEPOLIA` has, and `circuitsUrl`.
+
+```ts
+const engine = createPrivacyPoolsEngine({
+  chains: { 11155111: { ...PRIVACY_POOLS_SEPOLIA, rpcUrl: "https://your-sepolia-rpc" } },
+  // Serves /artifacts/withdraw.wasm and the rest.
+  circuitsUrl: "https://your-app.example/",
+});
+
+const draft = {
+  kind: "unshield",
+  chainId: 11155111,
+  token: PRIVACY_POOLS_NATIVE,
+  amount: parseEther("0.05"),
+  recipient: "0x…",
+} as const;
+
+const { fee, received } = await engine.quote(draft);
+const operation = await engine.prove(draft, { onStage: console.log });
+const { hash } = await engine.submit(operation);
+```
+
+There is no unshield block yet. [Proof Progress](/components/proof-progress/) runs `prove` and shows its stages. Call `submit` with what it returns.
+
+### The circuit files
+
+The proof is made in the browser, from six files: `withdraw.wasm`, `withdraw.zkey`, `withdraw.vkey`, and the same three for `commitment`. About 24 MB in total, most of it `withdraw.zkey`.
+
+- Copy them from `public/artifacts` in [0xbow's web app](https://github.com/0xbow-io/privacy-pools-website) into an `artifacts` folder you serve, and point `circuitsUrl` at its parent.
+- The SDK checks each file against a SHA-256 hash it ships with and refuses a file that differs. So the host does not have to be trusted.
+- They load on the first proof and stay in memory for the session. A failed download is tried again by the next proof.
+
+### What an unshield does
+
+- **It spends one deposit.** The amount has to fit in a single approved deposit. With 1 ETH in two deposits of 0.5, the most you can unshield at once is 0.5. The engine picks the smallest deposit that covers the amount.
+- **The rest stays private.** What is left of the deposit stays in the pool, still approved, and can be unshielded later.
+- **No dust.** The relayer has a minimum. The engine refuses an amount that would leave less than that behind, and says what to unshield instead.
+- **The relayer is checked.** The relayer writes the withdrawal's instructions and the proof is bound to them. Before proving, the engine checks they pay the draft's recipient at the quoted fee, and that the fee is within the pool's limit.
+- **The fee is the relayer's.** It is a share of the amount, about 0.1% on Sepolia, and moves with gas. `quote` asks for the price only. `prove` gets a signed price, which the returned `quote` reports.
+- **A proof is submitted once.** `submit` uses it up, even when the relayer refuses it. Prove again to retry.
+- **The relayer's promise lasts a minute.** If it ran out before `submit`, the engine asks for a new one. Same fee: it submits. Different fee: it asks for a new proof.
+- **Funds read as `proving` after `submit`**, until a scan sees the withdrawal on chain. Call `sync` when the transaction is mined. If no scan sees it within 10 minutes, the funds go back to `spendable`.
+
+The relayer sees the recipient, the amount and your IP address. It does not learn which deposit paid.
+
+On a laptop a proof took about 5 seconds once the files were loaded. It runs on the page's main thread, so the page can stutter while it does.
+
+## The RPC matters
+
+A scan reads every pool event since the pools were deployed, with `eth_getLogs`. Many free RPCs refuse that: they prune old logs, or allow 50 to 100 blocks per request.
+
+- Use a provider that serves old logs over wide ranges.
+- `blockRange` sets the blocks per request. Default 10,000.
+- A refused request is halved and tried again, so a provider with a smaller limit still works, slowly.
+- Three requests run at once.
+
+On Sepolia a first scan took about 25 seconds through a free RPC. Blocks more than 64 behind the head are read once per session. Later scans fetch only what is new.
+
+The scan fetches whole pools and the ASP's whole approved set, never one deposit. Asking for a single deposit would tell the RPC or the ASP which one is yours.
+
+## Other chains
+
+`PRIVACY_POOLS_SEPOLIA` covers ETH, USDC and USDT on Sepolia. For another chain, give the Entrypoint, the ASP and each pool's asset and deployment block. The engine reads the pool address, scope, minimum and fee from the Entrypoint.
+
+```ts
+createPrivacyPoolsEngine({
+  chains: {
+    1: {
+      rpcUrl: "https://your-mainnet-rpc",
+      entrypoint: "0x6818809EefCe719E480a7526D76bD3e561526b46",
+      aspUrl: "https://api.0xbow.io",
+      relayerUrl: "https://fastrelay.xyz",
+      pools: [{ asset: PRIVACY_POOLS_NATIVE, deploymentBlock: 22153707n }],
+    },
+  },
+});
+```
+
+These mainnet values come from 0xbow's own app. Check them against 0xbow's documentation before you use them.
+
+## What it maps to
+
+| Engine | Privacy Pools |
+| --- | --- |
+| `account.create` | A new 12-word phrase, encrypted with the password and kept in `storage`. |
+| `account.address` | Always `null`. v1 has no private address. |
+| `quoteShield` | Vetting fee and minimum from the Entrypoint. `standby` is the `reviewTime` estimate. `spender` is the Entrypoint, or nothing for ETH. No signature. |
+| `prepareShield` | The Entrypoint `deposit` call. ETH goes as the transaction's value. |
+| `pending` | Deposited, not yet approved by the ASP. |
+| `spendable` | Approved by the ASP. |
+| `proving` | Handed to the relayer, not yet seen on chain. |
+| `incomplete` | Never used. |
+| `restricted` | Not reported yet. A declined deposit shows as `pending`. |
+| `quote` | The relayer's fee for the amount. Rejects when the amount can't be unshielded, and says why. |
+| `prove` | The withdrawal proof for one deposit, made in the browser. |
+| `submit` | Hands the proof to the relayer, which sends the transaction. |
+
+A decline can only be asked about one deposit at a time, which would tell the ASP which deposits are yours. So the engine does not ask, and a declined deposit stays `pending`.
+
+## One index per shield
+
+Each deposit uses the next index from the phrase. Two deposits made with the same index share a nullifier, and the pool lets only one of them be withdrawn privately.
+
+The chain can't tell the engine about a deposit that is prepared but not mined. So every prepared shield takes a new index, and keeps it for 30 minutes, across reloads too. A dismissed wallet prompt leaves its index unused, which is harmless.
+
+The SDK stops looking after 10 unused indexes in a row. The engine refuses to run more than 8 ahead of the chain: after 8 shields started and none confirmed, it asks the user to wait.
+
+`prepareShield` also refuses when a pool's history could not be read in full, because the next index comes from that history.
+
+## The recovery phrase
+
+- It is encrypted with the password: PBKDF2-SHA256, 600,000 rounds, into AES-256-GCM.
+- The encrypted phrase is kept in `storage`, `localStorage` by default. Pass your own to keep it elsewhere.
+- The decrypted phrase is held in memory while unlocked, and dropped on lock.
+- A weak password is the weak point. Anyone who can read the page's storage can try passwords offline.
+- The same phrase opens the account at privacypools.com.
+
+Deposits made with an older Privacy Pools key scheme and not migrated since are not shown. Migrate them at privacypools.com.
+
+## Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `chains` | `Record<number, PrivacyPoolsChain>` | — | Deployments by chain id: `rpcUrl`, `entrypoint`, `aspUrl`, `pools`, `relayerUrl?`, `blockRange?`. |
+| `circuitsUrl` | `string` | — | Where the circuit files are served. Needed to unshield. |
+| `storage` | `{ getItem, setItem, removeItem }` | `localStorage` | Where the encrypted phrase is kept. |
+| `reviewTime` | `number` | `3600` | Seconds a deposit usually waits for the ASP. An estimate for the quote, not a protocol rule: it can take days. |
+| `pollInterval` | `number` | `60000` | Ms between scans while unlocked, so approvals show up. `0` turns it off. |
+| `client` | `(chainId) => PrivacyPoolsClient` | viem on `rpcUrl` | Chain reads, for tests or your own transport. |
+| `fetch` | `typeof fetch` | global `fetch` | HTTP for the ASP and the relayer. |
+
+The SDK logs scan progress to the console: pool addresses and counts, no secrets.
+
+## Not built yet
+
+- An unshield block. The engine can unshield; the UI for it is not built.
+- Unshielding without a relayer, from your own wallet.
+- Exit (ragequit) for a deposit that is not approved.
+- A cache that survives a reload, and an indexed source in place of `eth_getLogs`.
+- Privacy Pools v2. Its SDK is not on npm yet.

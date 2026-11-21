@@ -260,6 +260,8 @@ export function createMockShieldedEngine({
   let session = 0;
   let circuitsLoaded = circuitsCached;
   let proofCount = 0;
+  /** Proofs not yet submitted, by id, with the session that made them. */
+  const proofs = new Map<string, number>();
   let keepIncomplete = false;
   let nextProofFailure: string | undefined;
   let nextRetryFailure: string | undefined;
@@ -375,6 +377,38 @@ export function createMockShieldedEngine({
   }
 
   const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
+
+  /** Spend whole notes for an unshield, and bring the remainder back as change. */
+  async function unshield(
+    token: Address,
+    amount: bigint,
+    chainId: number,
+    change: "spendable" | "incomplete"
+  ) {
+    const chain = chainOf(chainId);
+    // Spend whole notes, oldest first, until they cover the amount.
+    let covered = 0n;
+    const spent = new Set<Note>();
+    for (const note of chain.notes) {
+      if (covered >= amount) break;
+      if (note.state !== "spendable" || !sameToken(note.token, token)) continue;
+      spent.add(note);
+      covered += note.amount;
+    }
+    if (amount <= 0n || covered < amount) throw new Error("Not enough spendable balance.");
+    chain.notes = chain.notes.filter((note) => !spent.has(note));
+
+    if (covered > amount) {
+      const note: Note = { token, amount: covered - amount, state: "proving" };
+      chain.notes.push(note);
+      later(timings.settle, chainId, () => {
+        note.state = change;
+      });
+    }
+    await scan(chainId);
+    const fee = feeOn(amount);
+    return { fee, received: amount - fee };
+  }
 
   function requireUnlocked() {
     if (status !== "unlocked") throw new Error("Unlock the private account first.");
@@ -530,7 +564,39 @@ export function createMockShieldedEngine({
       await wait(timings.verify, signal);
       if (started !== session) throw new Error("The private account was locked.");
 
-      return { id: `mock-proof-${++proofCount}`, draft, expiresAt: Date.now() + PROOF_LIFETIME };
+      const fee = feeOn(draft.amount);
+      const operation = {
+        id: `mock-proof-${++proofCount}`,
+        draft,
+        quote: { fee, received: draft.amount - fee },
+        expiresAt: Date.now() + PROOF_LIFETIME,
+      };
+      proofs.set(operation.id, started);
+      return operation;
+    },
+
+    async quote(draft) {
+      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (status === "unlocked") {
+        const spendable = chainOf(draft.chainId)
+          .notes.filter((note) => note.state === "spendable" && sameToken(note.token, draft.token))
+          .reduce((sum, note) => sum + note.amount, 0n);
+        if (spendable < draft.amount) throw new Error("Not enough spendable balance.");
+      }
+      const fee = feeOn(draft.amount);
+      return { fee, received: draft.amount - fee };
+    },
+
+    async submit(operation) {
+      requireUnlocked();
+      // A proof belongs to the session that made it, and is spent by its first submit.
+      if (proofs.get(operation.id) !== session) throw new Error("This proof can't be used. Prove again.");
+      if (Date.now() > operation.expiresAt) throw new Error("The proof expired. Prove again.");
+      proofs.delete(operation.id);
+      const { token, amount, chainId } = operation.draft;
+      await unshield(token, amount, chainId, "spendable");
+      const number = operation.id.slice("mock-proof-".length);
+      return { hash: `0x${number.padStart(64, "0")}` as Hash };
     },
 
     simulate: {
@@ -545,31 +611,8 @@ export function createMockShieldedEngine({
         return { fee, received: note.amount };
       },
 
-      async unshield({ token, amount, chainId = defaultChain, change = "spendable" }) {
-        const chain = chainOf(chainId);
-        // Spend whole notes, oldest first, until they cover the amount.
-        let covered = 0n;
-        const spent = new Set<Note>();
-        for (const note of chain.notes) {
-          if (covered >= amount) break;
-          if (note.state !== "spendable" || !sameToken(note.token, token)) continue;
-          spent.add(note);
-          covered += note.amount;
-        }
-        if (amount <= 0n || covered < amount) throw new Error("Not enough spendable balance.");
-        chain.notes = chain.notes.filter((note) => !spent.has(note));
-
-        if (covered > amount) {
-          const note: Note = { token, amount: covered - amount, state: "proving" };
-          chain.notes.push(note);
-          later(timings.settle, chainId, () => {
-            note.state = change;
-          });
-        }
-        await scan(chainId);
-        const fee = feeOn(amount);
-        return { fee, received: amount - fee };
-      },
+      unshield: ({ token, amount, chainId = defaultChain, change = "spendable" }) =>
+        unshield(token, amount, chainId, change),
 
       addFunds({ token, amount, state = "spendable", chainId = defaultChain, hash }) {
         chainOf(chainId).notes.push({ token, amount, state, hash });
