@@ -1353,6 +1353,49 @@
       ]
     },
     {
+      "name": "unshield",
+      "type": "registry:block",
+      "title": "Unshield",
+      "description": "Unshield block: move a token from a private (shielded) balance to a public address through a ShieldedEngine. Shows the spendable private balance with Max, a recipient field (address or ENS, or the connected wallet's address on request), and a quote with the fee and what the recipient gets, asked before the recipient is entered. Then it makes the proof in the tab, stage by stage with a cancel, and submits it through the engine: no wallet prompt and no connected wallet needed. The proof commits to its own fee; if that is higher than the one shown it stops and asks before sending. After sending it follows the transaction and has the engine scan once it is mined. The button names the blocker (Unlock your private account / Enter an amount / Insufficient private balance / Enter a recipient / Fetching quote / Can't unshield this amount). Exports useUnshieldFlow, useUnshieldQuote, unshieldBlocker, unshieldConfirmText, UnshieldQuoteRows and the framework-free createUnshieldFlow (lib/unshield-core.ts). data-phase: idle | proving | review | submitting | cancelled | error.",
+      "docs": "Docs: https://0xui.io/blocks/unshield.md",
+      "categories": [
+        "blocks"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/unshield.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/unshield-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "wagmi",
+        "viem",
+        "@tanstack/react-query",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/address-input",
+        "@0xui/morph-text",
+        "@0xui/primitive-button",
+        "@0xui/privacy-badge",
+        "@0xui/proof-progress",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/token-amount",
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/transaction-status",
+        "@0xui/use-store",
+        "@0xui/0xui-utils",
+        "@0xui/shield",
+        "@0xui/0xui-store"
+      ]
+    },
+    {
       "name": "wagmi-config",
       "type": "registry:lib",
       "title": "wagmi config + provider",
@@ -2211,6 +2254,32 @@
           "path": "registry/default/examples/shield-demo.tsx",
           "type": "registry:example"
         }
+      ]
+    },
+    {
+      "name": "unshield-demo",
+      "type": "registry:example",
+      "title": "Unshield demo",
+      "description": "Unshield block on Sepolia behind a private account unlock, with private balances below, on a mock engine.",
+      "docs": "Docs: https://0xui.io/blocks/unshield.md",
+      "categories": [
+        "blocks"
+      ],
+      "registryDependencies": [
+        "@0xui/unshield",
+        "@0xui/shielded-account",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/mock-shielded-engine"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/unshield-demo.tsx",
+          "type": "registry:example"
+        }
+      ],
+      "dependencies": [
+        "viem"
       ]
     },
     {

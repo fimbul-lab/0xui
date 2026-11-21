@@ -157,7 +157,7 @@ Shared helpers install on their own as dependencies: `0xui-utils` (address and a
 Components for private balances. They talk to a shielded engine: a mock one, and a Privacy Pools one that shields and unshields on the real contracts. Not ready for real funds: `shielded-account` and the Privacy Pools engine have not had a security review. The docs site leaves these out of its sidebar, search, `llms.txt` and agent skill until a real engine works; [/shielded/](https://0xui.io/shielded/) links them all.
 
 <details>
-<summary>The 11 shielded items</summary>
+<summary>The 12 shielded items</summary>
 
 | Item | Description |
 | --- | --- |
@@ -165,6 +165,7 @@ Components for private balances. They talk to a shielded engine: a mock one, and
 | `mock-shielded-engine` | In-memory engine for demos and tests. No network, no funds. |
 | `privacy-pools-engine` | Engine on Privacy Pools v1 (0xbow): real deposits and relayed withdrawals on the deployed contracts. |
 | `shield` | Shield block: fee, wait and wallet prompts up front, then sign, approve and shield one click at a time (approve and shield in one prompt on batching wallets), and the funds followed until spendable. Two variants. |
+| `unshield` | Unshield block: private balance, fee and what the recipient gets, then the proof stage by stage and the send. No wallet prompt. Asks again if the fee went up. |
 | `shielded-account` | Create, import, unlock and lock the private account, with a recovery phrase step. |
 | `shielded-transaction-status` | Follows a shield from the public chain into the private balance. |
 | `shielded-balance` | Private balance of a token, split into spendable, pending, proving, incomplete and restricted. |

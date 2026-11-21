@@ -270,7 +270,9 @@ export interface ShieldedEngine {
   /**
    * What a private operation costs right now. Signs nothing and proves
    * nothing. Rejects when the draft can't be done, e.g. the amount is more
-   * than the spendable balance, with a message fit to show.
+   * than the spendable balance, with a message fit to show. The price must
+   * not depend on the recipient: a form asks before one is entered, with the
+   * zero address in its place.
    */
   quote(draft: PrivateDraft): Promise<PrivateQuote>;
 
