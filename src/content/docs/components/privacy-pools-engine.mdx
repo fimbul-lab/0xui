@@ -114,10 +114,13 @@ A scan reads every pool event since the pools were deployed, with `eth_getLogs`.
 
 - Use a provider that serves old logs over wide ranges.
 - `blockRange` sets the blocks per request. Default 10,000.
-- A refused request is halved and tried again, so a provider with a smaller limit still works, slowly.
+- A request refused for its size is halved and tried again, so a provider with a smaller limit still works, slowly.
+- A request refused for coming too fast (HTTP 429) is tried again after a wait that doubles each time, up to six times. The other requests wait with it.
 - Three requests run at once.
 
-On Sepolia a first scan took about 25 seconds through a free RPC. Blocks more than 64 behind the head are read once per session. Later scans fetch only what is new.
+On Sepolia a first scan took about 30 seconds through a free RPC, and a scan after a reload about 3.
+
+Blocks more than 64 behind the head are read once and kept in IndexedDB, so a reload fetches only what is new. What is kept is the pools' public events, the same for every account: nothing in it says which deposits are yours. Pass your own `cache`, or `cache: false` to read everything again on every load.
 
 If the wallet sends through another RPC than the engine scans through, the two can disagree for a moment: a transaction one has mined, the other has not seen yet. A `sync` right after the receipt can then find nothing. The next scan finds it, and the engine scans every `pollInterval`.
 
@@ -206,6 +209,7 @@ Deposits made with an older Privacy Pools key scheme and not migrated since are 
 | `storage` | `{ getItem, setItem, removeItem }` | `localStorage` | Where the encrypted phrase is kept. |
 | `reviewTime` | `number` | `3600` | Seconds a deposit usually waits for the ASP. An estimate for the quote, not a protocol rule: it can take days. |
 | `pollInterval` | `number` | `60000` | Ms between scans while unlocked, so approvals show up. `0` turns it off. |
+| `cache` | `{ get, set } \| false` | IndexedDB | Where pool events are kept between page loads. |
 | `client` | `(chainId) => PrivacyPoolsClient` | viem on `rpcUrl` | Chain reads, for tests or your own transport. |
 | `fetch` | `typeof fetch` | global `fetch` | HTTP for the ASP and the relayer. |
 
@@ -214,5 +218,5 @@ The SDK logs scan progress to the console: pool addresses and counts, no secrets
 ## Not built yet
 
 - Unshielding without a relayer, from your own wallet.
-- A cache that survives a reload, and an indexed source in place of `eth_getLogs`.
+- An indexed source in place of `eth_getLogs`, so a first scan does not read every block.
 - Privacy Pools v2. Its SDK is not on npm yet.

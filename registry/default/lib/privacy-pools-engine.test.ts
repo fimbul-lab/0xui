@@ -21,6 +21,7 @@ import {
   encryptPhrase,
   nextDepositIndex,
   poolAccountState,
+  type PrivacyPoolsCache,
   type PrivacyPoolsClient,
   type PrivacyPoolsStorage,
 } from "./privacy-pools-engine";
@@ -67,6 +68,8 @@ function fakeChain() {
     /** Refuse ranges wider than this, like an RPC with a block limit. */
     maxRange: undefined as bigint | undefined,
     failLogs: false,
+    /** How many of the next log requests the RPC refuses as coming too fast. */
+    rateLimited: 0,
     aspStatus: 200,
     /** Every commitment in the pools' state tree, as the ASP publishes it. */
     stateLeaves: [] as string[],
@@ -96,7 +99,11 @@ function fakeChain() {
     getBlockNumber: async () => state.head,
     async getLogs({ fromBlock, toBlock }) {
       state.getLogsCalls.push({ fromBlock, toBlock });
-      if (state.failLogs) throw new Error("rate limited");
+      if (state.failLogs) throw new Error("node is down");
+      if (state.rateLimited > 0) {
+        state.rateLimited--;
+        throw Object.assign(new Error("HTTP request failed."), { status: 429 });
+      }
       if (state.maxRange !== undefined && toBlock - fromBlock + 1n > state.maxRange) {
         throw new Error("block range too wide");
       }
@@ -202,7 +209,11 @@ function memory(): PrivacyPoolsStorage & { items: Map<string, string> } {
   };
 }
 
-function setup(storage = memory(), chain = fakeChain(), options: { checkDeclined?: boolean } = {}) {
+function setup(
+  storage = memory(),
+  chain = fakeChain(),
+  options: { checkDeclined?: boolean; cache?: PrivacyPoolsCache } = {}
+) {
   const engine = createPrivacyPoolsEngine({
     ...options,
     chains: {
@@ -507,6 +518,87 @@ describe("scan", () => {
     );
   });
 
+  it("waits and tries again when the RPC says too many requests", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "Date"] });
+    try {
+      const context = setup();
+      context.state.rateLimited = 3;
+      await context.engine.account.import(PHRASE, "password");
+      const done = context.engine.sync(CHAIN);
+      await vi.advanceTimersByTimeAsync(20_000);
+      await done;
+      expect(context.engine.getSync(CHAIN).status).toBe("synced");
+      // Refused requests are repeated as they were, not split into more.
+      const sizes = context.state.getLogsCalls.map(({ fromBlock, toBlock }) => toBlock - fromBlock + 1n);
+      expect(sizes.filter((size) => size < 64n)).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives up on a rate limit that does not lift", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "Date"] });
+    try {
+      const context = setup();
+      context.state.rateLimited = 1_000;
+      await context.engine.account.import(PHRASE, "password");
+      const done = context.engine.sync(CHAIN);
+      await vi.advanceTimersByTimeAsync(600_000);
+      await done;
+      expect(context.engine.getSync(CHAIN)).toMatchObject({ status: "error" });
+      // A handful of tries per request, not a flood.
+      expect(context.state.getLogsCalls.length).toBeLessThan(60);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps pool events between page loads, and reads only what is new", async () => {
+    const items = new Map<string, string>();
+    const cache: PrivacyPoolsCache = {
+      get: async (key) => items.get(key),
+      set: async (key, value) => void items.set(key, value),
+    };
+    const storage = memory();
+    const chain = fakeChain();
+    const first = setup(storage, chain, { cache });
+    await first.engine.account.import(PHRASE, "password");
+    const { transaction } = await shieldUsdc(first.engine);
+    chain.deposit(USDC_POOL, precommitmentOf(transaction.data!), parseUnits("5", 6), 3n, 1_001n);
+    // Far enough on that the deposit's block is final, and so kept.
+    chain.state.head = 1_200n;
+    await first.engine.sync(CHAIN);
+    expect(amountsOf(first.engine)?.pending).toBe(parseUnits("5", 6));
+    expect(items.size).toBe(1);
+    // Nothing in the cache is about this account: it holds the pool's public events.
+    expect([...items.values()].join()).not.toContain(PHRASE.split(" ")[0]! + " ");
+
+    // A new page load: same storage and cache, a fresh engine.
+    chain.state.getLogsCalls.length = 0;
+    chain.state.head = 1_210n;
+    const second = setup(storage, chain, { cache });
+    await second.engine.account.unlock("password");
+    await second.engine.sync(CHAIN);
+    expect(amountsOf(second.engine)?.pending).toBe(parseUnits("5", 6));
+    // Only blocks after the cached ones were asked for. The deposit at 1001 came from the cache.
+    expect(chain.state.getLogsCalls.length).toBeGreaterThan(0);
+    expect(chain.state.getLogsCalls.every(({ fromBlock }) => fromBlock >= 1_137n)).toBe(true);
+  });
+
+  it("scans the chain when the cache can't be read", async () => {
+    const cache: PrivacyPoolsCache = {
+      get: async () => "not json",
+      set: async () => {
+        throw new Error("disk full");
+      },
+    };
+    const context = setup(memory(), fakeChain(), { cache });
+    await context.engine.account.import(PHRASE, "password");
+    await context.engine.sync(CHAIN);
+    expect(context.engine.getSync(CHAIN).status).toBe("synced");
+    expect(context.state.getLogsCalls[0]).toEqual({ fromBlock: 100n, toBlock: 599n });
+  });
+
   it("reports progress through both stages and ends synced", async () => {
     const context = setup();
     const states: ShieldedSync[] = [];
@@ -529,7 +621,7 @@ describe("scan", () => {
     state.failLogs = true;
     state.head = 1_100n;
     await expect(engine.sync(CHAIN)).resolves.toBeUndefined();
-    expect(engine.getSync(CHAIN)).toMatchObject({ status: "error", error: "rate limited" });
+    expect(engine.getSync(CHAIN)).toMatchObject({ status: "error", error: "node is down" });
     expect(engine.getBalances(CHAIN)).toBe(before);
 
     state.failLogs = false;
