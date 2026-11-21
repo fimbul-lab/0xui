@@ -1,0 +1,95 @@
+---
+title: Position List
+description: An owner's Uniswap v3 positions, read on-chain with useV3Positions and listed by status.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Empty } from "@/demos/position-list";
+
+Lists LP positions as [Position Cards](/components/position-card/): in range first, then out of range, largest first, with closed positions folded away. The header counts each status. `useV3Positions` reads everything it needs from the chain, so no indexer is required.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+The demo uses made-up positions. Nothing is read or sent.
+
+## Installation
+
+<Install name="position-list" />
+
+## Usage
+
+```tsx
+import { PositionList } from "@/components/position-list";
+import { useV3Positions } from "@/hooks/use-v3-positions";
+import { nativeToken } from "@/lib/token-list";
+import { uniswapV3Deployments, v3Collect } from "@/lib/v3-position-manager";
+import { mainnet } from "wagmi/chains";
+
+const { positionManager, weth } = uniswapV3Deployments[1];
+
+function MyPositions() {
+  const { positions } = useV3Positions({ tokens, native: nativeToken(mainnet) });
+  return (
+    <PositionList
+      positions={positions}
+      prices={prices}
+      getCollectTransaction={v3Collect({ positionManager, weth })}
+      actions={(item) => <Button onClick={() => openRemove(item)}>Remove</Button>}
+    />
+  );
+}
+```
+
+## Reading positions
+
+`useV3Positions` reads the connected account's positions (or `owner`'s) from Uniswap's position manager:
+
+1. `balanceOf` and `tokenOfOwnerByIndex` for the token ids, newest first, up to `limit`.
+2. `positions(tokenId)` for each: tokens, fee, ticks and liquidity.
+3. The factory's `getPool`, then each pool's `slot0`, `liquidity` and `tickSpacing`.
+4. `symbol`, `name` and `decimals` for tokens that aren't in `tokens`.
+5. Uncollected fees, by simulating `collect` from the owner. The stored `tokensOwed` misses fees earned since the position was last touched. These calls aren't batched through Multicall3, because `collect` checks who is calling.
+
+Pass `native` to show the wrapped native token as the native one (WETH as ETH). `v3Collect` and `v3Remove` then unwrap it on the way out.
+
+The defaults cover Uniswap on Ethereum, Optimism, Arbitrum and Base (`uniswapV3Deployments`). For forks with the same contracts, like PancakeSwap v3 or Sushi v3, pass `positionManager` and `factory`.
+
+| Returns | Type | Description |
+| --- | --- | --- |
+| `positions` | `V3PositionData[] \| undefined` | Positions with their pools. `undefined` while loading. |
+| `total` | `bigint` | All positions the owner has, including ones past `limit`. |
+| `phase` | `"idle" \| "loading" \| "ready" \| "error"` | `idle` without an owner. |
+| `isLoadingFees` | `boolean` | Fees still simulating. Cards show without them until then. |
+| `refetch` | `() => void` | Read again, e.g. after a collect. |
+| `unsupported` | `boolean` | No position manager or factory for this chain. |
+
+## Empty and loading
+
+With no positions, the list says so and shows whatever you pass in `empty`, like a "New position" button.
+
+<Preview>
+  <Empty client:load />
+</Preview>
+
+While `positions` is `undefined`, it shows skeleton cards (`skeletonCount`, 2 by default), "Loading positions" for screen readers.
+
+## Quoting
+
+`invert="auto"` (the default) quotes each position in its stablecoin, so a USDC/WETH position reads "USDC per ETH". `quoteInToken0(token0, token1)` is the rule on its own. Pass `true` or `false` to choose yourself.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `positions` | `{ position, pool }[]` | — | From `useV3Positions`. Leave out while loading. |
+| `prices` / `currency` | `TokenPrices` / `string` | — / `"USD"` | Fiat values, and sorting by value. |
+| `invert` | `boolean \| "auto"` | `"auto"` | Quote in token0. |
+| `getCollectTransaction` | `(request) => tx` | — | Adds Collect fees to each card. |
+| `actions` | `(item) => ReactNode` | — | Extra buttons per card. |
+| `empty` | `ReactNode` | — | Shown under "No positions yet". |
+| `title` | `ReactNode` | `"Your positions"` | Heading. |
+| `skeletonCount` | `number` | `2` | Skeleton cards while loading. |
+| `locale` | `string` | runtime locale | Number formatting locale. |

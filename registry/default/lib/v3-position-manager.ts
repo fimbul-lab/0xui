@@ -27,7 +27,48 @@ export const positionManagerAbi = parseAbi([
   "function refundETH() payable",
   "function unwrapWETH9(uint256 amountMinimum, address recipient) payable",
   "function sweepToken(address token, uint256 amountMinimum, address recipient) payable",
+  "function balanceOf(address owner) view returns (uint256)",
+  "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+  "function ownerOf(uint256 tokenId) view returns (address)",
 ]);
+
+export const v3FactoryAbi = parseAbi([
+  "function getPool(address tokenA, address tokenB, uint24 fee) view returns (address pool)",
+]);
+
+export const v3PoolAbi = parseAbi([
+  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
+  "function liquidity() view returns (uint128)",
+  "function tickSpacing() view returns (int24)",
+]);
+
+/** Uniswap v3 contracts and the wrapped native token, by chain id. From docs.uniswap.org/contracts/v3/reference/deployments. */
+export const uniswapV3Deployments: Record<number, { positionManager: Address; factory: Address; weth: Address }> = {
+  // Ethereum
+  1: {
+    positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+    factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    weth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  },
+  // Optimism
+  10: {
+    positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+    factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    weth: "0x4200000000000000000000000000000000000006",
+  },
+  // Arbitrum One
+  42161: {
+    positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
+    factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+    weth: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+  },
+  // Base
+  8453: {
+    positionManager: "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1",
+    factory: "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
+    weth: "0x4200000000000000000000000000000000000006",
+  },
+};
 
 /** Subtract slippage in basis points, rounding down. 50 bps is 0.5%. */
 export function withSlippage(amount: bigint, slippageBps: number) {

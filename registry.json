@@ -1428,7 +1428,7 @@
       "name": "v3-position-manager",
       "type": "registry:lib",
       "title": "Uniswap v3 position manager",
-      "description": "Transaction builders for Uniswap v3's NonfungiblePositionManager (and forks with the same ABI: PancakeSwap v3, Sushi v3): v3Mint (mint, native ETH as value + refundETH), v3Remove (decreaseLiquidity + collect in one multicall), v3Collect (collect fees). Native ETH withdrawals collect to the manager, then unwrapWETH9 + sweepToken. Also positionManagerAbi (mint, decreaseLiquidity, collect, positions, multicall, refundETH, unwrapWETH9, sweepToken), withSlippage(amount, bps) and deadlineIn(seconds).",
+      "description": "Transaction builders for Uniswap v3's NonfungiblePositionManager (and forks with the same ABI: PancakeSwap v3, Sushi v3): v3Mint (mint, native ETH as value + refundETH), v3Remove (decreaseLiquidity + collect in one multicall), v3Collect (collect fees). Native ETH withdrawals collect to the manager, then unwrapWETH9 + sweepToken. Also positionManagerAbi (mint, decreaseLiquidity, collect, positions, multicall, refundETH, unwrapWETH9, sweepToken), withSlippage(amount, bps) and deadlineIn(seconds). Read ABIs too: v3FactoryAbi (getPool), v3PoolAbi (slot0, liquidity, tickSpacing), balanceOf / tokenOfOwnerByIndex / ownerOf on the manager, and uniswapV3Deployments (position manager, factory, WETH) for Ethereum, Optimism, Arbitrum and Base.",
       "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
       "categories": [
         "liquidity"
@@ -1587,6 +1587,57 @@
         "@0xui/transaction-button",
         "@0xui/concentrated-liquidity",
         "@0xui/v3-position-manager"
+      ]
+    },
+    {
+      "name": "position-list",
+      "type": "registry:component",
+      "title": "Position List",
+      "description": "List of concentrated liquidity positions as PositionCards: in range first, then out of range, largest first, closed positions folded under 'Closed positions', a header counting each status, skeleton cards (skullet) while loading, and an empty state with a slot for a 'New position' button. invert='auto' quotes each in its stablecoin. Pairs with useV3Positions. Exports sortPositions and quoteInToken0.",
+      "docs": "Docs: https://0xui.io/components/position-list.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/position-list.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/position-card",
+        "@0xui/token-select",
+        "@0xui/concentrated-liquidity",
+        "@0xui/use-v3-positions"
+      ]
+    },
+    {
+      "name": "use-v3-positions",
+      "type": "registry:hook",
+      "title": "useV3Positions",
+      "description": "Read an owner's Uniswap v3 LP positions on-chain (and forks with the same position manager): token ids via balanceOf + tokenOfOwnerByIndex, positions(tokenId), each pool via the factory's getPool plus slot0 / liquidity / tickSpacing, token metadata from a token list or ERC-20 reads, and real uncollected fees by simulating collect from the owner (not tokensOwed). Optional native mapping shows WETH as ETH. Defaults for Ethereum, Optimism, Arbitrum and Base. Returns positions ready for PositionList / PositionCard, total, phase (idle/loading/ready/error), isLoadingFees, refetch.",
+      "docs": "Docs: https://0xui.io/components/position-list.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/hooks/use-v3-positions.ts",
+          "type": "registry:hook"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "wagmi",
+        "@tanstack/react-query"
+      ],
+      "registryDependencies": [
+        "@0xui/concentrated-liquidity",
+        "@0xui/v3-position-manager",
+        "@0xui/token-list"
       ]
     },
     {
@@ -2788,6 +2839,28 @@
       "files": [
         {
           "path": "registry/default/examples/remove-liquidity-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "position-list-demo",
+      "type": "registry:example",
+      "title": "Position List demo",
+      "description": "The connected account's Uniswap v3 positions on Ethereum, read on-chain with useV3Positions.",
+      "docs": "Docs: https://0xui.io/components/position-list.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/position-list",
+        "@0xui/use-v3-positions",
+        "@0xui/v3-position-manager",
+        "@0xui/token-list"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/position-list-demo.tsx",
           "type": "registry:example"
         }
       ]

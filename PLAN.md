@@ -665,15 +665,15 @@ Data stays bring-your-own, like `getQuote` in Swap: components take `PoolState` 
 | `fee-tier-select` | Fee tier radio cards with liquidity share and "Not created". |
 | `add-liquidity` (block) | Fee tier, price range and two linked `TokenInput`s (exact deposit ratio, one side locks for single-sided ranges), balances, approvals for both tokens, mint. Bring-your-own `getTransaction`, or `v3Mint({ positionManager, weth })` (native ETH via `multicall(mint, refundETH)`). |
 | `position-card`, `remove-liquidity` (block), `slippage-input` | Position with range status, holdings, uncollected fees and Collect; withdraw a share plus fees in one transaction; slippage presets and warnings. `v3-position-manager` lib holds the v3 mint / remove / collect builders (native ETH unwrapped). |
+| `position-list`, `use-v3-positions`, skeletons | Owner's positions read on-chain (ids, positions, pools, metadata, fees via simulated `collect`), listed by status with closed folded away. Every LP component shows a skullet skeleton while its data loads. |
 
 **Next, in order**
 
-1. `add-liquidity` follow-ups: a `v4Mint` (PositionManager `modifyLiquidities` with Permit2), a slippage setting in the UI, and a "create pool + set starting price" step when the tier has no pool.
-2. `positions` list and `usePosition` hook: read `positions(tokenId)` and simulate `collect` for real fees, list an owner's positions (indexer or `tokenOfOwnerByIndex`).
-3. Uniswap v4: `v4Mint` / `v4Remove` through PositionManager `modifyLiquidities`, with a Permit2 approval step.
+1. Uniswap v4: `v4Mint` / `v4Remove` through PositionManager `modifyLiquidities`, with a Permit2 approval step, and `useV4Positions`.
+2. "Create pool + set starting price" step in `add-liquidity` when the fee tier has no pool.
+3. `usePoolLiquidity` hook: reads `slot0`, `liquidity` and ticks with viem (TickLens for v3, StateView for v4), so the charts work without an indexer.
 4. `liquidity-shape` (DLMM-style): Spot / Curve / Bid-Ask distribution over N bins, previewed on the liquidity chart. Covers Meteora-style bin AMMs and splitting a v3 deposit across several ranges.
 5. `il-calculator` / `range-estimate`: impermanent loss versus holding at a price, fee APR estimate for a range from volume and in-range liquidity, time-in-range from recent prices.
-6. `usePoolLiquidity` hook: reads `slot0`, `liquidity` and ticks with viem (TickLens for v3, StateView for v4), so the charts work without an indexer.
 
 Open questions: v4 hooks and dynamic fees (show "Dynamic" in `fee-tier-select`?), and whether the depth chart should value asks at the moved price rather than spot.
 

@@ -75,7 +75,7 @@ const groups = [
     label: "Liquidity",
     icon: "chart-column",
     blurb: "Pool depth, price ranges and positions for concentrated liquidity.",
-    items: ["price-range", "position-card", "liquidity-chart", "depth-chart", "range-indicator", "fee-tier-select", "slippage-input"],
+    items: ["price-range", "position-list", "position-card", "liquidity-chart", "depth-chart", "range-indicator", "fee-tier-select", "slippage-input"],
   },
   {
     label: "Utilities",
