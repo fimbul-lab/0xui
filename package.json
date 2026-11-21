@@ -21,6 +21,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@0xbow/privacy-pools-core-sdk": "1.5.0",
     "@astrojs/react": "^6.0.3",
     "@astrojs/sitemap": "3.7.3",
     "@astrojs/starlight": "^0.41.7",
@@ -33,7 +34,9 @@
     "@ui-sdk/core": "^0.1.0-beta.10",
     "@ui-sdk/react": "^0.1.0-beta.10",
     "@web3icons/react": "^4.1.21",
+    "assert": "^2.1.0",
     "astro": "^7.2.3",
+    "buffer": "^6.0.3",
     "clsx": "^2.1.1",
     "cn": "^0.4.0",
     "lucide-react": "^1.32.0",

@@ -93,6 +93,7 @@ export const shieldedPreview = {
   components: [
     "shielded-engine",
     "mock-shielded-engine",
+    "privacy-pools-engine",
     "shielded-account",
     "shielded-balance",
     "shielded-sync-status",

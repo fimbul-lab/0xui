@@ -1292,6 +1292,31 @@
       ]
     },
     {
+      "name": "privacy-pools-engine",
+      "type": "registry:lib",
+      "title": "Privacy Pools engine",
+      "description": "ShieldedEngine on Privacy Pools v1 (0xbow) through its public SDK, for real funds on the deployed contracts. The private account is a BIP-39 recovery phrase kept encrypted with a password (PBKDF2 into AES-GCM), the same phrase privacypools.com takes. A scan reads the pools' Deposited, Withdrawn and Ragequit logs in chunks (halved when the RPC refuses a range, final blocks read once per session), rebuilds the account from the phrase, and asks the ASP which deposits are approved: pending until approved, then spendable. quoteShield reads the pool's vetting fee and minimum from the Entrypoint; prepareShield builds the Entrypoint deposit for ETH or an ERC-20, needs no signature, and never hands out one deposit index twice. Ships a Sepolia preset (ETH, USDC, USDT). Shield only: unshield (prove) is not built yet. Exports createPrivacyPoolsEngine, PRIVACY_POOLS_SEPOLIA, PRIVACY_POOLS_NATIVE, poolAccountState, nextDepositIndex, encryptPhrase and decryptPhrase.",
+      "docs": "Docs: https://0xui.io/components/privacy-pools-engine.md",
+      "categories": [
+        "shielded"
+      ],
+      "files": [
+        {
+          "path": "registry/default/lib/privacy-pools-engine.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "@0xbow/privacy-pools-core-sdk",
+        "assert",
+        "buffer"
+      ],
+      "registryDependencies": [
+        "@0xui/shielded-engine"
+      ]
+    },
+    {
       "name": "agent-tools",
       "type": "registry:component",
       "title": "Agent Tools",
@@ -1721,6 +1746,30 @@
       "files": [
         {
           "path": "registry/default/examples/mock-shielded-engine-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "privacy-pools-engine-demo",
+      "type": "registry:example",
+      "title": "Privacy Pools engine demo",
+      "description": "Shield block on the real Privacy Pools contracts on Sepolia: private account, scan status, ETH and USDC shields, and private balances.",
+      "docs": "Docs: https://0xui.io/components/privacy-pools-engine.md",
+      "categories": [
+        "shielded"
+      ],
+      "registryDependencies": [
+        "@0xui/privacy-pools-engine",
+        "@0xui/shield",
+        "@0xui/shielded-account",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/shielded-sync-status"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/privacy-pools-engine-demo.tsx",
           "type": "registry:example"
         }
       ]
