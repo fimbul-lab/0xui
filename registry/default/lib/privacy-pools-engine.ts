@@ -95,6 +95,16 @@ type PoolLog = {
   logIndex: number | null;
 };
 
+/**
+ * Where pool events are kept between page loads, so a reload reads only what
+ * is new. The events are public and the same for every account: nothing in
+ * here says which deposits are yours.
+ */
+export type PrivacyPoolsCache = {
+  get(key: string): Promise<string | undefined>;
+  set(key: string, value: string): Promise<void>;
+};
+
 /** The chain reads the engine makes. viem's PublicClient fits. */
 export type PrivacyPoolsClient = {
   getBlockNumber(): Promise<bigint>;
@@ -130,6 +140,11 @@ export type PrivacyPoolsEngineOptions = {
   pollInterval?: number;
   /** Chain reads. Defaults to a viem client on the chain's `rpcUrl`. */
   client?: (chainId: number) => PrivacyPoolsClient;
+  /**
+   * Keeps pool events between page loads. Defaults to IndexedDB where there
+   * is one. Pass `false` to read everything again on every load.
+   */
+  cache?: PrivacyPoolsCache | false;
   /** HTTP for the ASP and the relayer. Defaults to the global `fetch`. */
   fetch?: typeof fetch;
   /**
@@ -214,6 +229,64 @@ const MAX_INDEXES_AHEAD = 8n;
 
 /** `eth_getLogs` requests in flight at once during a scan. */
 const LOG_REQUESTS = 3;
+
+/** How often a rate-limited request is tried again, and the first wait. Each wait is twice the last. */
+const RATE_LIMIT_RETRIES = 6;
+const RATE_LIMIT_WAIT = 1_000;
+
+/** Final blocks read since the last save before the cache is written again, when no event came with them. */
+const CACHE_STRIDE = 2_000n;
+
+/** True when an RPC refused a request for coming too fast, not for what it asked. */
+function isRateLimit(cause: unknown) {
+  const { status, code, message, details } = cause as {
+    status?: number;
+    code?: number;
+    message?: string;
+    details?: string;
+  };
+  return (
+    status === 429 ||
+    code === -32005 ||
+    /rate limit|too many requests|429/i.test(`${details ?? ""} ${message ?? ""}`)
+  );
+}
+
+// JSON has no bigint. Events carry many.
+const toJson = (value: unknown) =>
+  JSON.stringify(value, (_key, item) => (typeof item === "bigint" ? `${item}n` : item));
+const fromJson = (text: string) =>
+  JSON.parse(text, (_key, item) =>
+    typeof item === "string" && /^-?\d+n$/.test(item) ? BigInt(item.slice(0, -1)) : item
+  );
+
+/** A cache in IndexedDB, or undefined where there is none. */
+function browserCache(): PrivacyPoolsCache | undefined {
+  if (typeof indexedDB === "undefined") return undefined;
+  const open = () =>
+    new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("0xui.privacy-pools", 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("events");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  const run = async <T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRequest<T>) => {
+    const database = await open();
+    try {
+      return await new Promise<T>((resolve, reject) => {
+        const request = work(database.transaction("events", mode).objectStore("events"));
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    } finally {
+      database.close();
+    }
+  };
+  return {
+    get: (key) => run<string | undefined>("readonly", (store) => store.get(key)),
+    set: async (key, value) => void (await run("readwrite", (store) => store.put(value, key))),
+  };
+}
 
 const PBKDF2_ROUNDS = 600_000;
 
@@ -400,6 +473,9 @@ type ChainState = {
   /** Final events, by lower-case pool address, read up to `syncedTo`. */
   events: Map<string, PoolEvents>;
   syncedTo: bigint | undefined;
+  /** How far the cache on disk reaches, and whether it has been read this session. */
+  cachedTo: bigint | undefined;
+  cacheRead: boolean;
   /** The account as the last complete scan rebuilt it. */
   account: AccountService | undefined;
   /** Approved labels the last scan saw, by pool scope. */
@@ -510,6 +586,7 @@ export function createPrivacyPoolsEngine({
   fetch: request = (...args) => fetch(...args),
   circuitsUrl,
   checkDeclined = false,
+  cache: cacheOption,
 }: PrivacyPoolsEngineOptions): ShieldedEngine {
   const listeners: Record<ShieldedEvent, Set<() => void>> = {
     account: new Set(),
@@ -561,6 +638,8 @@ export function createPrivacyPoolsEngine({
         pools: undefined,
         events: new Map(),
         syncedTo: undefined,
+        cachedTo: undefined,
+        cacheRead: false,
         account: undefined,
         approved: new Map(),
         declined: new Set(),
@@ -626,9 +705,51 @@ export function createPrivacyPoolsEngine({
     emit("sync");
   }
 
+  const cache = cacheOption === false ? undefined : (cacheOption ?? browserCache());
+
+  /** One entry per chain and set of pools. Changing the pools starts a new one. */
+  function cacheKey(chainId: number, pools: Pool[]) {
+    const parts = pools.map((pool) => `${lower(pool.address)}@${pool.deploymentBlock}`).sort();
+    return `events:${chainId}:${parts.join(",")}`;
+  }
+
+  /** Load final events saved by an earlier page load. A cache that can't be read is ignored. */
+  async function readCache(chainId: number, pools: Pool[]) {
+    const chain = chainOf(chainId);
+    if (chain.cacheRead) return;
+    chain.cacheRead = true;
+    if (!cache || chain.syncedTo !== undefined) return;
+    try {
+      const stored = await cache.get(cacheKey(chainId, pools));
+      if (!stored) return;
+      const { syncedTo, events } = fromJson(stored) as {
+        syncedTo: bigint;
+        events: [string, PoolEvents][];
+      };
+      if (typeof syncedTo !== "bigint" || chain.syncedTo !== undefined) return;
+      chain.events = new Map(events);
+      chain.syncedTo = chain.cachedTo = syncedTo;
+    } catch {
+      // Unreadable or from another version. The scan reads the chain instead.
+    }
+  }
+
+  function writeCache(chainId: number, pools: Pool[]) {
+    const chain = chainOf(chainId);
+    if (!cache || chain.syncedTo === undefined) return;
+    chain.cachedTo = chain.syncedTo;
+    void cache
+      .set(cacheKey(chainId, pools), toJson({ syncedTo: chain.syncedTo, events: [...chain.events] }))
+      .catch(() => {
+        // A full or blocked disk only costs the next load a longer scan.
+      });
+  }
+
   /**
-   * Read pool events over a block range, in chunks. A refused chunk is
-   * halved and tried again, down to one block.
+   * Read pool events over a block range, in chunks. A chunk refused for its
+   * size is halved and tried again, down to one block. A chunk refused for
+   * coming too fast is tried again after a wait, and the other requests wait
+   * with it.
    */
   async function fetchLogs(
     chainId: number,
@@ -640,8 +761,12 @@ export function createPrivacyPoolsEngine({
     const reader = client(chainId);
     const size = BigInt(Math.max(1, configOf(chainId).blockRange ?? 10_000));
     const logs: PoolLog[] = [];
+    /** When requests may go out again after a rate limit. Shared by every worker. */
+    let resumeAt = 0;
 
-    async function range(fromBlock: bigint, toBlock: bigint): Promise<void> {
+    async function range(fromBlock: bigint, toBlock: bigint, attempt = 0): Promise<void> {
+      const wait = resumeAt - Date.now();
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
       try {
         const found = await reader.getLogs({
           address: addresses,
@@ -651,6 +776,12 @@ export function createPrivacyPoolsEngine({
         });
         logs.push(...(found as PoolLog[]));
       } catch (cause) {
+        if (isRateLimit(cause)) {
+          // Smaller ranges would only mean more requests. Slow down instead.
+          if (attempt >= RATE_LIMIT_RETRIES) throw cause;
+          resumeAt = Math.max(resumeAt, Date.now() + RATE_LIMIT_WAIT * 2 ** attempt);
+          return range(fromBlock, toBlock, attempt + 1);
+        }
         if (fromBlock === toBlock) throw cause;
         const middle = fromBlock + (toBlock - fromBlock) / 2n;
         await range(fromBlock, middle);
@@ -716,6 +847,8 @@ export function createPrivacyPoolsEngine({
     try {
       report(0);
       const pools = await poolsOf(chainId);
+      await readCache(chainId, pools);
+      if (started !== session) return;
       const head = await client(chainId).getBlockNumber();
       const first = pools.reduce(
         (lowest, pool) => (pool.deploymentBlock < lowest ? pool.deploymentBlock : lowest),
@@ -736,11 +869,17 @@ export function createPrivacyPoolsEngine({
 
       // Keep what can no longer be reorganised away. The rest is read again next time.
       const final = head > REORG_DEPTH ? head - REORG_DEPTH : 0n;
-      addLogs(
-        chain.events,
-        logs.filter((log) => log.blockNumber !== null && log.blockNumber <= final)
-      );
+      const settled = logs.filter((log) => log.blockNumber !== null && log.blockNumber <= final);
+      addLogs(chain.events, settled);
       if (chain.syncedTo === undefined || final > chain.syncedTo) chain.syncedTo = final;
+      // Save when there is something new to keep, or enough blocks were ruled out.
+      if (
+        chain.cachedTo === undefined ||
+        (chain.syncedTo > chain.cachedTo &&
+          (settled.length > 0 || chain.syncedTo - chain.cachedTo >= CACHE_STRIDE))
+      ) {
+        writeCache(chainId, pools);
+      }
 
       const recent = new Map<string, PoolEvents>();
       addLogs(
