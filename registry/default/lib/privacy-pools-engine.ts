@@ -177,6 +177,13 @@ const PROOF_LIFETIME = 10 * 60_000;
 /** A fee commitment this close to its end is replaced before it is used. */
 const COMMITMENT_MARGIN = 10_000;
 
+/**
+ * How long `submit` looks for a withdrawal on chain after the relayer gave
+ * no clear answer, and how often.
+ */
+const RELAY_WATCH = 90_000;
+const RELAY_WATCH_INTERVAL = 6_000;
+
 /** How long funds read as `proving` after a withdrawal was handed to the relayer. */
 const SUBMITTED_LIFETIME = 10 * 60_000;
 
@@ -390,6 +397,8 @@ type ChainState = {
   declined: Set<string>;
   /** Public exits the last scan found. */
   exits: readonly ShieldedExit[] | undefined;
+  /** Withdrawals the last scan saw, by spent nullifier hash, with their transaction. */
+  withdrawals: Map<bigint, Hash>;
   /** What `prepareExit` needs for each exit, by id. */
   exitSources: Map<string, { pool: Pool; commitment: AccountCommitment }>;
   /** Commitments handed to the relayer, by hash, with when. They read as `proving` until a scan sees them spent. */
@@ -545,6 +554,7 @@ export function createPrivacyPoolsEngine({
         approved: new Map(),
         declined: new Set(),
         exits: undefined,
+        withdrawals: new Map(),
         exitSources: new Map(),
         submitted: new Map(),
       };
@@ -776,7 +786,11 @@ export function createPrivacyPoolsEngine({
       }
       // Who made each deposit: the only address its exit can be sent from.
       const depositors = new Map<string, Address>();
+      const withdrawals: ChainState["withdrawals"] = new Map();
       for (const pool of pools) {
+        for (const event of eventsOf(pool as never, "withdrawals") as WithdrawalEvent[]) {
+          withdrawals.set(event.spentNullifier, event.transactionHash);
+        }
         for (const event of eventsOf(pool as never, "deposits") as DepositEvent[]) {
           depositors.set(`${pool.scope}:${event.label}`, getAddress(event.depositor));
         }
@@ -785,6 +799,7 @@ export function createPrivacyPoolsEngine({
       chain.account = account;
       chain.approved = approved;
       chain.declined = declined;
+      chain.withdrawals = withdrawals;
       const exits: ShieldedExit[] = [];
       const exitSources: ChainState["exitSources"] = new Map();
       const now = Date.now();
@@ -971,7 +986,10 @@ export function createPrivacyPoolsEngine({
     }
     if (!response.ok) {
       const why = answer?.message ?? answer?.error;
-      throw new Error(typeof why === "string" ? why : `The relayer answered ${response.status}.`);
+      throw Object.assign(
+        new Error(typeof why === "string" ? why : `The relayer answered ${response.status}.`),
+        { status: response.status }
+      );
     }
     return answer as T;
   }
@@ -1097,6 +1115,7 @@ export function createPrivacyPoolsEngine({
       chain.approved = new Map();
       chain.declined = new Set();
       chain.exits = undefined;
+      chain.withdrawals = new Map();
       chain.exitSources = new Map();
       chain.submitted = new Map();
     }
@@ -1366,10 +1385,10 @@ export function createPrivacyPoolsEngine({
         feeCommitment = fresh.commitment!;
       }
 
-      const answer = await relayer<{ success?: boolean; txHash?: Hash; error?: string }>(
-        draft.chainId,
-        "request",
-        {
+      const chain = chainOf(draft.chainId);
+      let answer: { success?: boolean; txHash?: Hash; error?: string };
+      try {
+        answer = await relayer(draft.chainId, "request", {
           withdrawal: {
             processooor: configOf(draft.chainId).entrypoint,
             data: feeCommitment.withdrawalData,
@@ -1379,14 +1398,35 @@ export function createPrivacyPoolsEngine({
           scope: pool.scope.toString(),
           chainId: draft.chainId,
           feeCommitment,
+        });
+      } catch (cause) {
+        const status = (cause as { status?: number }).status;
+        // The relayer said no. Nothing was sent.
+        if (status !== undefined && status < 500) throw cause;
+        // No clear answer: a timeout, a gateway error, a dropped connection.
+        // The relayer may have sent it all the same, so look on chain.
+        chain.submitted.set(source.hash, Date.now());
+        // The proof's second public signal is the nullifier the withdrawal spends.
+        const nullifier = BigInt(proof.publicSignals[1]!);
+        const until = Date.now() + RELAY_WATCH;
+        for (;;) {
+          await freshScan(draft.chainId);
+          if (entry.session !== session) throw new Error("The private account was locked.");
+          const hash = chain.withdrawals.get(nullifier);
+          if (hash) return { hash };
+          if (Date.now() >= until) break;
+          await new Promise((resolve) => setTimeout(resolve, RELAY_WATCH_INTERVAL));
         }
-      );
+        throw new Error(
+          "The relayer gave no answer, and the withdrawal is not on chain yet. It may still arrive: check the balance again in a few minutes before trying again."
+        );
+      }
       if (!answer.success || !answer.txHash) {
         throw new Error(answer.error || "The relayer did not send the withdrawal.");
       }
 
       if (entry.session === session) {
-        chainOf(draft.chainId).submitted.set(source.hash, Date.now());
+        chain.submitted.set(source.hash, Date.now());
         void freshScan(draft.chainId);
       }
       return { hash: answer.txHash };
