@@ -135,9 +135,9 @@ export type ShieldedTransaction = {
 export type UnshieldDraft = {
   kind: "unshield";
   chainId: number;
-  /** ERC-20 contract. Native currency leaves as its wrapped token. */
+  /** ERC-20 contract, or the native token's address on an engine with `shieldsNative`. Otherwise native currency leaves as its wrapped token. */
   token: Address;
-  /** Amount taken from the private balance. The protocol fee comes out of it. */
+  /** Amount taken from the private balance. The fee comes out of it. */
   amount: bigint;
   /** Public address that receives the tokens. */
   recipient: Address;
@@ -146,11 +146,21 @@ export type UnshieldDraft = {
 /** A private operation that needs a proof. Private transfers join this union later. */
 export type PrivateDraft = UnshieldDraft;
 
+/** What a private operation costs and yields. */
+export type PrivateQuote = {
+  /** Protocol or relayer fee, taken from the amount. */
+  fee: bigint;
+  /** What arrives at the recipient. */
+  received: bigint;
+};
+
 /** A draft with its proof, ready to submit. */
 export type ProvedOperation = {
   id: string;
   /** The exact draft the proof was made for. A changed draft needs a new proof. */
   draft: PrivateDraft;
+  /** The fee the proof commits to. It can differ from an earlier `quote`. */
+  quote: PrivateQuote;
   /** Unix ms. After this the proof must be generated again. */
   expiresAt: number;
 };
@@ -256,4 +266,19 @@ export interface ShieldedEngine {
     draft: PrivateDraft,
     options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
   ): Promise<ProvedOperation>;
+
+  /**
+   * What a private operation costs right now. Signs nothing and proves
+   * nothing. Rejects when the draft can't be done, e.g. the amount is more
+   * than the spendable balance, with a message fit to show.
+   */
+  quote(draft: PrivateDraft): Promise<PrivateQuote>;
+
+  /**
+   * Send a proved operation. The engine submits it, through the protocol's
+   * relayer where there is one, so the public wallet is not involved.
+   * Resolves with the transaction's hash once it is broadcast, not once it
+   * is mined. A proof can be submitted once.
+   */
+  submit(operation: ProvedOperation): Promise<{ hash: Hash }>;
 }

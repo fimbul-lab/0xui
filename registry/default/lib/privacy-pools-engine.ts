@@ -1,14 +1,17 @@
 // Docs: https://0xui.io/components/privacy-pools-engine.md
 import type {
+  AccountCommitment,
   AccountService,
   DepositEvent,
   PoolAccount,
   PoolInfo,
   RagequitEvent,
   WithdrawalEvent,
+  WithdrawalProof,
 } from "@0xbow/privacy-pools-core-sdk";
 import {
   createPublicClient,
+  decodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
   formatUnits,
@@ -16,10 +19,12 @@ import {
   parseAbi,
   type Address,
   type Hash,
+  type Hex,
 } from "viem";
 import { english, generateMnemonic } from "viem/accounts";
 import {
   SHIELDED_BALANCE_STATES,
+  type PrivateDraft,
   type ShieldedAccountStatus,
   type ShieldedBalanceState,
   type ShieldedEngine,
@@ -52,6 +57,11 @@ export type PrivacyPoolsChain = {
   entrypoint: Address;
   /** The ASP's API. It says which deposits are approved. */
   aspUrl: string;
+  /**
+   * The relayer that sends withdrawals, so an unshield is not paid for from
+   * a public wallet. Without one the engine can't unshield on this chain.
+   */
+  relayerUrl?: string;
   /** Pools to scan and offer. */
   pools: readonly PrivacyPoolsPool[];
   /** Blocks per `eth_getLogs` request. Halved on its own when the RPC refuses a range. Default 10,000. */
@@ -62,6 +72,7 @@ export type PrivacyPoolsChain = {
 export const PRIVACY_POOLS_SEPOLIA = {
   entrypoint: "0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB",
   aspUrl: "https://dw.0xbow.io",
+  relayerUrl: "https://testnet-relayer.privacypools.com",
   pools: [
     { asset: PRIVACY_POOLS_NATIVE, deploymentBlock: 8587019n },
     { asset: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", deploymentBlock: 8587019n },
@@ -117,8 +128,15 @@ export type PrivacyPoolsEngineOptions = {
   pollInterval?: number;
   /** Chain reads. Defaults to a viem client on the chain's `rpcUrl`. */
   client?: (chainId: number) => PrivacyPoolsClient;
-  /** HTTP for the ASP. Defaults to the global `fetch`. */
+  /** HTTP for the ASP and the relayer. Defaults to the global `fetch`. */
   fetch?: typeof fetch;
+  /**
+   * Where the circuit files are served from, needed to unshield. The engine
+   * loads `artifacts/withdraw.wasm` and five more files relative to this URL,
+   * about 24 MB in total, on the first proof. The SDK checks each file
+   * against a hash it ships with, so the host does not have to be trusted.
+   */
+  circuitsUrl?: string;
 };
 
 const ENTRYPOINT_ABI = parseAbi([
@@ -128,6 +146,27 @@ const ENTRYPOINT_ABI = parseAbi([
 ]);
 
 const POOL_ABI = parseAbi(["function SCOPE() view returns (uint256)"]);
+
+const ASP_ROOT_ABI = parseAbi(["function latestRoot() view returns (uint256)"]);
+
+/** What a relayed withdrawal carries: who is paid, and the relayer's cut. */
+const RELAY_DATA = [
+  { name: "recipient", type: "address" },
+  { name: "feeRecipient", type: "address" },
+  { name: "relayFeeBPS", type: "uint256" },
+] as const;
+
+/** Both trees are proven at the circuit's full depth. */
+const TREE_DEPTH = 32n;
+
+/** How long a proof is offered for. The ASP's list can change sooner, and then the relayer refuses it. */
+const PROOF_LIFETIME = 10 * 60_000;
+
+/** A fee commitment this close to its end is replaced before it is used. */
+const COMMITMENT_MARGIN = 10_000;
+
+/** How long funds read as `proving` after a withdrawal was handed to the relayer. */
+const SUBMITTED_LIFETIME = 10 * 60_000;
 
 // The last Deposited field is the precommitment hash. The name is the SDK's.
 const POOL_EVENTS = parseAbi([
@@ -291,6 +330,22 @@ type Pool = {
   deploymentBlock: bigint;
   minimum: bigint;
   feeBps: bigint;
+  /** The most a relayer may take, in basis points. */
+  maxRelayFeeBps: bigint;
+};
+
+/** The relayer's signed promise to send a withdrawal for a fee. Lasts about a minute. */
+type FeeCommitment = { expiration: number; withdrawalData: Hex; [key: string]: unknown };
+
+type RelayerQuote = { feeBPS: string; feeCommitment?: FeeCommitment };
+
+/** A proved withdrawal, waiting to be handed to the relayer. */
+type Proved = {
+  session: number;
+  pool: Pool;
+  source: AccountCommitment;
+  proof: WithdrawalProof;
+  feeCommitment: FeeCommitment;
 };
 
 type PoolEvents = {
@@ -311,6 +366,10 @@ type ChainState = {
   syncedTo: bigint | undefined;
   /** The account as the last complete scan rebuilt it. */
   account: AccountService | undefined;
+  /** Approved labels the last scan saw, by pool scope. */
+  approved: Map<bigint, Set<string>>;
+  /** Commitments handed to the relayer, by hash, with when. They read as `proving` until a scan sees them spent. */
+  submitted: Map<bigint, number>;
 };
 
 type Reservation = { key: string; index: string; at: number };
@@ -378,8 +437,9 @@ function sameBalances(a: readonly ShieldedTokenBalance[], b: readonly ShieldedTo
  * - `prepareShield` builds the deposit for the Entrypoint. The public
  *   wallet sends it. No signature is needed.
  *
- * It can shield and follow funds. It cannot unshield yet: `prove` rejects.
- * Withdraw at privacypools.com with the recovery phrase until it can.
+ * - An unshield spends one deposit: `prove` makes the withdrawal proof in
+ *   the browser and `submit` hands it to the relayer, which sends it and
+ *   keeps a fee. It needs `relayerUrl` and `circuitsUrl`.
  */
 export function createPrivacyPoolsEngine({
   chains,
@@ -388,6 +448,7 @@ export function createPrivacyPoolsEngine({
   pollInterval = 60_000,
   client: clientFor,
   fetch: request = (...args) => fetch(...args),
+  circuitsUrl,
 }: PrivacyPoolsEngineOptions): ShieldedEngine {
   const listeners: Record<ShieldedEvent, Set<() => void>> = {
     account: new Set(),
@@ -439,6 +500,8 @@ export function createPrivacyPoolsEngine({
         events: new Map(),
         syncedTo: undefined,
         account: undefined,
+        approved: new Map(),
+        submitted: new Map(),
       };
       chainStates.set(chainId, chain);
     }
@@ -453,7 +516,7 @@ export function createPrivacyPoolsEngine({
       const reader = client(chainId);
       chain.pools = Promise.all(
         config.pools.map(async ({ asset, deploymentBlock }): Promise<Pool> => {
-          const [address, minimum, feeBps] = (await reader.readContract({
+          const [address, minimum, feeBps, maxRelayFeeBps] = (await reader.readContract({
             address: config.entrypoint,
             abi: ENTRYPOINT_ABI,
             functionName: "assetConfig",
@@ -474,6 +537,7 @@ export function createPrivacyPoolsEngine({
             deploymentBlock,
             minimum,
             feeBps,
+            maxRelayFeeBps,
           };
         })
       );
@@ -545,14 +609,22 @@ export function createPrivacyPoolsEngine({
     return logs;
   }
 
-  /** The ASP's approved labels for a pool, as decimal strings. */
-  async function approvedLabels(chainId: number, pool: Pool) {
+  /** A pool's two trees as the ASP publishes them: approved labels, and every commitment. */
+  async function treeLeaves(chainId: number, pool: Pool) {
     const response = await request(`${configOf(chainId).aspUrl}/${chainId}/public/mt-leaves`, {
       headers: { "X-Pool-Scope": pool.scope.toString() },
     });
     if (!response.ok) throw new Error(`The ASP answered ${response.status}.`);
-    const { aspLeaves } = (await response.json()) as { aspLeaves?: string[] };
-    return new Set(aspLeaves ?? []);
+    const { aspLeaves = [], stateTreeLeaves = [] } = (await response.json()) as {
+      aspLeaves?: string[];
+      stateTreeLeaves?: string[];
+    };
+    return { aspLeaves, stateTreeLeaves };
+  }
+
+  /** The ASP's approved labels for a pool, as decimal strings. */
+  async function approvedLabels(chainId: number, pool: Pool) {
+    return new Set((await treeLeaves(chainId, pool)).aspLeaves);
   }
 
   async function runScan(chainId: number) {
@@ -634,6 +706,12 @@ export function createPrivacyPoolsEngine({
       }
 
       chain.account = account;
+      chain.approved = approved;
+      const now = Date.now();
+      for (const [hash, at] of chain.submitted) {
+        if (now - at >= SUBMITTED_LIFETIME) chain.submitted.delete(hash);
+      }
+      const latest = new Set<bigint>();
       const balances: ShieldedTokenBalance[] = [];
       let changed = false;
       for (const pool of pools) {
@@ -643,7 +721,10 @@ export function createPrivacyPoolsEngine({
         for (const poolAccount of accounts) {
           const state = poolAccountState(poolAccount, approved.get(pool.scope)!);
           if (state) {
-            amounts[state] += (poolAccount.children.at(-1) ?? poolAccount.deposit).value;
+            const commitment = poolAccount.children.at(-1) ?? poolAccount.deposit;
+            latest.add(commitment.hash);
+            // A withdrawal is on its way: these funds can't be spent again, and part may come back.
+            amounts[chain.submitted.has(commitment.hash) ? "proving" : state] += commitment.value;
             held = true;
           }
           const key = lower(poolAccount.deposit.txHash);
@@ -660,6 +741,10 @@ export function createPrivacyPoolsEngine({
           changed = true;
         }
         if (held) balances.push({ token: pool.asset, amounts });
+      }
+      // A commitment that is no longer the latest was spent: the withdrawal landed.
+      for (const hash of chain.submitted.keys()) {
+        if (!latest.has(hash)) chain.submitted.delete(hash);
       }
       if (!chain.balances || !sameBalances(chain.balances, balances)) {
         chain.balances = balances;
@@ -719,6 +804,162 @@ export function createPrivacyPoolsEngine({
     return index;
   }
 
+  /** Withdrawals proved in this session and not yet submitted, by operation id. */
+  const proved = new Map<string, Proved>();
+  let proofCount = 0;
+  let prover: Promise<{ sdk: import("@0xbow/privacy-pools-core-sdk").PrivacyPoolSDK }> | undefined;
+
+  /** The SDK's prover with the circuit files loaded. They are downloaded once per session. */
+  function loadProver() {
+    if (!circuitsUrl) throw new Error("Unshielding needs `circuitsUrl`, where the circuit files are served.");
+    if (!prover) {
+      const loading = (async () => {
+        const { Circuits, PrivacyPoolSDK } = await import("@0xbow/privacy-pools-core-sdk");
+        const circuits = new Circuits({ baseUrl: circuitsUrl });
+        await circuits.initArtifacts("latest");
+        return { sdk: new PrivacyPoolSDK(circuits) };
+      })();
+      // A failed download is tried again by the next proof.
+      loading.catch(() => {
+        if (prover === loading) prover = undefined;
+      });
+      prover = loading;
+    }
+    return prover;
+  }
+
+  function relayerOf(chainId: number) {
+    const url = configOf(chainId).relayerUrl;
+    if (!url) throw new Error("Unshielding is not set up for this chain: it has no relayer.");
+    return url;
+  }
+
+  async function relayer<T>(chainId: number, path: string, body?: unknown): Promise<T> {
+    const response = await request(
+      `${relayerOf(chainId)}/relayer/${path}`,
+      body === undefined
+        ? undefined
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }
+    );
+    const text = await response.text();
+    let answer: { error?: unknown; message?: unknown } | undefined;
+    try {
+      answer = JSON.parse(text);
+    } catch {
+      // Not JSON. The status says enough.
+    }
+    if (!response.ok) {
+      const why = answer?.message ?? answer?.error;
+      throw new Error(typeof why === "string" ? why : `The relayer answered ${response.status}.`);
+    }
+    return answer as T;
+  }
+
+  /**
+   * The relayer's price for a withdrawal. With a recipient it also signs a
+   * fee commitment, which a proof is then bound to.
+   */
+  async function relayerQuote(draft: PrivateDraft, pool: Pool, withRecipient: boolean) {
+    const [details, quote] = await Promise.all([
+      relayer<{ minWithdrawAmount: string }>(
+        draft.chainId,
+        `details?chainId=${draft.chainId}&assetAddress=${pool.asset}`
+      ),
+      relayer<RelayerQuote>(draft.chainId, "quote", {
+        chainId: draft.chainId,
+        amount: draft.amount.toString(),
+        asset: pool.asset,
+        recipient: withRecipient ? draft.recipient : undefined,
+        extraGas: false,
+      }),
+    ]);
+    const minimum = BigInt(details.minWithdrawAmount);
+    if (draft.amount < minimum) {
+      throw new Error(`The minimum is ${formatUnits(minimum, pool.decimals)}.`);
+    }
+    const feeBps = BigInt(quote.feeBPS);
+    if (feeBps > pool.maxRelayFeeBps) {
+      throw new Error("The relayer's fee is above what the pool allows. Try again later.");
+    }
+    const fee = (draft.amount * feeBps) / 10_000n;
+    return { minimum, feeBps, quote: { fee, received: draft.amount - fee }, commitment: quote.feeCommitment };
+  }
+
+  /**
+   * The relayer writes the withdrawal's instructions, and the proof is bound
+   * to them. Check they pay the draft's recipient, at the quoted fee, before
+   * proving anything.
+   */
+  function checkCommitment(
+    commitment: FeeCommitment | undefined,
+    draft: PrivateDraft,
+    feeBps: bigint
+  ): asserts commitment is FeeCommitment {
+    let decoded: readonly [Address, Address, bigint];
+    try {
+      if (!commitment) throw new Error("no commitment");
+      decoded = decodeAbiParameters(RELAY_DATA, commitment.withdrawalData);
+    } catch {
+      throw new Error("The relayer's answer could not be read.");
+    }
+    if (lower(decoded[0]) !== lower(draft.recipient) || decoded[2] !== feeBps) {
+      throw new Error("The relayer's answer does not match this unshield. Nothing was sent.");
+    }
+  }
+
+  /**
+   * The deposit an unshield spends. A withdrawal spends one deposit, so the
+   * amount has to fit in one, and what it leaves behind has to be worth
+   * withdrawing later.
+   */
+  function sourceFor(chainId: number, pool: Pool, amount: bigint, minimum: bigint) {
+    const chain = chainOf(chainId);
+    const approved = chain.approved.get(pool.scope) ?? new Set<string>();
+    const accounts = chain.account?.account.poolAccounts.get(pool.scope as PoolInfo["scope"]) ?? [];
+    const spendable: AccountCommitment[] = [];
+    for (const account of accounts) {
+      if (poolAccountState(account, approved) !== "spendable") continue;
+      const commitment = account.children.at(-1) ?? account.deposit;
+      if (!chain.submitted.has(commitment.hash)) spendable.push(commitment);
+    }
+    spendable.sort((a, b) => (a.value < b.value ? -1 : a.value > b.value ? 1 : 0));
+
+    const show = (value: bigint) => formatUnits(value, pool.decimals);
+    const largest = spendable.at(-1)?.value ?? 0n;
+    if (amount > largest) {
+      const total = spendable.reduce((sum, commitment) => sum + commitment.value, 0n);
+      throw new Error(
+        amount > total
+          ? "Not enough spendable balance."
+          : `An unshield spends one deposit. The most you can unshield at once is ${show(largest)}.`
+      );
+    }
+    const fits = spendable.filter((commitment) => commitment.value >= amount);
+    const source = fits.find(({ value }) => value === amount || value - amount >= minimum);
+    if (!source) {
+      const { value } = fits[0]!;
+      throw new Error(
+        `That would leave ${show(value - amount)} behind, less than the minimum of ${show(minimum)}. Unshield ${show(value)} instead.`
+      );
+    }
+    return source;
+  }
+
+  /** Reject with the signal's reason as soon as it aborts, without waiting for `work`. */
+  function abortable<T>(work: Promise<T>, signal?: AbortSignal) {
+    if (!signal) return work;
+    return new Promise<T>((resolve, reject) => {
+      if (signal.aborted) return reject(signal.reason);
+      const onAbort = () => reject(signal.reason);
+      signal.addEventListener("abort", onAbort, { once: true });
+      work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+    });
+  }
+
   function requireUnlocked() {
     if (status !== "unlocked") throw new Error("Unlock the private account first.");
   }
@@ -735,7 +976,10 @@ export function createPrivacyPoolsEngine({
       chain.transactions = new Map();
       chain.scan = undefined;
       chain.account = undefined;
+      chain.approved = new Map();
+      chain.submitted = new Map();
     }
+    proved.clear();
     emit("sync");
     emit("balances");
   }
@@ -886,8 +1130,145 @@ export function createPrivacyPoolsEngine({
       };
     },
 
-    async prove() {
-      throw new Error("This engine can't unshield yet. Withdraw at privacypools.com.");
+    async quote(draft) {
+      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      const pool = await poolFor(draft.chainId, draft.token);
+      const { minimum, quote } = await relayerQuote(draft, pool, false);
+      // Without the account there is no balance to check the amount against.
+      if (chainOf(draft.chainId).account) sourceFor(draft.chainId, pool, draft.amount, minimum);
+      return quote;
+    },
+
+    async prove(draft, { onStage, signal }) {
+      requireUnlocked();
+      if (signal?.aborted) throw signal.reason;
+      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      const started = session;
+      const { chainId } = draft;
+      const chain = chainOf(chainId);
+      const stillOpen = () => {
+        if (started !== session) throw new Error("The private account was locked.");
+      };
+
+      onStage("loading-circuits");
+      const pool = await abortable(poolFor(chainId, draft.token), signal);
+      if (!chain.account) await abortable(scan(chainId), signal);
+      stillOpen();
+      const account = chain.account;
+      if (!account) throw new Error("Couldn't read the pool's history. Scan again before unshielding.");
+      const { sdk } = await abortable(loadProver(), signal);
+      const { calculateContext, generateMerkleProof } = await import("@0xbow/privacy-pools-core-sdk");
+
+      // The proof is bound to the relayer's commitment, which lasts about a
+      // minute. Ask for it last, once everything slow is loaded.
+      const [{ minimum, feeBps, quote, commitment }, leaves, aspRoot] = await abortable(
+        Promise.all([
+          relayerQuote(draft, pool, true),
+          treeLeaves(chainId, pool),
+          client(chainId).readContract({
+            address: configOf(chainId).entrypoint,
+            abi: ASP_ROOT_ABI,
+            functionName: "latestRoot",
+          }) as Promise<bigint>,
+        ]),
+        signal
+      );
+      stillOpen();
+      checkCommitment(commitment, draft, feeBps);
+      const source = sourceFor(chainId, pool, draft.amount, minimum);
+
+      let stateProof, aspProof;
+      try {
+        stateProof = generateMerkleProof(leaves.stateTreeLeaves.map(BigInt), source.hash);
+        aspProof = generateMerkleProof(leaves.aspLeaves.map(BigInt), source.label);
+      } catch {
+        throw new Error("The ASP's records are behind the chain. Try again in a minute.");
+      }
+      // The pool only accepts the approval list that is on chain right now.
+      if (BigInt(aspProof.root) !== aspRoot) {
+        throw new Error("The approval list is being updated. Try again in a minute.");
+      }
+
+      const secrets = account.createWithdrawalSecrets(source);
+      const context = calculateContext(
+        { processooor: configOf(chainId).entrypoint, data: commitment.withdrawalData },
+        pool.scope as PoolInfo["scope"]
+      );
+
+      onStage("proving");
+      const proof = await abortable(
+        sdk.proveWithdrawal(source, {
+          context: BigInt(context),
+          withdrawalAmount: draft.amount,
+          stateMerkleProof: stateProof,
+          aspMerkleProof: aspProof,
+          stateRoot: stateProof.root as never,
+          stateTreeDepth: TREE_DEPTH,
+          aspRoot: aspProof.root as never,
+          aspTreeDepth: TREE_DEPTH,
+          newNullifier: secrets.nullifier,
+          newSecret: secrets.secret,
+        }),
+        signal
+      );
+
+      onStage("verifying");
+      if (!(await abortable(sdk.verifyWithdrawal(proof), signal))) {
+        throw new Error("The proof did not verify. Nothing was sent.");
+      }
+      stillOpen();
+
+      const id = `privacy-pools-proof-${++proofCount}`;
+      proved.set(id, { session: started, pool, source, proof, feeCommitment: commitment });
+      return { id, draft, quote, expiresAt: Date.now() + PROOF_LIFETIME };
+    },
+
+    async submit(operation) {
+      requireUnlocked();
+      const entry = proved.get(operation.id);
+      if (!entry || entry.session !== session) {
+        throw new Error("This proof can't be used. Prove again.");
+      }
+      const { draft } = operation;
+      const { pool, source, proof } = entry;
+      // One submit per proof, even if this one fails halfway: a second could pay twice.
+      proved.delete(operation.id);
+      if (Date.now() > operation.expiresAt) throw new Error("The proof expired. Prove again.");
+
+      let { feeCommitment } = entry;
+      if (feeCommitment.expiration - Date.now() < COMMITMENT_MARGIN) {
+        // The relayer's promise ran out. A new one fits this proof only if it says the same thing.
+        const fresh = await relayerQuote(draft, pool, true);
+        if (lower(fresh.commitment?.withdrawalData ?? "") !== lower(feeCommitment.withdrawalData)) {
+          throw new Error("The relayer's fee changed. Prove again.");
+        }
+        feeCommitment = fresh.commitment!;
+      }
+
+      const answer = await relayer<{ success?: boolean; txHash?: Hash; error?: string }>(
+        draft.chainId,
+        "request",
+        {
+          withdrawal: {
+            processooor: configOf(draft.chainId).entrypoint,
+            data: feeCommitment.withdrawalData,
+          },
+          publicSignals: proof.publicSignals,
+          proof: { pi_a: proof.proof.pi_a, pi_b: proof.proof.pi_b, pi_c: proof.proof.pi_c },
+          scope: pool.scope.toString(),
+          chainId: draft.chainId,
+          feeCommitment,
+        }
+      );
+      if (!answer.success || !answer.txHash) {
+        throw new Error(answer.error || "The relayer did not send the withdrawal.");
+      }
+
+      if (entry.session === session) {
+        chainOf(draft.chainId).submitted.set(source.hash, Date.now());
+        void scan(draft.chainId);
+      }
+      return { hash: answer.txHash };
     },
   };
 }

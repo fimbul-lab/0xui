@@ -88,6 +88,8 @@ Measured against the Railgun SDK on Sepolia, except where marked as a guess.
 | `failNextRetry(message?)` | The next `retryProofs` rejects. |
 | `keepIncomplete(keep?)` | While on, `retryProofs` finishes but changes nothing. |
 
+`engine.quote` and `engine.submit` work too: `submit` on a proved unshield does what `simulate.unshield` does and resolves with a made-up hash.
+
 `shield` and `unshield` resolve with `{ fee, received }`. Pass `hash` to `shield` (or to `addFunds`, or a `funds` entry) and `getTransaction` reports on that public transaction. This is how the [Shield](/blocks/shield/) block's demo tells the mock that the shield was sent.
 
 ```ts
