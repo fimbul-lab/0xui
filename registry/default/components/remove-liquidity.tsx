@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/blocks/remove-liquidity.md
 import { Slider } from "@base-ui/react/slider";
 import { useEffect, useState, type ReactNode } from "react";
+import { Skeleton } from "skullet/react";
 import { formatUnits, type Address, type Hash, type Hex, type TransactionReceipt } from "viem";
 import { useConnection } from "wagmi";
 import { formatFee } from "@/components/fee-tier-select";
@@ -53,9 +54,36 @@ export function getRemoveAmounts(
   };
 }
 
+type RemovePool = Pick<PoolState, "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1">;
+
+/** Stand-ins the loading skeleton is measured from. */
+const sampleToken = (symbol: string, n: number): Token => ({
+  chainId: 1,
+  address: `0x${n.toString(16).padStart(40, "0")}`,
+  name: symbol,
+  symbol,
+  decimals: 18,
+});
+const sample: { position: Position<Token>; pool: RemovePool } = {
+  position: {
+    tokenId: 100_000n,
+    token0: sampleToken("ETH", 1),
+    token1: sampleToken("USDC", 2),
+    fee: 500,
+    tickLower: -600,
+    tickUpper: 600,
+    liquidity: 10n ** 18n,
+    fees0: 10n ** 16n,
+    fees1: 10n ** 16n,
+  },
+  pool: { tick: 0, tickSpacing: 10, decimals0: 18, decimals1: 18 },
+};
+
 export type RemoveLiquidityProps = {
-  position: Position<Token>;
-  pool: Pick<PoolState, "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1">;
+  /** The position. Leave out while it loads: the block shows a skeleton. */
+  position?: Position<Token>;
+  /** The position's pool. Leave out while it loads. */
+  pool?: RemovePool;
   /** Build the transaction. `v3Remove({ positionManager, weth })` for Uniswap v3 and forks. */
   getTransaction: GetRemoveTransaction;
   /** Starting percent. */
@@ -81,7 +109,20 @@ const presets = [25, 50, 75, 100];
  * current price plus all uncollected fees), set slippage, and withdraw in
  * one transaction. Native ETH comes back unwrapped with `v3Remove({ weth })`.
  */
-export function RemoveLiquidity({
+export function RemoveLiquidity({ position, pool, className, ...props }: RemoveLiquidityProps) {
+  return (
+    <Skeleton
+      data={position && pool ? { position, pool } : undefined}
+      sample={sample}
+      label="Loading position"
+      className={cn("w-full max-w-md", className)}
+    >
+      {(data) => <RemoveLiquidityView {...props} {...data} />}
+    </Skeleton>
+  );
+}
+
+function RemoveLiquidityView({
   position,
   pool,
   getTransaction,
@@ -96,7 +137,7 @@ export function RemoveLiquidity({
   title = "Remove liquidity",
   locale,
   className,
-}: RemoveLiquidityProps) {
+}: RemoveLiquidityProps & { position: Position<Token>; pool: RemovePool }) {
   const { address } = useConnection();
   const [percent, setPercent] = useState(defaultPercent);
   const [slippageBps, setSlippageBps] = useState(defaultSlippageBps);

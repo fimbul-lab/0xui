@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/position-card.md
 import type { ReactNode } from "react";
 import { formatUnits, type Address, type Hash, type Hex, type TransactionReceipt } from "viem";
+import { Skeleton } from "skullet/react";
 import { useConnection } from "wagmi";
 import { formatFee } from "@/components/fee-tier-select";
 import { RangeIndicator } from "@/components/range-indicator";
@@ -38,10 +39,36 @@ export function positionValue(
   );
 }
 
+type CardPool = Pick<PoolState, "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1">;
+
+/** Stand-ins the loading skeleton is measured from. */
+const sampleToken = (symbol: string, n: number): Token => ({
+  chainId: 1,
+  address: `0x${n.toString(16).padStart(40, "0")}`,
+  name: symbol,
+  symbol,
+  decimals: 18,
+});
+const sample: { position: Position<Token>; pool: CardPool } = {
+  position: {
+    tokenId: 100_000n,
+    token0: sampleToken("ETH", 1),
+    token1: sampleToken("USDC", 2),
+    fee: 500,
+    tickLower: -600,
+    tickUpper: 600,
+    liquidity: 10n ** 18n,
+    fees0: 10n ** 16n,
+    fees1: 10n ** 16n,
+  },
+  pool: { tick: 0, tickSpacing: 10, decimals0: 18, decimals1: 18 },
+};
+
 export type PositionCardProps = {
-  position: Position<Token>;
-  /** The position's pool: current tick and sqrt price. */
-  pool: Pick<PoolState, "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1">;
+  /** The position. Leave out while it loads: the card shows a skeleton. */
+  position?: Position<Token>;
+  /** The position's pool: current tick and sqrt price. Leave out while it loads. */
+  pool?: CardPool;
   /** Fiat values for the liquidity and fees. */
   prices?: TokenPrices;
   currency?: string;
@@ -63,7 +90,20 @@ export type PositionCardProps = {
  * now and its uncollected fees (with fiat values when prices are given),
  * and a Collect fees button. Add your own Add / Remove actions in `actions`.
  */
-export function PositionCard({
+export function PositionCard({ position, pool, className, ...props }: PositionCardProps) {
+  return (
+    <Skeleton
+      data={position && pool ? { position, pool } : undefined}
+      sample={sample}
+      label="Loading position"
+      className={cn("w-full", className)}
+    >
+      {(data) => <PositionCardView {...props} {...data} />}
+    </Skeleton>
+  );
+}
+
+function PositionCardView({
   position,
   pool,
   prices,
@@ -75,7 +115,7 @@ export function PositionCard({
   actions,
   locale,
   className,
-}: PositionCardProps) {
+}: PositionCardProps & { position: Position<Token>; pool: CardPool }) {
   const { address } = useConnection();
   const { token0, token1 } = position;
   const amounts = getPositionAmounts(position, pool);

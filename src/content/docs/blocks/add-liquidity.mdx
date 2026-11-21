@@ -46,9 +46,13 @@ const weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 `v3Mint` (from `v3-position-manager`, also exported here) encodes `NonfungiblePositionManager.mint`. A native ETH side is sent as value and wrapped by the manager, with `refundETH` in the same `multicall` so leftover ETH comes back. For anything else (Uniswap v4's `modifyLiquidities`, Aerodrome, your own router), pass your own `getTransaction`. It gets a `MintRequest` with ticks, desired and minimum amounts, recipient and deadline, and returns `{ to, data, value }`, sync or async.
 
+## Loading
+
+Leave out `pool` and `bins` while it loads. The block shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading pool" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
 ## Fee tiers
 
-Pass `feeTiers` and `onFeeChange` to show the fee picker. A different fee is a different pool, so load that pool's state and ticks when the fee changes. The range starts over for the new tick spacing.
+Pass `feeTiers` and `onFeeChange` to show the fee picker. A different fee is a different pool, so load that pool's state and ticks when the fee changes. Keep showing the previous pool until the new one arrives (TanStack Query's `placeholderData: keepPreviousData`), or the block goes back to its skeleton. The range starts over for the new tick spacing.
 
 ```tsx
 const [fee, setFee] = useState(500);
@@ -89,8 +93,9 @@ The root sets `data-deposit-mode` (`both`, `token0` or `token1`). The button nam
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `token0` / `token1` | `Token` | — | Pool tokens, in pool order. |
-| `pool` | `PoolState` | — | Current tick, sqrt price, liquidity, spacing, decimals. |
-| `bins` | `LiquidityBin[]` | — | For the range chart. Omit to hide it. |
+| `pool` | `PoolState` | — | Current tick, sqrt price, liquidity, spacing, decimals. Leave out while loading. |
+| `bins` | `LiquidityBin[]` | — | For the range chart. Leave out while loading. |
+| `showChart` | `boolean` | `true` | Show the liquidity chart. |
 | `getTransaction` | `GetMintTransaction` | — | Builds the mint. `v3Mint({ positionManager, weth })` for Uniswap v3. |
 | `spender` | `Address` | — | Approved for both tokens: the position manager, or Permit2 for v4. |
 | `fee` | `number` | — | Fee in hundredths of a bip. Required by `v3Mint`. |
@@ -103,3 +108,4 @@ The root sets `data-deposit-mode` (`both`, `token0` or `token1`). The button nam
 | `prices` | `TokenPrices` | — | Fiat values under the amounts. |
 | `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)` | — | Transaction callbacks. |
 | `title` | `ReactNode` | `"Add liquidity"` | Heading. |
+| `locale` | `string` | runtime locale | Number formatting locale. Pin it when you server-render, so the server and the browser agree. |

@@ -56,6 +56,10 @@ For the ticks, read them from an indexer (the Uniswap v3 subgraph's `ticks { tic
 
 `getLiquidityBins` rebuilds the liquidity in each slice from `liquidityNet`, the same way the pool does when the price crosses a tick, so the chart matches what a swap would see. Without ticks you can still build bins from known positions with `ticksFromPositions`.
 
+## Loading
+
+Leave out `bins` while it loads. The component shows a [skullet](https://skullet.lochie.me) skeleton the size of the plot, "Loading liquidity" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
 ## Examples
 
 ### With a range
@@ -90,7 +94,7 @@ Token0 is teal and token1 is violet. The pair passes colorblind and contrast che
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. |
+| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. Leave out while loading. |
 | `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. |
 | `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
 | `invert` | `boolean` | `false` | Quote in token0 and flip the axis. |

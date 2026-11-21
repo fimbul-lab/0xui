@@ -10,6 +10,7 @@ import {
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { SkeletonBox } from "skullet/react";
 import { Button } from "@/components/ui/button";
 import {
   formatPrice,
@@ -114,6 +115,8 @@ type Bar = {
   isCurrent: boolean;
 };
 
+const noBins: readonly LiquidityBin[] = [];
+
 /** Merge neighboring bins so every bar is at least `minWidth` px wide. */
 function toBars(bins: readonly LiquidityBin[], lower: number, upper: number, width: number, minWidth = 3): Bar[] {
   const visible = bins.filter((b) => b.tickUpper > lower && b.tickLower < upper);
@@ -149,8 +152,8 @@ const compact = (value: number, locale?: string) =>
 /* ------------------------------------------------------------------------ */
 
 export type LiquidityChartProps = {
-  /** Bins from `getLiquidityBins(pool, ticks)`. */
-  bins: readonly LiquidityBin[];
+  /** Bins from `getLiquidityBins(pool, ticks)`. Leave out while they load: the plot shows a skeleton. */
+  bins?: readonly LiquidityBin[];
   /** Current tick, spacing and decimals. */
   pool: Pick<PoolState, "tick" | "tickSpacing" | "decimals0" | "decimals1">;
   token0: PairToken;
@@ -177,7 +180,7 @@ export type LiquidityChartProps = {
  * draggable with pointer or keyboard.
  */
 export function LiquidityChart({
-  bins,
+  bins: binsProp,
   pool,
   token0,
   token1,
@@ -190,6 +193,8 @@ export function LiquidityChart({
   className,
 }: LiquidityChartProps) {
   const [ref, width] = useElementWidth<HTMLDivElement>();
+  const loading = !binsProp;
+  const bins = binsProp ?? noBins;
   const viewport = useChartViewport({ bins, currentTick: pool.tick, tickSpacing: pool.tickSpacing, range });
   const { lower, upper } = viewport;
   const bars = useMemo(() => toBars(bins, lower, upper, width), [bins, lower, upper, width]);
@@ -264,6 +269,7 @@ export function LiquidityChart({
   return (
     <div
       data-slot="liquidity-chart"
+      data-loading={loading || undefined}
       className={cn("flex w-full flex-col gap-2 text-sm", className)}
     >
       {showControls && (
@@ -273,7 +279,7 @@ export function LiquidityChart({
             <LegendKey color={liquidityColors.token1} label={token1.symbol} />
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon-sm" aria-label="Zoom in" disabled={!viewport.canZoomIn} onClick={viewport.zoomIn}>
+            <Button variant="ghost" size="icon-sm" aria-label="Zoom in" disabled={loading || !viewport.canZoomIn} onClick={viewport.zoomIn}>
               <PlusIcon />
             </Button>
             <Button variant="ghost" size="icon-sm" aria-label="Zoom out" disabled={!viewport.canZoomOut} onClick={viewport.zoomOut}>
@@ -287,7 +293,14 @@ export function LiquidityChart({
       )}
 
       <div ref={ref} className="relative w-full select-none" style={{ height: height + 20 }}>
-        {width > 0 && (
+        {(loading || width === 0) && (
+          // Before the data, and on the server before the width is known.
+          <>
+            <SkeletonBox width="100%" height={height} radius={8} />
+            <span className="sr-only">Loading liquidity</span>
+          </>
+        )}
+        {!loading && width > 0 && (
           <>
             <div
               role="group"

@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/fee-tier-select.md
 import { CheckIcon } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
+import { SkeletonBox } from "skullet/react";
 import { cn } from "@/lib/utils";
 
 export type FeeTier = {
@@ -34,6 +35,8 @@ export type FeeTierSelectProps = {
   defaultValue?: number;
   onValueChange?: (tier: FeeTier) => void;
   tiers?: FeeTier[];
+  /** Shares are loading: each tier shows a skeleton where its share goes. */
+  loading?: boolean;
   /** Group label, read by screen readers and shown above the options. */
   label?: ReactNode;
   locale?: string;
@@ -51,6 +54,7 @@ export function FeeTierSelect({
   defaultValue,
   onValueChange,
   tiers = defaultFeeTiers,
+  loading = false,
   label = "Fee tier",
   locale,
   className,
@@ -60,7 +64,7 @@ export function FeeTierSelect({
   const name = useId();
 
   return (
-    <fieldset data-slot="fee-tier-select" className={cn("flex w-full flex-col gap-2", className)}>
+    <fieldset data-slot="fee-tier-select" data-loading={loading || undefined} aria-busy={loading || undefined} className={cn("flex w-full flex-col gap-2", className)}>
       <legend className="mb-2 text-sm font-medium">{label}</legend>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {tiers.map((tier) => {
@@ -90,7 +94,12 @@ export function FeeTierSelect({
                 {checked && <CheckIcon className="size-4" aria-hidden />}
               </span>
               {tier.description && <span className="text-xs text-muted-foreground">{tier.description}</span>}
-              {(tier.share !== undefined || tier.exists === false) && (
+              {loading && (
+                <span className="mt-auto">
+                  <SkeletonBox width="7ch" height={18} radius={4} />
+                </span>
+              )}
+              {!loading && (tier.share !== undefined || tier.exists === false) && (
                 <span className="mt-auto w-fit rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
                   {tier.exists === false
                     ? "Not created"

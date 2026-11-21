@@ -1,3 +1,4 @@
+// Locale pinned so the server and the browser format numbers the same way.
 import { useState } from "react";
 import { AddLiquidity, v3Mint } from "@/components/add-liquidity";
 import { ConnectWallet } from "@/components/connect-wallet";
@@ -6,6 +7,7 @@ import { createDemoPool, demoUsdcEthPool } from "./lp-pool";
 import { demoEth, demoUsdc } from "./tokens";
 import { demoPrices } from "./prices";
 import { demo } from "./demo";
+import { usePretendLoad } from "./use-pretend-load";
 
 // Uniswap v3's NonfungiblePositionManager and WETH on Ethereum. Demo mints are never broadcast.
 const positionManager = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
@@ -23,14 +25,15 @@ const tiers: FeeTier[] = defaultFeeTiers
 
 export const Default = demo(() => {
   const [fee, setFee] = useState<keyof typeof pools>(500);
+  const loaded = usePretendLoad();
   const { pool, bins } = pools[fee];
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-2">
-      <AddLiquidity
+      <AddLiquidity locale="en-US"
         token0={demoUsdc}
         token1={demoEth}
-        pool={pool}
-        bins={bins}
+        pool={loaded ? pool : undefined}
+        bins={loaded ? bins : undefined}
         fee={fee}
         feeTiers={tiers}
         onFeeChange={(tier) => setFee(tier.fee as keyof typeof pools)}
@@ -51,7 +54,7 @@ export const SingleSided = demo(() => {
   // Inverted, ETH up 5–15%: ticks below the price, so the range takes only ETH (token1).
   return (
     <div className="w-full max-w-xl">
-      <AddLiquidity
+      <AddLiquidity locale="en-US"
         token0={demoUsdc}
         token1={demoEth}
         pool={pool}

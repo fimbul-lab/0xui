@@ -40,12 +40,16 @@ import { v3Remove } from "@/lib/v3-position-manager";
 
 The minimum amounts are the principal less slippage. The deadline is rebuilt every minute, so a page left open doesn't sign a stale one.
 
+## Loading
+
+Leave out `position` and `pool` while it loads. The block shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading position" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
 ## Props
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `position` | `Position<Token>` | — | The position, with `fees0` / `fees1`. |
-| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. |
+| `position` | `Position<Token>` | — | The position, with `fees0` / `fees1`. Leave out while loading. |
+| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. Leave out while loading. |
 | `getTransaction` | `(request: RemoveRequest) => tx` | — | `v3Remove({ positionManager, weth })` for Uniswap v3. |
 | `defaultPercent` | `number` | `50` | Starting share. |
 | `slippageBps` | `number` | `50` | Starting slippage. The user can change it. |

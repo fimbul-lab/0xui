@@ -1,5 +1,6 @@
 // Docs: https://0xui.io/components/depth-chart.md
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Skeleton, SkeletonBox } from "skullet/react";
 import { liquidityColors, type PairToken } from "@/components/liquidity-chart";
 import {
   formatPrice,
@@ -50,6 +51,17 @@ export function readDepth(
     : { percent, price: shown * (1 + x), amount: d.amount0, symbol: token0.symbol, value: d.amount0 };
 }
 
+const noBins: readonly LiquidityBin[] = [];
+
+/** Sample reading the stat tiles are measured from while loading. */
+const standIn = (token: PairToken): DepthReading => ({
+  percent: 2,
+  price: 1,
+  amount: 1234.5,
+  symbol: token.symbol,
+  value: 3_820_000,
+});
+
 const compact = (value: number, locale?: string) =>
   new Intl.NumberFormat(locale, { notation: value >= 1e4 ? "compact" : "standard", maximumSignificantDigits: 4 }).format(value);
 
@@ -57,10 +69,10 @@ const signed = (percent: number) =>
   `${percent > 0 ? "+" : percent < 0 ? "−" : "±"}${Math.abs(percent)}%`;
 
 export type DepthChartProps = {
-  /** Bins from `getLiquidityBins`. Pass enough of them to cover `window`. */
-  bins: readonly LiquidityBin[];
-  /** Current price, token1 per token0. */
-  currentPrice: number;
+  /** Bins from `getLiquidityBins`. Pass enough of them to cover `window`. Leave out while loading: shows a skeleton. */
+  bins?: readonly LiquidityBin[];
+  /** Current price, token1 per token0. Leave out while loading. */
+  currentPrice?: number;
   token0: PairToken;
   token1: PairToken;
   /** Quote in token0 instead. */
@@ -84,8 +96,8 @@ export type DepthChartProps = {
  * share an axis. Headline figures show depth at ±`level`%.
  */
 export function DepthChart({
-  bins,
-  currentPrice,
+  bins: binsProp,
+  currentPrice: priceProp,
   token0,
   token1,
   invert = false,
@@ -96,6 +108,9 @@ export function DepthChart({
   locale,
   className,
 }: DepthChartProps) {
+  const loading = !binsProp || priceProp === undefined;
+  const bins = binsProp ?? noBins;
+  const currentPrice = priceProp ?? 1;
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
@@ -155,16 +170,18 @@ export function DepthChart({
   };
 
   return (
-    <div data-slot="depth-chart" className={cn("flex w-full flex-col gap-3 text-sm", className)} style={{
+    <div data-slot="depth-chart" data-loading={loading || undefined} className={cn("flex w-full flex-col gap-3 text-sm", className)} style={{
         // Bids hold the quote token, asks the base token; colors follow the token.
         ["--lp-bid" as string]: invert ? liquidityColors.token0 : liquidityColors.token1,
         ["--lp-ask" as string]: invert ? liquidityColors.token1 : liquidityColors.token0,
       }}
     >
-      <div className="grid grid-cols-2 gap-2">
-        <DepthStat label={`Bids to ${signed(-level)}`} reading={down} quote={quote.symbol} color="var(--lp-bid)" locale={locale} />
-        <DepthStat label={`Asks to ${signed(level)}`} reading={up} quote={quote.symbol} color="var(--lp-ask)" locale={locale} />
-      </div>
+      <Skeleton loading={loading} label="Loading market depth">
+        <div className="grid grid-cols-2 gap-2">
+          <DepthStat label={`Bids to ${signed(-level)}`} reading={loading ? standIn(quote) : down} quote={quote.symbol} color="var(--lp-bid)" locale={locale} />
+          <DepthStat label={`Asks to ${signed(level)}`} reading={loading ? standIn(base) : up} quote={quote.symbol} color="var(--lp-ask)" locale={locale} />
+        </div>
+      </Skeleton>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -196,7 +213,8 @@ export function DepthChart({
         className="relative w-full select-none"
         style={{ height: height + 20 }}
       >
-        {width > 0 && (
+        {(loading || width === 0) && <SkeletonBox width="100%" height={height} radius={8} />}
+        {!loading && width > 0 && (
           <div
             role="group"
             tabIndex={0}
@@ -287,6 +305,7 @@ export function DepthChart({
             : ""}
         </p>
         {/* Reachable without hover: the full curve as a table. */}
+        {!loading && (
         <table className="sr-only">
           <caption>Cumulative depth by price move</caption>
           <thead>
@@ -309,8 +328,9 @@ export function DepthChart({
             })}
           </tbody>
         </table>
+        )}
       </div>
-      {edge.asks.length + edge.bids.length <= 2 && (
+      {!loading && edge.asks.length + edge.bids.length <= 2 && (
         <p className="text-xs text-muted-foreground">No liquidity around the current price.</p>
       )}
     </div>

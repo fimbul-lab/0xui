@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/price-range.md
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { Skeleton } from "skullet/react";
 import {
   LiquidityChart,
   type PairToken,
@@ -134,10 +135,18 @@ export function usePriceRange({
   };
 }
 
+type RangePool = Pick<PoolState, "tick" | "tickSpacing" | "decimals0" | "decimals1">;
+
+/** Stand-in pool the loading skeleton is measured from. */
+const samplePool: RangePool = { tick: 0, tickSpacing: 10, decimals0: 18, decimals1: 18 };
+
 export type PriceRangeProps = {
-  pool: Pick<PoolState, "tick" | "tickSpacing" | "decimals0" | "decimals1">;
-  /** Liquidity bins for the chart, from `getLiquidityBins`. Omit to hide the chart. */
+  /** Current tick, spacing and decimals. Leave out while it loads: the panel shows a skeleton. */
+  pool?: RangePool;
+  /** Liquidity bins for the chart, from `getLiquidityBins`. Leave out while they load: the chart shows a skeleton. */
   bins?: readonly LiquidityBin[];
+  /** Show the liquidity chart. Turn off for a compact form. */
+  showChart?: boolean;
   token0: PairToken;
   token1: PairToken;
   value?: TickRange;
@@ -161,9 +170,22 @@ export type PriceRangeProps = {
  * price fields with tick steppers, a token toggle to flip the quote, and a
  * notice when the range sits outside the price and only takes one token.
  */
-export function PriceRange({
+export function PriceRange({ pool, className, ...props }: PriceRangeProps) {
+  return (
+    <Skeleton data={pool} sample={samplePool} label="Loading pool" className={cn("w-full", className)}>
+      {(p) => (
+        // A new instance once the real pool lands, so the range starts from its price.
+        <PriceRangeView key={p === samplePool ? "sample" : "pool"} {...props} pool={p} loadingPool={p === samplePool} />
+      )}
+    </Skeleton>
+  );
+}
+
+function PriceRangeView({
   pool,
+  loadingPool,
   bins,
+  showChart = true,
   token0,
   token1,
   value,
@@ -176,7 +198,7 @@ export function PriceRange({
   title = "Set price range",
   locale,
   className,
-}: PriceRangeProps) {
+}: PriceRangeProps & { pool: RangePool; loadingPool: boolean }) {
   const [innerInvert, setInnerInvert] = useState(defaultInvert);
   const invert = invertProp ?? innerInvert;
   const setInvert = (next: boolean) => {
@@ -225,9 +247,9 @@ export function PriceRange({
         <span className="font-medium text-foreground tabular-nums">{formatPrice(current, { locale })}</span> {unit}
       </p>
 
-      {bins && (
+      {showChart && (
         <LiquidityChart
-          bins={bins}
+          bins={loadingPool ? undefined : bins}
           pool={pool}
           token0={token0}
           token1={token1}

@@ -32,6 +32,10 @@ import { RangeIndicator } from "@/components/range-indicator";
 />;
 ```
 
+## Loading
+
+Leave out `pool` while it loads. The component shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading position range" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
 ## States
 
 Out of range, closed, full range and inverted.
@@ -47,7 +51,7 @@ The status is on `data-status` (`in-range`, `out-of-range` or `closed`) and is w
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `tickLower` / `tickUpper` | `number` | — | The position's range. |
-| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. |
+| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. Leave out while loading. |
 | `liquidity` | `bigint` | — | `0n` shows the position as closed. |
 | `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
 | `invert` | `boolean` | `false` | Quote in token0. |

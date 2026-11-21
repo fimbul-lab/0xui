@@ -9,6 +9,7 @@ import {
   type Hex,
   type TransactionReceipt,
 } from "viem";
+import { Skeleton } from "skullet/react";
 import { useConnection } from "wagmi";
 import { ApproveButton } from "@/components/approve-button";
 import { useTokenBalance } from "@/components/balance";
@@ -93,14 +94,26 @@ export function useDepositAmounts({
   };
 }
 
+/** Stand-in pool the loading skeleton is measured from. */
+const samplePool: PoolState = {
+  tick: 0,
+  sqrtPriceX96: 2n ** 96n,
+  liquidity: 0n,
+  tickSpacing: 10,
+  decimals0: 18,
+  decimals1: 18,
+};
+
 export type AddLiquidityProps = {
   /** Pool's token0 and token1, in pool order (sorted by address). Native ETH is fine with `v3Mint({ weth })`. */
   token0: Token;
   token1: Token;
-  /** Current pool state. `sqrtPriceX96` makes the deposit ratio exact. */
-  pool: PoolState;
-  /** Liquidity bins for the range chart, from `getLiquidityBins`. */
+  /** Current pool state. `sqrtPriceX96` makes the deposit ratio exact. Leave out while it loads: the block shows a skeleton. */
+  pool?: PoolState;
+  /** Liquidity bins for the range chart, from `getLiquidityBins`. Leave out while they load. */
   bins?: readonly LiquidityBin[];
+  /** Show the liquidity chart. Turn off for a compact form. */
+  showChart?: boolean;
   /** Build the mint transaction. Use `v3Mint({ positionManager })` for Uniswap v3 and forks. */
   getTransaction: GetMintTransaction;
   /** Contract to approve for both tokens: the position manager, or Permit2 for v4. */
@@ -123,6 +136,8 @@ export type AddLiquidityProps = {
   onSubmitted?: (hash: Hash) => void;
   onSuccess?: (receipt: TransactionReceipt) => void;
   title?: ReactNode;
+  /** Number formatting locale. Pin it when you server-render, so the server and the browser agree. */
+  locale?: string;
   className?: string;
 };
 
@@ -135,11 +150,20 @@ export type AddLiquidityProps = {
  * the button names whatever is missing. Bring the transaction via
  * `getTransaction`, or use `v3Mint`.
  */
-export function AddLiquidity({
+export function AddLiquidity({ pool, className, ...props }: AddLiquidityProps) {
+  return (
+    <Skeleton data={pool} sample={samplePool} label="Loading pool" className={cn("w-full max-w-xl", className)}>
+      {(p) => <AddLiquidityView key={p === samplePool ? "sample" : "pool"} {...props} pool={p} />}
+    </Skeleton>
+  );
+}
+
+function AddLiquidityView({
   token0,
   token1,
   pool,
   bins,
+  showChart,
   getTransaction,
   spender,
   fee,
@@ -154,8 +178,9 @@ export function AddLiquidity({
   onSubmitted,
   onSuccess,
   title = "Add liquidity",
+  locale,
   className,
-}: AddLiquidityProps) {
+}: AddLiquidityProps & { pool: PoolState }) {
   const { address } = useConnection();
   const startRange = (invert: boolean) =>
     rangeAroundTick(pool.tick, pool.tickSpacing <= 1 ? 0.1 : 10, pool.tickSpacing, { invert });
@@ -281,17 +306,18 @@ export function AddLiquidity({
         {title && <h3 className="text-lg font-semibold">{title}</h3>}
         <span className="text-sm text-muted-foreground">
           {token0.symbol} / {token1.symbol}
-          {fee !== undefined && <span className="ml-2 rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">{formatFee(fee)}</span>}
+          {fee !== undefined && <span className="ml-2 rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">{formatFee(fee, locale)}</span>}
         </span>
       </header>
 
       {feeTiers && onFeeChange && (
-        <FeeTierSelect tiers={feeTiers} value={fee} onValueChange={onFeeChange} />
+        <FeeTierSelect tiers={feeTiers} value={fee} onValueChange={onFeeChange} locale={locale} />
       )}
 
       <PriceRange
         pool={pool}
-        bins={bins}
+        bins={pool === samplePool ? undefined : bins}
+        showChart={showChart}
         token0={token0}
         token1={token1}
         value={range}
@@ -299,6 +325,7 @@ export function AddLiquidity({
         invert={invert}
         onInvertChange={setInvert}
         presets={presets}
+        locale={locale}
       />
 
       <section className="flex flex-col gap-2" aria-label="Deposit amounts">
@@ -326,7 +353,7 @@ export function AddLiquidity({
             />
           )
         )}
-        <SlippageInput value={slippageBps} onValueChange={setSlippageBps} className="mt-1" />
+        <SlippageInput value={slippageBps} onValueChange={setSlippageBps} locale={locale} className="mt-1" />
       </section>
 
       {tx.error && (

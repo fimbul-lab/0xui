@@ -34,6 +34,10 @@ Pass enough bins to cover the widest window. With a tick spacing of 10, 300 bins
 
 To show the numbers without a chart, call `getMarketDepth(bins, price, 2)`, or `readDepth` for a signed move in the displayed direction.
 
+## Loading
+
+Leave out `bins` and `currentPrice` while it loads. The component shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading market depth" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
 ## Examples
 
 ### Inverted, ±1%
@@ -54,8 +58,8 @@ Above the price the pool holds only token0, below it only token1. Walking out fr
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. |
-| `currentPrice` | `number` | — | Token1 per token0. |
+| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. Leave out while loading. |
+| `currentPrice` | `number` | — | Token1 per token0. Leave out while loading. |
 | `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
 | `invert` | `boolean` | `false` | Quote in token0. |
 | `window` | `number` | `10` | Visible move each side, in %. Setting it hides the window buttons. |

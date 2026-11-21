@@ -33,6 +33,10 @@ import { v3Collect } from "@/lib/v3-position-manager";
 />;
 ```
 
+## Loading
+
+Leave out `position` and `pool` while it loads. The component shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading position" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
 ## Reading a position
 
 For Uniswap v3, read `positions(tokenId)` from the position manager. It returns the tokens, fee, ticks and liquidity. Its `tokensOwed0` and `tokensOwed1` only count fees up to the last time the position was touched, so get the real uncollected fees by simulating `collect` with the maximum amounts:
@@ -66,8 +70,8 @@ The Collect fees button names its blocker ("No fees to collect"). `v3Collect` pa
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `position` | `Position<Token>` | — | `{ tokenId, token0, token1, fee?, tickLower, tickUpper, liquidity, fees0?, fees1? }`. |
-| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. |
+| `position` | `Position<Token>` | — | `{ tokenId, token0, token1, fee?, tickLower, tickUpper, liquidity, fees0?, fees1? }`. Leave out while loading. |
+| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. Leave out while loading. |
 | `prices` | `TokenPrices` | — | Fiat totals. |
 | `currency` | `string` | `"USD"` | ISO 4217 currency. |
 | `invert` | `boolean` | `false` | Quote the range in token0. |

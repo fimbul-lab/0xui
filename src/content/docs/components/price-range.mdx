@@ -47,7 +47,7 @@ const usdcNeeded = getDependentAmount({ sqrtPriceX96, tickLower, tickUpper, amou
 
 ### Without the chart
 
-Leave out `bins` for a compact form, like a mobile sheet or a pool without tick data.
+Set `showChart={false}` for a compact form, like a mobile sheet or a pool without tick data.
 
 <Preview>
   <WithoutChart client:load />
@@ -60,6 +60,10 @@ Controlled, next to a [Range Indicator](/components/range-indicator/) showing th
 <Preview>
   <WithIndicator client:load />
 </Preview>
+
+## Loading
+
+Leave out `pool`, `bins` or both while it loads. The panel and the chart each show a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading pool" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
 
 ## Presets
 
@@ -87,8 +91,9 @@ The root sets `data-deposit-mode` and `data-full-range`:
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. |
-| `bins` | `LiquidityBin[]` | — | For the chart. Omit to hide it. |
+| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. Leave out while loading. |
+| `bins` | `LiquidityBin[]` | — | For the chart. Leave out while loading. |
+| `showChart` | `boolean` | `true` | Show the liquidity chart. |
 | `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
 | `value` / `defaultValue` | `{ tickLower, tickUpper }` | ±10% | Controlled or starting range. |
 | `onValueChange` | `(range) => void` | — | Called with snapped ticks. |

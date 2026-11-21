@@ -741,7 +741,7 @@
       "name": "add-liquidity",
       "type": "registry:block",
       "title": "Add Liquidity",
-      "description": "Add liquidity block for concentrated liquidity pools (Uniswap v3 style new-position flow): optional FeeTierSelect, PriceRange on the pool's liquidity chart, two TokenInputs linked by the exact deposit ratio (type either, the other fills; one side locks for single-sided ranges / range orders), balances, ApproveButton for each ERC-20, and a mint button naming the blocker. Bring your own transaction via getTransaction(MintRequest), or use v3Mint({ positionManager, weth }) for NonfungiblePositionManager.mint (native ETH via multicall + refundETH). Exports useDepositAmounts, withSlippage, v3Mint and MintRequest/GetMintTransaction types.",
+      "description": "Add liquidity block for concentrated liquidity pools (Uniswap v3 style new-position flow): optional FeeTierSelect, PriceRange on the pool's liquidity chart, two TokenInputs linked by the exact deposit ratio (type either, the other fills; one side locks for single-sided ranges / range orders), balances, ApproveButton for each ERC-20, and a mint button naming the blocker. Bring your own transaction via getTransaction(MintRequest), or use v3Mint({ positionManager, weth }) for NonfungiblePositionManager.mint (native ETH via multicall + refundETH). Exports useDepositAmounts, withSlippage, v3Mint and MintRequest/GetMintTransaction types. Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
       "categories": [
         "blocks"
@@ -756,7 +756,8 @@
         "viem",
         "wagmi",
         "@tanstack/react-query",
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/price-range",
@@ -777,7 +778,7 @@
       "name": "remove-liquidity",
       "type": "registry:block",
       "title": "Remove Liquidity",
-      "description": "Remove liquidity block for a concentrated liquidity position: Base UI slider plus 25/50/75/Max presets, 'You receive' with principal at the current price plus all uncollected fees (fiat total), SlippageInput, compact RangeIndicator, and one transaction via getTransaction or v3Remove({ positionManager, weth }) (decreaseLiquidity + collect, native ETH unwrapped). Deadline refreshed every minute. Exports getRemoveAmounts.",
+      "description": "Remove liquidity block for a concentrated liquidity position: Base UI slider plus 25/50/75/Max presets, 'You receive' with principal at the current price plus all uncollected fees (fiat total), SlippageInput, compact RangeIndicator, and one transaction via getTransaction or v3Remove({ positionManager, weth }) (decreaseLiquidity + collect, native ETH unwrapped). Deadline refreshed every minute. Exports getRemoveAmounts. Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/blocks/remove-liquidity.md",
       "categories": [
         "blocks"
@@ -791,7 +792,8 @@
       "dependencies": [
         "viem",
         "wagmi",
-        "@base-ui/react"
+        "@base-ui/react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/range-indicator",
@@ -1446,7 +1448,7 @@
       "name": "liquidity-chart",
       "type": "registry:component",
       "title": "Liquidity Chart",
-      "description": "Liquidity distribution histogram for a concentrated liquidity pool (Uniswap v3/v4 style): one bar per tick range, token0 above the price and token1 below it in their own colors, current price line, tooltip with tokens locked per bar, keyboard reading, zoom, invert. Optional range highlight with draggable handles and band (role=slider, arrow keys step one tick spacing). Hand-drawn SVG, no chart library. Exports useChartViewport, TickRange and liquidityColors (--lp-token0 / --lp-token1).",
+      "description": "Liquidity distribution histogram for a concentrated liquidity pool (Uniswap v3/v4 style): one bar per tick range, token0 above the price and token1 below it in their own colors, current price line, tooltip with tokens locked per bar, keyboard reading, zoom, invert. Optional range highlight with draggable handles and band (role=slider, arrow keys step one tick spacing). Hand-drawn SVG, no chart library. Exports useChartViewport, TickRange and liquidityColors (--lp-token0 / --lp-token1). Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
       "categories": [
         "liquidity"
@@ -1458,7 +1460,8 @@
         }
       ],
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "button",
@@ -1469,7 +1472,7 @@
       "name": "price-range",
       "type": "registry:component",
       "title": "Price Range",
-      "description": "'Set price range' panel for a new LP position, like Uniswap's: liquidity chart with draggable handles, presets by tick spacing (±0.05% for stables to ±50%, plus full range), min/max price fields with -/+ tick steppers that snap to the spacing, a token toggle to invert the quote, and a notice when the range is out of range and single-sided. data-deposit-mode (both/token0/token1) and data-full-range. Exports usePriceRange and defaultRangePresets.",
+      "description": "'Set price range' panel for a new LP position, like Uniswap's: liquidity chart with draggable handles, presets by tick spacing (±0.05% for stables to ±50%, plus full range), min/max price fields with -/+ tick steppers that snap to the spacing, a token toggle to invert the quote, and a notice when the range is out of range and single-sided. data-deposit-mode (both/token0/token1) and data-full-range. Exports usePriceRange and defaultRangePresets. Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/components/price-range.md",
       "categories": [
         "liquidity"
@@ -1481,7 +1484,8 @@
         }
       ],
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/liquidity-chart",
@@ -1492,7 +1496,7 @@
       "name": "depth-chart",
       "type": "registry:component",
       "title": "Depth Chart",
-      "description": "Order book style market depth for a concentrated liquidity pool: cumulative bids (quote token, price down) and asks (base token, price up) from the current price, both valued in the quote token on one axis, headline ±2% depth figures, window buttons (±2/5/10/25%), crosshair tooltip, keyboard reading, screen reader table, invert. Exports readDepth.",
+      "description": "Order book style market depth for a concentrated liquidity pool: cumulative bids (quote token, price down) and asks (base token, price up) from the current price, both valued in the quote token on one axis, headline ±2% depth figures, window buttons (±2/5/10/25%), crosshair tooltip, keyboard reading, screen reader table, invert. Exports readDepth. Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/components/depth-chart.md",
       "categories": [
         "liquidity"
@@ -1503,7 +1507,9 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [],
+      "dependencies": [
+        "skullet"
+      ],
       "registryDependencies": [
         "@0xui/liquidity-chart",
         "@0xui/concentrated-liquidity"
@@ -1513,7 +1519,7 @@
       "name": "range-indicator",
       "type": "registry:component",
       "title": "Range Indicator",
-      "description": "LP position range status: In range / Out of range / Closed badge (data-status, text not just color) and a log-scale bar with the range and a marker at the current price, min/current/max labels, full range and invert support.",
+      "description": "LP position range status: In range / Out of range / Closed badge (data-status, text not just color) and a log-scale bar with the range and a marker at the current price, min/current/max labels, full range and invert support. Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/components/range-indicator.md",
       "categories": [
         "liquidity"
@@ -1524,7 +1530,9 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [],
+      "dependencies": [
+        "skullet"
+      ],
       "registryDependencies": [
         "@0xui/concentrated-liquidity"
       ]
@@ -1533,7 +1541,7 @@
       "name": "fee-tier-select",
       "type": "registry:component",
       "title": "Fee Tier Select",
-      "description": "Fee tier picker for a new LP position: radio cards with fee (0.01/0.05/0.3/1%), when to use it, share of the pair's liquidity ('71% select') and 'Not created' for missing pools. onValueChange returns the tier with its tickSpacing. Exports defaultFeeTiers and formatFee.",
+      "description": "Fee tier picker for a new LP position: radio cards with fee (0.01/0.05/0.3/1%), when to use it, share of the pair's liquidity ('71% select') and 'Not created' for missing pools. onValueChange returns the tier with its tickSpacing. Exports defaultFeeTiers and formatFee. Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/components/fee-tier-select.md",
       "categories": [
         "liquidity"
@@ -1545,7 +1553,8 @@
         }
       ],
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "skullet"
       ],
       "registryDependencies": []
     },
@@ -1553,7 +1562,7 @@
       "name": "position-card",
       "type": "registry:component",
       "title": "Position Card",
-      "description": "Concentrated liquidity position card (Uniswap v3 style): pair icons, fee tier and token id, RangeIndicator (in range / out of range / closed, data-status), tokens held now (exact getPositionAmounts) and uncollected fees with fiat totals, a Collect fees TransactionButton (bring getCollectTransaction or v3Collect) that names its blocker, and an actions slot for Add / Remove. Exports positionValue.",
+      "description": "Concentrated liquidity position card (Uniswap v3 style): pair icons, fee tier and token id, RangeIndicator (in range / out of range / closed, data-status), tokens held now (exact getPositionAmounts) and uncollected fees with fiat totals, a Collect fees TransactionButton (bring getCollectTransaction or v3Collect) that names its blocker, and an actions slot for Add / Remove. Exports positionValue. Skeleton (skullet) while its data loads.",
       "docs": "Docs: https://0xui.io/components/position-card.md",
       "categories": [
         "liquidity"
@@ -1566,7 +1575,8 @@
       ],
       "dependencies": [
         "viem",
-        "wagmi"
+        "wagmi",
+        "skullet"
       ],
       "registryDependencies": [
         "@0xui/range-indicator",

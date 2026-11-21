@@ -1,4 +1,5 @@
 // Docs: https://0xui.io/components/range-indicator.md
+import { Skeleton } from "skullet/react";
 import {
   formatPrice,
   getRangeStatus,
@@ -21,11 +22,13 @@ const statusDot: Record<RangeStatus, string> = {
   closed: "bg-muted-foreground",
 };
 
+type RangePool = Pick<PoolState, "tick" | "tickSpacing" | "decimals0" | "decimals1">;
+
 export type RangeIndicatorProps = {
   tickLower: number;
   tickUpper: number;
-  /** Current tick, spacing and decimals of the pool. */
-  pool: Pick<PoolState, "tick" | "tickSpacing" | "decimals0" | "decimals1">;
+  /** Current tick, spacing and decimals of the pool. Leave out while it loads: shows a skeleton. */
+  pool?: RangePool;
   /** Position liquidity. `0n` shows the position as closed. */
   liquidity?: bigint;
   token0: { symbol: string };
@@ -44,7 +47,22 @@ export type RangeIndicatorProps = {
  * price on a log scale, so ±10% looks the same at any price. The status is
  * on `data-status` and is announced in text, not just color.
  */
-export function RangeIndicator({
+export function RangeIndicator({ pool, ...props }: RangeIndicatorProps) {
+  // Stand-in pool for the skeleton: the price in the middle of the range.
+  const sample: RangePool = {
+    tick: Math.round((props.tickLower + props.tickUpper) / 2),
+    tickSpacing: 1,
+    decimals0: 18,
+    decimals1: 18,
+  };
+  return (
+    <Skeleton data={pool} sample={sample} label="Loading position range" className="w-full">
+      {(p) => <RangeIndicatorView {...props} pool={p} />}
+    </Skeleton>
+  );
+}
+
+function RangeIndicatorView({
   tickLower,
   tickUpper,
   pool,
@@ -55,7 +73,7 @@ export function RangeIndicator({
   compact = false,
   locale,
   className,
-}: RangeIndicatorProps) {
+}: RangeIndicatorProps & { pool: RangePool }) {
   const status = getRangeStatus(pool.tick, tickLower, tickUpper, liquidity);
   const full = isFullRange(tickLower, tickUpper, pool.tickSpacing);
   const price = (t: number) => {

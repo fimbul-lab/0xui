@@ -43,6 +43,8 @@ Pass `share` to show how much of the pair's liquidity sits in each tier, the way
 />
 ```
 
+While the shares load, pass `loading`: each tier shows a skeleton where its share goes. The demo above loads for a second first.
+
 The defaults are Uniswap v3's tiers. Other DEXes use other fees and spacings (PancakeSwap v3 has 0.25%, Aerodrome Slipstream uses spacing to pick a pool). Pass your own `tiers`.
 
 ## Props
@@ -52,5 +54,6 @@ The defaults are Uniswap v3's tiers. Other DEXes use other fees and spacings (Pa
 | `value` / `defaultValue` | `number` | `3000` | Fee in hundredths of a bip. |
 | `onValueChange` | `(tier: FeeTier) => void` | — | Called with the picked tier. |
 | `tiers` | `FeeTier[]` | Uniswap v3 tiers | `{ fee, tickSpacing, description?, share?, exists? }`. |
+| `loading` | `boolean` | `false` | Shares are loading. Skeleton badges, `aria-busy`. |
 | `label` | `ReactNode` | `"Fee tier"` | Group label. |
 | `locale` | `string` | runtime locale | Number formatting locale. |
