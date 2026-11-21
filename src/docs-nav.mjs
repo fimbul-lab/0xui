@@ -72,6 +72,12 @@ const groups = [
     ],
   },
   {
+    label: "Liquidity",
+    icon: "chart-column",
+    blurb: "Pool depth, price ranges and positions for concentrated liquidity.",
+    items: ["price-range", "position-card", "liquidity-chart", "depth-chart", "range-indicator", "fee-tier-select", "slippage-input"],
+  },
+  {
     label: "Utilities",
     icon: "wrench",
     blurb: "Small pieces the other components are built from, and tools for browser agents.",
@@ -93,6 +99,7 @@ export const shieldedPreview = {
   components: [
     "shielded-engine",
     "mock-shielded-engine",
+    "privacy-pools-engine",
     "shielded-account",
     "shielded-balance",
     "shielded-sync-status",

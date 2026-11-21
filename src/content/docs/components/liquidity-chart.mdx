@@ -1,0 +1,120 @@
+---
+title: Liquidity Chart
+description: Liquidity distribution of a concentrated liquidity pool, both sides of the price, with an optional draggable range.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, WithRange, Inverted } from "@/demos/liquidity-chart";
+
+Shows where a Uniswap v3/v4-style pool's liquidity sits. Each bar is a slice of the price range. Bars above the price hold the base token (token0), bars below it hold the quote token (token1), and the bar at the price holds both. Hover or use the arrow keys to read the tokens locked in a bar.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+Works with any pool that uses Uniswap v3 ticks: Uniswap v3 and v4, PancakeSwap v3, Aerodrome Slipstream, Sushi v3 and their forks. The demo pool is made up.
+
+## Installation
+
+<Install name="liquidity-chart" />
+
+This also installs `concentrated-liquidity`, the math library the LP components share.
+
+## Usage
+
+Turn the pool's initialized ticks into bins with `getLiquidityBins`, then pass them in:
+
+```tsx
+import { LiquidityChart } from "@/components/liquidity-chart";
+import { getLiquidityBins } from "@/lib/concentrated-liquidity";
+
+const pool = { tick, liquidity, tickSpacing: 10, decimals0: 18, decimals1: 6 };
+const bins = getLiquidityBins(pool, ticks, { bins: 200 });
+
+<LiquidityChart bins={bins} pool={pool} token0={eth} token1={usdc} />;
+```
+
+## Pool data
+
+You need the pool's current tick and active liquidity, and its initialized ticks with their `liquidityNet`.
+
+```ts
+import { parseAbi } from "viem";
+
+const abi = parseAbi([
+  "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16, uint16, uint16, uint8, bool)",
+  "function liquidity() view returns (uint128)",
+]);
+const [[sqrtPriceX96, tick], liquidity] = await Promise.all([
+  client.readContract({ address: poolAddress, abi, functionName: "slot0" }),
+  client.readContract({ address: poolAddress, abi, functionName: "liquidity" }),
+]);
+```
+
+For the ticks, read them from an indexer (the Uniswap v3 subgraph's `ticks { tickIdx liquidityNet }`) or on-chain with Uniswap's `TickLens.getPopulatedTicksInWord`. In v4, read `slot0`, liquidity and ticks through the `StateView` contract.
+
+`getLiquidityBins` rebuilds the liquidity in each slice from `liquidityNet`, the same way the pool does when the price crosses a tick, so the chart matches what a swap would see. Without ticks you can still build bins from known positions with `ticksFromPositions`.
+
+## Loading
+
+Leave out `bins` while it loads. The component shows a [skullet](https://skullet.lochie.me) skeleton the size of the plot, "Loading liquidity" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
+## Examples
+
+### With a range
+
+Pass `range` to highlight a position. Add `onRangeChange` and the handles become draggable: drag either edge, or drag the band to move the whole range. Each handle is a slider, so arrow keys move it one tick spacing and Page Up/Down move it ten. Ranges always snap to the tick spacing.
+
+<Preview>
+  <WithRange client:load />
+</Preview>
+
+```tsx
+const [range, setRange] = useState(() => rangeAroundTick(pool.tick, 8, pool.tickSpacing));
+
+<LiquidityChart bins={bins} pool={pool} token0={eth} token1={usdc} range={range} onRangeChange={setRange} />;
+```
+
+For the full "Set price range" panel with presets and price fields, use [Price Range](/components/price-range/).
+
+### Inverted
+
+Pool order is fixed by address, so a pool often quotes the "wrong" way round (USDC/WETH quotes ETH per USDC). `invert` shows prices in token0 per token1 and flips the axis. Colors stay with their token.
+
+<Preview>
+  <Inverted client:load />
+</Preview>
+
+## Colors
+
+Token0 is teal and token1 is violet. The pair passes colorblind and contrast checks on light and dark backgrounds. To use your own, set `--lp-token0` and `--lp-token1` on a parent.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. Leave out while loading. |
+| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. |
+| `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
+| `invert` | `boolean` | `false` | Quote in token0 and flip the axis. |
+| `range` | `{ tickLower, tickUpper }` | — | Range to highlight. Bars outside it fade. |
+| `onRangeChange` | `(range) => void` | — | Makes the handles draggable. |
+| `height` | `number` | `160` | Plot height in px. |
+| `showControls` | `boolean` | `true` | Legend and zoom buttons. |
+| `locale` | `string` | runtime locale | Number formatting locale. |
+
+## Math library
+
+`concentrated-liquidity` holds the math every LP component uses. Exact `bigint` functions are ported from Uniswap's `TickMath` and `LiquidityAmounts`, so their results match the contracts. Use them for anything that goes into a transaction. The float functions are for display.
+
+| Function | What it does |
+| --- | --- |
+| `tickToPrice`, `priceToTick`, `nearestUsableTick` | Convert between ticks and human prices (token1 per token0). |
+| `priceRangeToTicks`, `rangeAroundTick` | Turn prices or a ±% into snapped ticks. |
+| `getSqrtRatioAtTick` | Exact sqrt price at a tick. |
+| `getAmountsForLiquidity`, `getLiquidityForAmounts` | Exact amounts for liquidity, and back. |
+| `getDependentAmount` | The other token's amount for a two-sided deposit. |
+| `getDepositMode`, `getRangeStatus` | Which tokens a range takes, and whether it's in range. |
+| `getLiquidityBins`, `ticksFromPositions` | Distribution for charts. |
+| `getDepthCurve`, `getMarketDepth` | Cumulative depth, and depth at ±%. |

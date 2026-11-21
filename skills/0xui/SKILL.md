@@ -1,6 +1,6 @@
 ---
 name: 0xui
-description: Builds web3 React UI from 0xui, a shadcn registry on wagmi, viem and Base UI. Use when adding wallet connect, balances, token or amount inputs, transactions, approvals, swaps, sends or ENS display to a React app, or when components.json lists the @0xui registry.
+description: Builds web3 React UI from 0xui, a shadcn registry on wagmi, viem and Base UI. Use when adding wallet connect, balances, token or amount inputs, transactions, approvals, swaps, sends, liquidity positions or ENS display to a React app, or when components.json lists the @0xui registry.
 ---
 
 # Build with 0xui
@@ -50,7 +50,8 @@ Prefer a block or component over hand-rolled wagmi calls: they already handle ca
 | Follow a transaction | `transaction-status` (inline), `transaction-toast` (Sonner) |
 | Past transactions, contract events | `transaction-history`, `event-feed` |
 | Forms for any contract from its ABI | `contract-form` |
-| Whole features | blocks: `swap`, `send`, `portfolio` |
+| Concentrated liquidity (Uniswap v3/v4 style): set a price range, pool depth, positions, fee tier, slippage | `price-range`, `position-card`, `liquidity-chart`, `depth-chart`, `range-indicator`, `fee-tier-select`, `slippage-input` (math in `concentrated-liquidity`, v3 transactions in `v3-position-manager`) |
+| Whole features | blocks: `swap`, `send`, `portfolio`, `add-liquidity`, `remove-liquidity` |
 | Building blocks | `copy-button`, `responsive-dialog`, `morph-text` |
 | Let browser agents read the wallet (WebMCP) | `agent-tools` |
 

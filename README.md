@@ -148,15 +148,16 @@ Shared helpers install on their own as dependencies: `0xui-utils` (address and a
 
 ## `0x03` Shielded (preview)
 
-Components for private balances. They talk to a shielded engine, and only a mock engine exists so far. Not for real funds: `shielded-account` has not had a security review. The docs site leaves these out of its sidebar, search, `llms.txt` and agent skill until a real engine works; [/shielded/](https://0xui.io/shielded/) links them all.
+Components for private balances. They talk to a shielded engine: a mock one, and a Privacy Pools one that can shield but not unshield yet. Not ready for real funds: `shielded-account` and the Privacy Pools engine have not had a security review. The docs site leaves these out of its sidebar, search, `llms.txt` and agent skill until a real engine works; [/shielded/](https://0xui.io/shielded/) links them all.
 
 <details>
-<summary>The 10 shielded items</summary>
+<summary>The 11 shielded items</summary>
 
 | Item | Description |
 | --- | --- |
 | `shielded-engine` | The interface between the components and a privacy protocol, with its provider and hooks. |
 | `mock-shielded-engine` | In-memory engine for demos and tests. No network, no funds. |
+| `privacy-pools-engine` | Engine on Privacy Pools v1 (0xbow): real deposits on the deployed contracts. Shield only so far. |
 | `shield` | Shield block: fee, wait and wallet prompts up front, then sign, approve and shield one click at a time (approve and shield in one prompt on batching wallets), and the funds followed until spendable. Two variants. |
 | `shielded-account` | Create, import, unlock and lock the private account, with a recovery phrase step. |
 | `shielded-transaction-status` | Follows a shield from the public chain into the private balance. |

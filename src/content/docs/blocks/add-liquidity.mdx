@@ -1,0 +1,111 @@
+---
+title: Add Liquidity
+description: New concentrated liquidity position, Uniswap style. Fee tier, price range on the pool's liquidity chart, linked deposit amounts, approvals and mint.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, SingleSided } from "@/demos/add-liquidity";
+
+The whole "new position" flow for a Uniswap v3-style pool: a [Fee Tier Select](/components/fee-tier-select/), a [Price Range](/components/price-range/) on the pool's liquidity chart, and two [Token Inputs](/components/token-input/) that stay at the ratio the range needs. Type either amount and the other fills in. Each token gets an [Approve Button](/components/approve-button/) step before the mint when it needs one.
+
+The demo is USDC/WETH on Ethereum with made-up liquidity, minting through Uniswap's position manager. Nothing is broadcast.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+## Installation
+
+<Install name="add-liquidity" />
+
+## Usage
+
+Pass the pool's tokens in pool order (sorted by address), its state, and how to build the mint. For Uniswap v3 and forks with the same position manager, use `v3Mint`:
+
+```tsx
+import { AddLiquidity, v3Mint } from "@/components/add-liquidity";
+import { getLiquidityBins } from "@/lib/concentrated-liquidity";
+
+const positionManager = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
+const weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+
+<AddLiquidity
+  token0={usdc}
+  token1={eth}
+  pool={pool} // { tick, sqrtPriceX96, liquidity, tickSpacing, decimals0, decimals1 }
+  bins={getLiquidityBins(pool, ticks)}
+  fee={500}
+  getTransaction={v3Mint({ positionManager, weth })}
+  spender={positionManager}
+  defaultInvert // show USDC per ETH
+/>;
+```
+
+[Liquidity Chart](/components/liquidity-chart/#pool-data) shows how to read `pool` and `ticks`.
+
+`v3Mint` (from `v3-position-manager`, also exported here) encodes `NonfungiblePositionManager.mint`. A native ETH side is sent as value and wrapped by the manager, with `refundETH` in the same `multicall` so leftover ETH comes back. For anything else (Uniswap v4's `modifyLiquidities`, Aerodrome, your own router), pass your own `getTransaction`. It gets a `MintRequest` with ticks, desired and minimum amounts, recipient and deadline, and returns `{ to, data, value }`, sync or async.
+
+## Loading
+
+Leave out `pool` and `bins` while it loads. The block shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading pool" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
+## Fee tiers
+
+Pass `feeTiers` and `onFeeChange` to show the fee picker. A different fee is a different pool, so load that pool's state and ticks when the fee changes. Keep showing the previous pool until the new one arrives (TanStack Query's `placeholderData: keepPreviousData`), or the block goes back to its skeleton. The range starts over for the new tick spacing.
+
+```tsx
+const [fee, setFee] = useState(500);
+const { pool, bins } = usePool(fee); // your loader
+
+<AddLiquidity fee={fee} feeTiers={tiers} onFeeChange={(tier) => setFee(tier.fee)} pool={pool} bins={bins} … />;
+```
+
+## Single-sided ranges
+
+A range above the price takes only token0 and a range below it only token1, so the other input locks. This is a range order: the position sells the token as the price crosses the range. Here ETH is sold for USDC between +5% and +15%.
+
+<Preview>
+  <SingleSided client:load />
+</Preview>
+
+## Amounts
+
+The ratio comes from `getDependentAmount` in `concentrated-liquidity`, exact `bigint` math matching the pool contract. `useDepositAmounts` holds the linking logic on its own: it keeps the side the user typed and recomputes the other when the range moves.
+
+Minimum amounts are the desired amounts less the slippage tolerance (0.5% to start, changeable with the [Slippage Input](/components/slippage-input/) under the amounts). The deadline is set when the transaction is built, and the transaction is rebuilt before it gets old.
+
+## States
+
+The root sets `data-deposit-mode` (`both`, `token0` or `token1`). The button names the blocker:
+
+| Situation | Button |
+| --- | --- |
+| Not connected | Connect wallet |
+| No amount | Enter an amount |
+| Amount above balance | Insufficient USDC balance |
+| `getTransaction` threw | Can't build transaction, plus the error |
+| ERC-20 without allowance | Approve USDC (then the other token) |
+| Ready | Add liquidity |
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `token0` / `token1` | `Token` | — | Pool tokens, in pool order. |
+| `pool` | `PoolState` | — | Current tick, sqrt price, liquidity, spacing, decimals. Leave out while loading. |
+| `bins` | `LiquidityBin[]` | — | For the range chart. Leave out while loading. |
+| `showChart` | `boolean` | `true` | Show the liquidity chart. |
+| `getTransaction` | `GetMintTransaction` | — | Builds the mint. `v3Mint({ positionManager, weth })` for Uniswap v3. |
+| `spender` | `Address` | — | Approved for both tokens: the position manager, or Permit2 for v4. |
+| `fee` | `number` | — | Fee in hundredths of a bip. Required by `v3Mint`. |
+| `feeTiers` / `onFeeChange` | `FeeTier[]` / `(tier) => void` | — | Show the fee picker. |
+| `defaultRange` | `{ tickLower, tickUpper }` | ±10% | Starting range. |
+| `presets` | `RangePreset[]` | by spacing | Range presets. |
+| `defaultInvert` | `boolean` | `false` | Quote prices in token0. |
+| `slippageBps` | `number` | `50` | Starting slippage tolerance in basis points. The user can change it. |
+| `deadlineSeconds` | `number` | `1200` | How long the mint stays valid. |
+| `prices` | `TokenPrices` | — | Fiat values under the amounts. |
+| `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)` | — | Transaction callbacks. |
+| `title` | `ReactNode` | `"Add liquidity"` | Heading. |
+| `locale` | `string` | runtime locale | Number formatting locale. Pin it when you server-render, so the server and the browser agree. |

@@ -37,7 +37,7 @@ export const SHIELDED_BALANCE_STATES = [
 
 /** One token's private balance, split by state. */
 export type ShieldedTokenBalance = {
-  /** ERC-20 contract. Native currency is held as its wrapped token. */
+  /** ERC-20 contract. Native currency is held as its wrapped token, unless the engine has `shieldsNative`. */
   token: Address;
   /** Amount in each state, in the token's smallest unit. Every state is present, 0n when empty. */
   amounts: Readonly<Record<ShieldedBalanceState, bigint>>;
@@ -92,7 +92,7 @@ export type ShieldedAccountStatus = "none" | "locked" | "unlocked";
 /** Move tokens from a public wallet into the account's private balance. */
 export type ShieldDraft = {
   chainId: number;
-  /** ERC-20 contract. Native currency is shielded as its wrapped token. */
+  /** ERC-20 contract, or the native token's address on an engine with `shieldsNative`. */
   token: Address;
   /** Amount leaving the public wallet. The protocol fee comes out of it. */
   amount: bigint;
@@ -161,6 +161,14 @@ export type ShieldedEvent = "account" | "sync" | "balances";
 export interface ShieldedEngine {
   /** Names the engine, e.g. "mock" or "railgun". */
   id: string;
+
+  /**
+   * True when the protocol takes native currency as it is. A shield draft
+   * then carries the native token's address (`NATIVE_TOKEN_ADDRESS`), and the
+   * shield transaction carries the amount as its value. Engines without it
+   * hold native currency as its wrapped token.
+   */
+  shieldsNative?: boolean;
 
   account: {
     status(): ShieldedAccountStatus;

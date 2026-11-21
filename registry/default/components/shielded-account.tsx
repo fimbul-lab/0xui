@@ -417,19 +417,19 @@ export function RecoveryPhrase({ mnemonic, onConfirm, className }: RecoveryPhras
 }
 
 export type ShieldedAccountSummaryProps = {
-  /** The account's private address. */
-  address: string;
+  /** The account's private address. Leave out for a protocol that has none. */
+  address?: string | null;
   onLock: () => void;
   className?: string;
 };
 
-/** The unlocked account in one line: a private badge, its address, and a lock button. */
+/** The unlocked account in one line: a private badge, its address if it has one, and a lock button. */
 export function ShieldedAccountSummary({ address, onLock, className }: ShieldedAccountSummaryProps) {
   return (
     <div className={cn("flex items-center justify-between gap-2 text-sm", className)}>
       <span className="flex min-w-0 items-center gap-2">
         <PrivacyBadge privacy="private" iconOnly />
-        <ShieldedAddress address={address} />
+        {address ? <ShieldedAddress address={address} /> : "Private account"}
       </span>
       <Button variant="ghost" size="sm" onClick={onLock}>
         <LockIcon aria-hidden />
@@ -445,8 +445,11 @@ export type ShieldedAccountProps = {
    * to gate the private part of your app behind the account.
    */
   children?: ReactNode;
-  /** Called when the account becomes usable: unlocked, imported, or created and backed up. */
-  onUnlocked?: (address: string) => void;
+  /**
+   * Called when the account becomes usable: unlocked, imported, or created
+   * and backed up. `address` is null for a protocol with no private address.
+   */
+  onUnlocked?: (address: string | null) => void;
   className?: string;
 };
 
@@ -467,9 +470,9 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
   };
 
   useEffect(() => {
-    if (phase === "unlocked" && address) onUnlocked?.(address);
+    if (phase === "unlocked") onUnlocked?.(address);
     // Only reaching "unlocked" should fire the callback.
-  }, [phase, address]);
+  }, [phase]);
 
   // The account lives in the browser. Render nothing on the server, so a
   // locked account never flashes the "create" form while hydrating.
@@ -486,7 +489,7 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
       className={cn("flex w-full max-w-sm flex-col gap-4 rounded-xl border p-4", className)}
     >
       {phase === "unlocked" ? (
-        address && <ShieldedAccountSummary address={address} onLock={account.lock} />
+        <ShieldedAccountSummary address={address} onLock={account.lock} />
       ) : phase === "backup" ? (
         <RecoveryPhrase mnemonic={account.mnemonic!} onConfirm={account.confirmBackup} />
       ) : phase === "locked" || phase === "unlocking" ? (

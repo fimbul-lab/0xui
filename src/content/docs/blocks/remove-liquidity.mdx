@@ -1,0 +1,61 @@
+---
+title: Remove Liquidity
+description: Withdraw part or all of a concentrated liquidity position, with its uncollected fees, in one transaction.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default } from "@/demos/remove-liquidity";
+
+Pick how much to withdraw with the slider or the 25%, 50%, 75% and Max buttons. The block shows what comes back: the principal at the current price plus all uncollected fees. Then it withdraws everything in one transaction.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+The demo is a USDC/ETH position on Uniswap v3. Nothing is broadcast.
+
+## Installation
+
+<Install name="remove-liquidity" />
+
+## Usage
+
+```tsx
+import { RemoveLiquidity } from "@/components/remove-liquidity";
+import { v3Remove } from "@/lib/v3-position-manager";
+
+<RemoveLiquidity
+  position={position}
+  pool={pool}
+  getTransaction={v3Remove({ positionManager, weth })}
+  prices={prices}
+  invert
+/>;
+```
+
+[Position Card](/components/position-card/#reading-a-position) shows how to read `position`, fees included.
+
+`v3Remove` sends `decreaseLiquidity` and `collect` in one `multicall`. Collecting pays out the removed tokens and every uncollected fee, so fees come along at any percent. When a side is native ETH, it collects into the position manager, then `unwrapWETH9` sends ETH and `sweepToken` sends the other token, so the user never holds WETH.
+
+The minimum amounts are the principal less slippage. The deadline is rebuilt every minute, so a page left open doesn't sign a stale one.
+
+## Loading
+
+Leave out `position` and `pool` while it loads. The block shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading position" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `position` | `Position<Token>` | — | The position, with `fees0` / `fees1`. Leave out while loading. |
+| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. Leave out while loading. |
+| `getTransaction` | `(request: RemoveRequest) => tx` | — | `v3Remove({ positionManager, weth })` for Uniswap v3. |
+| `defaultPercent` | `number` | `50` | Starting share. |
+| `slippageBps` | `number` | `50` | Starting slippage. The user can change it. |
+| `deadlineSeconds` | `number` | `1200` | How long the transaction stays valid. |
+| `prices` / `currency` | `TokenPrices` / `string` | — / `"USD"` | Fiat total. |
+| `invert` | `boolean` | `false` | Quote in token0. |
+| `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)` | — | Transaction callbacks. |
+| `title` | `ReactNode` | `"Remove liquidity"` | Heading. |
+| `locale` | `string` | runtime locale | Number formatting locale. |
