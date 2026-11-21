@@ -64,7 +64,7 @@ const syncing = useShieldedState("sync", (e) => e.getSync(1).status === "syncing
 
 `useShieldedState` takes the event to listen to, a function that reads from the engine, and the value to use on the server. Private state never reaches server HTML.
 
-The provider holds a framework-free client from `createShieldedClient(engine)` (`@/lib/shielded-client`): the engine, the account as a store, and `select(event, read)` for any other piece of state. Each shielded component keeps its logic in a `lib/` controller on top of it (`createShieldFlow`, `createUnshieldFlow`, `createShieldedSync`, `createShieldedBalances`, `createProver`, `createShieldedAccountFlow`), so a Vue or Svelte port only rewrites the markup.
+The provider holds a framework-free client from `createShieldedClient(engine)` (`@/lib/shielded-client`): the engine, the account as a store, and `select(event, read)` for any other piece of state. Each shielded component keeps its logic in a `lib/` controller on top of it (`createShieldFlow`, `createUnshieldFlow`, `createShieldedExitFlow`, `createShieldedSync`, `createShieldedBalances`, `createProver`, `createShieldedAccountFlow`), so a Vue or Svelte port only rewrites the markup.
 
 ## The interface
 
@@ -103,6 +103,13 @@ interface ShieldedEngine {
   ): Promise<ProvedOperation>;
   quote(draft: PrivateDraft): Promise<PrivateQuote>;
   submit(operation: ProvedOperation): Promise<{ hash: Hash }>;
+
+  getExits?(chainId: number): readonly ShieldedExit[] | undefined;
+  prepareExit?(
+    chainId: number,
+    id: string,
+    options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
+  ): Promise<PreparedExit>;
 }
 ```
 
@@ -182,6 +189,15 @@ const { hash } = await engine.submit(operation);
 - `submit` sends it. The engine does this itself, through the protocol's relayer where there is one, so the public wallet is not involved. It resolves when the transaction is broadcast, not mined. A proof can be submitted once.
 
 After `submit`, call `sync` once the transaction is mined, as after a shield.
+
+### Public exits
+
+Some protocols let funds go back to the address that shielded them, in public, without their approval. An engine for one has two more methods. Both are optional: check for them.
+
+- `getExits(chainId)` lists what can exit: `{ id, token, amount, state, depositor? }`. Changes come with the `balances` event.
+- `prepareExit(chainId, id, { onStage })` builds the transaction, after a proof if the protocol needs one. The public wallet sends it, from `depositor`.
+
+See [Shielded Exits](/components/shielded-exits/).
 
 ## Not in the interface yet
 

@@ -84,6 +84,7 @@ Measured against the Railgun SDK on Sepolia, except where marked as a guess.
 | `shield({ token, amount, outcome?, hash? })` | Funds arrive less the fee, `pending` for the standby period, then `spendable` or, with `outcome: "restricted"`, restricted. |
 | `unshield({ token, amount, change? })` | Spends whole notes. The remainder comes back as change: `proving`, then `spendable` or, with `change: "incomplete"`, stuck. |
 | `addFunds({ token, amount, state })` | Puts funds straight into any state. |
+| `exit(id)` | A restricted note went back to its depositor. Use the `id` from `getExits`. |
 | `failNextSync(message?)` | The next scan stops a third of the way in with an error. |
 | `failNextProof(message?)` | The next proof fails while proving. |
 | `failNextRetry(message?)` | The next `retryProofs` rejects. |

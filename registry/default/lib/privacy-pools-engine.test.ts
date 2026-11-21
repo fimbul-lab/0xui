@@ -37,6 +37,11 @@ const RECIPIENT: Address = "0x2222222222222222222222222222222222222222";
 const FEE_RECEIVER: Address = "0x3333333333333333333333333333333333333333";
 const PHRASE = "test test test test test test test test test test test junk";
 
+const ragequitAbi = parseAbi([
+  "struct RagequitProof { uint256[2] pA; uint256[2][2] pB; uint256[2] pC; uint256[4] pubSignals; }",
+  "function ragequit(RagequitProof _proof)",
+]);
+
 const depositAbi = parseAbi([
   "function deposit(uint256 _precommitment) payable returns (uint256)",
   "function deposit(address _asset, uint256 _value, uint256 _precommitment) returns (uint256)",
@@ -65,6 +70,9 @@ function fakeChain() {
     aspStatus: 200,
     /** Every commitment in the pools' state tree, as the ASP publishes it. */
     stateLeaves: [] as string[],
+    /** Labels the ASP declined, and the labels it was asked about. */
+    declined: [] as string[],
+    labelQueries: [] as string[],
     /** The approval root on chain. Follows the approved labels unless set. */
     aspRoot: undefined as bigint | undefined,
     relayer: {
@@ -135,6 +143,16 @@ function fakeChain() {
       state.relayer.requests.push(JSON.parse(init!.body as string));
       return json(state.relayer.answer);
     }
+    if (path.endsWith("/deposits-by-label")) {
+      const labels = (init!.headers as Record<string, string>)["X-Labels"]!.split(",");
+      state.labelQueries.push(...labels);
+      return json(
+        labels.map((label) => ({
+          label,
+          reviewStatus: state.declined.includes(label) ? "declined" : "pending",
+        }))
+      );
+    }
     const scope = (init!.headers as Record<string, string>)["X-Pool-Scope"]!;
     return json(
       { aspLeaves: state.approved.get(scope) ?? [], stateTreeLeaves: state.stateLeaves },
@@ -179,8 +197,9 @@ function memory(): PrivacyPoolsStorage & { items: Map<string, string> } {
   };
 }
 
-function setup(storage = memory(), chain = fakeChain()) {
+function setup(storage = memory(), chain = fakeChain(), options: { checkDeclined?: boolean } = {}) {
   const engine = createPrivacyPoolsEngine({
+    ...options,
     chains: {
       [CHAIN]: {
         rpcUrl: "http://unused.test",
@@ -453,10 +472,12 @@ describe("scan", () => {
 
   it("reads final blocks once and only what is new after that", async () => {
     const { engine, state } = await unlocked();
-    // First scan: blocks 100 to 1000 in chunks of 500.
+    // First scan: blocks 100 to 1000 in chunks of 500. The sync that follows
+    // the unlock scans once more, and reads only what could still change.
     expect(state.getLogsCalls).toEqual([
       { fromBlock: 100n, toBlock: 599n },
       { fromBlock: 600n, toBlock: 1_000n },
+      { fromBlock: 937n, toBlock: 1_000n },
     ]);
 
     state.getLogsCalls.length = 0;
@@ -475,9 +496,9 @@ describe("scan", () => {
     const accepted = context.state.getLogsCalls.filter(
       ({ fromBlock, toBlock }) => toBlock - fromBlock + 1n <= 200n
     );
-    // Every block from 100 to 1000 was read exactly once.
+    // Every block from 100 to 1000 was read once, and the last 64 again by the second scan.
     expect(accepted.reduce((sum, { fromBlock, toBlock }) => sum + toBlock - fromBlock + 1n, 0n)).toBe(
-      901n
+      901n + 64n
     );
   });
 
@@ -802,7 +823,6 @@ describe("unshield", () => {
     await engine.submit(first);
     expect(state.relayer.quotes).toHaveLength(quotes + 1);
     expect(state.relayer.requests).toHaveLength(1);
-    await engine.sync(CHAIN);
 
     await fund(context, parseUnits("50", 6), 8n);
     const second = await prove(engine, parseUnits("50", 6));
@@ -859,6 +879,15 @@ describe("unshield", () => {
       expect(sent!.publicSignals).toHaveLength(8);
       expect(sent!.publicSignals[2]).toBe("40000000");
       expect(sent!.publicSignals[4]).toBe("32");
+
+      // And an exit proof, checked by the real verifier inside prepareExit.
+      await fund(context, parseUnits("30", 6), 9n);
+      const exit = engine.getExits!(CHAIN)!.find((entry) => entry.amount === parseUnits("30", 6))!;
+      const { transaction } = await engine.prepareExit!(CHAIN, exit.id, { onStage() {} });
+      const { args } = decodeFunctionData({ abi: ragequitAbi, data: transaction.data! });
+      // Public signals: commitment, nullifier hash, value, label.
+      expect(args[0].pubSignals[2]).toBe(parseUnits("30", 6));
+      expect(args[0].pubSignals[3]).toBe(9n);
     },
     120_000
   );
@@ -883,6 +912,169 @@ describe("unshield", () => {
   });
 });
 
+describe("exit", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const EXIT_PROOF = {
+    proof: { pi_a: ["1", "2", "1"], pi_b: [["3", "4"], ["5", "6"], ["1", "0"]], pi_c: ["7", "8", "1"] },
+    publicSignals: ["11", "12", "13", "14"],
+  };
+
+  function fakeProver() {
+    vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
+    const prove = vi
+      .spyOn(PrivacyPoolSDK.prototype, "proveCommitment")
+      .mockResolvedValue(EXIT_PROOF as never);
+    const verify = vi.spyOn(PrivacyPoolSDK.prototype, "verifyCommitment").mockResolvedValue(true);
+    return { prove, verify };
+  }
+
+  type Context = Awaited<ReturnType<typeof unlocked>>;
+
+  async function depositUsdc(context: Context, value: bigint, label: bigint, approve = false) {
+    const { transaction } = await shieldUsdc(context.engine);
+    const hash = context.deposit(USDC_POOL, precommitmentOf(transaction.data!), value, label);
+    if (approve) {
+      context.state.approved.set("111", [...(context.state.approved.get("111") ?? []), `${label}`]);
+    }
+    context.state.head += 1n;
+    await context.engine.sync(CHAIN);
+    return hash;
+  }
+
+  it("scans again when asked during a scan, so a new block is not missed", async () => {
+    const context = setup();
+    await context.engine.account.import(PHRASE, "password");
+    // The unlock's scan is running. A deposit lands before the caller asks to sync.
+    const { transaction } = await shieldUsdc(context.engine);
+    context.deposit(USDC_POOL, precommitmentOf(transaction.data!), parseUnits("5", 6), 3n, 1_001n);
+    context.state.head = 1_001n;
+    await context.engine.sync(CHAIN);
+    expect(amountsOf(context.engine)?.pending).toBe(parseUnits("5", 6));
+  });
+
+  it("lists every deposit that still holds funds, approved or not", async () => {
+    const context = await unlocked();
+    expect(context.engine.getExits!(CHAIN)).toEqual([]);
+    await depositUsdc(context, parseUnits("100", 6), 7n);
+    await depositUsdc(context, parseUnits("60", 6), 8n, true);
+
+    const exits = context.engine.getExits!(CHAIN)!;
+    expect(exits).toEqual([
+      { id: "111:7", token: USDC, amount: parseUnits("100", 6), state: "pending", depositor: DEPOSITOR },
+      { id: "111:8", token: USDC, amount: parseUnits("60", 6), state: "spendable", depositor: DEPOSITOR },
+    ]);
+    // Same array until something changes.
+    context.state.head += 1n;
+    await context.engine.sync(CHAIN);
+    expect(context.engine.getExits!(CHAIN)).toBe(exits);
+  });
+
+  it("builds the ragequit call for the pool, after a proof that verifies", async () => {
+    const context = await unlocked();
+    const prover = fakeProver();
+    await depositUsdc(context, parseUnits("100", 6), 7n);
+
+    const stages: ProofStage[] = [];
+    const { transaction } = await context.engine.prepareExit!(CHAIN, "111:7", {
+      onStage: (stage) => stages.push(stage),
+    });
+    expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
+    expect(prover.prove.mock.calls[0]!.slice(0, 2)).toEqual([parseUnits("100", 6), 7n]);
+
+    expect(transaction.to).toBe(USDC_POOL);
+    expect(transaction.value).toBe(0n);
+    const { args } = decodeFunctionData({ abi: ragequitAbi, data: transaction.data! });
+    expect(args[0]).toEqual({
+      pA: [1n, 2n],
+      // Each pair of the middle point is swapped for the verifier contract.
+      pB: [
+        [4n, 3n],
+        [6n, 5n],
+      ],
+      pC: [7n, 8n],
+      pubSignals: [11n, 12n, 13n, 14n],
+    });
+
+    prover.verify.mockResolvedValueOnce(false);
+    await expect(
+      context.engine.prepareExit!(CHAIN, "111:7", { onStage() {} })
+    ).rejects.toThrow("did not verify");
+    await expect(
+      context.engine.prepareExit!(CHAIN, "111:99", { onStage() {} })
+    ).rejects.toThrow("no longer there");
+  });
+
+  it("drops the exit once the funds went back", async () => {
+    const context = await unlocked();
+    const hash = await depositUsdc(context, parseUnits("100", 6), 7n);
+    const commitment = BigInt(context.state.stateLeaves.at(-1)!);
+    context.state.head += 1n;
+    context.state.logs.push({
+      address: USDC_POOL,
+      eventName: "Ragequit",
+      args: { _ragequitter: DEPOSITOR, _commitment: commitment, _label: 7n, _value: parseUnits("100", 6) },
+      blockNumber: context.state.head,
+      transactionHash: `0x${"cd".repeat(32)}`,
+      logIndex: 0,
+    });
+    await context.engine.sync(CHAIN);
+
+    expect(context.engine.getExits!(CHAIN)).toEqual([]);
+    expect(amountsOf(context.engine)).toBeUndefined();
+    expect(context.engine.getTransaction(CHAIN, hash)?.state).toBe("restricted");
+  });
+
+  it("does not offer an exit for funds already handed to the relayer", async () => {
+    const context = await unlocked();
+    vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
+    vi.spyOn(PrivacyPoolSDK.prototype, "proveWithdrawal").mockResolvedValue({
+      proof: { pi_a: [], pi_b: [], pi_c: [] },
+      publicSignals: [],
+    } as never);
+    vi.spyOn(PrivacyPoolSDK.prototype, "verifyWithdrawal").mockResolvedValue(true);
+    await depositUsdc(context, parseUnits("100", 6), 7n, true);
+    const operation = await context.engine.prove(
+      { kind: "unshield", chainId: CHAIN, token: USDC, amount: parseUnits("40", 6), recipient: RECIPIENT },
+      { onStage() {} }
+    );
+    await context.engine.submit(operation);
+    await context.engine.sync(CHAIN);
+    expect(context.engine.getExits!(CHAIN)).toEqual([]);
+  });
+
+  it("never names a deposit to the ASP unless asked to", async () => {
+    const context = await unlocked();
+    await depositUsdc(context, parseUnits("100", 6), 7n);
+    expect(context.state.labelQueries).toEqual([]);
+    expect(amountsOf(context.engine)?.pending).toBe(parseUnits("100", 6));
+  });
+
+  it("shows a declined deposit as restricted when asked to check", async () => {
+    const chain = fakeChain();
+    chain.state.declined = ["7"];
+    const context = setup(memory(), chain, { checkDeclined: true });
+    await context.engine.account.import(PHRASE, "password");
+    await context.engine.sync(CHAIN);
+    await depositUsdc(context, parseUnits("100", 6), 7n);
+    await depositUsdc(context, parseUnits("60", 6), 8n, true);
+    await depositUsdc(context, parseUnits("20", 6), 9n);
+
+    expect(amountsOf(context.engine)).toMatchObject({
+      restricted: parseUnits("100", 6),
+      spendable: parseUnits("60", 6),
+      pending: parseUnits("20", 6),
+    });
+    expect(context.engine.getExits!(CHAIN)!.map((exit) => exit.state)).toEqual([
+      "restricted",
+      "spendable",
+      "pending",
+    ]);
+    // Approved deposits are never named.
+    expect(context.state.labelQueries).not.toContain("8");
+  });
+});
+
 describe("poolAccountState", () => {
   const commitment = (value: bigint) => ({ value }) as never;
   const account = (overrides: object = {}) =>
@@ -891,6 +1083,9 @@ describe("poolAccountState", () => {
   it("is pending until the ASP lists the label", () => {
     expect(poolAccountState(account(), new Set())).toBe("pending");
     expect(poolAccountState(account(), new Set(["7"]))).toBe("spendable");
+    expect(poolAccountState(account(), new Set(), new Set(["7"]))).toBe("restricted");
+    // Approval wins if the ASP changed its mind.
+    expect(poolAccountState(account(), new Set(["7"]), new Set(["7"]))).toBe("spendable");
   });
 
   it("is nothing once the funds are gone", () => {
