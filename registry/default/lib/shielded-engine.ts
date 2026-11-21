@@ -165,6 +165,32 @@ export type ProvedOperation = {
   expiresAt: number;
 };
 
+/**
+ * Funds that can leave in public: back to the address that shielded them,
+ * with no approval needed and no privacy kept. An engine lists one per
+ * deposit it can return.
+ */
+export type ShieldedExit = {
+  /** Names the exit for `prepareExit`. Stable while the funds are there. */
+  id: string;
+  token: Address;
+  /** Everything the exit returns. An exit can't be partial. */
+  amount: bigint;
+  /** Where these funds are now. */
+  state: ShieldedBalanceState;
+  /**
+   * The only address that can send the exit, and the one that gets the
+   * funds. Undefined when any wallet may send it.
+   */
+  depositor?: Address;
+};
+
+/** An exit, ready for the public wallet. */
+export type PreparedExit = {
+  /** The exit transaction. It must be sent from the exit's `depositor`. */
+  transaction: PublicCall;
+};
+
 /** What changed: the account, a chain's scan, or a chain's balances. */
 export type ShieldedEvent = "account" | "sync" | "balances";
 
@@ -283,4 +309,23 @@ export interface ShieldedEngine {
    * is mined. A proof can be submitted once.
    */
   submit(operation: ProvedOperation): Promise<{ hash: Hash }>;
+
+  /**
+   * The public exits open to the account on a chain, for protocols that
+   * have one. `undefined` until the first scan finishes. Changes are
+   * announced with the `balances` event. Returns the same array until it
+   * changes.
+   */
+  getExits?(chainId: number): readonly ShieldedExit[] | undefined;
+
+  /**
+   * Build the transaction that takes an exit. It may need a proof first:
+   * `onStage` is called as each stage starts. The public wallet sends the
+   * transaction, from the exit's `depositor`; the engine never does.
+   */
+  prepareExit?(
+    chainId: number,
+    id: string,
+    options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
+  ): Promise<PreparedExit>;
 }

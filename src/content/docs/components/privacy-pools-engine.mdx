@@ -9,7 +9,7 @@ import Install from "@/components/docs/Install.astro";
 A [shielded engine](/components/shielded-engine/) for [Privacy Pools](https://privacypools.com) v1 by 0xbow, built on its public SDK, `@0xbow/privacy-pools-core-sdk`. With it the [Shield](/blocks/shield/) block deposits into the real contracts and the [Unshield](/blocks/unshield/) block withdraws from them.
 
 <Aside type="caution" title="Use test networks">
-  This engine handles a recovery phrase and builds transactions that move funds. It has not had a security review. Unshielding was tested up to a proof the real verifier accepts, not with a withdrawal on chain. If one fails, the same recovery phrase opens the account at privacypools.com. Whether you may use a privacy protocol depends on where you are.
+  This engine handles a recovery phrase and builds transactions that move funds. It has not had a security review. Deposits, relayed withdrawals and exits were each run on Sepolia, with small amounts, and nowhere else. If something fails, the same recovery phrase opens the account at privacypools.com. Whether you may use a privacy protocol depends on where you are.
 </Aside>
 
 There is no live demo here. A shield needs a wallet with Sepolia funds, and the docs' Demo Wallet sends nothing. Install the example and run it.
@@ -19,7 +19,7 @@ There is no live demo here. A shield needs a wallet with Sepolia funds, and the 
 - **Deposit.** Funds go to the Entrypoint contract, which takes a vetting fee and passes the rest to the asset's pool.
 - **Review.** An Association Set Provider (ASP), run by 0xbow, screens each deposit. Until it approves, the deposit is `pending`. After, it is `spendable`.
 - **Withdraw.** An approved deposit can be withdrawn to any address with a zero-knowledge proof, through a relayer, which sends the transaction and keeps a fee.
-- **Exit.** A deposit that is not approved can always go back to the address it came from, in public. Not in this engine yet.
+- **Exit.** Any deposit can always go back to the address it came from, in public, approved or not. Privacy Pools calls it ragequit.
 
 The private account is a recovery phrase. Every deposit's secrets come from it, so the phrase alone finds the funds again on any device.
 
@@ -27,7 +27,7 @@ The private account is a recovery phrase. Every deposit's secrets come from it, 
 
 <Install name="privacy-pools-engine" />
 
-This also installs `assert` and `buffer`. The SDK's browser build calls both, and bundlers no longer stand in for Node's own. Your bundler may still warn that `fs` was left out: that file is only loaded outside the browser.
+This also installs `assert` and `buffer`. The SDK's browser build calls both, and bundlers no longer stand in for Node's own. The `assert` package in turn reads `process.env` as it loads, so the engine puts a minimal `process` on `globalThis` (`{ env: {}, browser: true }`) before it loads the SDK, if there is none. Your bundler may still warn that `fs` was left out: that file is only loaded outside the browser.
 
 ## Usage
 
@@ -101,6 +101,7 @@ The proof is made in the browser, from six files: `withdraw.wasm`, `withdraw.zke
 - **The fee is the relayer's.** It is a share of the amount, about 0.1% on Sepolia, and moves with gas. `quote` asks for the price only. `prove` gets a signed price, which the returned `quote` reports.
 - **A proof is submitted once.** `submit` uses it up, even when the relayer refuses it. Prove again to retry.
 - **The relayer's promise lasts a minute.** If it ran out before `submit`, the engine asks for a new one. Same fee: it submits. Different fee: it asks for a new proof.
+- **A relayer that goes quiet is not a failure.** If the relayer times out or its gateway errors, it may have sent the withdrawal anyway. `submit` then watches the chain for up to 90 seconds and resolves with the transaction it finds. If it finds none it rejects, and says the withdrawal may still arrive. A clear refusal rejects at once.
 - **Funds read as `proving` after `submit`**, until a scan sees the withdrawal on chain. Call `sync` when the transaction is mined. If no scan sees it within 10 minutes, the funds go back to `spendable`.
 
 The relayer sees the recipient, the amount and your IP address. It does not learn which deposit paid.
@@ -113,10 +114,15 @@ A scan reads every pool event since the pools were deployed, with `eth_getLogs`.
 
 - Use a provider that serves old logs over wide ranges.
 - `blockRange` sets the blocks per request. Default 10,000.
-- A refused request is halved and tried again, so a provider with a smaller limit still works, slowly.
+- A request refused for its size is halved and tried again, so a provider with a smaller limit still works, slowly.
+- A request refused for coming too fast (HTTP 429) is tried again after a wait that doubles each time, up to six times. The other requests wait with it.
 - Three requests run at once.
 
-On Sepolia a first scan took about 25 seconds through a free RPC. Blocks more than 64 behind the head are read once per session. Later scans fetch only what is new.
+On Sepolia a first scan took about 30 seconds through a free RPC, and a scan after a reload about 3.
+
+Blocks more than 64 behind the head are read once and kept in IndexedDB, so a reload fetches only what is new. What is kept is the pools' public events, the same for every account: nothing in it says which deposits are yours. Pass your own `cache`, or `cache: false` to read everything again on every load.
+
+If the wallet sends through another RPC than the engine scans through, the two can disagree for a moment: a transaction one has mined, the other has not seen yet. A `sync` right after the receipt can then find nothing. The next scan finds it, and the engine scans every `pollInterval`.
 
 The scan fetches whole pools and the ASP's whole approved set, never one deposit. Asking for a single deposit would tell the RPC or the ASP which one is yours.
 
@@ -152,12 +158,26 @@ These mainnet values come from 0xbow's own app. Check them against 0xbow's docum
 | `spendable` | Approved by the ASP. |
 | `proving` | Handed to the relayer, not yet seen on chain. |
 | `incomplete` | Never used. |
-| `restricted` | Not reported yet. A declined deposit shows as `pending`. |
+| `restricted` | Declined by the ASP. Only reported with `checkDeclined`; without it a declined deposit shows as `pending`. |
 | `quote` | The relayer's fee for the amount. Rejects when the amount can't be unshielded, and says why. |
 | `prove` | The withdrawal proof for one deposit, made in the browser. |
 | `submit` | Hands the proof to the relayer, which sends the transaction. |
+| `getExits` | Every deposit that still holds funds, with the address that made it. |
+| `prepareExit` | The pool's `ragequit` call for one deposit, after a proof. That address's wallet sends it. |
 
-A decline can only be asked about one deposit at a time, which would tell the ASP which deposits are yours. So the engine does not ask, and a declined deposit stays `pending`.
+The ASP publishes approvals in bulk, but a decline can only be asked about named deposits, which tells the ASP they are yours. So by default the engine does not ask, and a declined deposit stays `pending`.
+
+With `checkDeclined: true` it asks, about deposits that are not approved only, and shows declined ones as `restricted`. Turn it on if a clear "declined" matters more to your users than that leak.
+
+## Exit
+
+Every deposit that still holds funds can go back to the address that made it, without the ASP and without a relayer. The [Shielded Exits](/components/shielded-exits/) component lists them and runs the flow.
+
+- **It is public.** The chain shows the same address put the funds in and took them out.
+- **Only the depositor can send it.** The pool recorded that address at deposit. The engine reports it as the exit's `depositor`.
+- **It takes everything** left in that deposit, and is final for it.
+- **It needs `circuitsUrl`**, for the proof that the account knows the deposit's secrets. No relayer and no fee, only gas.
+- **Not offered mid-unshield.** Funds handed to the relayer are left out until a scan settles them.
 
 ## One index per shield
 
@@ -184,10 +204,12 @@ Deposits made with an older Privacy Pools key scheme and not migrated since are 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `chains` | `Record<number, PrivacyPoolsChain>` | — | Deployments by chain id: `rpcUrl`, `entrypoint`, `aspUrl`, `pools`, `relayerUrl?`, `blockRange?`. |
-| `circuitsUrl` | `string` | — | Where the circuit files are served. Needed to unshield. |
+| `circuitsUrl` | `string` | — | Where the circuit files are served. Needed to unshield and to exit. |
+| `checkDeclined` | `boolean` | `false` | Ask the ASP whether unapproved deposits were declined. Names those deposits to the ASP. |
 | `storage` | `{ getItem, setItem, removeItem }` | `localStorage` | Where the encrypted phrase is kept. |
 | `reviewTime` | `number` | `3600` | Seconds a deposit usually waits for the ASP. An estimate for the quote, not a protocol rule: it can take days. |
 | `pollInterval` | `number` | `60000` | Ms between scans while unlocked, so approvals show up. `0` turns it off. |
+| `cache` | `{ get, set } \| false` | IndexedDB | Where pool events are kept between page loads. |
 | `client` | `(chainId) => PrivacyPoolsClient` | viem on `rpcUrl` | Chain reads, for tests or your own transport. |
 | `fetch` | `typeof fetch` | global `fetch` | HTTP for the ASP and the relayer. |
 
@@ -196,6 +218,5 @@ The SDK logs scan progress to the console: pool addresses and counts, no secrets
 ## Not built yet
 
 - Unshielding without a relayer, from your own wallet.
-- Exit (ragequit) for a deposit that is not approved.
-- A cache that survives a reload, and an indexed source in place of `eth_getLogs`.
+- An indexed source in place of `eth_getLogs`, so a first scan does not read every block.
 - Privacy Pools v2. Its SDK is not on npm yet.

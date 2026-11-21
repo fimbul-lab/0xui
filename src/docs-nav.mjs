@@ -99,6 +99,7 @@ export const shieldedPreview = {
     "shielded-sync-status",
     "shielded-transaction-status",
     "proof-progress",
+    "shielded-exits",
     "shielded-address",
     "privacy-badge",
   ],
