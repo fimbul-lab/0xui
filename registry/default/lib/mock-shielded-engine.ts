@@ -3,6 +3,7 @@ import { encodeAbiParameters, type Address, type Hash } from "viem";
 import { encodeBech32m } from "@/lib/0xui-utils";
 import {
   SHIELDED_BALANCE_STATES,
+  type ProvedOperation,
   type ShieldedAccountStatus,
   type ShieldedTokenBalance,
   type ShieldedBalanceState,
@@ -90,6 +91,12 @@ export type MockShieldedEngineOptions = {
   circuitsCached?: boolean;
   /** Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. */
   shieldSignature?: boolean;
+  /**
+   * Stand in for the relayer: return the hash `submit` resolves with. By
+   * default it is made up, and no chain knows it, so anything that waits for
+   * its receipt waits forever.
+   */
+  relay?: (operation: ProvedOperation) => Hash | Promise<Hash>;
 };
 
 /** Controls that only the mock has: make things happen, or make the next thing fail. */
@@ -237,6 +244,7 @@ export function createMockShieldedEngine({
   chains: autoChains = [1],
   funds = [],
   circuitsCached = false,
+  relay,
   shieldSignature = true,
 }: MockShieldedEngineOptions = {}): MockShieldedEngine {
   if (!(speed > 0)) throw new RangeError("speed must be greater than 0.");
@@ -596,7 +604,7 @@ export function createMockShieldedEngine({
       const { token, amount, chainId } = operation.draft;
       await unshield(token, amount, chainId, "spendable");
       const number = operation.id.slice("mock-proof-".length);
-      return { hash: `0x${number.padStart(64, "0")}` as Hash };
+      return { hash: (await relay?.(operation)) ?? (`0x${number.padStart(64, "0")}` as Hash) };
     },
 
     simulate: {

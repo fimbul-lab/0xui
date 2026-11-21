@@ -55,6 +55,7 @@ Creating the engine starts no timers, so it is safe to create during server rend
 | `chains` | `number[]` | `[1]` | Chains scanned automatically after unlock. Others scan when `sync` is called. |
 | `funds` | `MockFunds[]` | `[]` | What the account holds: `{ token, amount, state?, chainId? }`. |
 | `circuitsCached` | `boolean` | `false` | Skip the slow first circuit download. |
+| `relay` | `(operation) => Hash` | made-up hash | The hash `submit` resolves with. No chain knows the default, so pass one yours does if something waits for its receipt. |
 | `shieldSignature` | `boolean` | `true` | Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. |
 
 ### Timings
