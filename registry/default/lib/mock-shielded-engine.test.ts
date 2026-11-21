@@ -380,6 +380,35 @@ describe("prove", () => {
   } as const;
   const funds = [{ token: weth, amount: 10n }];
 
+  it("quotes the fee and refuses more than is spendable", async () => {
+    const engine = await unlocked({ funds: [{ token: weth, amount: 100_000n }] });
+    expect(await engine.quote({ ...draft, amount: 40_000n })).toEqual({ fee: 100n, received: 39_900n });
+    await expect(engine.quote({ ...draft, amount: 200_000n })).rejects.toThrow(
+      "Not enough spendable balance."
+    );
+    await expect(engine.quote({ ...draft, amount: 0n })).rejects.toThrow("Enter an amount.");
+  });
+
+  it("submits a proved unshield once, and spends the funds", async () => {
+    const engine = await unlocked({ funds });
+    const operation = await engine.prove(draft, { onStage() {} });
+    expect(operation.quote).toEqual({ fee: 0n, received: 4n });
+
+    const { hash } = await engine.submit(operation);
+    expect(hash).toMatch(/^0x[0-9a-f]{64}$/);
+    // 10 was one note: 4 left, 6 came back as change.
+    expect(amountsOf(engine)?.spendable).toBe(6n);
+    await expect(engine.submit(operation)).rejects.toThrow("Prove again.");
+  });
+
+  it("refuses a proof from before the account was locked", async () => {
+    const engine = await unlocked({ funds });
+    const operation = await engine.prove(draft, { onStage() {} });
+    engine.account.lock();
+    await engine.account.unlock("password");
+    await expect(engine.submit(operation)).rejects.toThrow("Prove again.");
+  });
+
   it("reports the three stages in order and returns the operation", async () => {
     const engine = await unlocked({ funds });
     const stages: ProofStage[] = [];
