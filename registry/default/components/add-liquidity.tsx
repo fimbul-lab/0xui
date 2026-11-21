@@ -3,9 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LockIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import {
-  encodeFunctionData,
   formatUnits,
-  parseAbi,
   type Address,
   type Hash,
   type Hex,
@@ -17,6 +15,7 @@ import { useTokenBalance } from "@/components/balance";
 import { FeeTierSelect, formatFee, type FeeTier } from "@/components/fee-tier-select";
 import type { TickRange } from "@/components/liquidity-chart";
 import { PriceRange, type RangePreset } from "@/components/price-range";
+import { SlippageInput } from "@/components/slippage-input";
 import { TokenInput } from "@/components/token-input";
 import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
@@ -30,91 +29,18 @@ import {
   type PoolState,
 } from "@/lib/concentrated-liquidity";
 import { parseAmount } from "@/lib/0xui-utils";
+import { v3Mint, withSlippage, type MintRequest as V3MintRequest } from "@/lib/v3-position-manager";
 import { cn } from "@/lib/utils";
 
 /** Everything needed to mint a position. Amounts in each token's smallest unit. */
-export type MintRequest = {
-  token0: Token;
-  token1: Token;
-  /** Fee tier in hundredths of a bip, when the pool has one. */
-  fee?: number;
-  tickLower: number;
-  tickUpper: number;
-  amount0Desired: bigint;
-  amount1Desired: bigint;
-  /** `amount0Desired` less slippage. The mint reverts below it. */
-  amount0Min: bigint;
-  amount1Min: bigint;
-  /** Who gets the position NFT. The connected account. */
-  recipient: Address;
-  /** Unix seconds. */
-  deadline: bigint;
-};
+export type MintRequest = V3MintRequest<Token>;
 
 export type MintTransaction = { to: Address; data?: Hex; value?: bigint };
 
 /** Build the mint transaction. Sync or async, for a router API. */
 export type GetMintTransaction = (request: MintRequest) => MintTransaction | Promise<MintTransaction>;
 
-const positionManagerAbi = parseAbi([
-  "function mint((address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, address recipient, uint256 deadline) params) payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
-  "function multicall(bytes[] data) payable returns (bytes[] results)",
-  "function refundETH() payable",
-]);
-
-/**
- * `getTransaction` for Uniswap v3's NonfungiblePositionManager (and forks
- * with the same ABI: PancakeSwap v3, Sushi v3). A native ETH side is sent
- * as value and wrapped by the manager: pass the chain's `weth`, and the
- * call becomes `multicall(mint, refundETH)` so leftover ETH comes back.
- */
-export function v3Mint({ positionManager, weth }: { positionManager: Address; weth?: Address }): GetMintTransaction {
-  return (r) => {
-    const address = (token: Token) => {
-      if (!isNativeToken(token)) return token.address as Address;
-      if (!weth) throw new Error("Pass `weth` to v3Mint to deposit native ETH.");
-      return weth;
-    };
-    const token0 = address(r.token0);
-    const token1 = address(r.token1);
-    if (BigInt(token0) >= BigInt(token1)) {
-      throw new Error("token0 must sort below token1. Pass the tokens in pool order.");
-    }
-    if (r.fee === undefined) throw new Error("v3 pools need a fee tier.");
-    const mint = encodeFunctionData({
-      abi: positionManagerAbi,
-      functionName: "mint",
-      args: [
-        {
-          token0,
-          token1,
-          fee: r.fee,
-          tickLower: r.tickLower,
-          tickUpper: r.tickUpper,
-          amount0Desired: r.amount0Desired,
-          amount1Desired: r.amount1Desired,
-          amount0Min: r.amount0Min,
-          amount1Min: r.amount1Min,
-          recipient: r.recipient,
-          deadline: r.deadline,
-        },
-      ],
-    });
-    const value = isNativeToken(r.token0) ? r.amount0Desired : isNativeToken(r.token1) ? r.amount1Desired : 0n;
-    if (value === 0n) return { to: positionManager, data: mint };
-    const refund = encodeFunctionData({ abi: positionManagerAbi, functionName: "refundETH" });
-    return {
-      to: positionManager,
-      data: encodeFunctionData({ abi: positionManagerAbi, functionName: "multicall", args: [[mint, refund]] }),
-      value,
-    };
-  };
-}
-
-/** Subtract slippage in basis points, rounding down. */
-export function withSlippage(amount: bigint, slippageBps: number) {
-  return (amount * BigInt(10_000 - Math.round(slippageBps))) / 10_000n;
-}
+export { v3Mint, withSlippage };
 
 /**
  * Linked deposit amounts for a range: typing one token fills the other at
@@ -189,7 +115,7 @@ export type AddLiquidityProps = {
   presets?: RangePreset[];
   /** Quote prices in token0. Starts inverted when token0 is the stablecoin, like USDC/WETH. */
   defaultInvert?: boolean;
-  /** Slippage tolerance in basis points. 50 is 0.5%. */
+  /** Starting slippage tolerance in basis points. 50 is 0.5%. The user can change it. */
   slippageBps?: number;
   /** Seconds the mint stays valid after it's built. */
   deadlineSeconds?: number;
@@ -222,7 +148,7 @@ export function AddLiquidity({
   defaultRange,
   presets,
   defaultInvert = false,
-  slippageBps = 50,
+  slippageBps: defaultSlippageBps = 50,
   deadlineSeconds = 20 * 60,
   prices,
   onSubmitted,
@@ -241,6 +167,7 @@ export function AddLiquidity({
     setSpacing(pool.tickSpacing);
     setRange(startRange(invert));
   }
+  const [slippageBps, setSlippageBps] = useState(defaultSlippageBps);
   const deposit = useDepositAmounts({ pool, range, token0, token1 });
   const { amount0, amount1 } = deposit;
 
@@ -399,9 +326,7 @@ export function AddLiquidity({
             />
           )
         )}
-        <p className="text-xs text-muted-foreground">
-          Slippage tolerance {slippageBps / 100}%. The mint reverts if the price moves further before it lands.
-        </p>
+        <SlippageInput value={slippageBps} onValueChange={setSlippageBps} className="mt-1" />
       </section>
 
       {tx.error && (

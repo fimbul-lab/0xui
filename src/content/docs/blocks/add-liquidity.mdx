@@ -44,7 +44,7 @@ const weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 [Liquidity Chart](/components/liquidity-chart/#pool-data) shows how to read `pool` and `ticks`.
 
-`v3Mint` encodes `NonfungiblePositionManager.mint`. A native ETH side is sent as value and wrapped by the manager, with `refundETH` in the same `multicall` so leftover ETH comes back. For anything else (Uniswap v4's `modifyLiquidities`, Aerodrome, your own router), pass your own `getTransaction`. It gets a `MintRequest` with ticks, desired and minimum amounts, recipient and deadline, and returns `{ to, data, value }`, sync or async.
+`v3Mint` (from `v3-position-manager`, also exported here) encodes `NonfungiblePositionManager.mint`. A native ETH side is sent as value and wrapped by the manager, with `refundETH` in the same `multicall` so leftover ETH comes back. For anything else (Uniswap v4's `modifyLiquidities`, Aerodrome, your own router), pass your own `getTransaction`. It gets a `MintRequest` with ticks, desired and minimum amounts, recipient and deadline, and returns `{ to, data, value }`, sync or async.
 
 ## Fee tiers
 
@@ -69,7 +69,7 @@ A range above the price takes only token0 and a range below it only token1, so t
 
 The ratio comes from `getDependentAmount` in `concentrated-liquidity`, exact `bigint` math matching the pool contract. `useDepositAmounts` holds the linking logic on its own: it keeps the side the user typed and recomputes the other when the range moves.
 
-Minimum amounts are the desired amounts less `slippageBps` (default 0.5%). The deadline is set when the transaction is built, and the transaction is rebuilt before it gets old.
+Minimum amounts are the desired amounts less the slippage tolerance (0.5% to start, changeable with the [Slippage Input](/components/slippage-input/) under the amounts). The deadline is set when the transaction is built, and the transaction is rebuilt before it gets old.
 
 ## States
 
@@ -98,7 +98,7 @@ The root sets `data-deposit-mode` (`both`, `token0` or `token1`). The button nam
 | `defaultRange` | `{ tickLower, tickUpper }` | ±10% | Starting range. |
 | `presets` | `RangePreset[]` | by spacing | Range presets. |
 | `defaultInvert` | `boolean` | `false` | Quote prices in token0. |
-| `slippageBps` | `number` | `50` | Slippage tolerance in basis points. |
+| `slippageBps` | `number` | `50` | Starting slippage tolerance in basis points. The user can change it. |
 | `deadlineSeconds` | `number` | `1200` | How long the mint stays valid. |
 | `prices` | `TokenPrices` | — | Fiat values under the amounts. |
 | `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)` | — | Transaction callbacks. |

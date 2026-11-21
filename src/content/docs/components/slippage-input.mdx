@@ -1,0 +1,48 @@
+---
+title: Slippage Input
+description: Slippage tolerance with presets, a custom percent field, and warnings for settings that revert or invite sandwiching.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Warning } from "@/demos/slippage-input";
+
+Sets how far the price may move before a swap, deposit or withdrawal reverts. The value is in basis points: 50 is 0.5%.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+## Installation
+
+<Install name="slippage-input" />
+
+## Usage
+
+```tsx
+import { SlippageInput } from "@/components/slippage-input";
+
+const [slippageBps, setSlippageBps] = useState(50);
+
+<SlippageInput value={slippageBps} onValueChange={setSlippageBps} />;
+```
+
+Turn it into minimum amounts with `withSlippage(amount, slippageBps)` from `v3-position-manager`.
+
+## Warnings
+
+Below 0.05% the transaction is likely to revert on normal price moves. Above 5% a bot can trade in front of it and keep the difference. Both show a note, and `data-warning` is `low` or `high`. Custom values above 50% are refused.
+
+<Preview>
+  <Warning client:load />
+</Preview>
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `number` | — | Basis points. |
+| `onValueChange` | `(bps: number) => void` | — | Called with basis points. |
+| `presets` | `number[]` | `[10, 50, 100]` | Preset buttons, in basis points. |
+| `label` | `string` | `"Slippage tolerance"` | Label. |
+| `locale` | `string` | runtime locale | Number formatting locale. |

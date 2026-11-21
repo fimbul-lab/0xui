@@ -50,8 +50,8 @@ Prefer a block or component over hand-rolled wagmi calls: they already handle ca
 | Follow a transaction | `transaction-status` (inline), `transaction-toast` (Sonner) |
 | Past transactions, contract events | `transaction-history`, `event-feed` |
 | Forms for any contract from its ABI | `contract-form` |
-| Concentrated liquidity (Uniswap v3/v4 style): set a price range, pool depth, position status, fee tier | `price-range`, `liquidity-chart`, `depth-chart`, `range-indicator`, `fee-tier-select` (math in `concentrated-liquidity`) |
-| Whole features | blocks: `swap`, `send`, `portfolio`, `add-liquidity` |
+| Concentrated liquidity (Uniswap v3/v4 style): set a price range, pool depth, positions, fee tier, slippage | `price-range`, `position-card`, `liquidity-chart`, `depth-chart`, `range-indicator`, `fee-tier-select`, `slippage-input` (math in `concentrated-liquidity`, v3 transactions in `v3-position-manager`) |
+| Whole features | blocks: `swap`, `send`, `portfolio`, `add-liquidity`, `remove-liquidity` |
 | Building blocks | `copy-button`, `responsive-dialog`, `morph-text` |
 | Let browser agents read the wallet (WebMCP) | `agent-tools` |
 

@@ -537,3 +537,40 @@ function shareOfBin(lo: number, hi: number, cut: number, side: "0" | "1") {
   const total = Math.sqrt(hi) - Math.sqrt(lo);
   return total > 0 ? (Math.sqrt(hi) - Math.sqrt(cut)) / total : 0;
 }
+
+/* ------------------------------------------------------------------------ */
+/* Positions                                                                 */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * An LP position, as read from the position manager's `positions(tokenId)`.
+ * `fees0` / `fees1` are uncollected fees: simulate `collect` with max
+ * amounts to get them, since `tokensOwed` alone misses fees accrued since
+ * the position was last touched.
+ */
+export type Position<T = { symbol: string; decimals: number }> = {
+  tokenId: bigint;
+  token0: T;
+  token1: T;
+  /** Fee tier in hundredths of a bip. */
+  fee?: number;
+  tickLower: number;
+  tickUpper: number;
+  liquidity: bigint;
+  fees0?: bigint;
+  fees1?: bigint;
+};
+
+/** Exact token amounts a position (or `share` of it) holds at the pool's price. */
+export function getPositionAmounts(
+  position: Pick<Position, "tickLower" | "tickUpper" | "liquidity">,
+  pool: Pick<PoolState, "tick" | "sqrtPriceX96">,
+  { liquidity = position.liquidity }: { liquidity?: bigint } = {}
+) {
+  return getAmountsForLiquidity(
+    pool.sqrtPriceX96 ?? getSqrtRatioAtTick(pool.tick),
+    getSqrtRatioAtTick(position.tickLower),
+    getSqrtRatioAtTick(position.tickUpper),
+    liquidity
+  );
+}

@@ -664,12 +664,13 @@ Data stays bring-your-own, like `getQuote` in Swap: components take `PoolState` 
 | `range-indicator` | In range / Out of range / Closed, log-scale bar with the price marker. |
 | `fee-tier-select` | Fee tier radio cards with liquidity share and "Not created". |
 | `add-liquidity` (block) | Fee tier, price range and two linked `TokenInput`s (exact deposit ratio, one side locks for single-sided ranges), balances, approvals for both tokens, mint. Bring-your-own `getTransaction`, or `v3Mint({ positionManager, weth })` (native ETH via `multicall(mint, refundETH)`). |
+| `position-card`, `remove-liquidity` (block), `slippage-input` | Position with range status, holdings, uncollected fees and Collect; withdraw a share plus fees in one transaction; slippage presets and warnings. `v3-position-manager` lib holds the v3 mint / remove / collect builders (native ETH unwrapped). |
 
 **Next, in order**
 
 1. `add-liquidity` follow-ups: a `v4Mint` (PositionManager `modifyLiquidities` with Permit2), a slippage setting in the UI, and a "create pool + set starting price" step when the tier has no pool.
-2. `position-card`: pair, fee, `range-indicator`, liquidity value, uncollected fees, and Collect / Increase / Remove actions. A `positions` list on top of it, like the Portfolio block.
-3. `remove-liquidity`: percentage slider (25/50/75/Max), the tokens you get back, collect fees with it.
+2. `positions` list and `usePosition` hook: read `positions(tokenId)` and simulate `collect` for real fees, list an owner's positions (indexer or `tokenOfOwnerByIndex`).
+3. Uniswap v4: `v4Mint` / `v4Remove` through PositionManager `modifyLiquidities`, with a Permit2 approval step.
 4. `liquidity-shape` (DLMM-style): Spot / Curve / Bid-Ask distribution over N bins, previewed on the liquidity chart. Covers Meteora-style bin AMMs and splitting a v3 deposit across several ranges.
 5. `il-calculator` / `range-estimate`: impermanent loss versus holding at a price, fee APR estimate for a range from volume and in-range liquidity, time-in-range from recent prices.
 6. `usePoolLiquidity` hook: reads `slot0`, `liquidity` and ticks with viem (TickLens for v3, StateView for v4), so the charts work without an indexer.
