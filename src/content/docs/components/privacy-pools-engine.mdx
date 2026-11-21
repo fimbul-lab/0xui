@@ -27,7 +27,7 @@ The private account is a recovery phrase. Every deposit's secrets come from it, 
 
 <Install name="privacy-pools-engine" />
 
-This also installs `assert` and `buffer`. The SDK's browser build calls both, and bundlers no longer stand in for Node's own. Your bundler may still warn that `fs` was left out: that file is only loaded outside the browser.
+This also installs `assert` and `buffer`. The SDK's browser build calls both, and bundlers no longer stand in for Node's own. The `assert` package in turn reads `process.env` as it loads, so the engine puts a minimal `process` on `globalThis` (`{ env: {}, browser: true }`) before it loads the SDK, if there is none. Your bundler may still warn that `fs` was left out: that file is only loaded outside the browser.
 
 ## Usage
 
