@@ -327,6 +327,17 @@ export async function decryptPhrase(stored: string, password: string) {
   }
 }
 
+/**
+ * Load the SDK, on first use. Its browser build calls Node's `assert`, and
+ * the `assert` package reads `process.env` as it loads. Bundlers no longer
+ * provide `process`, so make sure a minimal one is there.
+ */
+function loadSdk() {
+  const scope = globalThis as { process?: unknown };
+  scope.process ??= { env: {}, browser: true };
+  return import("@0xbow/privacy-pools-core-sdk");
+}
+
 function memoryStorage(): PrivacyPoolsStorage {
   const items = new Map<string, string>();
   return {
@@ -741,7 +752,7 @@ export function createPrivacyPoolsEngine({
         ...((recent.get(lower(pool.address))?.[kind] ?? []) as never[]),
       ];
 
-      const { AccountService } = await import("@0xbow/privacy-pools-core-sdk");
+      const { AccountService } = await loadSdk();
       // The SDK's own data service refetches everything on every call. This
       // one answers from the events above.
       const source = {
@@ -946,7 +957,7 @@ export function createPrivacyPoolsEngine({
     if (!circuitsUrl) throw new Error("Unshielding needs `circuitsUrl`, where the circuit files are served.");
     if (!prover) {
       const loading = (async () => {
-        const { Circuits, PrivacyPoolSDK } = await import("@0xbow/privacy-pools-core-sdk");
+        const { Circuits, PrivacyPoolSDK } = await loadSdk();
         const circuits = new Circuits({ baseUrl: circuitsUrl });
         await circuits.initArtifacts("latest");
         return { sdk: new PrivacyPoolSDK(circuits) };
@@ -1297,7 +1308,7 @@ export function createPrivacyPoolsEngine({
       const account = chain.account;
       if (!account) throw new Error("Couldn't read the pool's history. Scan again before unshielding.");
       const { sdk } = await abortable(loadProver(), signal);
-      const { calculateContext, generateMerkleProof } = await import("@0xbow/privacy-pools-core-sdk");
+      const { calculateContext, generateMerkleProof } = await loadSdk();
 
       // The proof is bound to the relayer's commitment, which lasts about a
       // minute. Ask for it last, once everything slow is loaded.
