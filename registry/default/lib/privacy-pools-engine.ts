@@ -14,6 +14,7 @@ import {
   decodeAbiParameters,
   encodeFunctionData,
   erc20Abi,
+  getAddress,
   formatUnits,
   http,
   parseAbi,
@@ -29,6 +30,7 @@ import {
   type ShieldedBalanceState,
   type ShieldedEngine,
   type ShieldedEvent,
+  type ShieldedExit,
   type ShieldedSync,
   type ShieldedSyncStage,
   type ShieldedTokenBalance,
@@ -137,6 +139,12 @@ export type PrivacyPoolsEngineOptions = {
    * against a hash it ships with, so the host does not have to be trusted.
    */
   circuitsUrl?: string;
+  /**
+   * Ask the ASP whether deposits it has not approved were declined, so they
+   * read as `restricted` and not `pending` forever. Off by default: the ASP
+   * can only be asked about named deposits, which tells it they are yours.
+   */
+  checkDeclined?: boolean;
 };
 
 const ENTRYPOINT_ABI = parseAbi([
@@ -145,7 +153,11 @@ const ENTRYPOINT_ABI = parseAbi([
   "function assetConfig(address _asset) view returns (address pool, uint256 minimumDepositAmount, uint256 vettingFeeBPS, uint256 maxRelayFeeBPS)",
 ]);
 
-const POOL_ABI = parseAbi(["function SCOPE() view returns (uint256)"]);
+const POOL_ABI = parseAbi([
+  "function SCOPE() view returns (uint256)",
+  "struct RagequitProof { uint256[2] pA; uint256[2][2] pB; uint256[2] pC; uint256[4] pubSignals; }",
+  "function ragequit(RagequitProof _proof)",
+]);
 
 const ASP_ROOT_ABI = parseAbi(["function latestRoot() view returns (uint256)"]);
 
@@ -218,18 +230,22 @@ function reason(cause: unknown) {
  * was withdrawn in full, exited or migrated. `approved` is the ASP's set of
  * approved labels, as decimal strings.
  *
- * A declined deposit reads as `pending`: the ASP publishes approvals in
- * bulk, but a decline can only be asked about one deposit at a time, which
- * would tell the ASP which deposits are yours.
+ * Without `declined`, a declined deposit reads as `pending`: the ASP
+ * publishes approvals in bulk, but a decline can only be asked about named
+ * deposits, which tells the ASP they are yours. `declined` is the set of
+ * labels it said no to, for callers that chose to ask.
  */
 export function poolAccountState(
   account: Pick<PoolAccount, "label" | "deposit" | "children" | "ragequit" | "isMigrated">,
-  approved: ReadonlySet<string>
+  approved: ReadonlySet<string>,
+  declined?: ReadonlySet<string>
 ): ShieldedBalanceState | undefined {
   if (account.ragequit || account.isMigrated) return undefined;
   const latest = account.children.at(-1) ?? account.deposit;
   if (latest.value === 0n) return undefined;
-  return approved.has(account.label.toString()) ? "spendable" : "pending";
+  const label = account.label.toString();
+  if (approved.has(label)) return "spendable";
+  return declined?.has(label) ? "restricted" : "pending";
 }
 
 /**
@@ -360,6 +376,8 @@ type ChainState = {
   /** Shields the last scan found, by lower-case hash. */
   transactions: Map<string, ShieldedTransaction>;
   scan: Promise<void> | undefined;
+  /** One more scan, queued behind the running one. */
+  rescan: Promise<void> | undefined;
   pools: Promise<Pool[]> | undefined;
   /** Final events, by lower-case pool address, read up to `syncedTo`. */
   events: Map<string, PoolEvents>;
@@ -368,6 +386,12 @@ type ChainState = {
   account: AccountService | undefined;
   /** Approved labels the last scan saw, by pool scope. */
   approved: Map<bigint, Set<string>>;
+  /** Labels the ASP declined, when `checkDeclined` is on. */
+  declined: Set<string>;
+  /** Public exits the last scan found. */
+  exits: readonly ShieldedExit[] | undefined;
+  /** What `prepareExit` needs for each exit, by id. */
+  exitSources: Map<string, { pool: Pool; commitment: AccountCommitment }>;
   /** Commitments handed to the relayer, by hash, with when. They read as `proving` until a scan sees them spent. */
   submitted: Map<bigint, number>;
 };
@@ -414,6 +438,19 @@ function addLogs(target: Map<string, PoolEvents>, logs: readonly PoolLog[]) {
   }
 }
 
+function sameExits(a: readonly ShieldedExit[], b: readonly ShieldedExit[]) {
+  return (
+    a.length === b.length &&
+    a.every(
+      (exit, i) =>
+        exit.id === b[i]!.id &&
+        exit.amount === b[i]!.amount &&
+        exit.state === b[i]!.state &&
+        exit.depositor === b[i]!.depositor
+    )
+  );
+}
+
 function sameBalances(a: readonly ShieldedTokenBalance[], b: readonly ShieldedTokenBalance[]) {
   return (
     a.length === b.length &&
@@ -440,6 +477,9 @@ function sameBalances(a: readonly ShieldedTokenBalance[], b: readonly ShieldedTo
  * - An unshield spends one deposit: `prove` makes the withdrawal proof in
  *   the browser and `submit` hands it to the relayer, which sends it and
  *   keeps a fee. It needs `relayerUrl` and `circuitsUrl`.
+ * - An exit (ragequit) returns one deposit to the address that made it, in
+ *   public, whether the ASP approved it or not. `prepareExit` makes the
+ *   proof and builds the transaction; that address's wallet sends it.
  */
 export function createPrivacyPoolsEngine({
   chains,
@@ -449,6 +489,7 @@ export function createPrivacyPoolsEngine({
   client: clientFor,
   fetch: request = (...args) => fetch(...args),
   circuitsUrl,
+  checkDeclined = false,
 }: PrivacyPoolsEngineOptions): ShieldedEngine {
   const listeners: Record<ShieldedEvent, Set<() => void>> = {
     account: new Set(),
@@ -496,11 +537,15 @@ export function createPrivacyPoolsEngine({
         balances: undefined,
         transactions: new Map(),
         scan: undefined,
+        rescan: undefined,
         pools: undefined,
         events: new Map(),
         syncedTo: undefined,
         account: undefined,
         approved: new Map(),
+        declined: new Set(),
+        exits: undefined,
+        exitSources: new Map(),
         submitted: new Map(),
       };
       chainStates.set(chainId, chain);
@@ -622,6 +667,18 @@ export function createPrivacyPoolsEngine({
     return { aspLeaves, stateTreeLeaves };
   }
 
+  /** Which of these labels the ASP declined. Naming them tells the ASP they belong together. */
+  async function declinedLabels(chainId: number, pool: Pool, labels: string[]) {
+    if (labels.length === 0) return [];
+    const response = await request(
+      `${configOf(chainId).aspUrl}/${chainId}/public/deposits-by-label`,
+      { headers: { "X-Pool-Scope": pool.scope.toString(), "X-Labels": labels.join(",") } }
+    );
+    if (!response.ok) throw new Error(`The ASP answered ${response.status}.`);
+    const deposits = (await response.json()) as { label: string; reviewStatus: string }[];
+    return deposits.filter((entry) => entry.reviewStatus === "declined").map((entry) => entry.label);
+  }
+
   /** The ASP's approved labels for a pool, as decimal strings. */
   async function approvedLabels(chainId: number, pool: Pool) {
     return new Set((await treeLeaves(chainId, pool)).aspLeaves);
@@ -705,8 +762,31 @@ export function createPrivacyPoolsEngine({
         report((index + 1) / pools.length);
       }
 
+      // Asked only for deposits that are not approved, and only when the app chose to.
+      const declined = new Set<string>();
+      if (checkDeclined) {
+        for (const pool of pools) {
+          const accounts = account.account.poolAccounts.get(pool.scope as PoolInfo["scope"]) ?? [];
+          const waiting = accounts
+            .filter((entry) => poolAccountState(entry, approved.get(pool.scope)!) === "pending")
+            .map((entry) => entry.label.toString());
+          for (const label of await declinedLabels(chainId, pool, waiting)) declined.add(label);
+          if (started !== session) return;
+        }
+      }
+      // Who made each deposit: the only address its exit can be sent from.
+      const depositors = new Map<string, Address>();
+      for (const pool of pools) {
+        for (const event of eventsOf(pool as never, "deposits") as DepositEvent[]) {
+          depositors.set(`${pool.scope}:${event.label}`, getAddress(event.depositor));
+        }
+      }
+
       chain.account = account;
       chain.approved = approved;
+      chain.declined = declined;
+      const exits: ShieldedExit[] = [];
+      const exitSources: ChainState["exitSources"] = new Map();
       const now = Date.now();
       for (const [hash, at] of chain.submitted) {
         if (now - at >= SUBMITTED_LIFETIME) chain.submitted.delete(hash);
@@ -719,10 +799,22 @@ export function createPrivacyPoolsEngine({
         let held = false;
         const accounts = account.account.poolAccounts.get(pool.scope as PoolInfo["scope"]) ?? [];
         for (const poolAccount of accounts) {
-          const state = poolAccountState(poolAccount, approved.get(pool.scope)!);
+          const state = poolAccountState(poolAccount, approved.get(pool.scope)!, declined);
           if (state) {
             const commitment = poolAccount.children.at(-1) ?? poolAccount.deposit;
             latest.add(commitment.hash);
+            // On its way out through the relayer already: an exit now would race it.
+            if (!chain.submitted.has(commitment.hash)) {
+              const id = `${pool.scope}:${poolAccount.label}`;
+              exits.push({
+                id,
+                token: pool.asset,
+                amount: commitment.value,
+                state,
+                depositor: depositors.get(id),
+              });
+              exitSources.set(id, { pool, commitment });
+            }
             // A withdrawal is on its way: these funds can't be spent again, and part may come back.
             amounts[chain.submitted.has(commitment.hash) ? "proving" : state] += commitment.value;
             held = true;
@@ -745,6 +837,11 @@ export function createPrivacyPoolsEngine({
       // A commitment that is no longer the latest was spent: the withdrawal landed.
       for (const hash of chain.submitted.keys()) {
         if (!latest.has(hash)) chain.submitted.delete(hash);
+      }
+      chain.exitSources = exitSources;
+      if (!chain.exits || !sameExits(chain.exits, exits)) {
+        chain.exits = exits;
+        changed = true;
       }
       if (!chain.balances || !sameBalances(chain.balances, balances)) {
         chain.balances = balances;
@@ -769,6 +866,26 @@ export function createPrivacyPoolsEngine({
       chain.scan = running;
     }
     return chain.scan;
+  }
+
+  /**
+   * Scan with a head read from now on. A scan already running may have read
+   * the head before the caller's transaction was mined, so it is followed by
+   * one more, shared by everyone who asks meanwhile.
+   */
+  function freshScan(chainId: number): Promise<void> {
+    if (status !== "unlocked") return Promise.resolve();
+    const chain = chainOf(chainId);
+    if (!chain.scan) return scan(chainId);
+    if (!chain.rescan) {
+      const started = session;
+      const queued: Promise<void> = chain.scan.then(() => {
+        if (chain.rescan === queued) chain.rescan = undefined;
+        return started === session ? scan(chainId) : undefined;
+      });
+      chain.rescan = queued;
+    }
+    return chain.rescan;
   }
 
   function reservations(): Reservation[] {
@@ -975,8 +1092,12 @@ export function createPrivacyPoolsEngine({
       chain.balances = undefined;
       chain.transactions = new Map();
       chain.scan = undefined;
+      chain.rescan = undefined;
       chain.account = undefined;
       chain.approved = new Map();
+      chain.declined = new Set();
+      chain.exits = undefined;
+      chain.exitSources = new Map();
       chain.submitted = new Map();
     }
     proved.clear();
@@ -1054,7 +1175,7 @@ export function createPrivacyPoolsEngine({
     getSync: (chainId) => chainOf(chainId).sync,
     getBalances: (chainId) => chainOf(chainId).balances,
     getTransaction: (chainId, hash) => chainOf(chainId).transactions.get(lower(hash)),
-    sync: scan,
+    sync: freshScan,
 
     // Nothing in Privacy Pools v1 is ever `incomplete`.
     async retryProofs() {},
@@ -1266,9 +1387,57 @@ export function createPrivacyPoolsEngine({
 
       if (entry.session === session) {
         chainOf(draft.chainId).submitted.set(source.hash, Date.now());
-        void scan(draft.chainId);
+        void freshScan(draft.chainId);
       }
       return { hash: answer.txHash };
+    },
+    getExits: (chainId) => chainOf(chainId).exits,
+
+    async prepareExit(chainId, id, { onStage, signal }) {
+      requireUnlocked();
+      if (signal?.aborted) throw signal.reason;
+      const started = session;
+      const source = chainOf(chainId).exitSources.get(id);
+      if (!source) throw new Error("These funds are no longer there to exit. Scan again.");
+      const { pool, commitment } = source;
+
+      onStage("loading-circuits");
+      const { sdk } = await abortable(loadProver(), signal);
+      onStage("proving");
+      const proof = await abortable(
+        sdk.proveCommitment(commitment.value, commitment.label, commitment.nullifier, commitment.secret),
+        signal
+      );
+      onStage("verifying");
+      if (!(await abortable(sdk.verifyCommitment(proof), signal))) {
+        throw new Error("The proof did not verify. Nothing was sent.");
+      }
+      if (started !== session) throw new Error("The private account was locked.");
+
+      const { pi_a, pi_b, pi_c } = proof.proof;
+      const pair = (values: string[]) => [BigInt(values[0]!), BigInt(values[1]!)] as const;
+      // The verifier contract takes each pair of the middle point the other way round.
+      const flipped = (values: string[]) => [BigInt(values[1]!), BigInt(values[0]!)] as const;
+      const signals = proof.publicSignals.map(BigInt);
+      if (signals.length !== 4) throw new Error("The proof has an unexpected shape. Nothing was sent.");
+      return {
+        transaction: {
+          to: pool.address,
+          data: encodeFunctionData({
+            abi: POOL_ABI,
+            functionName: "ragequit",
+            args: [
+              {
+                pA: pair(pi_a),
+                pB: [flipped(pi_b[0]!), flipped(pi_b[1]!)],
+                pC: pair(pi_c),
+                pubSignals: signals as unknown as readonly [bigint, bigint, bigint, bigint],
+              },
+            ],
+          }),
+          value: 0n,
+        },
+      };
     },
   };
 }

@@ -19,7 +19,7 @@ There is no live demo here. A shield needs a wallet with Sepolia funds, and the 
 - **Deposit.** Funds go to the Entrypoint contract, which takes a vetting fee and passes the rest to the asset's pool.
 - **Review.** An Association Set Provider (ASP), run by 0xbow, screens each deposit. Until it approves, the deposit is `pending`. After, it is `spendable`.
 - **Withdraw.** An approved deposit can be withdrawn to any address with a zero-knowledge proof, through a relayer, which sends the transaction and keeps a fee.
-- **Exit.** A deposit that is not approved can always go back to the address it came from, in public. Not in this engine yet.
+- **Exit.** Any deposit can always go back to the address it came from, in public, approved or not. Privacy Pools calls it ragequit.
 
 The private account is a recovery phrase. Every deposit's secrets come from it, so the phrase alone finds the funds again on any device.
 
@@ -152,12 +152,26 @@ These mainnet values come from 0xbow's own app. Check them against 0xbow's docum
 | `spendable` | Approved by the ASP. |
 | `proving` | Handed to the relayer, not yet seen on chain. |
 | `incomplete` | Never used. |
-| `restricted` | Not reported yet. A declined deposit shows as `pending`. |
+| `restricted` | Declined by the ASP. Only reported with `checkDeclined`; without it a declined deposit shows as `pending`. |
 | `quote` | The relayer's fee for the amount. Rejects when the amount can't be unshielded, and says why. |
 | `prove` | The withdrawal proof for one deposit, made in the browser. |
 | `submit` | Hands the proof to the relayer, which sends the transaction. |
+| `getExits` | Every deposit that still holds funds, with the address that made it. |
+| `prepareExit` | The pool's `ragequit` call for one deposit, after a proof. That address's wallet sends it. |
 
-A decline can only be asked about one deposit at a time, which would tell the ASP which deposits are yours. So the engine does not ask, and a declined deposit stays `pending`.
+The ASP publishes approvals in bulk, but a decline can only be asked about named deposits, which tells the ASP they are yours. So by default the engine does not ask, and a declined deposit stays `pending`.
+
+With `checkDeclined: true` it asks, about deposits that are not approved only, and shows declined ones as `restricted`. Turn it on if a clear "declined" matters more to your users than that leak.
+
+## Exit
+
+Every deposit that still holds funds can go back to the address that made it, without the ASP and without a relayer. The [Shielded Exits](/components/shielded-exits/) component lists them and runs the flow.
+
+- **It is public.** The chain shows the same address put the funds in and took them out.
+- **Only the depositor can send it.** The pool recorded that address at deposit. The engine reports it as the exit's `depositor`.
+- **It takes everything** left in that deposit, and is final for it.
+- **It needs `circuitsUrl`**, for the proof that the account knows the deposit's secrets. No relayer and no fee, only gas.
+- **Not offered mid-unshield.** Funds handed to the relayer are left out until a scan settles them.
 
 ## One index per shield
 
@@ -184,7 +198,8 @@ Deposits made with an older Privacy Pools key scheme and not migrated since are 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `chains` | `Record<number, PrivacyPoolsChain>` | — | Deployments by chain id: `rpcUrl`, `entrypoint`, `aspUrl`, `pools`, `relayerUrl?`, `blockRange?`. |
-| `circuitsUrl` | `string` | — | Where the circuit files are served. Needed to unshield. |
+| `circuitsUrl` | `string` | — | Where the circuit files are served. Needed to unshield and to exit. |
+| `checkDeclined` | `boolean` | `false` | Ask the ASP whether unapproved deposits were declined. Names those deposits to the ASP. |
 | `storage` | `{ getItem, setItem, removeItem }` | `localStorage` | Where the encrypted phrase is kept. |
 | `reviewTime` | `number` | `3600` | Seconds a deposit usually waits for the ASP. An estimate for the quote, not a protocol rule: it can take days. |
 | `pollInterval` | `number` | `60000` | Ms between scans while unlocked, so approvals show up. `0` turns it off. |
@@ -196,6 +211,5 @@ The SDK logs scan progress to the console: pool addresses and counts, no secrets
 ## Not built yet
 
 - Unshielding without a relayer, from your own wallet.
-- Exit (ragequit) for a deposit that is not approved.
 - A cache that survives a reload, and an indexed source in place of `eth_getLogs`.
 - Privacy Pools v2. Its SDK is not on npm yet.

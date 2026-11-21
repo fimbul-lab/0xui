@@ -370,6 +370,37 @@ describe("shielding through the interface", () => {
   });
 });
 
+describe("exits", () => {
+  it("lists restricted funds only, and drops one that went back", async () => {
+    const depositor = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+    const engine = await unlocked({
+      funds: [
+        { token: weth, amount: 10n },
+        { token: weth, amount: 3n, state: "restricted", depositor },
+      ],
+    });
+    const exits = engine.getExits!(1)!;
+    expect(exits).toEqual([
+      { id: expect.any(String), token: weth, amount: 3n, state: "restricted", depositor },
+    ]);
+    // Same array until something changes.
+    await engine.sync(1);
+    expect(engine.getExits!(1)).toBe(exits);
+
+    const stages: ProofStage[] = [];
+    const { transaction } = await engine.prepareExit!(1, exits[0]!.id, {
+      onStage: (stage) => stages.push(stage),
+    });
+    expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
+    expect(transaction.to).toBeDefined();
+    await expect(engine.prepareExit!(1, "nope", { onStage() {} })).rejects.toThrow("no longer there");
+
+    await engine.simulate.exit(exits[0]!.id);
+    expect(engine.getExits!(1)).toEqual([]);
+    expect(amountsOf(engine)?.restricted).toBe(0n);
+  });
+});
+
 describe("prove", () => {
   const draft = {
     kind: "unshield",

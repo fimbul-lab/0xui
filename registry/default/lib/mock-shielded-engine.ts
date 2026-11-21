@@ -4,6 +4,7 @@ import { encodeBech32m } from "@/lib/0xui-utils";
 import {
   SHIELDED_BALANCE_STATES,
   type ProvedOperation,
+  type ShieldedExit,
   type ShieldedAccountStatus,
   type ShieldedTokenBalance,
   type ShieldedBalanceState,
@@ -69,6 +70,8 @@ export type MockFunds = {
   chainId?: number;
   /** The public transaction that shielded them, so `getTransaction` can report on it. */
   hash?: Hash;
+  /** The address that shielded them: the only one a restricted note's exit can be sent from. */
+  depositor?: Address;
 };
 
 export type MockShieldedEngineOptions = {
@@ -112,6 +115,8 @@ export type MockSimulate = {
     outcome?: "spendable" | "restricted";
     /** The public transaction that shielded them, so `getTransaction` can report on it. */
     hash?: Hash;
+    /** The address that shielded them. */
+    depositor?: Address;
   }): Promise<{ fee: bigint; received: bigint }>;
   /**
    * Spend from the spendable balance to a public address. The recipient gets
@@ -127,6 +132,8 @@ export type MockSimulate = {
   }): Promise<{ fee: bigint; received: bigint }>;
   /** Put funds straight into any state, with no fee and no waiting period. */
   addFunds(funds: MockFunds): Promise<void>;
+  /** A restricted note went back to its depositor: the exit from `getExits` was sent. */
+  exit(id: string, chainId?: number): Promise<void>;
   /** The next scan of the chain stops a third of the way in with an error. */
   failNextSync(message?: string, chainId?: number): void;
   /** The next proof fails while proving. */
@@ -139,7 +146,13 @@ export type MockSimulate = {
 
 export type MockShieldedEngine = ShieldedEngine & { simulate: MockSimulate };
 
-type Note = { token: Address; amount: bigint; state: ShieldedBalanceState; hash?: Hash };
+type Note = {
+  token: Address;
+  amount: bigint;
+  state: ShieldedBalanceState;
+  hash?: Hash;
+  depositor?: Address;
+};
 
 type ChainState = {
   /** What the account really holds. Only a scan copies it into `balances`. */
@@ -148,6 +161,8 @@ type ChainState = {
   balances: readonly ShieldedTokenBalance[] | undefined;
   /** Public transactions the last scan found, by lower-case hash. */
   transactions: Map<string, ShieldedTransaction>;
+  /** Restricted notes the last scan found, as public exits. */
+  exits: readonly ShieldedExit[] | undefined;
   /** A scan has finished at least once, so the next one is a short repeat scan. */
   scanned: boolean;
   scan: Promise<void> | undefined;
@@ -281,10 +296,17 @@ export function createMockShieldedEngine({
       chain = {
         notes: funds
           .filter((fund) => (fund.chainId ?? defaultChain) === chainId)
-          .map(({ token, amount, state = "spendable", hash }) => ({ token, amount, state, hash })),
+          .map(({ token, amount, state = "spendable", hash, depositor }) => ({
+            token,
+            amount,
+            state,
+            hash,
+            depositor,
+          })),
         sync: IDLE,
         balances: undefined,
         transactions: new Map(),
+        exits: undefined,
         scanned: false,
         scan: undefined,
         nextSyncFailure: undefined,
@@ -358,6 +380,21 @@ export function createMockShieldedEngine({
       });
       changed = true;
     }
+    // Restricted funds can only go back where they came from: each such note is an exit.
+    const exits = chain.notes
+      .filter((note) => note.state === "restricted")
+      .map((note): ShieldedExit => {
+        const { token, amount, state, depositor } = note;
+        return { id: exitId(note), token, amount, state, depositor };
+      });
+    if (
+      !chain.exits ||
+      chain.exits.length !== exits.length ||
+      exits.some((exit, i) => exit.id !== chain.exits![i]!.id)
+    ) {
+      chain.exits = exits;
+      changed = true;
+    }
     if (changed) emit("balances");
     // The SDK's "complete" event carries progress 0.
     setSync(chain, { stage: "transactions", status: "synced", progress: 0 });
@@ -382,6 +419,14 @@ export function createMockShieldedEngine({
       change();
       return scan(chainId);
     });
+  }
+
+  const exitIds = new WeakMap<Note, string>();
+  let exitCount = 0;
+  function exitId(note: Note) {
+    let id = exitIds.get(note);
+    if (!id) exitIds.set(note, (id = `mock-exit-${++exitCount}`));
+    return id;
   }
 
   const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
@@ -607,10 +652,38 @@ export function createMockShieldedEngine({
       return { hash: (await relay?.(operation)) ?? (`0x${number.padStart(64, "0")}` as Hash) };
     },
 
+    getExits: (chainId) => chainOf(chainId).exits,
+
+    async prepareExit(chainId, id, { onStage, signal }) {
+      requireUnlocked();
+      if (signal?.aborted) throw signal.reason;
+      const started = session;
+      if (!chainOf(chainId).notes.some((note) => exitIds.get(note) === id)) {
+        throw new Error("These funds are no longer there to exit. Scan again.");
+      }
+      onStage("loading-circuits");
+      await wait(circuitsLoaded ? timings.loadCircuits / 20 : timings.loadCircuits, signal);
+      circuitsLoaded = true;
+      onStage("proving");
+      await wait(timings.prove, signal);
+      onStage("verifying");
+      await wait(timings.verify, signal);
+      if (started !== session) throw new Error("The private account was locked.");
+      // Not a real call: the mock's contract is not deployed anywhere.
+      return { transaction: { to: MOCK_SHIELD_CONTRACT, data: "0x", value: 0n } };
+    },
+
     simulate: {
-      async shield({ token, amount, chainId = defaultChain, outcome = "spendable", hash }) {
+      async shield({
+        token,
+        amount,
+        chainId = defaultChain,
+        outcome = "spendable",
+        hash,
+        depositor,
+      }) {
         const fee = feeOn(amount);
-        const note: Note = { token, amount: amount - fee, state: "pending", hash };
+        const note: Note = { token, amount: amount - fee, state: "pending", hash, depositor };
         chainOf(chainId).notes.push(note);
         later(timings.standby, chainId, () => {
           note.state = outcome;
@@ -622,8 +695,14 @@ export function createMockShieldedEngine({
       unshield: ({ token, amount, chainId = defaultChain, change = "spendable" }) =>
         unshield(token, amount, chainId, change),
 
-      addFunds({ token, amount, state = "spendable", chainId = defaultChain, hash }) {
-        chainOf(chainId).notes.push({ token, amount, state, hash });
+      addFunds({ token, amount, state = "spendable", chainId = defaultChain, hash, depositor }) {
+        chainOf(chainId).notes.push({ token, amount, state, hash, depositor });
+        return scan(chainId);
+      },
+
+      exit(id, chainId = defaultChain) {
+        const chain = chainOf(chainId);
+        chain.notes = chain.notes.filter((note) => exitIds.get(note) !== id);
         return scan(chainId);
       },
 
