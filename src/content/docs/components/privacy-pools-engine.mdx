@@ -6,7 +6,7 @@ description: A shielded engine on the deployed Privacy Pools contracts. It shiel
 import { Aside } from "@astrojs/starlight/components";
 import Install from "@/components/docs/Install.astro";
 
-A [shielded engine](/components/shielded-engine/) for [Privacy Pools](https://privacypools.com) v1 by 0xbow, built on its public SDK, `@0xbow/privacy-pools-core-sdk`. With it the [Shield](/blocks/shield/) block deposits into the real contracts, and `prove` and `submit` withdraw from them.
+A [shielded engine](/components/shielded-engine/) for [Privacy Pools](https://privacypools.com) v1 by 0xbow, built on its public SDK, `@0xbow/privacy-pools-core-sdk`. With it the [Shield](/blocks/shield/) block deposits into the real contracts and the [Unshield](/blocks/unshield/) block withdraws from them.
 
 <Aside type="caution" title="Use test networks">
   This engine handles a recovery phrase and builds transactions that move funds. It has not had a security review. Unshielding was tested up to a proof the real verifier accepts, not with a withdrawal on chain. If one fails, the same recovery phrase opens the account at privacypools.com. Whether you may use a privacy protocol depends on where you are.
@@ -82,7 +82,7 @@ const operation = await engine.prove(draft, { onStage: console.log });
 const { hash } = await engine.submit(operation);
 ```
 
-There is no unshield block yet. [Proof Progress](/components/proof-progress/) runs `prove` and shows its stages. Call `submit` with what it returns.
+The [Unshield](/blocks/unshield/) block runs these three calls behind a form.
 
 ### The circuit files
 
@@ -195,7 +195,6 @@ The SDK logs scan progress to the console: pool addresses and counts, no secrets
 
 ## Not built yet
 
-- An unshield block. The engine can unshield; the UI for it is not built.
 - Unshielding without a relayer, from your own wallet.
 - Exit (ragequit) for a deposit that is not approved.
 - A cache that survives a reload, and an indexed source in place of `eth_getLogs`.
