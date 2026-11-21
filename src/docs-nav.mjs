@@ -72,6 +72,12 @@ const groups = [
     ],
   },
   {
+    label: "Liquidity",
+    icon: "chart-column",
+    blurb: "Pool depth, price ranges and positions for concentrated liquidity.",
+    items: ["price-range", "liquidity-chart", "depth-chart", "range-indicator", "fee-tier-select"],
+  },
+  {
     label: "Utilities",
     icon: "wrench",
     blurb: "Small pieces the other components are built from, and tools for browser agents.",

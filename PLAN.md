@@ -647,6 +647,34 @@ export type PrivateTxPhase =
 - Kohaku is unaudited and changes weekly. `kohaku-engine` is labelled experimental and pins exact versions.
 - A mnemonic in the browser is a real attack surface. The account component needs its own security review before release.
 
+### Phase 6: Liquidity (LP) components (started 2026-11-21)
+
+Components for providing concentrated liquidity (Uniswap v3/v4 ticks, and the forks that share them: PancakeSwap v3, Aerodrome Slipstream, Sushi v3). Reference UIs: Uniswap's new-position flow (fee tier, "Set price range" with histogram, presets and steppers, deposit), Uniswap Labs' and Kaiko's ±2% market depth, Meteora DLMM (bin shapes: Spot, Curve, Bid-Ask), Orca and Aerodrome (range presets, position cards).
+
+Data stays bring-your-own, like `getQuote` in Swap: components take `PoolState` plus `TickData[]` (`slot0`, `liquidity()`, ticks from a subgraph, `TickLens` or v4 `StateView`). Charts are hand-drawn SVG, no chart dependency. Colors: teal for token0, violet for token1, validated for CVD and contrast in both modes, overridable with `--lp-token0` / `--lp-token1`.
+
+**Done in this round**
+
+| Item | What |
+|---|---|
+| `concentrated-liquidity` (lib) | Exact bigint TickMath + LiquidityAmounts ports (tested against the contract bounds), tick/price conversion, presets as ±%, deposit mode, range status, liquidity bins rebuilt from `liquidityNet`, depth curve and ±% depth. |
+| `liquidity-chart` | Distribution histogram, both sides colored by token, current price, tooltip and keyboard reading, zoom, invert, optional draggable range (handles are sliders). |
+| `price-range` | Uniswap-style "Set price range": chart with handles, presets by tick spacing, min/max fields with tick steppers, invert toggle, single-sided notice. `usePriceRange` hook. |
+| `depth-chart` | Order-book style cumulative depth both sides, ±2% headline figures, window buttons, crosshair, screen reader table. |
+| `range-indicator` | In range / Out of range / Closed, log-scale bar with the price marker. |
+| `fee-tier-select` | Fee tier radio cards with liquidity share and "Not created". |
+
+**Next, in order**
+
+1. `add-liquidity` block: fee tier, price range and two `TokenInput`s linked by `getDependentAmount` (typing one fills the other; one side locks when the range is single-sided), approvals for both tokens, bring-your-own `getMintTransaction` (v3 NonfungiblePositionManager `mint`, v4 PositionManager `modifyLiquidities` with Permit2). Slippage setting, and a "create pool + set starting price" step when the tier has no pool.
+2. `position-card`: pair, fee, `range-indicator`, liquidity value, uncollected fees, and Collect / Increase / Remove actions. A `positions` list on top of it, like the Portfolio block.
+3. `remove-liquidity`: percentage slider (25/50/75/Max), the tokens you get back, collect fees with it.
+4. `liquidity-shape` (DLMM-style): Spot / Curve / Bid-Ask distribution over N bins, previewed on the liquidity chart. Covers Meteora-style bin AMMs and splitting a v3 deposit across several ranges.
+5. `il-calculator` / `range-estimate`: impermanent loss versus holding at a price, fee APR estimate for a range from volume and in-range liquidity, time-in-range from recent prices.
+6. `usePoolLiquidity` hook: reads `slot0`, `liquidity` and ticks with viem (TickLens for v3, StateView for v4), so the charts work without an indexer.
+
+Open questions: v4 hooks and dynamic fees (show "Dynamic" in `fee-tier-select`?), and whether the depth chart should value asks at the moved price rather than spot.
+
 ### Running alongside every phase: agent DX
 - `llms.txt` / `llms-full.txt` generated from the registry (full source + props).
 - Document the shadcn registry MCP (`npx shadcn registry:mcp`) so agents can browse and install 0xui.

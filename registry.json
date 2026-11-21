@@ -1337,6 +1337,131 @@
       ]
     },
     {
+      "name": "concentrated-liquidity",
+      "type": "registry:lib",
+      "title": "Concentrated liquidity",
+      "description": "Uniswap v3/v4 concentrated liquidity math for LP components (also PancakeSwap v3, Aerodrome Slipstream, Sushi v3). Exact bigint ports of TickMath and LiquidityAmounts: getSqrtRatioAtTick, getAmountsForLiquidity, getLiquidityForAmounts, getDependentAmount (other side of a two-sided deposit). Display math: tickToPrice, priceToTick, nearestUsableTick, priceRangeToTicks, rangeAroundTick (±%), getDepositMode, getRangeStatus, getLiquidityBins (distribution rebuilt from liquidityNet), ticksFromPositions, getDepthCurve and getMarketDepth (±2% depth), formatPrice. Types: PoolState, TickData, LiquidityBin.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/lib/concentrated-liquidity.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [],
+      "registryDependencies": []
+    },
+    {
+      "name": "liquidity-chart",
+      "type": "registry:component",
+      "title": "Liquidity Chart",
+      "description": "Liquidity distribution histogram for a concentrated liquidity pool (Uniswap v3/v4 style): one bar per tick range, token0 above the price and token1 below it in their own colors, current price line, tooltip with tokens locked per bar, keyboard reading, zoom, invert. Optional range highlight with draggable handles and band (role=slider, arrow keys step one tick spacing). Hand-drawn SVG, no chart library. Exports useChartViewport, TickRange and liquidityColors (--lp-token0 / --lp-token1).",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/liquidity-chart.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "price-range",
+      "type": "registry:component",
+      "title": "Price Range",
+      "description": "'Set price range' panel for a new LP position, like Uniswap's: liquidity chart with draggable handles, presets by tick spacing (±0.05% for stables to ±50%, plus full range), min/max price fields with -/+ tick steppers that snap to the spacing, a token toggle to invert the quote, and a notice when the range is out of range and single-sided. data-deposit-mode (both/token0/token1) and data-full-range. Exports usePriceRange and defaultRangePresets.",
+      "docs": "Docs: https://0xui.io/components/price-range.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/price-range.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/liquidity-chart",
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "depth-chart",
+      "type": "registry:component",
+      "title": "Depth Chart",
+      "description": "Order book style market depth for a concentrated liquidity pool: cumulative bids (quote token, price down) and asks (base token, price up) from the current price, both valued in the quote token on one axis, headline ±2% depth figures, window buttons (±2/5/10/25%), crosshair tooltip, keyboard reading, screen reader table, invert. Exports readDepth.",
+      "docs": "Docs: https://0xui.io/components/depth-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/depth-chart.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "@0xui/liquidity-chart",
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "range-indicator",
+      "type": "registry:component",
+      "title": "Range Indicator",
+      "description": "LP position range status: In range / Out of range / Closed badge (data-status, text not just color) and a log-scale bar with the range and a marker at the current price, min/current/max labels, full range and invert support.",
+      "docs": "Docs: https://0xui.io/components/range-indicator.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/range-indicator.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [],
+      "registryDependencies": [
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "fee-tier-select",
+      "type": "registry:component",
+      "title": "Fee Tier Select",
+      "description": "Fee tier picker for a new LP position: radio cards with fee (0.01/0.05/0.3/1%), when to use it, share of the pair's liquidity ('71% select') and 'Not created' for missing pools. onValueChange returns the tier with its tickSpacing. Exports defaultFeeTiers and formatFee.",
+      "docs": "Docs: https://0xui.io/components/fee-tier-select.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/fee-tier-select.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "lucide-react"
+      ],
+      "registryDependencies": []
+    },
+    {
       "name": "account-demo",
       "type": "registry:example",
       "title": "Account demo",
@@ -2337,6 +2462,105 @@
       "files": [
         {
           "path": "registry/default/examples/agent-tools-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "liquidity-chart-demo",
+      "type": "registry:example",
+      "title": "Liquidity Chart demo",
+      "description": "Liquidity chart with a draggable ±8% range.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/liquidity-chart",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/liquidity-chart-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "price-range-demo",
+      "type": "registry:example",
+      "title": "Price Range demo",
+      "description": "Set price range panel on a made-up ETH/USDC pool.",
+      "docs": "Docs: https://0xui.io/components/price-range.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/price-range",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/price-range-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "depth-chart-demo",
+      "type": "registry:example",
+      "title": "Depth Chart demo",
+      "description": "Market depth with ±2% figures on a made-up ETH/USDC pool.",
+      "docs": "Docs: https://0xui.io/components/depth-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/depth-chart",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/depth-chart-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "range-indicator-demo",
+      "type": "registry:example",
+      "title": "Range Indicator demo",
+      "description": "An in-range and an out-of-range position.",
+      "docs": "Docs: https://0xui.io/components/range-indicator.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/range-indicator",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/range-indicator-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "fee-tier-select-demo",
+      "type": "registry:example",
+      "title": "Fee Tier Select demo",
+      "description": "Fee tiers with liquidity shares and a tier without a pool.",
+      "docs": "Docs: https://0xui.io/components/fee-tier-select.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/fee-tier-select"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/fee-tier-select-demo.tsx",
           "type": "registry:example"
         }
       ]

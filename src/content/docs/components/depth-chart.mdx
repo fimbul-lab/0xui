@@ -1,0 +1,65 @@
+---
+title: Depth Chart
+description: Order book style market depth for a concentrated liquidity pool, with depth at ±2% on both sides.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, Inverted } from "@/demos/depth-chart";
+
+How much a trade can take from the pool before the price moves a given amount. Bids on the left are the quote token the pool gives up as the price falls. Asks on the right are the base token it gives up as the price rises. Both sides are valued in the quote token, so they share one axis.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+The figures on top are ±2% depth, the measure Uniswap Labs and Kaiko use to compare liquidity across venues. Hover or use the arrow keys to read depth at any price.
+
+## Installation
+
+<Install name="depth-chart" />
+
+## Usage
+
+```tsx
+import { DepthChart } from "@/components/depth-chart";
+import { getLiquidityBins, poolPrice } from "@/lib/concentrated-liquidity";
+
+const bins = getLiquidityBins(pool, ticks, { bins: 300 });
+
+<DepthChart bins={bins} currentPrice={poolPrice(pool)} token0={eth} token1={usdc} />;
+```
+
+Pass enough bins to cover the widest window. With a tick spacing of 10, 300 bins reach about ±35%. Past the last bin the curve goes flat.
+
+To show the numbers without a chart, call `getMarketDepth(bins, price, 2)`, or `readDepth` for a signed move in the displayed direction.
+
+## Examples
+
+### Inverted, ±1%
+
+<Preview>
+  <Inverted client:load />
+</Preview>
+
+```tsx
+<DepthChart bins={bins} currentPrice={price} token0={eth} token1={usdc} invert level={1} />
+```
+
+## How depth is measured
+
+Above the price the pool holds only token0, below it only token1. Walking out from the price, the chart adds up the tokens in each slice of the curve, and splits the slice the cut falls in along the constant-liquidity curve. Asks are valued at the current price, not the price after the move, so the two sides compare like for like.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. |
+| `currentPrice` | `number` | — | Token1 per token0. |
+| `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
+| `invert` | `boolean` | `false` | Quote in token0. |
+| `window` | `number` | `10` | Visible move each side, in %. Setting it hides the window buttons. |
+| `windows` | `number[]` | `[2, 5, 10, 25]` | Window buttons. `[]` hides them. |
+| `level` | `number` | `2` | Depth level for the headline figures and markers. |
+| `height` | `number` | `180` | Plot height in px. |
+| `locale` | `string` | runtime locale | Number formatting locale. |
