@@ -9,7 +9,7 @@ import Install from "@/components/docs/Install.astro";
 A [shielded engine](/components/shielded-engine/) for [Privacy Pools](https://privacypools.com) v1 by 0xbow, built on its public SDK, `@0xbow/privacy-pools-core-sdk`. With it the [Shield](/blocks/shield/) block deposits into the real contracts and the [Unshield](/blocks/unshield/) block withdraws from them.
 
 <Aside type="caution" title="Use test networks">
-  This engine handles a recovery phrase and builds transactions that move funds. It has not had a security review. Unshielding was tested up to a proof the real verifier accepts, not with a withdrawal on chain. If one fails, the same recovery phrase opens the account at privacypools.com. Whether you may use a privacy protocol depends on where you are.
+  This engine handles a recovery phrase and builds transactions that move funds. It has not had a security review. Deposits, relayed withdrawals and exits were each run on Sepolia, with small amounts, and nowhere else. If something fails, the same recovery phrase opens the account at privacypools.com. Whether you may use a privacy protocol depends on where you are.
 </Aside>
 
 There is no live demo here. A shield needs a wallet with Sepolia funds, and the docs' Demo Wallet sends nothing. Install the example and run it.
@@ -101,6 +101,7 @@ The proof is made in the browser, from six files: `withdraw.wasm`, `withdraw.zke
 - **The fee is the relayer's.** It is a share of the amount, about 0.1% on Sepolia, and moves with gas. `quote` asks for the price only. `prove` gets a signed price, which the returned `quote` reports.
 - **A proof is submitted once.** `submit` uses it up, even when the relayer refuses it. Prove again to retry.
 - **The relayer's promise lasts a minute.** If it ran out before `submit`, the engine asks for a new one. Same fee: it submits. Different fee: it asks for a new proof.
+- **A relayer that goes quiet is not a failure.** If the relayer times out or its gateway errors, it may have sent the withdrawal anyway. `submit` then watches the chain for up to 90 seconds and resolves with the transaction it finds. If it finds none it rejects, and says the withdrawal may still arrive. A clear refusal rejects at once.
 - **Funds read as `proving` after `submit`**, until a scan sees the withdrawal on chain. Call `sync` when the transaction is mined. If no scan sees it within 10 minutes, the funds go back to `spendable`.
 
 The relayer sees the recipient, the amount and your IP address. It does not learn which deposit paid.
@@ -117,6 +118,8 @@ A scan reads every pool event since the pools were deployed, with `eth_getLogs`.
 - Three requests run at once.
 
 On Sepolia a first scan took about 25 seconds through a free RPC. Blocks more than 64 behind the head are read once per session. Later scans fetch only what is new.
+
+If the wallet sends through another RPC than the engine scans through, the two can disagree for a moment: a transaction one has mined, the other has not seen yet. A `sync` right after the receipt can then find nothing. The next scan finds it, and the engine scans every `pollInterval`.
 
 The scan fetches whole pools and the ASP's whole approved set, never one deposit. Asking for a single deposit would tell the RPC or the ASP which one is yours.
 

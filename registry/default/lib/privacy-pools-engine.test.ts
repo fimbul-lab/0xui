@@ -85,6 +85,10 @@ function fakeChain() {
       quotes: [] as { recipient?: string; amount: string }[],
       requests: [] as Record<string, any>[],
       answer: { success: true, txHash: `0x${"ab".repeat(32)}` } as Record<string, unknown>,
+      /** HTTP status of the answer to a relay request. */
+      status: 200,
+      /** Runs when a relay request arrives, e.g. to mine the withdrawal. */
+      onRequest: undefined as (() => void) | undefined,
     },
   };
 
@@ -141,7 +145,8 @@ function fakeChain() {
     }
     if (path.endsWith("/relayer/request")) {
       state.relayer.requests.push(JSON.parse(init!.body as string));
-      return json(state.relayer.answer);
+      state.relayer.onRequest?.();
+      return json(state.relayer.answer, state.relayer.status);
     }
     if (path.endsWith("/deposits-by-label")) {
       const labels = (init!.headers as Record<string, string>)["X-Labels"]!.split(",");
@@ -807,6 +812,74 @@ describe("unshield", () => {
     await expect(context.engine.submit(operation)).rejects.toThrow("Prove again.");
     expect(context.state.relayer.requests).toHaveLength(1);
     // A failed submit leaves the funds spendable.
+    await context.engine.sync(CHAIN);
+    expect(amountsOf(context.engine)?.spendable).toBe(parseUnits("100", 6));
+  });
+
+  it("finds the withdrawal on chain when the relayer times out after sending it", async () => {
+    const context = await unlocked();
+    const { engine, state } = context;
+    const prover = fakeProver();
+    await fund(context, parseUnits("100", 6), 7n);
+
+    // The proof's second public signal is the nullifier hash the pool reports as spent.
+    prover.prove.mockImplementation(async (source, input) => {
+      const spent = poseidon1([(source as { nullifier: bigint }).nullifier]);
+      state.relayer.onRequest = () => {
+        const change = getCommitment(parseUnits("60", 6), 7n, input.newNullifier, input.newSecret);
+        state.head += 1n;
+        state.logs.push({
+          address: USDC_POOL,
+          eventName: "Withdrawn",
+          args: {
+            _processooor: ENTRYPOINT,
+            _value: parseUnits("40", 6),
+            _spentNullifier: spent,
+            _newCommitment: change.hash,
+          },
+          blockNumber: state.head,
+          transactionHash: `0x${"ef".repeat(32)}`,
+          logIndex: 0,
+        });
+      };
+      return { ...FAKE_PROOF, publicSignals: ["7", spent.toString()] } as never;
+    });
+    state.relayer.status = 504;
+    state.relayer.answer = {};
+
+    const operation = await prove(engine, parseUnits("40", 6));
+    await expect(engine.submit(operation)).resolves.toEqual({ hash: `0x${"ef".repeat(32)}` });
+    expect(amountsOf(engine)).toMatchObject({ spendable: parseUnits("60", 6), proving: 0n });
+  });
+
+  it("keeps the funds out of reach when the relayer gives no answer at all", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "Date"] });
+    try {
+      const context = await unlocked();
+      fakeProver();
+      await fund(context, parseUnits("100", 6), 7n);
+      context.state.relayer.status = 502;
+      context.state.relayer.answer = {};
+      const operation = await prove(context.engine, parseUnits("40", 6));
+
+      const result = context.engine.submit(operation).catch((error: Error) => error.message);
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(await result).toContain("It may still arrive");
+      // Unknown outcome: not spendable again until a scan settles it or time passes.
+      expect(amountsOf(context.engine)).toMatchObject({ spendable: 0n, proving: parseUnits("100", 6) });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("treats a refusal as final", async () => {
+    const context = await unlocked();
+    fakeProver();
+    await fund(context, parseUnits("100", 6), 7n);
+    context.state.relayer.status = 400;
+    context.state.relayer.answer = { message: "Fee commitment expired." };
+    const operation = await prove(context.engine, parseUnits("40", 6));
+    await expect(context.engine.submit(operation)).rejects.toThrow("Fee commitment expired.");
     await context.engine.sync(CHAIN);
     expect(amountsOf(context.engine)?.spendable).toBe(parseUnits("100", 6));
   });
