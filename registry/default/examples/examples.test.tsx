@@ -9,7 +9,7 @@ const root = process.cwd();
 const examples = import.meta.glob<{ default: ComponentType }>("./*-demo.tsx", { eager: true });
 
 /** Docs pages that document an API rather than a component, so they have no example. */
-const withoutExample = ["shielded-engine"];
+const withoutExample = ["shielded-engine", "mixer-engine"];
 
 type RegistryItem = {
   name: string;

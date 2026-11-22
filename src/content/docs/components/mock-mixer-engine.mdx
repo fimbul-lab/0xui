@@ -1,0 +1,79 @@
+---
+title: Mock Mixer Engine
+description: An in-memory mixer engine for demos, tests and building UI before a real one is wired up.
+---
+
+import Install from "@/components/docs/Install.astro";
+
+A [mixer engine](/components/mixer-engine/) with no network, no cryptography and no funds. The [Mixer](/blocks/mixer/) demo and its tests run on it.
+
+Its notes start with `mock-note`, so nobody mistakes one for a real note.
+
+## Installation
+
+<Install name="mock-mixer-engine" />
+
+## Usage
+
+```tsx
+import { Mixer } from "@/components/mixer";
+import { createMockMixerEngine } from "@/lib/mock-mixer-engine";
+
+const engine = createMockMixerEngine();
+
+<Mixer
+  engine={engine}
+  // A real engine reads these from the chain. The mock is told.
+  onDeposited={(_, { commitment }) => engine.simulate.deposit(commitment)}
+  onWithdrawn={(_, withdrawal) => engine.simulate.withdrawn(withdrawal)}
+/>;
+```
+
+Creating the engine starts no timers, so it is safe to create during server render.
+
+## Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `speed` | `number` | `1` | Divides every delay. `Infinity` skips timers altogether. |
+| `timings` | `Partial<MockMixerTimings>` | see below | Override single delays, in ms. |
+| `pools` | `MixerPool[]` | 0.1, 1 and 10 ETH on chain 1 | The pools offered. No contract lives at the default addresses. |
+| `existingDeposits` | `number` | `1200` | Deposits each pool already holds. |
+| `relayerFeeBps` | `number \| false` | `30` | The relayer's cut. `false` for an engine with no relayer. |
+| `relay` | `(withdrawal) => Hash` | made-up hash | The hash `relay` resolves with. No chain knows the default, so pass one yours does if something waits for its receipt. |
+
+### Timings
+
+Guesses, not measurements. The [Tornado engine](/components/tornado-engine/) takes longer to prove.
+
+| Key | Default | What |
+| --- | --- | --- |
+| `sync` | 5 s | Reading a pool's deposits. Later reads take a tenth. |
+| `loadCircuits` | 4 s | Downloading circuits on the first proof. Later proofs take a twentieth. |
+| `prove` | 8 s | Generating the proof. |
+| `verify` | 1 s | Verifying it. |
+| `lookup` | 0.6 s | Looking a note up. |
+
+## Making things happen
+
+| Method | What it does |
+| --- | --- |
+| `simulate.deposit(commitment)` | The deposit was mined. `false` if it was already known. |
+| `simulate.crowd(pool, n)` | `n` other deposits arrive after the ones so far. |
+| `simulate.withdrawn(withdrawal)` | A withdrawal the wallet sent was mined: its note is spent. A relayed one is marked by `relay`. |
+| `simulate.failNextSync(message?)` | The next read of the deposits fails. |
+| `simulate.failNextProof(message?)` | The next proof fails while proving. |
+| `simulate.failNextRelay(message?)` | The next `relay` is refused. |
+
+## In tests
+
+```tsx
+const engine = createMockMixerEngine({ speed: Infinity });
+const { note, commitment } = await engine.createNote(engine.pools[0]);
+engine.simulate.deposit(commitment);
+
+render(<MixerWithdrawForm engine={engine} />);
+await user.click(screen.getByLabelText("Note"));
+await user.paste(note);
+expect(await screen.findByRole("button", { name: "Enter a recipient" })).toBeDisabled();
+```

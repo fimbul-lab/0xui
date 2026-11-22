@@ -1,0 +1,73 @@
+---
+title: Mixer Engine
+description: The interface between the mixer block and a note-based privacy pool.
+---
+
+import Install from "@/components/docs/Install.astro";
+
+The [Mixer](/blocks/mixer/) block does not know any protocol. It talks to a `MixerEngine`: a small interface over a pool that takes fixed amounts and hands out a secret note per deposit, like Tornado Cash.
+
+It is not a [shielded engine](/components/shielded-engine/). That one is shaped like an account: a recovery phrase, a scan, balances. A mixer has none of these. The note is the money.
+
+Two engines implement it: the [mock](/components/mock-mixer-engine/) and [Tornado](/components/tornado-engine/).
+
+## Installation
+
+<Install name="mixer-engine" />
+
+## The interface
+
+```ts
+interface MixerEngine {
+  readonly id: string;
+  readonly pools: readonly MixerPool[];
+  readonly relays: boolean;
+
+  createNote(pool): Promise<MixerNote>;
+  parseNote(text): Promise<MixerNote>;
+  prepareDeposit(note): Promise<MixerCall>;
+  getDeposit(note, { signal? }): Promise<MixerDeposit>;
+  quote(pool, via): Promise<MixerQuote>;
+  prove(draft, { onStage, signal? }): Promise<MixerWithdrawal>;
+  relay(withdrawal): Promise<{ hash }>;
+}
+```
+
+| Method | What it does |
+| --- | --- |
+| `createNote(pool)` | Makes a note from fresh randomness. Sends nothing. |
+| `parseNote(text)` | Reads pasted text. Rejects with a message fit to show when it is not a note, or is for a pool the engine doesn't know. |
+| `prepareDeposit(note)` | The deposit call for the wallet. An ERC-20 pool needs the pool approved for the amount first. |
+| `getDeposit(note)` | `missing`, `deposited` or `withdrawn`, with `depositsSince`: how many deposits came after it. |
+| `quote(pool, via)` | Fee and amount received, through `"wallet"` or `"relayer"`. |
+| `prove(draft)` | Reads the pool's deposits and makes the proof. Reports `syncing`, `loading-circuits`, `proving`, `verifying`. Takes an `AbortSignal`. |
+| `relay(withdrawal)` | Hands a `via: "relayer"` withdrawal to the relayer. Resolves once it is broadcast. |
+
+## Types
+
+```ts
+type MixerPool = {
+  chainId: number;
+  address: Address; // the pool contract
+  token?: Address; // undefined: the native token
+  symbol: string;
+  decimals: number;
+  denomination: bigint; // the one amount it takes
+};
+
+type MixerNote = { note: string; pool: MixerPool; commitment: Hex };
+type MixerDeposit = { state: "missing" | "deposited" | "withdrawn"; timestamp?: number; depositsSince?: number };
+type MixerWithdrawDraft = { note: string; recipient: Address; via: "wallet" | "relayer" };
+type MixerQuote = { fee: bigint; received: bigint };
+type MixerWithdrawal = { id: string; pool; recipient; via; quote; transaction: MixerCall };
+```
+
+## Rules for an engine
+
+- **Never keep a note.** Not in memory past the call, not in storage, not in an error message.
+- **A withdrawal carries no link to its deposit.** `MixerWithdrawal` has no commitment and no leaf index. Callbacks get this object, and apps log callbacks. Keep the proof behind `id`.
+- **Errors are fit to show.** The block prints `message` as is.
+- **`prove` checks before it works.** A note with no deposit or a spent one is refused before the slow part.
+- **The proof commits to the fee.** `quote` on the returned withdrawal is what the proof was made with. The block compares it to the one on screen.
+
+`mixerPoolLabel(pool)` writes a pool's amount, like `0.1 ETH`. `sameMixerPool(a, b)` compares two pools by chain and address. `MIXER_STAGES` lists the proof stages in order.

@@ -89,7 +89,7 @@ const groups = [
  * The `/shielded/` page links them all.
  */
 export const shieldedPreview = {
-  blocks: ["shield", "unshield"],
+  blocks: ["shield", "unshield", "mixer"],
   components: [
     "shielded-engine",
     "mock-shielded-engine",
@@ -102,6 +102,10 @@ export const shieldedPreview = {
     "shielded-exits",
     "shielded-address",
     "privacy-badge",
+    "mixer-engine",
+    "mock-mixer-engine",
+    "tornado-engine",
+    "note-backup",
   ],
 };
 

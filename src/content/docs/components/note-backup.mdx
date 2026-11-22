@@ -1,0 +1,56 @@
+---
+title: Note Backup
+description: Shows a secret once, with reveal, copy and download, and a checkbox that gates the next step.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Backup } from "@/demos/mixer";
+
+Some secrets can't be recovered: a mixer note, a one-time key. This component shows one for backup before anything depends on it. The note in the demo is made up.
+
+<Preview>
+  <Backup client:load />
+</Preview>
+
+## Installation
+
+<Install name="note-backup" />
+
+## Usage
+
+```tsx
+import { NoteBackup } from "@/components/note-backup";
+
+const [saved, setSaved] = useState(false);
+
+<NoteBackup note={note} saved={saved} onSavedChange={setSaved} />
+<Button disabled={!saved}>{saved ? "Deposit" : "Save your note first"}</Button>
+```
+
+`saved` is controlled, so the button that comes next can name the blocker.
+
+## How it protects the note
+
+- **Hidden first.** The note is blurred, not selectable and hidden from assistive technology until **Reveal note** is clicked. The blurred text is dots, not the note.
+- **The checkbox opens late.** It stays disabled until the note was revealed, copied or downloaded. Nobody can confirm a backup of something they never took.
+- **Download is local.** The file is made in memory from a click. Nothing is uploaded.
+- **Nowhere else.** The note is not put in an attribute, a query key or storage. Give `fileName` a name that does not contain it.
+- **Not for agents.** The component is marked `data-agent-hidden`, so an agent connected through [Agent Tools](/components/agent-tools/) never reads the note or confirms the backup. A person does.
+
+Copying puts the note on the clipboard, where other apps can read it. The component says so.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `note` | `string` | — | The secret to back up. Required. |
+| `saved` | `boolean` | — | Whether the user confirmed the backup. Required. |
+| `onSavedChange` | `(saved: boolean) => void` | — | Required. |
+| `fileName` | `string` | `"note-backup.txt"` | Name of the downloaded file. |
+| `title` | `ReactNode` | `"Save your note"` | Heading. `null` hides it. |
+| `description` | `ReactNode` | what losing the note means | Text under the heading. |
+| `confirmLabel` | `ReactNode` | `"I saved my note somewhere safe"` | Text next to the checkbox. |
+| `className` | `string` | — | |
+
+`downloadTextFile(fileName, text)` is exported too. It returns `false` where the browser can't start a download.
