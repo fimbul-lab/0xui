@@ -1,11 +1,19 @@
 // Docs: https://0xui.io/components/block-number.md
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { SkeletonBox } from "skullet/react";
-import { useBlockNumber } from "wagmi";
+import { useChainId, useConfig } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
 import { MorphText } from "@/components/morph-text";
+import {
+  blockNumberPhase,
+  blockNumberQueryOptions,
+  formatBlockNumber,
+  watchBlockNumberQuery,
+} from "@/lib/block-number-core";
 import { cn } from "@/lib/utils";
 
-export type BlockNumberPhase = "loading" | "live" | "error";
+export type { BlockNumberPhase } from "@/lib/block-number-core";
 
 /** SkeletonBox is a block by default. This one sits in a line of text. */
 const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
@@ -25,13 +33,17 @@ export function useLiveBlockNumber({
   chainId,
   watch = true,
 }: Pick<BlockNumberProps, "chainId" | "watch"> = {}) {
-  const { data, isError, isPending } = useBlockNumber({ chainId, watch });
-  const phase: BlockNumberPhase = isError
-    ? "error"
-    : isPending
-      ? "loading"
-      : "live";
-  return { blockNumber: data, phase };
+  const config = useConfig();
+  const queryClient = useQueryClient();
+  const currentChainId = useChainId();
+  const id = chainId ?? currentChainId;
+  const query = useQuery(blockNumberQueryOptions(config, { chainId: id }));
+
+  useEffect(() => {
+    if (watch) return watchBlockNumberQuery(config, queryClient, { chainId: id });
+  }, [config, queryClient, id, watch]);
+
+  return { blockNumber: query.data, phase: blockNumberPhase(query) };
 }
 
 /**
@@ -46,7 +58,7 @@ export function BlockNumber({
 }: BlockNumberProps) {
   const { blockNumber, phase } = useLiveBlockNumber({ chainId, watch });
   const formatted =
-    blockNumber === undefined ? undefined : blockNumber.toLocaleString();
+    blockNumber === undefined ? undefined : formatBlockNumber(blockNumber);
 
   return (
     <span

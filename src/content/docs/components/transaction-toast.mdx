@@ -7,7 +7,7 @@ import Install from "@/components/docs/Install.astro";
 import Preview from "@/components/docs/Preview.astro";
 import { Default } from "@/demos/transaction-toast";
 
-Follow a transaction without keeping its UI on screen. One toast goes from "Transaction pending" to "Transaction confirmed" or "Transaction reverted", with a link to the explorer. Built on [Sonner](https://sonner.emilkowal.ski).
+Follow a transaction without keeping its UI on screen. One toast goes from "Transaction pending" to "Transaction confirmed" or "Transaction reverted", with a link to the explorer. Built on [ui-sdk Toast](https://ui-sdk.dev/docs/components/toast).
 
 Connect the **Demo Wallet** and send to see it.
 
@@ -19,10 +19,10 @@ Connect the **Demo Wallet** and send to see it.
 
 <Install name="transaction-toast" />
 
-This also installs the shadcn `sonner` component. Mount its `<Toaster />` once, near the root of your app:
+This also installs the toast primitive. Mount its `<Toaster />` once, near the root of your app:
 
 ```tsx
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/primitives/toast";
 
 <Web3Provider>
   <App />
@@ -56,5 +56,8 @@ It works with any hash, including ones from your own `writeContract` calls.
 | `description` | `ReactNode` | What the transaction does. Shown in every state. |
 | `titles` | `{ pending?, success?, reverted?, error? }` | Override the headings. |
 | `onConfirmed` | `(receipt) => void` | Called when mined successfully. |
+| `toaster` | `Toaster` | Queue to show it in, from `createToaster()`. Defaults to the shared `toast()` queue. |
 
-The pending toast stays until the transaction settles. The confirmed toast stays 6 seconds, and the reverted or error toast 10 seconds.
+The pending toast stays until the transaction settles. The confirmed toast stays 6 seconds, and the reverted or error toast 10 seconds. A pending toast closed early comes back with the outcome. Hover or focus the stack (F6) to pause the timers.
+
+Without React, `toastTransaction(config, hash, options)` from `@/lib/transaction-toast` does the same with any `toast()` queue.

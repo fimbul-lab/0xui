@@ -1,5 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createAgent } from "@ui-sdk/react/agent";
 import { encodeErrorResult, encodeFunctionResult, erc20Abi, parseAbi, parseEther } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -12,6 +13,7 @@ import {
 } from "../../../test/wagmi";
 import { Account } from "./account";
 import { Balance } from "./balance";
+import { ChainSelector } from "./chain-selector";
 import { ConnectWallet } from "./connect-wallet";
 import { TransactionButton } from "./transaction-button";
 import { TransactionStatus } from "./transaction-status";
@@ -70,23 +72,42 @@ describe("ConnectWallet", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Wallet is locked");
   });
 
-  it("opens as a drawer on a small screen and still connects", async () => {
+  it("opens as a sheet on a small touch screen and still connects", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query === "(max-width: 639px)",
+      matches: query.includes("pointer: coarse"),
       media: query,
       addEventListener: () => {},
       removeEventListener: () => {},
     }));
+    // jsdom has neither; ui-sdk's sheet uses them to track and animate its snap points.
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+      }
+    );
+    Element.prototype.animate = (() => ({
+      finished: Promise.resolve(),
+      cancel() {},
+      finish() {},
+      addEventListener() {},
+      removeEventListener() {},
+    })) as never;
     const { config } = renderWithWagmi(<ConnectWallet />);
 
     await user.click(screen.getByRole("button", { name: "Connect wallet" }));
-    const drawer = await screen.findByRole("dialog", { name: "Connect a wallet" });
-    expect(drawer).toHaveAttribute("data-slot", "drawer-popup");
-    expect(drawer.querySelector('[data-slot="drawer-swipe-handle"]')).toBeInTheDocument();
-    await user.click(within(drawer).getByRole("button", { name: "Mock Connector" }));
+    const sheet = await screen.findByRole("dialog", { name: "Connect a wallet" });
+    expect(sheet).toHaveAttribute("data-presentation", "sheet");
+    await user.click(within(sheet).getByRole("button", { name: "Mock Connector" }));
 
     await waitFor(() => expect(config.state.status).toBe("connected"));
+    delete (Element.prototype as Partial<Element>).animate;
   });
 });
 
@@ -391,5 +412,172 @@ describe("TransactionStatus", () => {
     expect(
       container.querySelector('[data-slot="transaction-status"]')
     ).toHaveAttribute("data-phase", "reverted");
+  });
+});
+
+describe("agent", () => {
+  // One bridge per file. `approve` stands in for the person answering.
+  let approve = false;
+  const agent = createAgent({ allow: (step) => !step.confirm || approve });
+
+  /** The bridge's entries on the page, after asserting each has a name. */
+  function components() {
+    const entries = agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+    for (const entry of entries) {
+      expect(entry.label, `${entry.component} ${entry.ref} has no name`).toBeTruthy();
+    }
+    return entries;
+  }
+
+  /** No label's words all appear in another's, so a step by label finds one control. */
+  function expectDistinctLabels(entries: ReturnType<typeof components>) {
+    const words = (label: string) => label.toLowerCase().split(/[^\p{L}\p{N}…]+/u).filter(Boolean);
+    for (const a of entries) {
+      for (const b of entries) {
+        if (a === b) continue;
+        const inside = words(a.label!).every((word) => words(b.label!).includes(word));
+        expect(inside, `"${a.label}" also names "${b.label}"`).toBe(false);
+      }
+    }
+  }
+
+  function byLabel(label: string) {
+    return components().find((entry) => entry.label === label);
+  }
+
+  it("connects, switches network and disconnects in a header, asking the person each time", async () => {
+    approve = false;
+    const config = createTestConfig({ rpc: { ...fakeChainRpc(), eth_getBalance: "0x0" } });
+    renderWithWagmi(
+      <>
+        <WalletButton />
+        <ChainSelector />
+      </>,
+      { config },
+    );
+
+    let entries = components();
+    expect(entries.map((entry) => entry.label)).toEqual(["Connect wallet", "Network: Ethereum"]);
+    expectDistinctLabels(entries);
+    // Opening the picker is free.
+    expect(byLabel("Connect wallet")?.confirm).toBeUndefined();
+    expect((await agent.act({ steps: [{ ref: "Connect wallet", action: "press" }] })).ok).toBe(true);
+
+    const wallet = await waitFor(() => {
+      const row = byLabel("Mock Connector");
+      expect(row).toBeDefined();
+      return row!;
+    });
+    expect(wallet.confirm).toBe("Connects Mock Connector and shares your address with this site");
+    const connect = { steps: [{ ref: "Connect a wallet", action: "press", args: ["Mock Connector"] }] };
+    const refused = await agent.act(connect);
+    expect(refused.ok).toBe(false);
+    expect(refused.error?.message).toContain("Connects Mock Connector and shares your address");
+    expect(config.state.status).toBe("disconnected");
+
+    approve = true;
+    expect((await agent.act(connect)).ok).toBe(true);
+    await waitFor(() => expect(config.state.status).toBe("connected"));
+
+    entries = await waitFor(() => {
+      const now = components();
+      expect(now.map((entry) => entry.label)).toEqual(["Network: Ethereum", "Account 0xd8dA…6045"]);
+      return now;
+    });
+    expectDistinctLabels(entries);
+
+    // Switching network asks the person; opening the list doesn't.
+    approve = false;
+    const toSepolia = { steps: [{ ref: "Network", action: "press", args: ["Sepolia"] }] };
+    const declined = await agent.act(toSepolia);
+    expect(declined.error?.message).toContain("Asks your wallet to switch to Sepolia");
+    expect(config.state.chainId).toBe(1);
+    approve = true;
+    expect((await agent.act(toSepolia)).ok).toBe(true);
+    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+    await waitFor(() => expect(byLabel("Network: Sepolia")).toBeDefined());
+
+    // Opening the account panel is free; disconnecting asks.
+    approve = false;
+    expect((await agent.act({ steps: [{ ref: "Account", action: "setOpen", args: [true] }] })).ok).toBe(true);
+    const disconnect = await waitFor(() => {
+      const button = byLabel("Disconnect");
+      expect(button).toBeDefined();
+      return button!;
+    });
+    expect(disconnect.confirm).toBe("Disconnects Mock Connector from this site");
+    expect(byLabel("Copy your address")?.confirm).toBeUndefined();
+    expect((await agent.act({ steps: [{ ref: "Disconnect", action: "press" }] })).ok).toBe(false);
+    expect(config.state.status).toBe("connected");
+    approve = true;
+    expect((await agent.act({ steps: [{ ref: "Disconnect", action: "press" }] })).ok).toBe(true);
+    await waitFor(() => expect(config.state.status).toBe("disconnected"));
+  });
+
+  it("asks the person before switching to another connected account", async () => {
+    approve = false;
+    const config = createTestConfig({
+      rpc: { ...fakeChainRpc(), eth_getBalance: "0x0" },
+      wallets: [[testAccounts[0]], [testAccounts[1]]],
+    });
+    renderWithWagmi(<Account />, { config });
+    await act(() => connectMock(config, 0));
+    await act(() => connectMock(config, 1));
+
+    await agent.act({ steps: [{ ref: "Account", action: "setOpen", args: [true] }] });
+    const row = await waitFor(() => {
+      const found = byLabel("0xd8dA…6045 Mock Connector");
+      expect(found).toBeDefined();
+      return found!;
+    });
+    expect(row.confirm).toBe("Switches this site to your Mock Connector account 0xd8dA…6045");
+
+    const switchAccount = { steps: [{ ref: row.ref, action: "press" }] };
+    expect((await agent.act(switchAccount)).ok).toBe(false);
+    expect(config.state.current).toBe(config.connectors[1]!.uid);
+    approve = true;
+    expect((await agent.act(switchAccount)).ok).toBe(true);
+    await waitFor(() => expect(config.state.current).toBe(config.connectors[0]!.uid));
+  });
+
+  it("only asks about what a transaction button does now", async () => {
+    approve = false;
+    const send = { to: recipient, value: parseEther("0.1") };
+    const config = createTestConfig({ rpc: fakeChainRpc() });
+    renderWithWagmi(
+      <>
+        <TransactionButton transaction={send}>Send</TransactionButton>
+        <TransactionButton transaction={send} chainId={11155111}>
+          Mint
+        </TransactionButton>
+      </>,
+      { config },
+    );
+
+    // Disconnected, each opens the wallet picker, which asks per wallet.
+    const disconnected = components();
+    expect(disconnected).toHaveLength(2);
+    expect(disconnected.every((entry) => entry.label === "Connect wallet" && !entry.confirm)).toBe(true);
+
+    await act(() => connectMock(config));
+    await waitFor(() => expect(byLabel("Send")).toBeDefined());
+    expect(byLabel("Send")?.confirm).toBe("Send: sends a transaction on Ethereum from your wallet");
+    expect(byLabel("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia");
+    expectDistinctLabels(components());
+
+    expect((await agent.act({ steps: [{ ref: "Send", action: "press" }] })).error?.message).toContain(
+      "sends a transaction on Ethereum",
+    );
+    expect(screen.getByRole("button", { name: "Send" }).closest("[data-slot=transaction-button]")).toHaveAttribute("data-phase", "idle");
+    approve = true;
+    expect((await agent.act({ steps: [{ ref: "Send", action: "press" }] })).ok).toBe(true);
+    expect(await screen.findByRole("button", { name: "Done" })).toBeInTheDocument();
+  });
+
+  it("reads a transaction's status card", async () => {
+    const config = createTestConfig({ rpc: sentTransaction(fakeChainRpc()) });
+    renderWithWagmi(<TransactionStatus hash={fakeTxHash}>Send 0.1 ETH</TransactionStatus>, { config });
+    expect(await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(components().map((entry) => entry.label)).toEqual(["Copy transaction hash"]);
   });
 });

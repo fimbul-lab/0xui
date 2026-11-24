@@ -12,11 +12,17 @@
   <a href="https://0xui.io/llms.txt">llms.txt</a>
 </p>
 
-Web3 React components you copy into your app. Built on [wagmi](https://wagmi.sh), [viem](https://viem.sh), [Base UI](https://base-ui.com) and Tailwind CSS v4, and installed with the [shadcn CLI](https://ui.shadcn.com/docs/cli).
+Web3 React components you copy into your app. Built on [wagmi](https://wagmi.sh), [viem](https://viem.sh), [ui-sdk](https://ui-sdk.dev) and Tailwind CSS v4, and installed with the [shadcn CLI](https://ui.shadcn.com/docs/cli).
 
 ## `0x00` Install
 
-0xui is a [shadcn registry](https://ui.shadcn.com/docs/registry). It needs Tailwind CSS v4 and the [Base UI](https://base-ui.com) flavor of shadcn (`npx shadcn@latest init --base base`).
+0xui is a [shadcn registry](https://ui.shadcn.com/docs/registry). It needs Tailwind CSS v4 and a shadcn setup (`npx shadcn@latest init`, Base UI or Radix). Components bring their own primitives on [ui-sdk](https://ui-sdk.dev), so they don't use shadcn's `components/ui`.
+
+Put the ui-sdk layer at the very top of your global stylesheet, above `@import "tailwindcss"`:
+
+```css
+@layer ui-sdk;
+```
 
 Add the registry to `components.json`:
 
@@ -128,7 +134,7 @@ The [installation guide](https://0xui.io/getting-started/installation/) has the 
 | [`approve-button`](https://0xui.io/components/approve-button/) | ERC-20 approval gate in front of your action. |
 | [`batch-transaction`](https://0xui.io/components/batch-transaction/) | Several calls in one wallet prompt (EIP-5792), step by step otherwise. |
 | [`transaction-status`](https://0xui.io/components/transaction-status/) | Inline card that follows a transaction from submitted to confirmed. |
-| [`transaction-toast`](https://0xui.io/components/transaction-toast/) | Follow a transaction in a Sonner toast. |
+| [`transaction-toast`](https://0xui.io/components/transaction-toast/) | Follow a transaction in a toast. |
 | [`transaction-history`](https://0xui.io/components/transaction-history/) | Transactions sent from your app with live status. |
 | [`contract-form`](https://0xui.io/components/contract-form/) | Read/write forms for any contract from its ABI. |
 | [`event-feed`](https://0xui.io/components/event-feed/) | Live feed of a contract's events. |
@@ -138,13 +144,13 @@ The [installation guide](https://0xui.io/getting-started/installation/) has the 
 | | |
 | --- | --- |
 | [`copy-button`](https://0xui.io/components/copy-button/) | Copy to clipboard with confirmation. |
-| [`responsive-dialog`](https://0xui.io/components/responsive-dialog/) | A dialog that becomes a bottom drawer on small screens. |
+| [`responsive-dialog`](https://0xui.io/components/responsive-dialog/) | A dialog that becomes a bottom sheet on small touch screens. |
 | [`morph-text`](https://0xui.io/components/morph-text/) | Text that morphs from the old value to the new one when it changes. |
 | [`agent-tools`](https://0xui.io/components/agent-tools/) | WebMCP tools that let browser agents read the wallet, its balances and chains. |
 
 </details>
 
-Shared helpers install on their own as dependencies: `0xui-utils` (address and amount formatting, explorer links), `use-mounted`, `use-copy`.
+Shared helpers install on their own as dependencies: `0xui-utils` (address and amount formatting, explorer links), `use-mounted`, `use-copy`, and the primitives in `components/primitives` (button, popover, dialog, tabs, avatar, field, toast).
 
 ## `0x03` Shielded (preview)
 

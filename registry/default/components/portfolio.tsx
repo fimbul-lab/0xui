@@ -1,74 +1,56 @@
 // Docs: https://0xui.io/blocks/portfolio.md
+import {
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+} from "@ui-sdk/react/collapsible";
+import {
+  Timeline,
+  TimelineDescription,
+  TimelineItem,
+  TimelineTitle,
+} from "@ui-sdk/react/timeline";
 import { ChevronDownIcon } from "lucide-react";
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Skeleton, SkeletonBox } from "skullet/react";
-import { formatUnits, type Address } from "viem";
+import type { Address } from "viem";
 import { useChainId, useConnection } from "wagmi";
 import { MorphText } from "@/components/morph-text";
+import { Button } from "@/components/primitives/button";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
 import { useTokenBalances, type Token } from "@/components/token-select";
-import { getTokenPrice, isNativeToken, looksLikeSpam, type TokenPrices } from "@/lib/token-list";
+import {
+  normalizeBalances,
+  portfolioPhase,
+  summarizePortfolio,
+  type HiddenReason,
+  type PortfolioBalances,
+  type PortfolioFilters,
+  type PortfolioHolding,
+  type PortfolioRow,
+} from "@/lib/portfolio-core";
+import type { TokenPrices } from "@/lib/token-list";
 import { cn } from "@/lib/utils";
 
-/** Why a holding is tucked under "Hidden tokens". */
-export type HiddenReason = "spam" | "unlisted" | "unpriced" | "dust";
-
-export type PortfolioRow = {
-  token: Token;
-  balance: bigint;
-  /** Fiat value, when a price is known. */
-  value: number | undefined;
-  /** The token came from `holdings` and isn't on the token list. */
-  unlisted?: boolean;
-  /** Set when the row is hidden. */
-  hidden?: HiddenReason;
-};
-
-/** A holding from your own source, with the token's metadata as that source reports it. */
-export type PortfolioHolding = { token: Token; balance: bigint };
-
-export type PortfolioFilters = {
-  /**
-   * Flags scam tokens. Defaults to `looksLikeSpam`. Pass your own to add
-   * verdicts from a scanning service or your indexer, e.g.
-   * `(t) => looksLikeSpam(t) || flagged.has(t.address)`.
-   */
-  isSpam?: (token: Token) => boolean;
-  /**
-   * Show `holdings` whose token isn't on the token list. Off by default: the
-   * list is the allowlist, and an indexer returns every token an address
-   * was ever sent.
-   */
-  showUnlisted?: boolean;
-  /** Hide tokens without a price. Most airdropped spam has no market. */
-  hideUnpriced?: boolean;
-  /** Hide holdings worth less than this, in your currency. */
-  minValue?: number;
-};
-
-/** Hidden reason for a holding, or undefined to show it. The native currency is always shown. */
-export function hiddenReason(
-  row: Omit<PortfolioRow, "hidden">,
-  { isSpam = looksLikeSpam, showUnlisted = false, hideUnpriced = true, minValue = 0.5 }: PortfolioFilters = {}
-): HiddenReason | undefined {
-  if (isNativeToken(row.token)) return undefined;
-  if (isSpam(row.token)) return "spam";
-  if (row.unlisted && !showUnlisted) return "unlisted";
-  if (row.value === undefined) return hideUnpriced ? "unpriced" : undefined;
-  if (row.value < minValue) return "dust";
-  return undefined;
-}
-
-const byValue = (a: PortfolioRow, b: PortfolioRow) =>
-  (b.value ?? -1) - (a.value ?? -1) ||
-  Number(formatUnits(b.balance, b.token.decimals)) - Number(formatUnits(a.balance, a.token.decimals));
+export {
+  hiddenReason,
+  portfolioPhase,
+  summarizePortfolio,
+  type HiddenReason,
+  type PortfolioFilters,
+  type PortfolioHolding,
+  type PortfolioPhase,
+  type PortfolioRow,
+  type PortfolioSummary,
+} from "@/lib/portfolio-core";
 
 /**
  * Holdings for a token list, valued with `prices` and sorted by value, then
  * by amount for tokens without a price. Likely spam, unpriced tokens and
  * dust go to `hidden` rather than `rows`, so the total isn't inflated and
- * nothing is lost: show them on request.
+ * nothing is lost: show them on request. The logic lives in
+ * `summarizePortfolio` (framework-free).
  *
  * Pass `holdings` when your indexer returns tokens with their own metadata.
  * Tokens on the list keep the list's metadata. The rest are hidden as
@@ -76,7 +58,7 @@ const byValue = (a: PortfolioRow, b: PortfolioRow) =>
  */
 export function usePortfolio({
   tokens = noTokens,
-  prices = {},
+  prices,
   address,
   chainId: chainIdProp,
   hideZero = true,
@@ -93,7 +75,7 @@ export function usePortfolio({
   chainId?: number;
   hideZero?: boolean;
   /** Balances from your own source (e.g. an indexer), keyed by token address. Skips RPC reads. */
-  balances?: ReadonlyMap<string, bigint> | Record<string, bigint>;
+  balances?: PortfolioBalances;
   /** Holdings from your own source, each with its token's metadata. Skips RPC reads and wins over `balances`. */
   holdings?: readonly PortfolioHolding[];
 } & PortfolioFilters) {
@@ -102,49 +84,33 @@ export function usePortfolio({
   const onChain = useMemo(() => tokens.filter((t) => t.chainId === chainId), [tokens, chainId]);
   const external = Boolean(balancesProp || holdings);
   const rpc = useTokenBalances(onChain, { chainId, address, enabled: !external });
-  const balances = useMemo(() => {
-    if (!balancesProp) return rpc.balances;
-    const entries = balancesProp instanceof Map ? [...balancesProp] : Object.entries(balancesProp);
-    return new Map(entries.map(([key, value]) => [key.toLowerCase(), value]));
-  }, [balancesProp, rpc.balances]);
-  const isLoading = !external && rpc.isLoading;
-  const isError = !external && rpc.isError;
+  const balances = useMemo(
+    () => (balancesProp ? normalizeBalances(balancesProp) : rpc.balances),
+    [balancesProp, rpc.balances],
+  );
 
-  const { rows, hidden } = useMemo(() => {
-    const listed = new Map(onChain.map((token) => [token.address.toLowerCase(), token]));
-    const held = holdings
-      ? holdings
-          .filter((holding) => holding.token.chainId === chainId)
-          .map(({ token, balance }) => {
-            // The list's name and logo are the trusted ones.
-            const known = listed.get(token.address.toLowerCase());
-            return { token: known ?? token, balance, unlisted: !known };
-          })
-      : onChain.map((token) => ({
-          token,
-          balance: balances.get(token.address.toLowerCase()) ?? 0n,
-          unlisted: false,
-        }));
-    const all: PortfolioRow[] = held
-      .map((row) => {
-        const price = getTokenPrice(prices, row.token);
-        const value =
-          price === undefined ? undefined : Number(formatUnits(row.balance, row.token.decimals)) * price;
-        return { ...row, value };
-      })
-      .filter((row) => !hideZero || row.balance > 0n)
-      .map((row) => ({
-        ...row,
-        hidden: hiddenReason(row, { isSpam, showUnlisted, hideUnpriced, minValue }),
-      }))
-      .sort(byValue);
-    return { rows: all.filter((row) => !row.hidden), hidden: all.filter((row) => row.hidden) };
-  }, [onChain, chainId, balances, holdings, prices, hideZero, isSpam, showUnlisted, hideUnpriced, minValue]);
+  const summary = useMemo(
+    () =>
+      summarizePortfolio({
+        tokens: onChain,
+        chainId,
+        balances,
+        holdings,
+        prices,
+        hideZero,
+        isSpam,
+        showUnlisted,
+        hideUnpriced,
+        minValue,
+      }),
+    [onChain, chainId, balances, holdings, prices, hideZero, isSpam, showUnlisted, hideUnpriced, minValue],
+  );
 
-  const total = rows.reduce((sum, row) => sum + (row.value ?? 0), 0);
-  const unpriced = rows.filter((row) => row.value === undefined).length;
-
-  return { rows, hidden, total, unpriced, isLoading, isError };
+  return {
+    ...summary,
+    isLoading: !external && rpc.isLoading,
+    isError: !external && rpc.isError,
+  };
 }
 
 const noTokens: readonly Token[] = [];
@@ -179,15 +145,27 @@ export type PortfolioProps = PortfolioFilters & {
   className?: string;
 };
 
-function ShowMore({ remaining, onClick }: { remaining: number; onClick: () => void }) {
+function ShowMore({
+  remaining,
+  what,
+  onClick,
+}: {
+  remaining: number;
+  /** Read out after "Show more", so the two lists' buttons have names of their own. */
+  what: string;
+  onClick: () => void;
+}) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       onClick={onClick}
-      className="self-center rounded-md px-3 py-1.5 text-sm font-medium hover:bg-muted"
+      className="h-auto self-center rounded-md px-3 py-1.5 dark:hover:bg-muted"
     >
-      Show more ({remaining})
-    </button>
+      {/* One run of text, so the button lays out as "Show more (5)". */}
+      <span>
+        Show more <span className="sr-only">{what}</span> ({remaining})
+      </span>
+    </Button>
   );
 }
 
@@ -224,12 +202,19 @@ function Holding({
   note?: string;
 }) {
   const { token, balance, value } = row;
+  // The spaces between parts are for the row's text, which screen readers and
+  // agents read in one piece: "Ether 2 ETH $6,000.00". Flex layout drops them.
   return (
-    <li data-hidden={row.hidden} className="flex items-center gap-3 py-2">
+    <TimelineItem
+      data-hidden={row.hidden}
+      className="flex items-center gap-3 rounded-sm py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
       {/* Spam logos can be offensive or link to scams: letters only. */}
       <TokenIcon symbol={token.symbol} src={row.hidden === "spam" ? undefined : token.logoURI} size={32} />
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium">{token.name}</span>
+      {/* Focused with the arrow keys, a row reads as its title, the token and
+          amount, then its description, the value. */}
+      <TimelineTitle className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-sm font-medium">{token.name}</span>{" "}
         <TokenAmount
           value={balance}
           decimals={token.decimals}
@@ -237,12 +222,12 @@ function Holding({
           locale={locale}
           className="truncate text-xs text-muted-foreground"
         />
-      </span>
-      <span className="flex shrink-0 flex-col items-end text-sm tabular-nums">
-        {value === undefined ? <span className="text-muted-foreground">—</span> : money.format(value)}
+      </TimelineTitle>{" "}
+      <TimelineDescription className="flex shrink-0 flex-col items-end text-sm tabular-nums">
+        {value === undefined ? <span className="text-muted-foreground">—</span> : money.format(value)}{" "}
         {note && <span className="text-xs text-muted-foreground">{note}</span>}
-      </span>
-    </li>
+      </TimelineDescription>
+    </TimelineItem>
   );
 }
 
@@ -272,9 +257,7 @@ export function Portfolio({
   className,
 }: PortfolioProps) {
   const [visible, setVisible] = useState(pageSize);
-  const [showHidden, setShowHidden] = useState(false);
   const [hiddenVisible, setHiddenVisible] = useState(pageSize);
-  const hiddenId = useId();
   const { address: connected } = useConnection();
   const address = addressProp ?? connected;
   const { rows, hidden, total, unpriced, isLoading, isError } = usePortfolio({
@@ -298,17 +281,13 @@ export function Portfolio({
     unpriced: "No price",
     dust: `Under ${money.format(minValue)}`,
   };
-  const phase = isLoadingProp
-    ? "loading"
-    : !address && !balances && !holdings
-      ? "idle"
-      : isLoading
-        ? "loading"
-        : isError
-          ? "error"
-          : rows.length || hidden.length
-            ? "ready"
-            : "empty";
+  const phase = portfolioPhase({
+    loadingProp: isLoadingProp,
+    hasSource: Boolean(address || balances || holdings),
+    isLoading,
+    isError,
+    count: rows.length + hidden.length,
+  });
   // The skeleton is measured from what will be shown: the real rows when they
   // are already known (your own data, a refetch), sample rows otherwise.
   const known = rows.length > 0 || hidden.length > 0;
@@ -358,7 +337,8 @@ export function Portfolio({
               <p className="py-4 text-center text-sm text-muted-foreground">Every token in this wallet is hidden.</p>
             )}
             {listRows.length > 0 && (
-              <ul className="flex flex-col">
+              // A list with arrow keys between rows, and rows an agent can find by text.
+              <Timeline aria-label="Token holdings" className="flex flex-col">
                 {listRows.map((row) => (
                   <Holding
                     key={`${row.token.chainId}-${row.token.address}`}
@@ -367,49 +347,46 @@ export function Portfolio({
                     locale={locale}
                   />
                 ))}
-              </ul>
+              </Timeline>
             )}
             {rows.length > visible && (
-              <ShowMore remaining={rows.length - visible} onClick={() => setVisible((v) => v + pageSize)} />
+              <ShowMore
+                remaining={rows.length - visible}
+                what="holdings"
+                onClick={() => setVisible((v) => v + pageSize)}
+              />
             )}
 
             {hidden.length > 0 && (
-              <div className="flex flex-col border-t pt-2">
-                <button
-                  type="button"
-                  aria-expanded={showHidden}
-                  aria-controls={hiddenId}
-                  onClick={() => setShowHidden((s) => !s)}
-                  className="flex items-center justify-between rounded-md py-1.5 text-sm text-muted-foreground hover:text-foreground"
-                >
+              <Collapsible className="group/hidden flex flex-col border-t pt-2">
+                <CollapsibleTrigger className="flex items-center justify-between rounded-md py-1.5 text-sm text-muted-foreground hover:text-foreground">
                   Hidden tokens ({hidden.length})
                   <ChevronDownIcon
                     aria-hidden
-                    className={cn("size-4 transition-transform", showHidden && "rotate-180")}
+                    className="size-4 transition-transform group-data-open/hidden:rotate-180"
                   />
-                </button>
-                {showHidden && (
-                  <>
-                    <ul id={hiddenId} aria-label="Hidden tokens" className="flex flex-col opacity-80">
-                      {hidden.slice(0, hiddenVisible).map((row) => (
-                        <Holding
-                          key={`${row.token.chainId}-${row.token.address}`}
-                          row={row}
-                          money={money}
-                          locale={locale}
-                          note={notes[row.hidden!]}
-                        />
-                      ))}
-                    </ul>
-                    {hidden.length > hiddenVisible && (
-                      <ShowMore
-                        remaining={hidden.length - hiddenVisible}
-                        onClick={() => setHiddenVisible((v) => v + pageSize)}
+                </CollapsibleTrigger>
+                <CollapsiblePanel className="flex flex-col">
+                  <Timeline aria-label="Hidden holdings" className="flex flex-col opacity-80">
+                    {hidden.slice(0, hiddenVisible).map((row) => (
+                      <Holding
+                        key={`${row.token.chainId}-${row.token.address}`}
+                        row={row}
+                        money={money}
+                        locale={locale}
+                        note={notes[row.hidden!]}
                       />
-                    )}
-                  </>
-                )}
-              </div>
+                    ))}
+                  </Timeline>
+                  {hidden.length > hiddenVisible && (
+                    <ShowMore
+                      remaining={hidden.length - hiddenVisible}
+                      what="hidden tokens"
+                      onClick={() => setHiddenVisible((v) => v + pageSize)}
+                    />
+                  )}
+                </CollapsiblePanel>
+              </Collapsible>
             )}
           </div>
         </Skeleton>

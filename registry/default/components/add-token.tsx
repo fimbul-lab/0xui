@@ -1,19 +1,35 @@
 // Docs: https://0xui.io/components/add-token.md
 import { CheckIcon, Loader2Icon, WalletIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
-import type { Address } from "viem";
-import { useConnection, useWatchAsset } from "wagmi";
+import { useMemo, type ComponentProps, type ReactNode } from "react";
+import { useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
-import { Button } from "@/components/ui/button";
-import { errorCode, isUserRejection } from "@/lib/0xui-utils";
+import { Button } from "@/components/primitives/button";
+import { useStore } from "@/hooks/use-store";
+import { createTokenAdder, type AddTokenPhase, type WatchedToken } from "@/lib/add-token-core";
+import { errorCode, truncateAddress } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
-export type AddTokenPhase = "idle" | "adding" | "added" | "cancelled" | "error";
+export type { AddTokenPhase };
 
-export type AddTokenProps = Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
+/**
+ * Adds `token` to the connected wallet (EIP-747), as React state. The logic
+ * lives in `createTokenAdder` (framework-free); this only renders it.
+ */
+export function useAddToken(token: WatchedToken) {
+  const config = useConfig();
+  const adder = useMemo(() => createTokenAdder(config), [config]);
+  const state = useStore(adder);
+  return { ...state, add: () => adder.add(token) };
+}
+
+export type AddTokenProps = Omit<
+  ComponentProps<typeof Button>,
+  "onClick" | "children" | "className"
+> & {
   /** ERC-20 to add. Wallets show `logoURI` as the token icon. */
-  token: { address: Address; symbol: string; decimals: number; logoURI?: string };
+  token: WatchedToken;
   children?: ReactNode;
+  className?: string;
 };
 
 /**
@@ -29,44 +45,23 @@ export function AddToken({
   disabled,
   ...buttonProps
 }: AddTokenProps) {
-  const { status } = useConnection();
-  const watch = useWatchAsset();
+  const { phase, error, connected, add } = useAddToken(token);
 
-  if (status !== "connected") return null;
-
-  const phase: AddTokenPhase = watch.isPending
-    ? "adding"
-    : watch.data === true
-      ? "added"
-      : watch.data === false || isUserRejection(watch.error)
-        ? "cancelled"
-        : watch.error
-          ? "error"
-          : "idle";
+  if (!connected) return null;
 
   return (
     <span
       data-slot="add-token"
       data-phase={phase}
-      data-error={errorCode(phase, watch.error)}
+      data-error={errorCode(phase, error)}
       className={cn("inline-flex flex-col gap-1", className)}
     >
       <Button
         variant={variant}
         size={size}
-        disabled={disabled || phase === "adding" || phase === "added"}
-        aria-busy={phase === "adding" || undefined}
-        onClick={() =>
-          watch.mutate({
-            type: "ERC20",
-            options: {
-              address: token.address,
-              symbol: token.symbol,
-              decimals: token.decimals,
-              image: token.logoURI,
-            },
-          })
-        }
+        disabled={disabled || phase === "added"}
+        onClick={add}
+        data-agent-confirm={`Asks your wallet to add ${token.symbol} (${truncateAddress(token.address)}) to its token list`}
         {...buttonProps}
       >
         {phase === "adding" ? (

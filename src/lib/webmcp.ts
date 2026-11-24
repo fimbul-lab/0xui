@@ -84,7 +84,7 @@ export function docsTools({
       name: "list_docs",
       title: "List 0xui docs",
       description:
-        "Lists every page of the 0xui docs (web3 React components on wagmi, viem and Base UI, installed with the shadcn CLI) with a one-line description, grouped like the sidebar, plus setup instructions. Returns Markdown. Call it first when you don't know which component fits.",
+        "Lists every page of the 0xui docs (web3 React components on wagmi, viem and ui-sdk, installed with the shadcn CLI) with a one-line description, grouped like the sidebar, plus setup instructions. Returns Markdown. Call it first when you don't know which component fits.",
       inputSchema: { type: "object", properties: {} },
       annotations: { readOnlyHint: true },
       execute: () => read("/llms.txt"),

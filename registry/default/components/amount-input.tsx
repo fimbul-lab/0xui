@@ -1,51 +1,22 @@
 // Docs: https://0xui.io/components/amount-input.md
-import {
-  useId,
-  type ClipboardEvent,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
+import { Input, InputGroup } from "@ui-sdk/react/input";
+import type { ClipboardEvent, ComponentProps, ReactNode } from "react";
 import { formatUnits } from "viem";
-import { parseAmount } from "@/lib/0xui-utils";
+import { Button } from "@/components/primitives/button";
+import { Field, FieldDescription } from "@/components/primitives/field";
+import {
+  getAmountState,
+  pastedAmount,
+  sanitizeAmountInput,
+  type AmountState,
+} from "@/lib/amount-input-core";
 import { cn } from "@/lib/utils";
 
-/**
- * Clean up what the user typed into a decimal string the input can hold, or
- * return `undefined` to reject the keystroke. Accepts "," as the decimal
- * point, turns a leading "." into "0.", and refuses digits beyond `decimals`.
- */
-export function sanitizeAmountInput(raw: string, decimals: number) {
-  const text = raw.replace(/,/g, ".").replace(/\s/g, "");
-  if (text === "") return "";
-  if (!/^\d*\.?\d*$/.test(text)) return undefined;
-  const [, fraction = ""] = text.split(".");
-  if (fraction.length > decimals) return undefined;
-  return text.startsWith(".") ? `0${text}` : text;
-}
-
-export type AmountState = {
-  /** Raw amount, or undefined when the input is empty or just ".". */
-  amount: bigint | undefined;
-  /** True when `max` is set and the amount is above it. */
-  exceedsMax: boolean;
-};
-
-/** Parse an amount input value against decimals and an optional maximum. */
-export function getAmountState(
-  value: string,
-  decimals: number,
-  max?: bigint
-): AmountState {
-  const amount = value ? parseAmount(value, decimals) : undefined;
-  return {
-    amount,
-    exceedsMax: amount !== undefined && max !== undefined && amount > max,
-  };
-}
+export { getAmountState, sanitizeAmountInput, type AmountState };
 
 export type AmountInputProps = Omit<
-  ComponentProps<"input">,
-  "value" | "onChange" | "type" | "max"
+  ComponentProps<typeof Input>,
+  "value" | "defaultValue" | "onChange" | "onValueChange" | "type" | "max"
 > & {
   /** Decimal string, e.g. "1.5". Keep it in state; never store amounts as numbers. */
   value: string;
@@ -78,36 +49,35 @@ export function AmountInput({
   hint,
   label = "Amount",
   className,
-  id,
+  onPaste,
   ...props
 }: AmountInputProps) {
-  const fallbackId = useId();
-  const inputId = id ?? fallbackId;
-  const hintId = `${inputId}-hint`;
   const state = getAmountState(value, decimals, max);
 
-  const update = (next: string) =>
-    onValueChange(next, getAmountState(next, decimals, max));
+  const update = (next: string) => onValueChange(next, getAmountState(next, decimals, max));
 
-  const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    const text = event.clipboardData.getData("text");
-    // Let normal input handle anything the sanitizer already accepts.
-    if (sanitizeAmountInput(text, decimals) !== undefined) return;
-    const parsed = parseAmount(text, decimals);
-    if (parsed === undefined) return;
+  const paste = (event: ClipboardEvent<HTMLInputElement>) => {
+    onPaste?.(event);
+    const next = pastedAmount(event.clipboardData.getData("text"), decimals);
+    if (next === undefined) return;
     event.preventDefault();
-    update(formatUnits(parsed, decimals));
+    update(next);
   };
 
   return (
-    <div
-      data-slot="amount-input"
-      data-exceeds-max={state.exceedsMax || undefined}
-      className={cn("flex min-w-0 flex-col gap-1", className)}
+    <Field
+      invalid={state.exceedsMax || undefined}
+      render={(fieldProps) => (
+        <div
+          {...fieldProps}
+          data-slot="amount-input"
+          data-exceeds-max={state.exceedsMax || undefined}
+        />
+      )}
+      className={cn("min-w-0 gap-1", className)}
     >
-      <div className="flex items-center gap-2">
-        <input
-          id={inputId}
+      <InputGroup className="flex items-center gap-2">
+        <Input
           type="text"
           inputMode="decimal"
           autoComplete="off"
@@ -115,35 +85,33 @@ export function AmountInput({
           spellCheck={false}
           placeholder="0"
           aria-label={label}
-          aria-invalid={state.exceedsMax || undefined}
-          aria-describedby={hint ? hintId : undefined}
           value={value}
-          onChange={(event) => {
-            const next = sanitizeAmountInput(event.target.value, decimals);
-            if (next !== undefined) update(next);
+          onValueChange={(raw, details) => {
+            const next = sanitizeAmountInput(raw, decimals);
+            if (next === undefined) details.cancel();
+            else update(next);
           }}
-          onPaste={onPaste}
-          className={cn(
-            "w-full min-w-0 bg-transparent text-3xl font-medium tabular-nums outline-none placeholder:text-muted-foreground/50",
-            state.exceedsMax && "text-destructive"
-          )}
+          onPaste={paste}
+          className="w-full min-w-0 bg-transparent text-3xl font-medium tabular-nums outline-none placeholder:text-muted-foreground/50 data-invalid:text-destructive"
           {...props}
         />
         {showMax && max !== undefined && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={() => update(formatUnits(max, decimals))}
-            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-muted"
+            className="text-primary"
           >
             Max
-          </button>
+          </Button>
         )}
-      </div>
+      </InputGroup>
       {hint && (
-        <div id={hintId} className="text-sm text-muted-foreground tabular-nums">
+        <FieldDescription render={<div />} className="tabular-nums">
           {hint}
-        </div>
+        </FieldDescription>
       )}
-    </div>
+    </Field>
   );
 }

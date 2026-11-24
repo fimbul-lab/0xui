@@ -1,47 +1,34 @@
 // Docs: https://0xui.io/components/network-guard.md
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
-import type { ReactNode } from "react";
-import { useChains, useConnection, useSwitchChain } from "wagmi";
-import { Button } from "@/components/ui/button";
+import { useMemo, type ReactNode } from "react";
+import { useConfig } from "wagmi";
+import { Button } from "@/components/primitives/button";
 import { useMounted } from "@/hooks/use-mounted";
-import { errorCode, isUserRejection } from "@/lib/0xui-utils";
+import { useStore } from "@/hooks/use-store";
+import { errorCode } from "@/lib/0xui-utils";
+import { createNetworkGuard, type NetworkGuardPhase } from "@/lib/network-guard-core";
 import { cn } from "@/lib/utils";
 
-export type NetworkGuardPhase = "ok" | "wrong-network" | "switching";
+export type { NetworkGuardPhase };
 
-/** Whether the connected wallet is on one of `chainIds`, and a way to switch to the first. */
+/**
+ * Whether the connected wallet is on one of `chainIds`, and a way to switch
+ * to the first. The logic lives in `createNetworkGuard` (framework-free).
+ */
 export function useNetworkGuard(chainIds: number | readonly number[]) {
-  const allowed = typeof chainIds === "number" ? [chainIds] : chainIds;
+  const config = useConfig();
+  const key = typeof chainIds === "number" ? String(chainIds) : chainIds.join(",");
+  // Keyed by the ids rather than the array, which callers often pass inline.
+  const guard = useMemo(() => createNetworkGuard(config, chainIds), [config, key]);
+  const state = useStore(guard);
   const mounted = useMounted();
-  const connection = useConnection();
-  const chains = useChains();
-  const switchChain = useSwitchChain();
-
-  const target = chains.find((c) => c.id === allowed[0]);
-  const wrongNetwork =
-    mounted &&
-    connection.status === "connected" &&
-    connection.chainId !== undefined &&
-    !allowed.includes(connection.chainId);
-
-  const phase: NetworkGuardPhase = !wrongNetwork
-    ? "ok"
-    : switchChain.isPending
-      ? "switching"
-      : "wrong-network";
+  const wrongNetwork = mounted && state.wrongNetwork;
 
   return {
-    phase,
+    ...state,
+    phase: wrongNetwork ? state.phase : ("ok" as NetworkGuardPhase),
     wrongNetwork,
-    allowedChains: chains.filter((c) => allowed.includes(c.id)),
-    currentChainId: connection.chainId,
-    target,
-    switchToTarget: () => {
-      if (!target) return;
-      switchChain.mutate({ chainId: target.id });
-    },
-    cancelled: isUserRejection(switchChain.error),
-    error: isUserRejection(switchChain.error) ? null : switchChain.error,
+    switchToTarget: guard.switchToTarget,
   };
 }
 
@@ -113,8 +100,7 @@ export function NetworkGuard({ chainId, mode = "banner", children, className }: 
         <Button
           size="sm"
           onClick={guard.switchToTarget}
-          disabled={guard.phase === "switching"}
-          aria-busy={guard.phase === "switching" || undefined}
+          data-agent-confirm={`Asks your wallet to switch to ${guard.target.name}`}
         >
           {guard.phase === "switching" && <Loader2Icon aria-hidden className="animate-spin" />}
           Switch to {guard.target.name}

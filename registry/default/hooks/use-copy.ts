@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useMemo } from "react";
+import { useStore } from "@/hooks/use-store";
+import { createCopier } from "@/lib/copy";
 
 /**
  * Copy text to the clipboard and expose a `copied` flag that resets after
@@ -6,25 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * or permission is denied.
  */
 export function useCopy({ timeout = 2000 }: { timeout?: number } = {}) {
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  const copy = useCallback(
-    async (text: string) => {
-      try {
-        await navigator.clipboard.writeText(text);
-      } catch {
-        return false;
-      }
-      setCopied(true);
-      clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopied(false), timeout);
-      return true;
-    },
-    [timeout]
-  );
-
-  return { copied, copy };
+  const copier = useMemo(() => createCopier({ timeout }), [timeout]);
+  const { copied } = useStore(copier);
+  return { copied, copy: copier.copy };
 }

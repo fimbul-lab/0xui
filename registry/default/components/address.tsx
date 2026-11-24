@@ -1,11 +1,11 @@
 // Docs: https://0xui.io/components/address.md
+import { useQuery } from "@tanstack/react-query";
 import { getAddress, type Address as AddressType } from "viem";
-import { useEnsName } from "wagmi";
-import { mainnet } from "wagmi/chains";
+import { useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
 import { ExplorerLink } from "@/components/explorer-link";
 import { MorphText } from "@/components/morph-text";
-import { truncateAddress } from "@/lib/0xui-utils";
+import { addressDisplay, ensNameQueryOptions } from "@/lib/identity";
 import { cn } from "@/lib/utils";
 
 export type AddressProps = {
@@ -30,11 +30,10 @@ export function useAddressName(
   address: AddressType,
   { ens = true, name }: { ens?: boolean; name?: string } = {}
 ) {
-  const { data: ensName, isLoading } = useEnsName({
-    address,
-    chainId: mainnet.id,
-    query: { enabled: ens && !name },
-  });
+  const config = useConfig();
+  const { data: ensName, isLoading } = useQuery(
+    ensNameQueryOptions(config, { address, enabled: ens && !name })
+  );
   const checksummed = getAddress(address);
   const resolved = name ?? ensName ?? undefined;
   return { name: resolved, checksummed, isLoading };
@@ -59,7 +58,7 @@ export function Address({
     ens,
     name: nameProp,
   });
-  const text = name ?? truncateAddress(checksummed, truncate);
+  const { text, label: fullLabel } = addressDisplay(checksummed, { name, truncate });
 
   const label = (
     <span
@@ -70,7 +69,7 @@ export function Address({
       <span aria-hidden>
         <MorphText>{text}</MorphText>
       </span>
-      <span className="sr-only">{name ? `${name}, ${checksummed}` : checksummed}</span>
+      <span className="sr-only">{fullLabel}</span>
     </span>
   );
 
@@ -90,7 +89,8 @@ export function Address({
       ) : (
         label
       )}
-      {copyable && <CopyButton value={checksummed} label="Copy address" />}
+      {/* Named for the address, so several on a page stay apart. */}
+      {copyable && <CopyButton value={checksummed} label={`Copy address ${text}`} />}
     </span>
   );
 }

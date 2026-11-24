@@ -1,13 +1,13 @@
 ---
 title: Agent Tools
-description: WebMCP tools that let browser agents read the wallet, its balances and chains, without clicking through your app.
+description: Lets AI agents read and use your 0xui interface and the wallet, and asks the person before anything touches their wallet.
 ---
 
 import Install from "@/components/docs/Install.astro";
 
-Registers [WebMCP](https://webmachinelearning.github.io/webmcp/) tools with the browser, so an agent working in your app can ask for the connected wallet, its balances and the supported chains directly. It reads from your wagmi config. In browsers without WebMCP it does nothing.
+Connects AI agents to your app. It creates ui-sdk's [agent bridge](https://ui-sdk.dev/docs/agents), so an agent can read every 0xui control by its label, fill inputs and press buttons, and adds tools for the wallet: who is connected, balances, tokens, ENS names, gas and transactions. In a browser with [WebMCP](https://webmachinelearning.github.io/webmcp/) it registers all of them for the browser's agent. In browsers without WebMCP it registers nothing.
 
-The tools read, except `switch_chain`, which opens the wallet's own prompt. Sending and signing stay with the person: 0xui buttons mark those with [`data-agent-confirm`](/getting-started/conventions/#agents).
+An agent never touches the wallet on its own. Controls that send, sign, approve, connect, switch networks or add a token carry [`data-agent-confirm`](/getting-started/conventions/#agents), and an agent's step on one opens a dialog with the mark's sentence. Nothing happens unless the person chooses **Allow**. People using the page themselves are never asked.
 
 ## Installation
 
@@ -26,19 +26,55 @@ import { AgentTools } from "@/components/agent-tools";
 </Web3Provider>;
 ```
 
+Extra copies do nothing: the first one mounted registers the tools and asks the person.
+
+## How confirms work
+
+1. The agent calls `act` with a step, like `{ ref: "Send 0.1 ETH", action: "press" }`.
+2. The button carries `data-agent-confirm="Send 0.1 ETH: sends a transaction on Ethereum from your wallet"`, so the bridge asks before it presses.
+3. A dialog shows that sentence with **Don't allow** and **Allow**. Focus starts on **Don't allow**.
+4. **Allow** presses the button, and the wallet opens as usual. **Don't allow**, Escape or no answer within 5 minutes refuses the step, and the agent is told the person said no.
+
+Every other step runs without asking: reading the page, filling an amount, picking a token or a chain in a list, opening a popover. The dialog is hidden from agents, so an agent can't answer its own question. `switch_chain` asks in the same dialog before it opens the wallet.
+
 ## Tools
+
+The bridge's tools, from ui-sdk:
+
+| Tool | Input | Returns |
+| --- | --- | --- |
+| `snapshot` | — | Every control on the page with its label, value, actions and any `confirm` sentence. |
+| `query` | `text?`, `within?`, `kind?` | Matching controls, or a list's choices, like a token picker's tokens. |
+| `act` | `steps` | Runs steps like `setValue` and `press` in order, and reports what changed. |
+
+The wallet tools:
 
 | Tool | Input | Returns |
 | --- | --- | --- |
 | `get_wallet` | — | Connection status, address, wallet name, chain, and whether the chain is supported. |
 | `list_chains` | — | The app's chains, with the current one marked. |
 | `get_balance` | `token?`, `address?`, `chain?` | Native or ERC-20 balance as a decimal string, raw value and symbol. |
+| `get_token` | `token`, `chain?` | An ERC-20 token's name, symbol and decimals. |
+| `get_allowance` | `token`, `spender`, `owner?`, `chain?` | How much of a token a spender may move. |
+| `resolve_ens` | `name` or `address` | The address for an ENS name, or the primary name for an address. |
 | `get_gas_price` | `chain?` | Gas price in wei and gwei. |
-| `switch_chain` | `chain` | The chain switched to. The wallet asks the person first. |
+| `get_block_number` | `chain?` | The latest block number. |
+| `get_transaction` | `hash`, `chain?` | `success`, `reverted`, `pending` or `not-found`, with the block once mined. |
+| `switch_chain` | `chain` | The chain switched to. Asks the person first, then the wallet. |
 
-`chain` takes an id or a name, like `8453` or `"Base"`. An unsupported chain fails with the list of supported ones.
+`chain` takes an id or a name, like `8453` or `"Base"`. An unsupported chain fails with the list of supported ones. Tools that return text from contracts, ENS or the page are marked `untrustedContentHint`, so the agent treats it as data.
 
 ## Examples
+
+### Your own confirm
+
+Replace the dialog with your own prompt, like your chat panel's. Resolve `true` only when the person agrees, and close the prompt when `signal` aborts:
+
+```tsx
+<AgentTools confirm={(message, { signal }) => chat.askToApprove(message, { signal })} />
+```
+
+To refuse every marked step, so an agent can read and fill but leaves sending to the person, pass `confirm={false}`.
 
 ### Your own tools
 
@@ -61,20 +97,35 @@ const tools: AgentTool[] = [
 <AgentTools tools={tools} />;
 ```
 
-### Headless
+### Your own model
+
+With an assistant of your own instead of the browser's, keep `<AgentTools enabled={false} />` mounted for the dialog and hand your model the same tools. `getAgent()` returns the page's bridge, which asks through the dialog:
 
 ```tsx
-import { useAgentTools, walletAgentTools } from "@/components/agent-tools";
+import {
+  askPerson,
+  getAgent,
+  pageAgentTools,
+  walletAgentTools,
+} from "@/components/agent-tools";
 
-useAgentTools({ enabled: agentsAllowed });
-
-// Or the tool list itself, to hand to your own model:
-const tools = walletAgentTools(config);
+// In an effect or event handler, in the browser:
+const tools = [
+  ...pageAgentTools(getAgent()),
+  ...walletAgentTools(config, { confirm: askPerson }),
+];
+// Give the model each tool's name, description and inputSchema,
+// and answer its calls with `tool.execute(input)`.
 ```
+
+`walletAgentTools`, `pageAgentTools`, `agentPermissions` and `registerAgentTools` live in `lib/agent-tools-core.ts`, with no React, so other frameworks can use them with their own ui-sdk bridge. `agentPermissions(confirm)` returns the `allow` for `createAgent` and the `approved` check for ui-sdk's `registerTools`, so the person is asked once.
 
 ## Props
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
+| `confirm` | `(message, { signal }) => boolean \| Promise<boolean>` \| `false` | dialog | Asks the person before an agent's step on a `data-agent-confirm` control or `switch_chain`. `false` refuses those steps. |
 | `tools` | `AgentTool[]` | — | Your own tools, registered next to the wallet tools. |
-| `enabled` | `boolean` | `true` | Register nothing while `false`, e.g. until the person opts in. |
+| `enabled` | `boolean` | `true` | Register nothing with the browser while `false`, e.g. until the person opts in. The dialog still answers `askPerson`. |
+
+`useAgentTools(options)` takes the same options without rendering a dialog, so its `confirm` defaults to `false`.

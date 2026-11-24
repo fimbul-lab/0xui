@@ -48,4 +48,4 @@ Render one function with `ContractFunction`.
 
 Payable functions get an ETH value field. The write button names the first field to fix, e.g. "Check amount".
 
-Pure helpers: `parseAbiInput(param, text)` and `formatAbiValue(value)`.
+Pure helpers: `parseAbiInput(param, text)` and `formatAbiValue(value)`. The rest of the logic is framework-free in `@/lib/contract-form`: `contractFunctions(abi, { functions, show })`, `functionCallDraft(fn, values, ethValue)` (parsed args plus what to fix) and `readFunctionMutationOptions(config, { address, fn })` for any TanStack Query adapter.

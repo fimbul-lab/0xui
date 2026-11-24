@@ -3,16 +3,20 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import type {
-  ShieldedAccountStatus,
-  ShieldedEngine,
-  ShieldedEvent,
-} from "@/lib/shielded-engine";
+import {
+  SERVER_ACCOUNT,
+  createShieldedClient,
+  type ReadableStore,
+  type ShieldedAccountSnapshot,
+  type ShieldedClient,
+} from "@/lib/shielded-client";
+import type { ShieldedEngine, ShieldedEvent } from "@/lib/shielded-engine";
 
-const ShieldedEngineContext = createContext<ShieldedEngine | null>(null);
+const ShieldedClientContext = createContext<ShieldedClient | null>(null);
 
 export type ShieldedProviderProps = {
   /** The engine every shielded component below talks to. Create it once, outside render. */
@@ -22,18 +26,32 @@ export type ShieldedProviderProps = {
 
 /** Gives the shielded components below an engine. Wrap the private part of your app once. */
 export function ShieldedProvider({ engine, children }: ShieldedProviderProps) {
+  const client = useMemo(() => createShieldedClient(engine), [engine]);
   return (
-    <ShieldedEngineContext.Provider value={engine}>{children}</ShieldedEngineContext.Provider>
+    <ShieldedClientContext.Provider value={client}>{children}</ShieldedClientContext.Provider>
   );
+}
+
+/** The engine and its stores, from the nearest ShieldedProvider. */
+export function useShieldedClient() {
+  const client = useContext(ShieldedClientContext);
+  if (!client) {
+    throw new Error("useShieldedEngine must be used inside <ShieldedProvider>.");
+  }
+  return client;
 }
 
 /** The engine from the nearest ShieldedProvider. */
 export function useShieldedEngine() {
-  const engine = useContext(ShieldedEngineContext);
-  if (!engine) {
-    throw new Error("useShieldedEngine must be used inside <ShieldedProvider>.");
-  }
-  return engine;
+  return useShieldedClient().engine;
+}
+
+/**
+ * Read a shielded store and re-render when it changes. `serverValue` is used
+ * during server render and hydration, so private state never reaches the HTML.
+ */
+export function useShieldedStore<T>(store: ReadableStore<T>, serverValue: T) {
+  return useSyncExternalStore(store.subscribe, store.get, () => serverValue);
 }
 
 /**
@@ -61,12 +79,6 @@ export function useShieldedState<T>(
 }
 
 /** The private account: whether one exists and is unlocked, and its private address. */
-export function useShieldedAccount(): {
-  status: ShieldedAccountStatus;
-  /** Private address, or null unless unlocked. */
-  address: string | null;
-} {
-  const status = useShieldedState("account", (engine) => engine.account.status(), "none");
-  const address = useShieldedState("account", (engine) => engine.account.address(), null);
-  return { status, address };
+export function useShieldedAccount(): ShieldedAccountSnapshot {
+  return useShieldedStore(useShieldedClient().account, SERVER_ACCOUNT);
 }

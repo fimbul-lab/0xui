@@ -210,15 +210,17 @@ export function pageMarkdown(page: DocPage, docs: DocPage[], registry: RegistryI
     .concat("\n");
 }
 
-const intro = `0xui is a [shadcn registry](https://ui.shadcn.com/docs/registry) of web3 React components. Components are copied into the app as source, built on wagmi, viem, Base UI and Tailwind CSS v4. Every component handles the states real wallets produce (pending, cancelled in wallet, wrong network, error) and exports its hook, so the logic works with your own UI.
+const intro = `0xui is a [shadcn registry](https://ui.shadcn.com/docs/registry) of web3 React components. Components are copied into the app as source, built on wagmi, viem, ui-sdk and Tailwind CSS v4. Every component handles the states real wallets produce (pending, cancelled in wallet, wrong network, error) and exports its hook, so the logic works with your own UI.
 
-To install, the project needs shadcn with the Base UI flavor (\`npx shadcn@latest init --base base\`; Radix isn't supported) and this in \`components.json\`:
+To install, the project needs shadcn (\`npx shadcn@latest init\`; Base UI or Radix both work), \`@layer ui-sdk;\` at the very top of the global stylesheet (above \`@import "tailwindcss"\`), and this in \`components.json\`:
 
 \`\`\`json
 { "registries": { "@0xui": "${site}/r/{name}.json" } }
 \`\`\`
 
 Then \`${installCommand(["<name>"])}\`. Start with \`@0xui/wagmi-config\` when the app has no \`WagmiProvider\` yet. Without a terminal, add \`--overwrite\`: otherwise the CLI can stop at an overwrite question, exit 0 and leave the install half done.
+
+AI agents can use apps built with 0xui: render \`<AgentTools />\` (\`@0xui/agent-tools\`) once inside \`Web3Provider\` to connect ui-sdk's agent bridge and the wallet tools over WebMCP. Reading and filling are free; an agent's step on a control marked \`data-agent-confirm\` (send, sign, approve, connect, switch network) waits until the person chooses Allow in a dialog.
 
 Every page below is Markdown. Append \`.md\` to any docs URL for its Markdown, read everything at once at ${site}/llms-full.txt, or install the agent skill: \`npx skills add ${site}\`.`;
 
@@ -231,7 +233,7 @@ export function llmsTxt(docs: DocPage[], registry: RegistryItem[]) {
 
   return [
     "# 0xui",
-    "> Copy-paste web3 React components built on wagmi, viem, Base UI and Tailwind, installed with the shadcn CLI.",
+    "> Copy-paste web3 React components built on wagmi, viem, ui-sdk and Tailwind, installed with the shadcn CLI.",
     intro,
     ...docSections(docs).map(
       (section) =>
@@ -252,7 +254,7 @@ export function llmsFullTxt(docs: DocPage[], registry: RegistryItem[]) {
   const pages = docSections(docs).flatMap((section) => section.pages);
   return [
     "# 0xui",
-    `> Copy-paste web3 React components built on wagmi, viem, Base UI and Tailwind. Every page of the docs at ${site}, as Markdown.`,
+    `> Copy-paste web3 React components built on wagmi, viem, ui-sdk and Tailwind. Every page of the docs at ${site}, as Markdown.`,
     ...pages.map((page) =>
       pageMarkdown(page, docs, registry)
         .trim()

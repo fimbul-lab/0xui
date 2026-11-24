@@ -1,6 +1,6 @@
 ---
 title: AI agents
-description: Give your coding agent the 0xui docs as Markdown, a skill, the shadcn MCP server or in-browser tools.
+description: Give your coding agent the 0xui docs as Markdown, a skill, the shadcn MCP server or in-browser tools, and let agents use the apps you build.
 ---
 
 0xui is built to be read by agents as well as people. Pick whichever fits how your agent works. They all serve the same docs.
@@ -53,12 +53,14 @@ In a browser with [WebMCP](https://webmachinelearning.github.io/webmcp/), this s
 | `get_doc` | One page as Markdown, by id, name or URL. |
 | `get_registry_item` | What `shadcn add` installs for an item, with its source. |
 
-The tools only read the docs. They don't change anything in your browser or your project.
+The docs tools only read the docs. They don't change anything in your browser or your project.
+
+On a page with live demos, the site also renders [Agent Tools](/components/agent-tools/), so the browser's agent can try the demos the way it would use your app: `snapshot`, `query` and `act` for the controls, and the wallet tools for the demo wallet. When it presses something that touches the wallet, like **Send** or **Connect**, a dialog asks you first.
 
 ## In your app
 
 0xui components are built so agents can drive the apps you make with them, too:
 
-- [Agent Tools](/components/agent-tools/) registers WebMCP tools for the wallet: who is connected, balances, chains, gas.
-- Buttons that send, sign or approve carry `data-agent-confirm`, so a browser agent asks a person before pressing them.
+- Render [Agent Tools](/components/agent-tools/) once inside your `Web3Provider`. It connects ui-sdk's agent bridge, so an agent can read every control by its label, fill inputs and press buttons, and adds tools for the wallet: who is connected, balances, tokens, ENS names, gas and transactions.
+- Reading and filling are free. Controls that touch the wallet (send, sign, approve, connect, switch networks, add a token) carry `data-agent-confirm`, and an agent's step on one waits for the person to choose **Allow**. Secrets are hidden. See [Conventions](/getting-started/conventions/#agents).
 - `data-phase` and `data-error` say what state a component is in and why an action failed. See [Conventions](/getting-started/conventions/#state).

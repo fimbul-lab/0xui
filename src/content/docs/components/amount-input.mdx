@@ -48,7 +48,7 @@ It is `type="text"` with `inputMode="decimal"`, never `type="number"`. Number in
 
 ## Props
 
-Also accepts `<input>` props.
+Also accepts ui-sdk `Input` props. The input sits in a ui-sdk `Field`, so `hint` describes it and an amount over `max` marks it invalid.
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -60,4 +60,4 @@ Also accepts `<input>` props.
 | `hint` | `ReactNode` | — | Line under the amount, e.g. a fiat value. |
 | `label` | `string` | `"Amount"` | Accessible label. |
 
-Pure helpers: `sanitizeAmountInput(raw, decimals)` and `getAmountState(value, decimals, max?)`.
+Pure helpers, in `lib/amount-input-core.ts`: `sanitizeAmountInput(raw, decimals)`, `pastedAmount(text, decimals)` and `getAmountState(value, decimals, max?)`.

@@ -1,11 +1,10 @@
 // Docs: https://0xui.io/components/token-amount.md
-import { formatUnits } from "viem";
-import {
-  formatTokenAmount,
-  type FormatTokenAmountOptions,
-} from "@/lib/0xui-utils";
+import type { FormatTokenAmountOptions } from "@/lib/0xui-utils";
 import { MorphText } from "@/components/morph-text";
+import { formatFiat, tokenAmountDisplay } from "@/lib/token-amount-core";
 import { cn } from "@/lib/utils";
+
+export { formatFiat };
 
 export type TokenAmountProps = FormatTokenAmountOptions & {
   /** Raw amount in the token's smallest unit. */
@@ -23,19 +22,6 @@ export type TokenAmountProps = FormatTokenAmountOptions & {
   className?: string;
 };
 
-/** Fiat value of a token amount, formatted as currency. */
-export function formatFiat(
-  value: bigint,
-  decimals: number,
-  price: number,
-  { currency = "USD", locale }: { currency?: string; locale?: string } = {}
-) {
-  const amount = Number(formatUnits(value, decimals)) * price;
-  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(
-    amount
-  );
-}
-
 /**
  * Formatted token amount, e.g. `1,234.5678 USDC`. Never loses precision to
  * floats and never rounds up. The exact amount is available on hover.
@@ -52,14 +38,14 @@ export function TokenAmount({
   animate = false,
   className,
 }: TokenAmountProps) {
-  const formatted = formatTokenAmount(value, decimals, {
+  const { formatted, exact, fiat } = tokenAmountDisplay(value, decimals, {
+    symbol,
+    price,
+    currency,
     maxDecimals,
     compact,
     locale,
   });
-  const exact = `${formatUnits(value, decimals)}${symbol ? ` ${symbol}` : ""}`;
-  const fiat =
-    price === undefined ? undefined : formatFiat(value, decimals, price, { currency, locale });
 
   return (
     <span
@@ -68,6 +54,8 @@ export function TokenAmount({
     >
       <span title={exact} className="tabular-nums">
         {animate ? <MorphText>{formatted}</MorphText> : formatted}
+        {/* A space for screen readers and agents ("2 ETH", not "2ETH"); the margin spaces it visually. */}
+        {symbol && <span className="sr-only"> </span>}
         {symbol && <span className="ml-1 text-muted-foreground">{symbol}</span>}
       </span>
       {fiat !== undefined && (

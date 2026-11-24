@@ -1,5 +1,5 @@
 import { parseEther } from "viem";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/primitives/toast";
 import { TransactionButton } from "@/components/transaction-button";
 import { useTransactionToast } from "@/components/transaction-toast";
 import { demoAccounts } from "./wagmi-config";
@@ -9,7 +9,7 @@ export const Default = demo(function ToastDemo() {
   const toastTransaction = useTransactionToast();
   return (
     <>
-      <Toaster position="bottom-right" />
+      <Toaster />
       <TransactionButton
         chainId={1}
         transaction={{ to: demoAccounts[1], value: parseEther("0.01") }}

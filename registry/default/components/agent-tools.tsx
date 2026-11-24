@@ -1,196 +1,79 @@
 // Docs: https://0xui.io/components/agent-tools.md
-import { useEffect } from "react";
-import { erc20Abi, formatUnits, isAddress, type Address } from "viem";
-import { useConfig, type Config } from "wagmi";
+import { createAgent } from "@ui-sdk/react/agent";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useConfig } from "wagmi";
 import {
-  getBalance,
-  getChainId,
-  getChains,
-  getConnection,
-  getGasPrice,
-  readContracts,
-  switchChain,
-} from "wagmi/actions";
+  agentPermissions,
+  pageAgentTools,
+  registerAgentTools,
+  walletAgentTools,
+  type Agent,
+  type AgentConfirm,
+  type AgentTool,
+  type RegisterAgentToolsOptions,
+  type WalletAgentToolsOptions,
+} from "@/lib/agent-tools-core";
+import {
+  AlertDialog,
+  AlertDialogClose,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  createAlertDialogController,
+} from "@/components/primitives/alert-dialog";
+import { Button } from "@/components/primitives/button";
 
-export type AgentTool = {
-  name: string;
-  title: string;
-  description: string;
-  inputSchema: object;
-  annotations: { readOnlyHint: boolean; consequentialHint?: boolean };
-  execute: (input: Record<string, unknown>) => Promise<unknown>;
+export {
+  agentPermissions,
+  pageAgentTools,
+  registerAgentTools,
+  walletAgentTools,
+  type Agent,
+  type AgentConfirm,
+  type AgentTool,
+  type RegisterAgentToolsOptions,
+  type WalletAgentToolsOptions,
 };
 
-type ModelContext = {
-  registerTool(tool: AgentTool, options?: { signal?: AbortSignal }): Promise<void> | void;
+// One bridge and one place to ask per page, however many AgentTools render:
+// the first one mounted registers the tools and asks the person.
+type Instance = { confirm: () => AgentConfirm | false };
+let instances: Instance[] = [];
+const listeners = new Set<() => void>();
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 };
-
-function chainIdOf(config: Config, value: unknown) {
-  if (value === undefined) return getChainId(config);
-  const chain = getChains(config).find(
-    (c) => c.id === Number(value) || c.name.toLowerCase() === String(value).toLowerCase(),
-  );
-  if (!chain) {
-    const names = getChains(config).map((c) => `${c.name} (${c.id})`);
-    throw new Error(`This app doesn't support chain "${value}". Chains: ${names.join(", ")}.`);
-  }
-  return chain.id;
-}
+const setInstances = (next: Instance[]) => {
+  instances = next;
+  for (const listener of listeners) listener();
+};
 
 /**
- * WebMCP tools for the wallet state of a wagmi app: who is connected, on
- * which chain, with what balances. They only read, except `switch_chain`,
- * which opens the wallet's own prompt. Sending and signing stay with the
- * person: 0xui's buttons mark those with `data-agent-confirm`.
+ * Asks the person through the mounted `AgentTools`' confirm, the dialog by
+ * default. Resolves `false` when none is mounted or its `confirm` is `false`.
+ * Pass it as `confirm` to `walletAgentTools` in your own model loop.
  */
-export function walletAgentTools(config: Config): AgentTool[] {
-  return [
-    {
-      name: "get_wallet",
-      title: "Get the connected wallet",
-      description:
-        'Returns whether a wallet is connected, its address, the wallet\'s name, and the chain it is on. Returns { status: "disconnected" } when no wallet is connected: ask the person to connect one.',
-      inputSchema: { type: "object", properties: {} },
-      annotations: { readOnlyHint: true },
-      async execute() {
-        const connection = getConnection(config);
-        if (connection.status !== "connected") return { status: connection.status };
-        const chain = getChains(config).find((c) => c.id === connection.chainId);
-        return {
-          status: "connected",
-          address: connection.address,
-          addresses: connection.addresses,
-          wallet: connection.connector?.name,
-          chain: { id: connection.chainId, name: chain?.name ?? "Unsupported network" },
-          supportedChain: Boolean(chain),
-        };
-      },
-    },
-    {
-      name: "list_chains",
-      title: "List supported chains",
-      description: "Lists the chains this app supports, with the current one marked.",
-      inputSchema: { type: "object", properties: {} },
-      annotations: { readOnlyHint: true },
-      async execute() {
-        const current = getChainId(config);
-        return getChains(config).map((chain) => ({
-          id: chain.id,
-          name: chain.name,
-          nativeCurrency: chain.nativeCurrency.symbol,
-          current: chain.id === current,
-          testnet: Boolean(chain.testnet),
-        }));
-      },
-    },
-    {
-      name: "get_balance",
-      title: "Get a token balance",
-      description:
-        "Returns a balance as a decimal string with its symbol and raw integer value. Defaults to the connected account's native balance on the current chain. Pass token (an ERC-20 contract address) for a token, address for another account, chain (id or name) for another chain.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          token: {
-            type: "string",
-            description: "ERC-20 contract address. Omit for the native currency.",
-          },
-          address: {
-            type: "string",
-            description: "Account to read. Defaults to the connected account.",
-          },
-          chain: {
-            type: ["number", "string"],
-            description: "Chain id or name. Defaults to the current chain.",
-          },
-        },
-      },
-      annotations: { readOnlyHint: true },
-      async execute(input) {
-        const address = (input.address ?? getConnection(config).address) as Address | undefined;
-        if (!address || !isAddress(address)) {
-          throw new Error("No wallet is connected. Pass an address, or ask the person to connect.");
-        }
-        const chainId = chainIdOf(config, input.chain);
+export const askPerson: AgentConfirm = (message, options) => {
+  const confirm = instances[0]?.confirm();
+  return confirm ? confirm(message, options) : false;
+};
 
-        if (input.token === undefined) {
-          const balance = await getBalance(config, { address, chainId });
-          return {
-            value: balance.value.toString(),
-            formatted: formatUnits(balance.value, balance.decimals),
-            symbol: balance.symbol,
-            chainId,
-          };
-        }
+const permissions = agentPermissions(askPerson);
+let agent: Agent | undefined;
 
-        const token = String(input.token);
-        if (!isAddress(token)) throw new Error(`"${token}" isn't a contract address.`);
-        const [value, decimals, symbol] = await readContracts(config, {
-          allowFailure: false,
-          contracts: [
-            { address: token, abi: erc20Abi, functionName: "balanceOf", args: [address], chainId },
-            { address: token, abi: erc20Abi, functionName: "decimals", chainId },
-            { address: token, abi: erc20Abi, functionName: "symbol", chainId },
-          ],
-        });
-        return {
-          value: value.toString(),
-          formatted: formatUnits(value, decimals),
-          symbol,
-          chainId,
-        };
-      },
-    },
-    {
-      name: "get_gas_price",
-      title: "Get the gas price",
-      description:
-        "Returns the current gas price on a chain in wei and gwei. Defaults to the current chain.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          chain: { type: ["number", "string"], description: "Chain id or name." },
-        },
-      },
-      annotations: { readOnlyHint: true },
-      async execute(input) {
-        const chainId = chainIdOf(config, input.chain);
-        const wei = await getGasPrice(config, { chainId });
-        return { wei: wei.toString(), gwei: formatUnits(wei, 9), chainId };
-      },
-    },
-    {
-      name: "switch_chain",
-      title: "Switch the wallet's chain",
-      description:
-        "Asks the wallet to switch to another supported chain. The wallet shows the person a prompt; if they decline, this fails with a rejection and you should not retry on your own.",
-      inputSchema: {
-        type: "object",
-        properties: { chain: { type: ["number", "string"], description: "Chain id or name." } },
-        required: ["chain"],
-      },
-      annotations: { readOnlyHint: false },
-      async execute(input) {
-        const chain = await switchChain(config, { chainId: chainIdOf(config, input.chain) });
-        return { id: chain.id, name: chain.name };
-      },
-    },
-  ];
-}
-
-/** Registers `tools` with the browser through WebMCP. Returns the cleanup. Does nothing without WebMCP. */
-export function registerAgentTools(tools: AgentTool[]) {
-  const context = (globalThis.document as { modelContext?: ModelContext } | undefined)
-    ?.modelContext;
-  const controller = new AbortController();
-  if (!context) return () => {};
-  for (const tool of tools) {
-    // Early builds returned synchronously, and a second registration of a name rejects.
-    Promise.resolve()
-      .then(() => context.registerTool(tool, { signal: controller.signal }))
-      .catch(() => {});
+/**
+ * The page's ui-sdk agent bridge, created on first call. Steps on a
+ * `data-agent-confirm` control go to `askPerson`; everything else runs.
+ * Browser only: call it from an effect or an event handler.
+ */
+export function getAgent(): Agent {
+  if (typeof document === "undefined") {
+    throw new Error("getAgent() runs in the browser. Call it from an effect or an event handler.");
   }
-  return () => controller.abort();
+  return (agent ??= createAgent({ allow: permissions.allow }));
 }
 
 export type UseAgentToolsOptions = {
@@ -198,24 +81,120 @@ export type UseAgentToolsOptions = {
   tools?: AgentTool[];
   /** Set to false to register nothing, e.g. until the person opts in. */
   enabled?: boolean;
+  /**
+   * Asks the person before an agent's step on a `data-agent-confirm` control,
+   * or a wallet tool that opens the wallet. `false` refuses those steps.
+   * `useAgentTools` alone has no dialog, so it defaults to `false`.
+   */
+  confirm?: AgentConfirm | false;
 };
 
 const noTools: AgentTool[] = [];
 
 /**
- * Registers the wallet tools, plus any of your own, while the component is
- * mounted. A new `tools` array registers everything again, so keep it stable.
+ * Registers ui-sdk's `snapshot`, `act` and `query` for the page and the
+ * wallet tools, plus any of your own, while the component is mounted. A new
+ * `tools` array registers everything again, so keep it stable.
  */
-export function useAgentTools({ tools = noTools, enabled = true }: UseAgentToolsOptions = {}) {
+export function useAgentTools({
+  tools = noTools,
+  enabled = true,
+  confirm = false,
+}: UseAgentToolsOptions = {}) {
   const config = useConfig();
+  const confirmRef = useRef(confirm);
   useEffect(() => {
-    if (!enabled) return;
-    return registerAgentTools([...walletAgentTools(config), ...tools]);
-  }, [config, enabled, tools]);
+    confirmRef.current = confirm;
+  });
+  const [instance] = useState<Instance>(() => ({ confirm: () => confirmRef.current }));
+  const owner = useSyncExternalStore(
+    subscribe,
+    () => instances[0] === instance,
+    () => false,
+  );
+
+  useEffect(() => {
+    setInstances([...instances, instance]);
+    return () => setInstances(instances.filter((other) => other !== instance));
+  }, [instance]);
+
+  useEffect(() => {
+    // Without WebMCP there is nothing to register, so don't start the bridge for it.
+    if (!owner || !enabled || !("modelContext" in document)) return;
+    return registerAgentTools([...walletAgentTools(config, { confirm: askPerson }), ...tools], {
+      agent: getAgent(),
+      allow: permissions.approved,
+    });
+  }, [owner, enabled, config, tools]);
 }
 
-/** Drop inside your `Web3Provider` to give browser agents the wallet tools. Renders nothing. */
-export function AgentTools(props: UseAgentToolsOptions) {
-  useAgentTools(props);
-  return null;
+/** One question at a time, in an alert dialog the agent can't see or press. */
+function createDialogConfirm() {
+  const controller = createAlertDialogController<string>();
+  let queue: Promise<unknown> = Promise.resolve();
+  const confirm: AgentConfirm = (message, { signal }) => {
+    const answer = queue.then(async () => {
+      if (signal.aborted) return false;
+      const result = await controller.open({ payload: message, signal });
+      return result.returnValue === "confirm";
+    });
+    queue = answer.catch(() => {});
+    return answer;
+  };
+  return { controller, confirm };
+}
+
+function AgentConfirmDialog({
+  controller,
+}: {
+  controller: ReturnType<typeof createAlertDialogController<string>>;
+}) {
+  return (
+    <AlertDialog controller={controller}>
+      {/* Hidden from agents, so one can't answer its own question. */}
+      <AlertDialogContent data-slot="agent-confirm" data-agent-hidden="">
+        {(state) => (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Allow the AI agent to do this?</AlertDialogTitle>
+              <AlertDialogDescription className="text-foreground">
+                {String(state.payload ?? "")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <p className="text-muted-foreground">
+              An AI agent using this page asked to do this for you. Nothing happens unless you allow
+              it.
+            </p>
+            <AlertDialogFooter>
+              <AlertDialogClose render={<Button variant="outline" />}>Don't allow</AlertDialogClose>
+              <AlertDialogClose value="confirm" render={<Button />}>
+                Allow
+              </AlertDialogClose>
+            </AlertDialogFooter>
+          </>
+        )}
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export type AgentToolsProps = Omit<UseAgentToolsOptions, "confirm"> & {
+  /**
+   * Asks the person before an agent's step on a `data-agent-confirm` control,
+   * or a wallet tool that opens the wallet. Defaults to an alert dialog with
+   * the mark's sentence, "Don't allow" and "Allow". `false` refuses them all.
+   */
+  confirm?: AgentConfirm | false;
+};
+
+/**
+ * Connects AI agents to the page: ui-sdk's agent bridge (`snapshot`, `act`,
+ * `query`) and the wallet tools, registered with the browser through WebMCP.
+ * Steps on controls marked `data-agent-confirm`, like Send or Connect, wait
+ * for the person in a dialog. Render it once, inside your `Web3Provider`.
+ */
+export function AgentTools({ confirm, ...options }: AgentToolsProps) {
+  const [dialog] = useState(createDialogConfirm);
+  useAgentTools({ ...options, confirm: confirm === undefined ? dialog.confirm : confirm });
+  return confirm === undefined ? <AgentConfirmDialog controller={dialog.controller} /> : null;
 }

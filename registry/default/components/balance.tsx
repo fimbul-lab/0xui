@@ -1,11 +1,13 @@
 // Docs: https://0xui.io/components/balance.md
+import { useQuery } from "@tanstack/react-query";
 import { SkeletonBox } from "skullet/react";
-import { erc20Abi, type Address } from "viem";
-import { useBalance, useConnection, useReadContracts } from "wagmi";
+import type { Address } from "viem";
+import { useChainId, useConfig, useConnection } from "wagmi";
 import { TokenAmount, type TokenAmountProps } from "@/components/token-amount";
+import { balancePhase, tokenBalanceQueryOptions, type BalancePhase } from "@/lib/balance-core";
 import { cn } from "@/lib/utils";
 
-export type BalancePhase = "idle" | "loading" | "ready" | "error";
+export type { BalancePhase };
 
 /** SkeletonBox is a block by default. This one sits in a line of text. */
 const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
@@ -25,60 +27,37 @@ export type UseTokenBalanceParameters = {
 
 /**
  * Native or ERC-20 balance with its decimals and symbol. ERC-20 reads are
- * batched into one multicall.
+ * batched into one multicall. The read is `tokenBalanceQueryOptions`
+ * (framework-free).
  */
 export function useTokenBalance({
   address: addressProp,
   token,
   chainId,
-  refreshInterval = 15_000,
-  enabled: enabledProp = true,
+  refreshInterval,
+  enabled = true,
 }: UseTokenBalanceParameters = {}) {
+  const config = useConfig();
   const connection = useConnection();
-  const address = enabledProp ? (addressProp ?? connection.address) : undefined;
+  const currentChainId = useChainId();
+  const address = enabled ? (addressProp ?? connection.address) : undefined;
 
-  const native = useBalance({
-    address,
-    chainId,
-    query: { enabled: Boolean(address) && !token, refetchInterval: refreshInterval },
-  });
-
-  const erc20 = useReadContracts({
-    allowFailure: false,
-    contracts: [
-      { address: token, abi: erc20Abi, functionName: "balanceOf", args: [address!], chainId },
-      { address: token, abi: erc20Abi, functionName: "decimals", chainId },
-      { address: token, abi: erc20Abi, functionName: "symbol", chainId },
-    ],
-    query: {
-      enabled: Boolean(address) && Boolean(token),
-      refetchInterval: refreshInterval,
-    },
-  });
-
-  const query = token ? erc20 : native;
-  const data = token
-    ? erc20.data && {
-        value: erc20.data[0],
-        decimals: erc20.data[1],
-        symbol: erc20.data[2],
-      }
-    : native.data;
-
-  const phase: BalancePhase = !address
-    ? "idle"
-    : query.isError
-      ? "error"
-      : data
-        ? "ready"
-        : "loading";
+  const query = useQuery(
+    tokenBalanceQueryOptions(config, {
+      address,
+      token,
+      chainId: chainId ?? currentChainId,
+      refreshInterval,
+    }),
+  );
+  const data = query.data;
 
   return {
     address,
     value: data?.value,
     decimals: data?.decimals,
     symbol: data?.symbol,
-    phase,
+    phase: balancePhase({ address, isError: query.isError, hasData: Boolean(data) }),
     error: query.error,
     refetch: query.refetch,
   };

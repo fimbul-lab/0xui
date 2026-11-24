@@ -1,48 +1,22 @@
 // Docs: https://0xui.io/blocks/send.md
 import { useState, type ReactNode } from "react";
-import { erc20Abi, type Address, type Hash, type TransactionReceipt } from "viem";
+import type { Hash, TransactionReceipt } from "viem";
+import { useConfig } from "wagmi";
 import { AddressInput, type AddressInputState } from "@/components/address-input";
 import { TokenInput, type TokenInputState } from "@/components/token-input";
-import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
+import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
 import { TransactionStatus } from "@/components/transaction-status";
+import { sendBlocker, sendConfirmText, sendRequest, type SendDraft } from "@/lib/send-core";
 import { cn } from "@/lib/utils";
 
-export type SendDraft = {
-  recipient: Address | undefined;
-  token: Token;
-  amount: bigint | undefined;
-};
-
-/**
- * Why the draft can't be sent yet, as button text, or undefined when it's
- * ready. Order matches how people fill in the form.
- */
-export function sendBlocker(
-  draft: SendDraft,
-  { recipientPhase, insufficient }: { recipientPhase: AddressInputState["phase"]; insufficient: boolean }
-) {
-  if (recipientPhase === "empty") return "Enter a recipient";
-  if (recipientPhase === "resolving") return "Looking up name…";
-  if (!draft.recipient) return "Enter a valid recipient";
-  if (!draft.amount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${draft.token.symbol} balance`;
-  return undefined;
-}
-
-/** The transaction for a draft: a value transfer for the native currency, `transfer` for ERC-20s. */
-export function sendRequest(draft: Required<Pick<SendDraft, "recipient" | "amount">> & { token: Token }) {
-  return isNativeToken(draft.token)
-    ? { transaction: { to: draft.recipient, value: draft.amount } }
-    : {
-        contract: {
-          address: draft.token.address,
-          abi: erc20Abi,
-          functionName: "transfer" as const,
-          args: [draft.recipient, draft.amount] as const,
-        },
-      };
-}
+export {
+  sendBlocker,
+  sendConfirmText,
+  sendRequest,
+  type SendDraft,
+  type SendRecipientPhase,
+} from "@/lib/send-core";
 
 export type SendProps = {
   /** Tokens the user can send. Pass one to lock the token. */
@@ -82,6 +56,7 @@ export function Send({
   const [amountText, setAmountText] = useState("");
   const [amount, setAmount] = useState<TokenInputState>();
   const [hash, setHash] = useState<Hash>();
+  const { chains } = useConfig();
 
   const draft: SendDraft = {
     recipient: recipient?.address,
@@ -95,6 +70,17 @@ export function Send({
   const request =
     !blocker && draft.recipient && draft.amount
       ? sendRequest({ recipient: draft.recipient, amount: draft.amount, token })
+      : undefined;
+  // What a person confirms before an agent's press reaches the wallet.
+  const agentConfirm =
+    request && draft.recipient && draft.amount
+      ? sendConfirmText({
+          amount: draft.amount,
+          token,
+          recipient: draft.recipient,
+          ensName: recipient?.ensName,
+          chainName: chains.find((c) => c.id === token.chainId)?.name,
+        })
       : undefined;
 
   return (
@@ -127,6 +113,7 @@ export function Send({
         {...request}
         chainId={token.chainId}
         disabledReason={blocker}
+        agentConfirm={agentConfirm}
         onSubmitted={(h) => {
           setHash(h);
           onSubmitted?.(h);

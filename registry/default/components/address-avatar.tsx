@@ -1,10 +1,12 @@
 // Docs: https://0xui.io/components/address-avatar.md
+import { useQuery } from "@tanstack/react-query";
 import type { Address } from "viem";
-import { normalize } from "viem/ens";
-import { useEnsAvatar, useEnsName } from "wagmi";
-import { mainnet } from "wagmi/chains";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useConfig } from "wagmi";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar";
+import { addressGradient, ensAvatarQueryOptions, ensNameQueryOptions } from "@/lib/identity";
 import { cn } from "@/lib/utils";
+
+export { addressGradient };
 
 export type AddressAvatarProps = {
   address: Address;
@@ -17,29 +19,11 @@ export type AddressAvatarProps = {
   className?: string;
 };
 
-/**
- * Deterministic two-color gradient for an address, so the same address
- * always gets the same placeholder.
- */
-export function addressGradient(address: string) {
-  const hex = address.toLowerCase().replace(/^0x/, "").padEnd(12, "0");
-  const from = parseInt(hex.slice(0, 6), 16) % 360;
-  const to = (from + 40 + (parseInt(hex.slice(6, 12), 16) % 120)) % 360;
-  return `linear-gradient(135deg, oklch(0.75 0.15 ${from}), oklch(0.55 0.2 ${to}))`;
-}
-
 /** Resolve the ENS avatar URL for an address. */
 export function useAddressAvatar(address: Address, { enabled = true } = {}) {
-  const { data: name } = useEnsName({
-    address,
-    chainId: mainnet.id,
-    query: { enabled },
-  });
-  const { data: avatar } = useEnsAvatar({
-    name: name ? normalize(name) : undefined,
-    chainId: mainnet.id,
-    query: { enabled: enabled && Boolean(name) },
-  });
+  const config = useConfig();
+  const { data: name } = useQuery(ensNameQueryOptions(config, { address, enabled }));
+  const { data: avatar } = useQuery(ensAvatarQueryOptions(config, { name, enabled }));
   return { name: name ?? undefined, avatar: avatar ?? undefined };
 }
 

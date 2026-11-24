@@ -39,7 +39,7 @@ import { EventFeed } from "@/components/event-feed";
 />
 ```
 
-Headless: `useEventFeed(params)` returns `events`, newest first and deduplicated.
+Headless: `useEventFeed(params)` returns `events`, newest first and deduplicated. Without React, use `@/lib/event-feed`: `createEventWatcher(config, filter)` for live events (`get`/`subscribe`), `eventHistoryQueryOptions(config, { ...filter, blocks })` for recent ones, and `mergeFeedEvents`.
 
 <Aside type="tip" title="In production">
 `historyBlocks` reads past events over RPC, and providers cap those ranges. For real history, we recommend an [index of the chain](/getting-started/indexed-data/), either your own (ClickHouse is built for event logs) or a service like Goldsky. Pass its events to `initialEvents`, and new events still stream in live:

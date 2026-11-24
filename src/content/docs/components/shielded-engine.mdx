@@ -64,6 +64,8 @@ const syncing = useShieldedState("sync", (e) => e.getSync(1).status === "syncing
 
 `useShieldedState` takes the event to listen to, a function that reads from the engine, and the value to use on the server. Private state never reaches server HTML.
 
+The provider holds a framework-free client from `createShieldedClient(engine)` (`@/lib/shielded-client`): the engine, the account as a store, and `select(event, read)` for any other piece of state. Each shielded component keeps its logic in a `lib/` controller on top of it (`createShieldFlow`, `createShieldedSync`, `createShieldedBalances`, `createProver`, `createShieldedAccountFlow`), so a Vue or Svelte port only rewrites the markup.
+
 ## The interface
 
 ```ts

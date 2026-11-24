@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { parseEther } from "viem";
 import { ProofProgress, useProof } from "@/components/proof-progress";
 import { ShieldedProvider, useShieldedState } from "@/components/shielded-provider";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
 import type { PrivateDraft } from "@/lib/shielded-engine";
 

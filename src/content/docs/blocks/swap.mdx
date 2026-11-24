@@ -72,4 +72,4 @@ Price impact over 5% shows in amber, and over 15% in red.
 | `onSubmitted` / `onSuccess` | — | Transaction callbacks. The input clears on success. |
 | `title` | `ReactNode` | Heading. Defaults to `"Swap"`. `null` hides it. |
 
-Headless pieces: `useSwapQuote` and `formatRate`.
+Headless pieces: `useSwapQuote` and `formatRate`. `@/lib/swap` holds the framework-free rest: `swapQuoteQueryOptions` for any TanStack Query adapter, and `swapBlocker` for the button text.

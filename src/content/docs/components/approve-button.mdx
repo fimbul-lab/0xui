@@ -55,7 +55,7 @@ Also accepts [Transaction Button](/components/transaction-button/) props such as
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `token` | `{ address, symbol }` | — | Token to approve. |
+| `token` | `{ address, symbol, decimals? }` | — | Token to approve. With `decimals`, the browser agent's confirm states the amount in tokens: "lets 0x… spend up to 50 USDC". |
 | `spender` | `Address` | — | Contract that will spend it. |
 | `amount` | `bigint` | — | Amount the action needs. |
 | `chainId` | `number` | — | Chain the token is on. |

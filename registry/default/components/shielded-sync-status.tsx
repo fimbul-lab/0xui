@@ -1,55 +1,24 @@
 // Docs: https://0xui.io/components/shielded-sync-status.md
-import { CheckIcon, Loader2Icon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useShieldedEngine, useShieldedState } from "@/components/shielded-provider";
-import { Button } from "@/components/ui/button";
 import {
-  SHIELDED_SYNC_STAGES,
-  type ShieldedSync,
-  type ShieldedSyncStage,
-} from "@/lib/shielded-engine";
+  Progress,
+  ProgressIndicator,
+  ProgressTrack,
+} from "@ui-sdk/react/progress";
+import { CheckIcon, Loader2Icon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
+import { useMemo } from "react";
+import { Button } from "@/components/primitives/button";
+import { useShieldedEngine, useShieldedStore } from "@/components/shielded-provider";
+import { SHIELDED_SYNC_STAGES, type ShieldedSyncStage } from "@/lib/shielded-engine";
+import {
+  advanceSync,
+  createShieldedSync,
+  serverSync,
+  type ShieldedSyncPhase,
+  type ShieldedSyncView,
+} from "@/lib/shielded-sync";
 import { cn } from "@/lib/utils";
 
-export type ShieldedSyncPhase = "idle" | "syncing" | "synced" | "error";
-
-/** A scan as the UI shows it: one progress value for the whole scan that only moves forward. */
-export type ShieldedSyncView = {
-  phase: ShieldedSyncPhase;
-  /** The pass that is running, or ran last. */
-  stage: ShieldedSyncStage;
-  /** 0 to 1 across every stage. Never lower than it was earlier in the same scan. */
-  progress: number;
-  /** Why the scan failed. */
-  error?: string;
-};
-
-const idleView: ShieldedSyncView = { phase: "idle", stage: "notes", progress: 0 };
-
-/**
- * Fold the engine's next scan state into what the UI shows.
- *
- * Engines report progress per stage and it can go backwards. This spreads
- * the stages evenly over one 0 to 1 range and keeps the highest value seen
- * since the scan started. A scan that starts after one finished or failed
- * begins again from 0.
- */
-export function advanceSync(previous: ShieldedSyncView | undefined, next: ShieldedSync): ShieldedSyncView {
-  if (next.status === "idle") return { ...idleView, stage: next.stage };
-  if (next.status === "synced") return { phase: "synced", stage: next.stage, progress: 1 };
-
-  if (next.status === "error") {
-    // The bar stays where the scan stopped.
-    const stoppedAt =
-      previous?.phase === "syncing" || previous?.phase === "error" ? previous.progress : 0;
-    return { phase: "error", stage: next.stage, progress: stoppedAt, error: next.error };
-  }
-
-  const running = previous?.phase === "syncing" ? previous.progress : 0;
-  const stageProgress = Math.min(Math.max(next.progress, 0), 1);
-  const overall =
-    (SHIELDED_SYNC_STAGES.indexOf(next.stage) + stageProgress) / SHIELDED_SYNC_STAGES.length;
-  return { phase: "syncing", stage: next.stage, progress: Math.max(running, overall) };
-}
+export { advanceSync, type ShieldedSyncPhase, type ShieldedSyncView };
 
 export type UseShieldedSyncParameters = {
   /**
@@ -61,36 +30,15 @@ export type UseShieldedSyncParameters = {
 
 /**
  * Follow the private balance scan on a chain: phase, stage, a progress value
- * that never moves backwards, and `sync` to retry or refresh.
+ * that never moves backwards, and `sync` to retry or refresh. The logic lives
+ * in `createShieldedSync` (framework-free).
  */
 export function useShieldedSync({ chainId }: UseShieldedSyncParameters) {
   const engine = useShieldedEngine();
-
-  const [view, setView] = useState(idleView);
-  useEffect(() => {
-    setView(advanceSync(undefined, engine.getSync(chainId)));
-    return engine.subscribe("sync", () => {
-      // Read now: by the time React runs the updater the engine may have moved on.
-      const next = engine.getSync(chainId);
-      setView((previous) => advanceSync(previous, next));
-    });
-  }, [engine, chainId]);
-
-  // Balances exist once a scan has finished, so a scan after that is an update.
-  const hasBalances = useShieldedState(
-    "balances",
-    (e) => e.getBalances(chainId) !== undefined,
-    false
-  );
-
-  return {
-    ...view,
-    chainId,
-    /** True when balances are already showing and this scan only refreshes them. */
-    isUpdate: hasBalances && view.phase !== "synced",
-    /** Scan now: retry after an error, or refresh early. */
-    sync: () => engine.sync(chainId),
-  };
+  const follower = useMemo(() => createShieldedSync(engine, chainId), [engine, chainId]);
+  const server = useMemo(() => serverSync(chainId), [chainId]);
+  const state = useShieldedStore(follower, server);
+  return { ...state, sync: follower.sync };
 }
 
 /** Default label for each scan stage. */
@@ -115,19 +63,11 @@ export function ShieldedSyncBar({
 }: ShieldedSyncBarProps) {
   const percent = Math.round(Math.min(Math.max(progress, 0), 1) * 100);
   return (
-    <div
-      role="progressbar"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={percent}
-      className={cn("h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}
-    >
-      <div
-        className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out motion-reduce:transition-none"
-        style={{ width: `${percent}%` }}
-      />
-    </div>
+    <Progress value={percent} aria-label={label} className="w-full">
+      <ProgressTrack className={cn("h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}>
+        <ProgressIndicator className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out motion-reduce:transition-none" />
+      </ProgressTrack>
+    </Progress>
   );
 }
 
@@ -166,7 +106,7 @@ export function ShieldedSyncStatus({
   const action =
     phase === "error" ? (
       <Button variant="outline" size="xs" onClick={sync}>
-        Retry
+        Retry <span className="sr-only">sync</span>
       </Button>
     ) : phase === "synced" ? (
       <Button

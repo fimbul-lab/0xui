@@ -1,124 +1,64 @@
 // Docs: https://0xui.io/components/shielded-account.md
-import { Loader2Icon, LockIcon } from "lucide-react";
-import { useEffect, useId, useState, type ComponentProps, type ReactNode } from "react";
+import { Checkbox, CheckboxIndicator } from "@ui-sdk/react/checkbox";
+import { Field, FieldLabel } from "@ui-sdk/react/field";
+import { Input } from "@ui-sdk/react/input";
+import { Textarea } from "@ui-sdk/react/textarea";
+import { CheckIcon, Loader2Icon, LockIcon } from "lucide-react";
+import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { PrivacyBadge } from "@/components/privacy-badge";
+import { Button } from "@/components/primitives/button";
 import { ShieldedAddress } from "@/components/shielded-address";
-import { useShieldedAccount, useShieldedEngine } from "@/components/shielded-provider";
-import { Button } from "@/components/ui/button";
+import { useShieldedEngine, useShieldedStore } from "@/components/shielded-provider";
 import { useMounted } from "@/hooks/use-mounted";
+import {
+  MIN_PASSWORD_LENGTH,
+  SERVER_ACCOUNT_FLOW,
+  createShieldedAccountFlow,
+  passwordBlocker,
+  phraseBlocker,
+  phraseWords,
+  type ShieldedAccountPhase,
+} from "@/lib/shielded-account-core";
 import { cn } from "@/lib/utils";
 
-export type ShieldedAccountPhase =
-  /** No private account on this device. */
-  | "none"
-  | "creating"
-  /** Created. The recovery phrase is on screen until the user confirms they saved it. */
-  | "backup"
-  | "importing"
-  | "locked"
-  | "unlocking"
-  | "unlocked";
-
-const toError = (cause: unknown) => (cause instanceof Error ? cause : new Error(String(cause)));
+export { MIN_PASSWORD_LENGTH, passwordBlocker, phraseBlocker, phraseWords, type ShieldedAccountPhase };
 
 /**
  * Create, import, unlock and lock the private account. The engine keeps the
  * recovery phrase; this hook holds it only between `create` and
- * `confirmBackup`, so it can be shown once.
+ * `confirmBackup`, so it can be shown once. The logic lives in
+ * `createShieldedAccountFlow` (framework-free).
  */
 export function useShieldedAccountFlow() {
   const engine = useShieldedEngine();
-  const { status, address } = useShieldedAccount();
-  const [busy, setBusy] = useState<"creating" | "importing" | "unlocking">();
-  const [mnemonic, setMnemonic] = useState<string>();
-  const [error, setError] = useState<Error>();
-
-  const phase: ShieldedAccountPhase = busy ?? (mnemonic !== undefined ? "backup" : status);
-
-  /** Run one engine call. Resolves true when it worked; a failure lands in `error`. */
-  const run = async (kind: NonNullable<typeof busy>, action: () => Promise<void>) => {
-    setError(undefined);
-    setBusy(kind);
-    try {
-      await action();
-      return true;
-    } catch (cause) {
-      setError(toError(cause));
-      return false;
-    } finally {
-      setBusy(undefined);
-    }
-  };
-
+  const flow = useMemo(() => createShieldedAccountFlow(engine), [engine]);
+  const state = useShieldedStore(flow, SERVER_ACCOUNT_FLOW);
   return {
-    phase,
-    /** Private address, or null unless unlocked. */
-    address,
-    /** The recovery phrase, only while `phase` is "backup". */
-    mnemonic,
-    /** Why the last action failed, e.g. a wrong password. Cleared by the next action. */
-    error,
-    clearError: () => setError(undefined),
-    /** Create a new account. Slow: the phase is "creating" for several seconds. */
-    create: (password: string) =>
-      run("creating", async () => {
-        const created = await engine.account.create(password);
-        setMnemonic(created.mnemonic);
-      }),
-    /** The user has saved the phrase. Drops it from memory. */
-    confirmBackup: () => setMnemonic(undefined),
-    /** Restore an account from its recovery phrase. */
-    importAccount: (phrase: string, password: string) =>
-      run("importing", () => engine.account.import(phrase, password)),
-    unlock: (password: string) => run("unlocking", () => engine.account.unlock(password)),
-    lock: () => {
-      setMnemonic(undefined);
-      setError(undefined);
-      engine.account.lock();
-    },
+    ...state,
+    clearError: flow.clearError,
+    create: flow.create,
+    confirmBackup: flow.confirmBackup,
+    importAccount: flow.importAccount,
+    unlock: flow.unlock,
+    lock: flow.lock,
   };
-}
-
-export const MIN_PASSWORD_LENGTH = 8;
-
-/** Why a new password can't be used yet, as button text, or undefined when it's fine. */
-export function passwordBlocker(password: string, confirmation: string) {
-  if (!password) return "Enter a password";
-  if (password.length < MIN_PASSWORD_LENGTH) return `Use at least ${MIN_PASSWORD_LENGTH} characters`;
-  if (password !== confirmation) return "Passwords don't match";
-  return undefined;
-}
-
-/** The words of a typed recovery phrase, whatever the spacing or casing. */
-export function phraseWords(text: string) {
-  return text.trim().toLowerCase().split(/\s+/).filter(Boolean);
-}
-
-/** Why a typed recovery phrase can't be used yet, or undefined when the word count fits. */
-export function phraseBlocker(text: string) {
-  const count = phraseWords(text).length;
-  if (count === 0) return "Enter your recovery phrase";
-  if (count !== 12 && count !== 24) return `Enter all 12 or 24 words (${count} so far)`;
-  return undefined;
 }
 
 const fieldClass =
   "h-11 w-full rounded-lg border bg-background px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
-function Field({
+function TextField({
   label,
+  invalid,
   className,
   ...props
-}: Omit<ComponentProps<"input">, "id"> & { label: string }) {
-  const id = useId();
+}: Omit<ComponentProps<typeof Input>, "id"> & { label: string; invalid?: boolean }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      <input id={id} className={cn(fieldClass, className)} {...props} />
-    </div>
+    <Field invalid={invalid} className="flex flex-col gap-1.5">
+      <FieldLabel className="text-sm font-medium">{label}</FieldLabel>
+      <Input className={cn(fieldClass, className)} {...props} />
+    </Field>
   );
 }
 
@@ -126,12 +66,15 @@ function SubmitButton({
   blocker,
   busy,
   busyLabel,
+  agentConfirm,
   children,
 }: {
   /** Names what is missing. The button is disabled and shows this. */
   blocker: string | undefined;
   busy: boolean;
   busyLabel: string;
+  /** What a browser agent must ask a person before pressing it, as `data-agent-confirm`. */
+  agentConfirm: string;
   children: ReactNode;
 }) {
   return (
@@ -141,6 +84,7 @@ function SubmitButton({
       className="h-11 w-full"
       disabled={busy || blocker !== undefined}
       aria-busy={busy || undefined}
+      data-agent-confirm={agentConfirm}
     >
       {busy && <Loader2Icon aria-hidden className="animate-spin motion-reduce:animate-none" />}
       {busy ? busyLabel : (blocker ?? children)}
@@ -188,27 +132,34 @@ export function ShieldedAccountCreateForm({
         if (!blocker && !busy) onCreate(password);
       }}
     >
-      <Field
-        label="Password"
+      {/* "New password", not "Password": a label inside another ("Confirm
+          password") can't be told apart by an agent naming it. */}
+      <TextField
+        label="New password"
         type="password"
         autoComplete="new-password"
         value={password}
         disabled={busy}
-        onChange={(event) => setPassword(event.target.value)}
+        onValueChange={setPassword}
       />
-      <Field
+      <TextField
         label="Confirm password"
         type="password"
         autoComplete="new-password"
         value={confirmation}
         disabled={busy}
-        onChange={(event) => setConfirmation(event.target.value)}
+        onValueChange={setConfirmation}
       />
       <p className="text-sm text-muted-foreground">
         The password encrypts the account on this device. It can't be reset.
       </p>
       <FormError error={error} />
-      <SubmitButton blocker={blocker} busy={busy} busyLabel="Creating account…">
+      <SubmitButton
+        blocker={blocker}
+        busy={busy}
+        busyLabel="Creating account…"
+        agentConfirm="Creates a new private account on this device, locked with the password entered here"
+      >
         Create private account
       </SubmitButton>
       <p role="status" className="text-sm text-muted-foreground empty:hidden">
@@ -229,7 +180,6 @@ export function ShieldedAccountImportForm({
   error,
   className,
 }: ShieldedAccountImportFormProps) {
-  const phraseId = useId();
   const [phrase, setPhrase] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -243,12 +193,10 @@ export function ShieldedAccountImportForm({
         if (!blocker && !busy) onImport(phraseWords(phrase).join(" "), password);
       }}
     >
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={phraseId} className="text-sm font-medium">
-          Recovery phrase
-        </label>
-        <textarea
-          id={phraseId}
+      {/* An agent may paste the phrase in, but never read it back. */}
+      <Field data-agent-secret="" className="flex flex-col gap-1.5">
+        <FieldLabel className="text-sm font-medium">Recovery phrase</FieldLabel>
+        <Textarea
           rows={3}
           // A recovery phrase must never reach a spell checker, an
           // autocomplete store or a password manager.
@@ -261,28 +209,33 @@ export function ShieldedAccountImportForm({
           placeholder="12 or 24 words, separated by spaces"
           value={phrase}
           disabled={busy}
-          onChange={(event) => setPhrase(event.target.value)}
+          onValueChange={setPhrase}
           className={cn(fieldClass, "h-auto resize-none py-2.5 font-mono placeholder:font-sans")}
         />
-      </div>
-      <Field
+      </Field>
+      <TextField
         label="New password"
         type="password"
         autoComplete="new-password"
         value={password}
         disabled={busy}
-        onChange={(event) => setPassword(event.target.value)}
+        onValueChange={setPassword}
       />
-      <Field
+      <TextField
         label="Confirm password"
         type="password"
         autoComplete="new-password"
         value={confirmation}
         disabled={busy}
-        onChange={(event) => setConfirmation(event.target.value)}
+        onValueChange={setConfirmation}
       />
       <FormError error={error} />
-      <SubmitButton blocker={blocker} busy={busy} busyLabel="Importing account…">
+      <SubmitButton
+        blocker={blocker}
+        busy={busy}
+        busyLabel="Importing account…"
+        agentConfirm="Restores the private account from the recovery phrase entered here and keeps it on this device, locked with the new password"
+      >
         Import private account
       </SubmitButton>
       <p role="status" className="text-sm text-muted-foreground empty:hidden">
@@ -313,20 +266,21 @@ export function ShieldedAccountUnlockForm({
         if (password && !busy) onUnlock(password);
       }}
     >
-      <Field
+      <TextField
         label="Password"
         type="password"
         autoComplete="current-password"
         value={password}
         disabled={busy}
-        aria-invalid={error ? true : undefined}
-        onChange={(event) => setPassword(event.target.value)}
+        invalid={error ? true : undefined}
+        onValueChange={setPassword}
       />
       <FormError error={error} />
       <SubmitButton
         blocker={password ? undefined : "Enter your password"}
         busy={busy}
         busyLabel="Unlocking…"
+        agentConfirm="Unlocks your private account on this device with the password entered here"
       >
         Unlock
       </SubmitButton>
@@ -348,13 +302,13 @@ export type RecoveryPhraseProps = {
  * the phrase.
  */
 export function RecoveryPhrase({ mnemonic, onConfirm, className }: RecoveryPhraseProps) {
-  const checkboxId = useId();
   const [revealed, setRevealed] = useState(false);
   const [saved, setSaved] = useState(false);
   const words = mnemonic.split(" ");
 
   return (
-    <div className={cn("flex flex-col gap-3 text-sm", className)}>
+    // Agents never see the phrase, and saving it is the person's to confirm.
+    <div data-agent-hidden="" className={cn("flex flex-col gap-3 text-sm", className)}>
       <div className="flex flex-col gap-1">
         <p className="font-medium">Save your recovery phrase</p>
         <p className="text-muted-foreground">
@@ -397,15 +351,17 @@ export function RecoveryPhrase({ mnemonic, onConfirm, className }: RecoveryPhras
         </p>
       )}
 
-      <label htmlFor={checkboxId} className="flex min-h-11 items-center gap-2">
-        <input
-          id={checkboxId}
-          type="checkbox"
+      <label className="flex min-h-11 items-center gap-2">
+        <Checkbox
           checked={saved}
           disabled={!revealed}
-          onChange={(event) => setSaved(event.target.checked)}
-          className="size-4 accent-primary"
-        />
+          onCheckedChange={(checked) => setSaved(checked === true)}
+          className="flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground data-disabled:opacity-50"
+        >
+          <CheckboxIndicator>
+            <CheckIcon aria-hidden className="size-3.5" />
+          </CheckboxIndicator>
+        </Checkbox>
         I saved my recovery phrase somewhere safe
       </label>
 
@@ -431,9 +387,14 @@ export function ShieldedAccountSummary({ address, onLock, className }: ShieldedA
         <PrivacyBadge privacy="private" iconOnly />
         <ShieldedAddress address={address} />
       </span>
-      <Button variant="ghost" size="sm" onClick={onLock}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onLock}
+        data-agent-confirm="Locks your private account. Unlocking it again takes its password"
+      >
         <LockIcon aria-hidden />
-        Lock
+        Lock <span className="sr-only">private account</span>
       </Button>
     </div>
   );

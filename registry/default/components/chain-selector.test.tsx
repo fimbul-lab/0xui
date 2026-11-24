@@ -1,5 +1,6 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createAgent } from "@ui-sdk/react/agent";
 import { SwitchChainError } from "viem";
 import { describe, expect, it } from "vitest";
 import {
@@ -122,5 +123,63 @@ describe("ChainSelectorDialog", () => {
       name: "Select Network",
     });
     expect(dialog).toHaveTextContent("Sepolia");
+  });
+});
+
+describe("agent", () => {
+  let approve = false;
+  const agent = createAgent({ allow: (step) => !step.confirm || approve });
+  const onPage = () =>
+    agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+
+  it("opens the list freely and asks before each switch", async () => {
+    approve = false;
+    const config = createTestConfig();
+    renderWithWagmi(<ChainSelector />, { config });
+    await act(() => connectMock(config));
+
+    expect(onPage().map((entry) => entry.label)).toEqual(["Network: Ethereum"]);
+    expect((await agent.act({ steps: [{ ref: "Network", action: "setOpen", args: [true] }] })).ok).toBe(true);
+
+    const rows = await waitFor(() => {
+      const buttons = onPage().filter((entry) => entry.component === "button");
+      expect(buttons).toHaveLength(2);
+      return buttons;
+    });
+    for (const row of rows) {
+      expect(row.label, `${row.ref} has no name`).toBeTruthy();
+      expect(row.confirm).toBe(`Asks your wallet to switch to ${row.label}`);
+    }
+
+    const toSepolia = { steps: [{ ref: "Sepolia", action: "press" }] };
+    const refused = await agent.act(toSepolia);
+    expect(refused.ok).toBe(false);
+    expect(refused.error?.message).toContain("Asks your wallet to switch to Sepolia");
+    expect(config.state.chainId).toBe(1);
+
+    approve = true;
+    expect((await agent.act(toSepolia)).ok).toBe(true);
+    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+
+    approve = false;
+    expect((await agent.act({ steps: [{ ref: "Network", action: "setOpen", args: [false] }] })).ok).toBe(true);
+  });
+
+  it("switches tabs without asking, in the dialog too", async () => {
+    approve = false;
+    const config = createTestConfig();
+    renderWithWagmi(<ChainSelectorDialog groupByNetwork iconOnly />, { config });
+    await act(() => connectMock(config));
+
+    expect(onPage().map((entry) => entry.label)).toEqual(["Network: Ethereum"]);
+    await agent.act({ steps: [{ ref: "Network", action: "setOpen", args: [true] }] });
+    await waitFor(() => expect(onPage().map((entry) => entry.label)).toContain("Network type"));
+    expect(onPage().map((entry) => entry.label)).toContain("Close network picker");
+
+    const result = await agent.act({ steps: [{ ref: "Network type", action: "setValue", args: ["Testnet"] }] });
+    expect(result.ok, result.error?.message).toBe(true);
+    const sepolia = await screen.findByRole("button", { name: "Sepolia" });
+    expect(sepolia).toHaveAttribute("data-agent-confirm", "Asks your wallet to switch to Sepolia");
+    expect(config.state.chainId).toBe(1);
   });
 });

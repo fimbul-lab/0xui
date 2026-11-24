@@ -8,6 +8,7 @@ import {
 } from "@/components/amount-input";
 import { useTokenBalance } from "@/components/balance";
 import { MorphText } from "@/components/morph-text";
+import { Button } from "@/components/primitives/button";
 import { TokenAmount, formatFiat } from "@/components/token-amount";
 import {
   TokenSelect,
@@ -86,6 +87,20 @@ export function TokenInput({
   };
   const current = stateFor(value);
 
+  // Every control is named for its panel, so a swap's two panels, or a send
+  // and a swap on one page, never share a name. The field adds the token
+  // ("You pay in ETH"), so no other name holds all of its words.
+  const panel = typeof label === "string" ? label : "Amount";
+  const names = {
+    amount: token
+      ? `${panel} in ${token.symbol}`
+      : /\bamount\b/i.test(panel)
+        ? panel
+        : `${panel} amount`,
+    max: `Max ${panel}`,
+    token: `${panel} token: ${token ? `${token.symbol}, change` : "Select token"}`,
+  };
+
   const fiat =
     price !== undefined && current.amount !== undefined
       ? formatFiat(current.amount, decimals, price, { currency })
@@ -115,7 +130,7 @@ export function TokenInput({
           max={max}
           showMax={false}
           readOnly={readOnly}
-          label={typeof label === "string" ? label : "Amount"}
+          label={names.amount}
           className="flex-1"
         />
         {tokens && onTokenChange ? (
@@ -126,6 +141,7 @@ export function TokenInput({
             chainId={token?.chainId}
             popular={popular}
             prices={prices}
+            aria-label={names.token}
             className="shrink-0"
           />
         ) : (
@@ -151,16 +167,19 @@ export function TokenInput({
               Balance:
               <TokenAmount value={max} decimals={decimals} animate />
               {!readOnly && max > 0n && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="xs"
+                  aria-label={names.max}
                   onClick={() => {
                     const next = formatUnits(max, decimals);
                     onValueChange(next, stateFor(next));
                   }}
-                  className="rounded px-1 font-medium text-primary hover:bg-muted"
+                  className="px-1 text-sm text-primary"
                 >
                   Max
-                </button>
+                </Button>
               )}
             </span>
           )

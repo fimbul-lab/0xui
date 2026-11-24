@@ -1,5 +1,5 @@
 import { ShieldedSyncStatus } from "@/components/shielded-sync-status";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 import { shieldedDemo } from "./shielded-demo";
 
 export const Default = shieldedDemo(

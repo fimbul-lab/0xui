@@ -1,15 +1,18 @@
 // Docs: https://0xui.io/components/wallet-button.md
+import { useMemo } from "react";
 import { SkeletonBox } from "skullet/react";
-import { useConnection } from "wagmi";
+import { useConfig } from "wagmi";
 import { Account, type AccountProps } from "@/components/account";
 import {
   ConnectWallet,
   type ConnectWalletProps,
 } from "@/components/connect-wallet";
 import { useMounted } from "@/hooks/use-mounted";
+import { useStore } from "@/hooks/use-store";
+import { createConnectedAccount, walletButtonPhase, type WalletButtonPhase } from "@/lib/account-core";
 import { cn } from "@/lib/utils";
 
-export type WalletButtonPhase = "restoring" | "disconnected" | "connected";
+export type { WalletButtonPhase };
 
 export type WalletButtonProps = {
   /** Props for the "Connect wallet" button and picker. */
@@ -21,10 +24,10 @@ export type WalletButtonProps = {
 
 /** Which state the wallet button is in. "restoring" covers SSR and wagmi reconnecting on page load. */
 export function useWalletButtonPhase(): WalletButtonPhase {
-  const mounted = useMounted();
-  const { status } = useConnection();
-  if (!mounted || status === "reconnecting") return "restoring";
-  return status === "connected" ? "connected" : "disconnected";
+  const config = useConfig();
+  const account = useMemo(() => createConnectedAccount(config), [config]);
+  const { status } = useStore(account);
+  return walletButtonPhase(status, useMounted());
 }
 
 /**

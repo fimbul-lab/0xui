@@ -1,4 +1,5 @@
 import { act, render, renderHook, screen, within } from "@testing-library/react";
+import { createAgent } from "@ui-sdk/react/agent";
 import type { ReactElement, ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { parseEther, parseUnits } from "viem";
@@ -445,7 +446,7 @@ describe("ShieldedSyncStatus", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Couldn't sync private balance");
     expect(screen.getByRole("alert")).toHaveTextContent("RPC rate limited");
 
-    await click(screen.getByRole("button", { name: "Retry" }));
+    await click(screen.getByRole("button", { name: "Retry sync" }));
     expect(root).toHaveAttribute("data-phase", "synced");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -528,7 +529,7 @@ describe("ProofProgress", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Couldn't generate proof");
     expect(screen.getByRole("alert")).toHaveTextContent("Out of memory");
     expect(stepStates()).toEqual(["done", "failed", "todo"]);
-    await click(screen.getByRole("button", { name: "Try again" }));
+    await click(screen.getByRole("button", { name: "Try again to generate the proof" }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
@@ -586,7 +587,7 @@ describe("ProofProgress", () => {
       expect(screen.getByRole("status")).toHaveTextContent("Proof ready");
       expect(stepStates()).toEqual(["done", "done", "done"]);
       expect(onProved).toHaveBeenCalledWith(expect.objectContaining({ draft }));
-      expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Cancel proof" })).not.toBeInTheDocument();
     });
 
     it("cancels quietly, marks where it stopped, and can start over", async () => {
@@ -596,7 +597,7 @@ describe("ProofProgress", () => {
 
       await click(screen.getByRole("button", { name: "Prove" }));
       await advance(MOCK_TIMINGS.loadCircuits + 100);
-      await click(screen.getByRole("button", { name: "Cancel" }));
+      await click(screen.getByRole("button", { name: "Cancel proof" }));
 
       expect(phase()).toBe("cancelled");
       expect(screen.getByRole("status")).toHaveTextContent("Proof cancelled");
@@ -604,7 +605,7 @@ describe("ProofProgress", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(onError).not.toHaveBeenCalled();
 
-      await click(screen.getByRole("button", { name: "Try again" }));
+      await click(screen.getByRole("button", { name: "Try again to generate the proof" }));
       expect(phase()).toBe("loading-circuits");
     });
 
@@ -621,7 +622,7 @@ describe("ProofProgress", () => {
       expect(stepStates()).toEqual(["done", "failed", "todo"]);
       expect(onError).toHaveBeenCalledOnce();
 
-      await click(screen.getByRole("button", { name: "Try again" }));
+      await click(screen.getByRole("button", { name: "Try again to generate the proof" }));
       expect(phase()).toBe("done");
       expect(onProved).toHaveBeenCalledOnce();
     });
@@ -654,3 +655,62 @@ describe("ProofProgress", () => {
     });
   });
 });
+
+describe("Agents", () => {
+  const agent = createAgent();
+  const onPage = () => agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) => act(() => agent.act({ steps }));
+
+  it("names every control apart on one page, and runs the free ones", async () => {
+    const engine = await unlockedEngine({
+      funds: [{ token: weth.address, amount: parseEther("0.75"), state: "incomplete" }],
+    });
+    engine.simulate.failNextSync("RPC rate limited");
+    await engine.sync(1);
+    const onRetry = vi.fn();
+    const onCancel = vi.fn();
+    renderShielded(
+      <>
+        <ShieldedSyncStatus chainId={1} />
+        <ShieldedBalance token={weth} chainId={1} />
+        <ShieldedAddress address={engine.account.address()!} />
+        <ProofProgress phase="error" stage="proving" error="Out of memory" onRetry={onRetry} />
+        <ProofProgress phase="proving" onCancel={onCancel} />
+      </>,
+      engine
+    );
+
+    const components = onPage();
+    for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    const labels = components.map((e) => e.label!);
+    for (const label of ["Retry sync", "Retry proofs", "Copy private address", "Cancel proof", "Try again to generate the proof"]) {
+      expect(labels, `${label} is missing from the snapshot`).toContain(label);
+    }
+    expect(collisions(labels)).toEqual([]);
+
+    const result = await run([
+      { ref: "Try again to generate the proof", action: "press" },
+      { ref: "Cancel proof", action: "press" },
+      { ref: "Retry sync", action: "press" },
+      { ref: "Retry proofs", action: "press" },
+    ]);
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(onCancel).toHaveBeenCalledOnce();
+    await settle();
+    expect(screen.queryByText("Incomplete")).not.toBeInTheDocument();
+  });
+});
+
+/** Pairs of labels where every word of one is in the other, which a step can't tell apart by name. */
+function collisions(labels: readonly string[]) {
+  const words = (label: string) => new Set(label.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
+  const found: string[] = [];
+  labels.forEach((a, i) =>
+    labels.forEach((b, j) => {
+      const wb = words(b);
+      if (i !== j && [...words(a)].every((w) => wb.has(w))) found.push(`${a} / ${b}`);
+    })
+  );
+  return found;
+}

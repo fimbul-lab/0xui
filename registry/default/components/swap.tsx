@@ -2,39 +2,34 @@
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownUpIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  formatUnits,
-  type Address,
-  type Hash,
-  type Hex,
-  type TransactionReceipt,
-} from "viem";
-import { useConnection } from "wagmi";
+import { formatUnits, type Hash, type TransactionReceipt } from "viem";
+import { useConfig, useConnection } from "wagmi";
 import { ApproveButton } from "@/components/approve-button";
 import { MorphText } from "@/components/morph-text";
+import { Button } from "@/components/primitives/button";
 import { TokenInput, type TokenInputState } from "@/components/token-input";
-import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
+import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
+import {
+  formatRate,
+  isSameToken,
+  priceImpactLevel,
+  swapBlocker,
+  swapConfirmText,
+  swapNeedsApproval,
+  swapQuoteQueryOptions,
+  type GetQuote,
+} from "@/lib/swap-core";
 import { cn } from "@/lib/utils";
 
-export type SwapQuote = {
-  /** Output amount, in the buy token's smallest unit. */
-  buyAmount: bigint;
-  /** Transaction that performs the swap. */
-  transaction: { to: Address; data?: Hex; value?: bigint };
-  /** Contract that must be approved to spend the sell token, if it's an ERC-20. */
-  spender?: Address;
-  /** Price impact in percent, e.g. 0.3. Shown, and warned about above 5%. */
-  priceImpact?: number;
-};
-
-export type GetQuote = (request: {
-  sellToken: Token;
-  buyToken: Token;
-  sellAmount: bigint;
-  /** Connected account, for quotes that need a taker. */
-  taker: Address | undefined;
-}) => Promise<SwapQuote>;
+export {
+  formatRate,
+  swapBlocker,
+  swapConfirmText,
+  swapQuoteQueryOptions,
+  type GetQuote,
+  type SwapQuote,
+} from "@/lib/swap-core";
 
 function useDebounced<T>(value: T, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -43,22 +38,6 @@ function useDebounced<T>(value: T, delay: number) {
     return () => clearTimeout(timer);
   }, [value, delay]);
   return debounced;
-}
-
-/** "1 ETH = 3,150.42 USDC" from a quote. */
-export function formatRate(
-  sell: { token: Token; amount: bigint },
-  buy: { token: Token; amount: bigint },
-  { invert = false, locale }: { invert?: boolean; locale?: string } = {}
-) {
-  const sellUnits = Number(formatUnits(sell.amount, sell.token.decimals));
-  const buyUnits = Number(formatUnits(buy.amount, buy.token.decimals));
-  if (!sellUnits || !buyUnits) return undefined;
-  const [from, to, rate] = invert
-    ? [buy.token, sell.token, sellUnits / buyUnits]
-    : [sell.token, buy.token, buyUnits / sellUnits];
-  const formatted = new Intl.NumberFormat(locale, { maximumSignificantDigits: 6 }).format(rate);
-  return `1 ${from.symbol} = ${formatted} ${to.symbol}`;
 }
 
 /**
@@ -80,22 +59,16 @@ export function useSwapQuote({
 }) {
   const { address } = useConnection();
   const debounced = useDebounced(sellAmount, 400);
-  const query = useQuery({
-    queryKey: [
-      "0xui",
-      "swap-quote",
-      sellToken?.chainId,
-      sellToken?.address,
-      buyToken?.address,
-      debounced?.toString(),
-      address,
-    ],
-    queryFn: () =>
-      getQuote({ sellToken: sellToken!, buyToken: buyToken!, sellAmount: debounced!, taker: address }),
-    enabled: Boolean(sellToken && buyToken && debounced && debounced > 0n),
-    refetchInterval: refreshInterval,
-    retry: false,
-  });
+  const query = useQuery(
+    swapQuoteQueryOptions({
+      getQuote,
+      sellToken,
+      buyToken,
+      sellAmount: debounced,
+      taker: address,
+      refreshInterval,
+    }),
+  );
   return {
     quote: query.data,
     isLoading: query.isFetching && !query.data,
@@ -143,6 +116,7 @@ export function Swap({
   const [sellText, setSellText] = useState("");
   const [sell, setSell] = useState<TokenInputState>();
   const [invertRate, setInvertRate] = useState(false);
+  const { chains } = useConfig();
 
   const sellAmount = sell?.amount;
   const { quote, isLoading, isStale, error } = useSwapQuote({
@@ -162,7 +136,7 @@ export function Swap({
   const pick = (side: "sell" | "buy") => (token: Token) => {
     const other = side === "sell" ? buyToken : sellToken;
     // Picking the other side's token swaps them.
-    if (other && other.address === token.address && other.chainId === token.chainId) return flip();
+    if (isSameToken(other, token)) return flip();
     if (side === "sell") {
       setSellToken(token);
       setSellText("");
@@ -172,17 +146,15 @@ export function Swap({
     }
   };
 
-  const blocker = !sellToken || !buyToken
-    ? "Select a token"
-    : !sellAmount
-      ? "Enter an amount"
-      : sell?.insufficient
-        ? `Insufficient ${sellToken.symbol} balance`
-        : error
-          ? "No route found"
-          : isLoading || isStale || !quote
-            ? "Fetching quote…"
-            : undefined;
+  const blocker = swapBlocker({
+    sellToken,
+    buyToken,
+    sellAmount,
+    insufficient: sell?.insufficient ?? false,
+    error,
+    quoting: isLoading || isStale,
+    quote,
+  });
 
   const buyText =
     quote && buyToken && !isStale ? formatUnits(quote.buyAmount, buyToken.decimals) : "";
@@ -195,12 +167,23 @@ export function Swap({
         )
       : undefined;
   const impact = quote?.priceImpact;
+  // What a person confirms before an agent's press reaches the wallet.
+  const agentConfirm =
+    !blocker && quote && sellToken && buyToken && sellAmount
+      ? swapConfirmText({
+          sell: { token: sellToken, amount: sellAmount },
+          buy: { token: buyToken, amount: quote.buyAmount },
+          priceImpact: impact,
+          chainName: chains.find((c) => c.id === sellToken.chainId)?.name,
+        })
+      : undefined;
 
   const swapButton = (
     <TransactionButton
       chainId={sellToken?.chainId}
       transaction={!blocker ? quote?.transaction : undefined}
       disabledReason={blocker}
+      agentConfirm={agentConfirm}
       onSubmitted={onSubmitted}
       onSuccess={(receipt) => {
         setSellText("");
@@ -213,8 +196,7 @@ export function Swap({
     </TransactionButton>
   );
 
-  const needsApproval =
-    !blocker && sellToken && !isNativeToken(sellToken) && quote?.spender && sellAmount;
+  const needsApproval = !blocker && sellToken && sellAmount && swapNeedsApproval(sellToken, quote);
 
   return (
     <div data-slot="swap" className={cn("flex w-full max-w-md flex-col gap-3", className)}>
@@ -233,14 +215,15 @@ export function Swap({
           popular={popular}
           prices={prices}
         />
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           aria-label="Switch tokens"
           onClick={flip}
-          className="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-xl border-4 border-background bg-muted p-2 hover:bg-accent"
+          // Sits on the seam between the panels. Keeps its centering while pressed.
+          className="absolute top-1/2 left-1/2 z-10 h-auto -translate-x-1/2 -translate-y-1/2 rounded-xl border-4 border-background bg-muted p-2 hover:bg-accent dark:hover:bg-accent active:not-aria-[haspopup]:-translate-y-1/2"
         >
           <ArrowDownUpIcon aria-hidden className="size-4" />
-        </button>
+        </Button>
         <TokenInput
           label="You receive"
           value={buyText}
@@ -261,16 +244,27 @@ export function Swap({
             {(error as { shortMessage?: string }).shortMessage ?? error.message}
           </span>
         ) : rate ? (
-          <button type="button" onClick={() => setInvertRate((v) => !v)} className="hover:text-foreground">
+          <Button
+            variant="link"
+            aria-label={`Invert rate: ${rate}`}
+            onClick={() => setInvertRate((v) => !v)}
+            // Reads as the rate line itself, not as a button.
+            className="h-auto border-0 p-0 font-normal whitespace-normal text-inherit no-underline hover:text-foreground hover:no-underline active:not-aria-[haspopup]:translate-y-0"
+          >
             <MorphText>{rate}</MorphText>
-          </button>
+          </Button>
         ) : sellAmount && (isLoading || isStale) ? (
           <span>Fetching quote…</span>
         ) : (
           <span />
         )}
         {impact !== undefined && rate && (
-          <span className={cn(impact > 15 ? "text-destructive" : impact > 5 && "text-amber-600 dark:text-amber-400")}>
+          <span
+            className={cn(
+              priceImpactLevel(impact) === "danger" && "text-destructive",
+              priceImpactLevel(impact) === "warn" && "text-amber-600 dark:text-amber-400",
+            )}
+          >
             <MorphText>{`Price impact ${impact.toFixed(2)}%`}</MorphText>
           </span>
         )}

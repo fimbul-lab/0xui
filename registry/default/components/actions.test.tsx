@@ -1,9 +1,10 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Toaster } from "sonner";
+import { createAgent } from "@ui-sdk/react/agent";
+import { useEffect } from "react";
 import { decodeFunctionData, erc20Abi, parseUnits, type Address, type Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
   createTestConfig,
@@ -16,6 +17,7 @@ import {
 import { AddToken } from "./add-token";
 import { ApproveButton } from "./approve-button";
 import { NetworkGuard } from "./network-guard";
+import { Toaster, toast } from "./primitives/toast";
 import { SignMessage } from "./sign-message";
 import { useTransactionToast } from "./transaction-toast";
 
@@ -25,6 +27,26 @@ const usdc = {
   decimals: 6,
 };
 const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af" as Address;
+
+// The shared toast queue opens its overlay once, on its first toast, and
+// ui-sdk checks a second later that a host renders it. Open it here with a
+// host mounted through that check; otherwise it lands between two tests,
+// with no host, and fails the run.
+beforeAll(async () => {
+  const { unmount } = render(<Toaster />);
+  act(() => {
+    toast("Warm-up");
+    toast.dismiss();
+  });
+  await new Promise((resolve) => setTimeout(resolve, 1_100));
+  unmount();
+});
+
+// Each test's toasts go before its host does.
+afterEach(async () => {
+  act(() => toast.dismiss());
+  await waitFor(() => expect(toast.toasts()).toHaveLength(0));
+});
 
 describe("ApproveButton", () => {
   it("approves, then shows the action", async () => {
@@ -53,7 +75,7 @@ describe("ApproveButton", () => {
     const approve = await screen.findByRole("button", { name: "Approve USDC" });
     expect(approve).toHaveAttribute(
       "data-agent-confirm",
-      `Approve USDC: lets ${router} spend the USDC this action needs`,
+      `Approve USDC: lets ${router} spend up to 50 USDC`,
     );
     await user.click(approve);
 
@@ -265,9 +287,12 @@ describe("useTransactionToast", () => {
       { from: testAccounts[0], to: testAccounts[1] },
     ]);
     const settled = await screen.findByText(heading, {}, { timeout: 5_000 });
-    // Sonner's store is global, so earlier tests' toasts may still be showing.
-    const toastEl = settled.closest("li")!;
-    expect(within(toastEl).getByRole("button", { name: "View" })).toBeInTheDocument();
+    // The shared toast queue is global, so earlier tests' toasts may still be showing.
+    const toastEl = settled.closest("[data-slot=toast]") as HTMLElement;
+    expect(within(toastEl).getByRole("link", { name: "View" })).toHaveAttribute(
+      "href",
+      `https://etherscan.io/tx/${fakeTxHash}`,
+    );
   });
 });
 
@@ -295,5 +320,149 @@ describe("AddToken", () => {
 
     await user.click(await screen.findByRole("button", { name: "Add USDC to wallet" }));
     expect(await screen.findByText("Cancelled in wallet.")).toBeInTheDocument();
+  });
+});
+
+describe("agent", () => {
+  let approve = false;
+  const agent = createAgent({ allow: (step) => !step.confirm || approve });
+  const onPage = () =>
+    agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+  const named = (label: string) => onPage().find((entry) => entry.label === label);
+
+  it("asks the person before NetworkGuard switches network", async () => {
+    approve = false;
+    const config = createTestConfig();
+    renderWithWagmi(<NetworkGuard chainId={11155111}>Content</NetworkGuard>, { config });
+    await act(() => connectMock(config));
+
+    await screen.findByRole("button", { name: "Switch to Sepolia" });
+    expect(named("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia");
+    const step = { steps: [{ ref: "Switch to Sepolia", action: "press" }] };
+    expect((await agent.act(step)).error?.message).toContain("Asks your wallet to switch to Sepolia");
+    expect(config.state.chainId).toBe(1);
+    approve = true;
+    expect((await agent.act(step)).ok).toBe(true);
+    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+  });
+
+  it("asks the person before adding a token to the wallet", async () => {
+    approve = false;
+    const config = createTestConfig();
+    renderWithWagmi(<AddToken token={usdc} />, { config });
+    await act(() => connectMock(config));
+
+    await screen.findByRole("button", { name: "Add USDC to wallet" });
+    expect(named("Add USDC to wallet")?.confirm).toBe(
+      "Asks your wallet to add USDC (0xA0b8…eB48) to its token list",
+    );
+    const step = { steps: [{ ref: "Add USDC", action: "press" }] };
+    expect((await agent.act(step)).ok).toBe(false);
+    expect(screen.queryByRole("button", { name: "USDC added" })).not.toBeInTheDocument();
+    approve = true;
+    expect((await agent.act(step)).ok).toBe(true);
+    expect(await screen.findByRole("button", { name: "USDC added" })).toBeInTheDocument();
+  });
+
+  it("asks before signing, but not before opening the wallet picker", async () => {
+    approve = false;
+    const signer = privateKeyToAccount(generatePrivateKey());
+    const config = createTestConfig({
+      accounts: [signer.address],
+      rpc: {
+        eth_sign: ([, raw]: [Address, `0x${string}`]) => signer.signMessage({ message: { raw } }),
+      },
+    });
+    renderWithWagmi(<SignMessage message="hello" showSignature />, { config });
+
+    expect(named("Connect wallet")?.confirm).toBeUndefined();
+    await act(() => connectMock(config));
+    await screen.findByRole("button", { name: "Sign message" });
+    expect(named("Sign message")?.confirm).toBe("Sign message: signs a message with your wallet");
+
+    const step = { steps: [{ ref: "Sign message", action: "press" }] };
+    expect((await agent.act(step)).ok).toBe(false);
+    approve = true;
+    expect((await agent.act(step)).ok).toBe(true);
+    expect(await screen.findByRole("button", { name: "Copy signature" })).toBeInTheDocument();
+    expect(named("Copy signature")?.confirm).toBeUndefined();
+  });
+
+  it("names an approval by its token and asks before it", async () => {
+    approve = false;
+    const config = createTestConfig({
+      rpc: { ...fakeChainRpc(), eth_call: erc20CallRpc({ allowance: 0n }) },
+    });
+    renderWithWagmi(
+      <ApproveButton token={usdc} spender={router} amount={parseUnits("50", 6)} chainId={1}>
+        Swap
+      </ApproveButton>,
+      { config },
+    );
+    await act(() => connectMock(config));
+    await screen.findByRole("button", { name: "Approve USDC" });
+    expect(named("Approve USDC")?.confirm).toBe(
+      `Approve USDC: lets ${router} spend up to 50 USDC`,
+    );
+    expect((await agent.act({ steps: [{ ref: "Approve USDC", action: "press" }] })).ok).toBe(false);
+  });
+
+  it.each([
+    [{ unlimited: true }, usdc, `Approve USDC: lets ${router} spend all of your USDC, with no limit`],
+    [{}, { address: usdc.address, symbol: "USDC" }, `Approve USDC: lets ${router} spend up to 50000000 base units of USDC`],
+  ])("states the approval's size in its confirm (%o)", async (props, token, sentence) => {
+    const config = createTestConfig({
+      rpc: { ...fakeChainRpc(), eth_call: erc20CallRpc({ allowance: 0n }) },
+    });
+    renderWithWagmi(
+      <ApproveButton token={token} spender={router} amount={parseUnits("50", 6)} chainId={1} {...props}>
+        Swap
+      </ApproveButton>,
+      { config },
+    );
+    await act(() => connectMock(config));
+    await screen.findByRole("button", { name: "Approve USDC" });
+    expect(named("Approve USDC")?.confirm).toBe(sentence);
+  });
+
+  it("leaves an empty toast region out", async () => {
+    // The shared queue is empty here: each test clears it.
+    renderWithWagmi(<Toaster />);
+    expect(onPage()).toEqual([]);
+  });
+
+  it("reads a transaction toast and its explorer link", async () => {
+    const chain = fakeChainRpc();
+    function Track() {
+      const toastTransaction = useTransactionToast();
+      useEffect(() => {
+        toastTransaction(fakeTxHash, { description: "Agent test send" });
+      }, [toastTransaction]);
+      return <Toaster />;
+    }
+    renderWithWagmi(<Track />, { config: createTestConfig({ rpc: chain }) });
+
+    // One toast is listed under its title; several under the region's name,
+    // Notifications, with every toast's text. The shared queue is global, so
+    // earlier tests' toasts may still be showing.
+    const toastText = () =>
+      onPage().find((item) => item.component === "toast" && item.text?.includes("Agent test send"));
+    const entry = await waitFor(() => {
+      expect(toastText()).toBeDefined();
+      return toastText()!;
+    });
+    expect(entry.label).toBeTruthy();
+    expect(entry.text).toContain("Transaction pending");
+    expect(entry.buttons).toContain("View");
+
+    // Let it settle before the host unmounts.
+    (chain.eth_sendTransaction as (p: unknown) => unknown)([
+      { from: testAccounts[0], to: testAccounts[1] },
+    ]);
+    const settled = await screen.findByText("Agent test send", {}, { timeout: 5_000 });
+    await waitFor(
+      () => expect(settled.closest("[data-slot=toast]")).toHaveTextContent("Transaction confirmed"),
+      { timeout: 5_000 },
+    );
   });
 });

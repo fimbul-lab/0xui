@@ -1,6 +1,8 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createAgent } from "@ui-sdk/react/agent";
 import {
+  decodeFunctionData,
   encodeAbiParameters,
   encodeEventTopics,
   encodeFunctionResult,
@@ -48,6 +50,13 @@ const usdc: Token = {
 const recipient = testAccounts[1];
 const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af" as Address;
 
+const getQuote: GetQuote = async ({ sellToken, sellAmount }) => ({
+  buyAmount: sellToken.symbol === "ETH" ? (sellAmount * 3150n) / 10n ** 12n : (sellAmount * 10n ** 12n) / 3150n,
+  transaction: { to: router, data: "0x1234", value: sellToken.symbol === "ETH" ? sellAmount : 0n },
+  spender: sellToken.symbol === "ETH" ? undefined : router,
+  priceImpact: 0.12,
+});
+
 describe("Send", () => {
   it("names what's missing, in order", () => {
     const base = { recipient: undefined, token: usdc, amount: undefined };
@@ -89,8 +98,8 @@ describe("Send", () => {
     await act(() => connectMock(config));
 
     expect(screen.getByRole("button", { name: "Enter a recipient" })).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: "Recipient" }), recipient);
-    await user.type(screen.getByRole("textbox", { name: "Amount" }), "0.25");
+    await user.type(screen.getByRole("textbox", { name: "Recipient address" }), recipient);
+    await user.type(screen.getByRole("textbox", { name: "Amount in ETH" }), "0.25");
 
     await user.click(await screen.findByRole("button", { name: "Send ETH" }));
 
@@ -109,13 +118,6 @@ describe("Swap", () => {
     expect(formatRate(sell, buy, { invert: true, locale: "en-US" })).toBe("1 USDC = 0.00031746 ETH");
   });
 
-  const getQuote: GetQuote = async ({ sellToken, sellAmount }) => ({
-    buyAmount: sellToken.symbol === "ETH" ? (sellAmount * 3150n) / 10n ** 12n : (sellAmount * 10n ** 12n) / 3150n,
-    transaction: { to: router, data: "0x1234", value: sellToken.symbol === "ETH" ? sellAmount : 0n },
-    spender: sellToken.symbol === "ETH" ? undefined : router,
-    priceImpact: 0.12,
-  });
-
   it("quotes, shows the rate, and swaps", async () => {
     const user = userEvent.setup();
     const quote = vi.fn(getQuote);
@@ -126,10 +128,10 @@ describe("Swap", () => {
     await act(() => connectMock(config));
 
     expect(screen.getByRole("button", { name: "Enter an amount" })).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: "You pay" }), "2");
+    await user.type(screen.getByRole("textbox", { name: /^You pay in / }), "2");
 
-    expect(await screen.findByRole("textbox", { name: "You receive" })).toHaveValue("");
-    await waitFor(() => expect(screen.getByRole("textbox", { name: "You receive" })).toHaveValue("6300"));
+    expect(await screen.findByRole("textbox", { name: /^You receive / })).toHaveValue("");
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /^You receive / })).toHaveValue("6300"));
     expect(screen.getByText(/1 ETH = 3,150 USDC/)).toBeInTheDocument();
     expect(screen.getByText("Price impact 0.12%")).toBeInTheDocument();
     expect(quote).toHaveBeenCalledTimes(1);
@@ -137,7 +139,7 @@ describe("Swap", () => {
     await user.click(screen.getByRole("button", { name: "Swap" }));
     // "Done" shows even though the input clears on success.
     expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "You pay" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: /^You pay in / })).toHaveValue("");
   });
 
   it("asks for approval when selling an ERC-20", async () => {
@@ -150,7 +152,7 @@ describe("Swap", () => {
     });
     await act(() => connectMock(config));
 
-    await user.type(screen.getByRole("textbox", { name: "You pay" }), "100");
+    await user.type(screen.getByRole("textbox", { name: /^You pay in / }), "100");
     expect(await screen.findByRole("button", { name: "Approve USDC" }, { timeout: 3_000 })).toBeEnabled();
   });
 
@@ -159,9 +161,9 @@ describe("Swap", () => {
     renderWithWagmi(<Swap tokens={[eth, usdc]} defaultBuyToken={usdc} getQuote={getQuote} />);
 
     await user.click(screen.getByRole("button", { name: "Switch tokens" }));
-    const [sellPicker, buyPicker] = screen.getAllByRole("button", { name: /change token/ });
-    expect(sellPicker).toHaveAccessibleName("USDC, change token");
-    expect(buyPicker).toHaveAccessibleName("ETH, change token");
+    const [sellPicker, buyPicker] = screen.getAllByRole("button", { name: /token: .*, change$/ });
+    expect(sellPicker).toHaveAccessibleName("You pay token: USDC, change");
+    expect(buyPicker).toHaveAccessibleName("You receive token: ETH, change");
   });
 
   it("says when there's no route", async () => {
@@ -177,7 +179,7 @@ describe("Swap", () => {
     );
     await act(() => connectMock(config));
 
-    await user.type(screen.getByRole("textbox", { name: "You pay" }), "1");
+    await user.type(screen.getByRole("textbox", { name: /^You pay in / }), "1");
     expect(await screen.findByRole("button", { name: "No route found" })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent("No liquidity for this pair");
   });
@@ -294,9 +296,9 @@ describe("ContractForm", () => {
 
     await user.click(screen.getByText("balanceOf(address)"));
     await user.type(screen.getByRole("textbox", { name: /owner/ }), recipient);
-    await user.click(screen.getByRole("button", { name: "Read" }));
+    await user.click(screen.getByRole("button", { name: "Read balanceOf from the contract" }));
 
-    expect(await screen.findByLabelText("Result")).toHaveTextContent("42");
+    expect(await screen.findByLabelText("balanceOf result")).toHaveValue("42");
   });
 
   it("names the field to fix before writing", async () => {
@@ -310,7 +312,7 @@ describe("ContractForm", () => {
     await user.type(screen.getByRole("textbox", { name: /to/ }), recipient);
     expect(screen.getByRole("button", { name: "Check amount" })).toBeDisabled();
     await user.type(screen.getByRole("textbox", { name: /amount/ }), "10");
-    expect(screen.getByRole("button", { name: "transfer" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Call transfer" })).toBeEnabled();
   });
 });
 
@@ -357,7 +359,7 @@ describe("Portfolio", () => {
     expect(await screen.findByText("$78.00")).toBeInTheDocument();
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Token 11");
-    await user.click(screen.getByRole("button", { name: "Show more (7)" }));
+    await user.click(screen.getByRole("button", { name: "Show more holdings (7)" }));
     expect(screen.getAllByRole("listitem")).toHaveLength(10);
   });
 
@@ -397,8 +399,8 @@ describe("Portfolio", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
 
     await user.click(toggle);
-    const hidden = within(screen.getByRole("list", { name: "Hidden tokens" }));
-    expect(hidden.getByText("Visit uni-claim.com to claim").closest("li")).toHaveTextContent("Likely spam");
+    const hidden = within(screen.getByRole("list", { name: "Hidden holdings" }));
+    expect(hidden.getByText("Visit uni-claim.com to claim").closest("[role=listitem]")).toHaveTextContent("Likely spam");
     expect(hidden.getAllByText("No price")).toHaveLength(2);
     expect(hidden.getByText("Under $0.50")).toBeInTheDocument();
   });
@@ -425,7 +427,7 @@ describe("Portfolio", () => {
     expect(await screen.findAllByText("$50.00")).toHaveLength(2);
     expect(screen.getByText("USD Coin")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Hidden tokens (1)" }));
-    expect(screen.getByText("New Token").closest("li")).toHaveTextContent("Not on the token list");
+    expect(screen.getByText("New Token").closest("[role=listitem]")).toHaveTextContent("Not on the token list");
 
     unmount();
     renderWithWagmi(
@@ -471,7 +473,7 @@ describe("TransactionHistory", () => {
     act(() => recordTransaction({ hash: fakeTxHash, chainId: 1, description: "Send 1 ETH" }));
 
     expect(await screen.findByText("Send 1 ETH")).toBeInTheDocument();
-    expect(await screen.findByLabelText("Confirmed", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(await screen.findByText("Confirmed ·", {}, { timeout: 5_000 })).toBeInTheDocument();
   });
 
   it("shows only the connected account's transactions", async () => {
@@ -502,8 +504,8 @@ describe("TransactionHistory", () => {
     expect(screen.getByText("Indexed 0")).toBeInTheDocument();
     expect(screen.queryByText("Indexed 3")).not.toBeInTheDocument();
     // Not the local store, so nothing to clear.
-    expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Show more (1)" }));
+    expect(screen.queryByRole("button", { name: "Clear transaction history" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show more transactions (1)" }));
     expect(screen.getByText("Indexed 3")).toBeInTheDocument();
   });
 
@@ -512,7 +514,7 @@ describe("TransactionHistory", () => {
     renderWithWagmi(<TransactionHistory from={null} />);
     act(() => recordTransaction({ hash: fakeTxHash, chainId: 1, description: "Old", status: "confirmed" }));
 
-    await user.click(await screen.findByRole("button", { name: "Clear" }));
+    await user.click(await screen.findByRole("button", { name: "Clear transaction history" }));
     expect(screen.queryByText("Old")).not.toBeInTheDocument();
   });
 });
@@ -662,3 +664,326 @@ describe("EventFeed", () => {
     expect(within(feed).getByRole("link", { name: /#101/ })).toHaveAttribute("href", `https://etherscan.io/tx/${fakeTxHash}`);
   });
 });
+
+describe("Agents", () => {
+  // One bridge for the file. A person approves only while `approve` is set.
+  let approve = false;
+  const asked: string[] = [];
+  const agent = createAgent({
+    allow: (step) => {
+      if (step.confirm) asked.push(step.confirm);
+      return !step.confirm || approve;
+    },
+  });
+  beforeEach(() => {
+    approve = false;
+    asked.length = 0;
+  });
+
+  const onPage = () => agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+  const entry = (label: string) => onPage().find((e) => e.label === label);
+  const expectNamed = (labels: string[]) => {
+    const components = onPage();
+    for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    const names = components.map((e) => e.label);
+    for (const label of labels) expect(names, `${label} is missing from the snapshot`).toContain(label);
+  };
+  /** The value of the item named `text` in the list labelled `within`, as an agent finds it. */
+  const pick = async (within: string, text: string) => {
+    const found = await act(() => agent.query({ within, text }));
+    if ("error" in found) throw new Error(found.error);
+    const value = found[0]?.items?.[0]?.value;
+    expect(value, `${text} isn't in ${within}`).toBeDefined();
+    return value;
+  };
+  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) => act(() => agent.act({ steps }));
+
+  it("sends: fills recipient, token and amount, and needs a person to press Send", async () => {
+    const sent = vi.fn();
+    const chain = fakeChainRpc();
+    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const config = createTestConfig({
+      rpc: {
+        ...chain,
+        eth_getBalance: toHex(parseEther("1")),
+        eth_call: erc20CallRpc({ balance: parseUnits("500", 6), decimals: 6 }),
+        eth_sendTransaction: (params: [{ to: string; data?: string }]) => {
+          sent(params[0]);
+          return send(params);
+        },
+      },
+    });
+    renderWithWagmi(<Send tokens={[eth, usdc]} />, { config });
+    await act(() => connectMock(config));
+    expectNamed(["Recipient address", "Paste into Recipient", "Amount in ETH", "Amount token: ETH, change"]);
+
+    let result = await run([
+      { ref: "Recipient", action: "setValue", args: [recipient] },
+      { ref: "Amount token", action: "press" },
+    ]);
+    expect(result.ok, result.error?.message).toBe(true);
+    // The picker is open: find the token's row by its name, and run it.
+    const token = await pick("Search tokens", "USD Coin");
+    result = await run([{ ref: "Search tokens", action: "run", args: [token] }]);
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(entry("Amount token: USDC, change"), "the picked token shows on the trigger").toBeDefined();
+    expect(result.ok, result.error?.message).toBe(true);
+    result = await run([{ ref: "Amount", action: "setValue", args: ["2.5"] }]);
+    expect(result.ok, result.error?.message).toBe(true);
+
+    const sentence = `Sends 2.5 USDC from your wallet to ${recipient} on Ethereum`;
+    await waitFor(() => expect(entry("Send USDC")?.confirm).toBe(sentence));
+
+    // Alone, the agent is refused, and the person is asked in those words.
+    result = await run([{ ref: "Send USDC", action: "press" }]);
+    expect(result.ok).toBe(false);
+    expect(asked).toEqual([sentence]);
+    expect(sent).not.toHaveBeenCalled();
+
+    approve = true;
+    result = await run([{ ref: "Send USDC", action: "press" }]);
+    expect(result.ok, result.error?.message).toBe(true);
+    await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+    const tx = sent.mock.calls[0]![0] as { to: string; data: `0x${string}` };
+    expect(tx.to).toBe(usdc.address);
+    expect(decodeFunctionData({ abi: erc20Abi, data: tx.data }).args).toEqual([recipient, parseUnits("2.5", 6)]);
+  });
+
+  it("swaps: fills the amount, picks the token, reads the rate, and needs a person to press Swap", async () => {
+    const config = createTestConfig({
+      rpc: { ...fakeChainRpc(), eth_getBalance: toHex(parseEther("5")) },
+    });
+    renderWithWagmi(<Swap tokens={[eth, usdc]} getQuote={getQuote} />, { config });
+    await act(() => connectMock(config));
+    expectNamed(["You pay in ETH", "You receive amount", "Switch tokens", "You receive token: Select token"]);
+
+    let result = await run([
+      { ref: "You pay", action: "setValue", args: ["2"] },
+      { ref: "Select token", action: "press" },
+    ]);
+    expect(result.ok, result.error?.message).toBe(true);
+    result = await run([{ ref: "Search tokens", action: "run", args: [await pick("Search tokens", "USD Coin")] }]);
+    expect(result.ok, result.error?.message).toBe(true);
+
+    const sentence = "Swaps 2 ETH from your wallet for about 6300 USDC on Ethereum (price impact 0.12%)";
+    await waitFor(() => expect(entry("Swap")?.confirm).toBe(sentence), { timeout: 3_000 });
+    expect(entry("You receive in USDC")?.value).toBe("6300");
+
+    // The rate is a button too, free to press.
+    result = await run([{ ref: "Invert rate", action: "press" }]);
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(onPage().find((e) => e.label?.startsWith("Invert rate"))?.label).toBe(
+      "Invert rate: 1 USDC = 0.00031746 ETH"
+    );
+
+    result = await run([{ ref: "Swap", action: "press" }]);
+    expect(result.ok).toBe(false);
+    expect(asked).toEqual([sentence]);
+
+    approve = true;
+    result = await run([{ ref: "Swap", action: "press" }]);
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
+  });
+
+  it("flips a swap's tokens", async () => {
+    renderWithWagmi(<Swap tokens={[eth, usdc]} defaultBuyToken={usdc} getQuote={getQuote} />);
+    const result = await run([{ ref: "Switch tokens", action: "press" }]);
+    expect(result.ok, result.error?.message).toBe(true);
+    const [sellPicker, buyPicker] = screen.getAllByRole("button", { name: /token: .*, change$/ });
+    expect(sellPicker).toHaveAccessibleName("You pay token: USDC, change");
+    expect(buyPicker).toHaveAccessibleName("You receive token: ETH, change");
+  });
+
+  describe("ContractForm", () => {
+    const abi = parseAbi([
+      "function balanceOf(address owner) view returns (uint256)",
+      "function transfer(address to, uint256 amount) returns (bool)",
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function setPaused(bool paused)",
+    ]);
+
+    function setup() {
+      const sent = vi.fn();
+      const chain = fakeChainRpc();
+      const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+      const config = createTestConfig({
+        rpc: {
+          ...chain,
+          eth_call: erc20CallRpc({ balance: 42n }),
+          eth_sendTransaction: (params: [unknown]) => (sent(params[0]), send(params)),
+        },
+      });
+      renderWithWagmi(<ContractForm address={usdc.address} abi={abi} />, { config });
+      return { config, sent };
+    }
+
+    it("names every field after its function, so no two collide", async () => {
+      const { config } = setup();
+      await act(() => connectMock(config));
+      const cards = onPage().map((e) => e.label!);
+      expect(cards).toEqual([
+        "read balanceOf(address) → uint256",
+        "write transfer(address, uint256) → bool",
+        "write approve(address, uint256) → bool",
+        "write setPaused(bool)",
+      ]);
+      for (const card of cards) {
+        const result = await run([{ ref: card, action: "setOpen", args: [true] }]);
+        expect(result.ok, result.error?.message).toBe(true);
+      }
+      expectNamed([
+        "balanceOf: owner address",
+        "Read balanceOf from the contract",
+        "transfer: to address",
+        "transfer: amount uint256",
+        "approve: spender address",
+        "approve: amount uint256",
+        "setPaused: paused bool",
+      ]);
+      // Two "amount" fields, each found by its own name. Disabled buttons
+      // ("Fill in the fields") can't be pressed, so they may share one.
+      const live = onPage().filter((e) => !e.disabled);
+      expect(collisions(live.map((e) => e.label!))).toEqual([]);
+    });
+
+    it("reads freely, and shows the result to the agent", async () => {
+      setup();
+      // Opening a card renders its fields, so they come in the next call.
+      let result = await run([{ ref: "read balanceOf", action: "setOpen", args: [true] }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      result = await run([{ ref: "balanceOf: owner", action: "setValue", args: [recipient] }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      result = await run([{ ref: "Read balanceOf from the contract", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      expect(asked).toEqual([]);
+      await waitFor(() => expect(entry("balanceOf result")?.value).toBe("42"));
+    });
+
+    it("fills a write's arguments, and needs a person to send it", async () => {
+      const { config, sent } = setup();
+      await act(() => connectMock(config));
+      let result = await run([
+        { ref: "write transfer", action: "setOpen", args: [true] },
+        { ref: "write setPaused", action: "setOpen", args: [true] },
+      ]);
+      expect(result.ok, result.error?.message).toBe(true);
+      result = await run([
+        { ref: "transfer: to", action: "setValue", args: [recipient] },
+        { ref: "transfer: amount", action: "setValue", args: ["10"] },
+        { ref: "setPaused: paused", action: "setValue", args: ["true"] },
+      ]);
+      expect(result.ok, result.error?.message).toBe(true);
+      expect(entry("setPaused: paused bool")?.value).toBe("true");
+
+      const sentence = `Calls transfer(to: ${recipient}, amount: 10) on contract ${usdc.address} on Ethereum, from your wallet`;
+      expect(entry("Call transfer")?.confirm).toBe(sentence);
+      result = await run([{ ref: "Call transfer", action: "press" }]);
+      expect(result.ok).toBe(false);
+      expect(sent).not.toHaveBeenCalled();
+
+      approve = true;
+      result = await run([{ ref: "Call transfer", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+      const tx = sent.mock.calls[0]![0] as { data: `0x${string}` };
+      expect(decodeFunctionData({ abi, data: tx.data })).toMatchObject({
+        functionName: "transfer",
+        args: [recipient, 10n],
+      });
+    });
+  });
+
+  it("confirms a batch step by step, but opens the wallet picker freely", async () => {
+    const config = createTestConfig({ rpc: fakeChainRpc() });
+    const calls = [
+      { to: usdc.address, data: "0x095ea7b3" as const, label: "Approve USDC" },
+      { to: router, data: "0x1234" as const, label: "Swap" },
+    ];
+    renderWithWagmi(<BatchTransaction calls={calls} chainId={1} />, { config });
+    expect(entry("Connect wallet")?.confirm).toBeUndefined();
+
+    await act(() => connectMock(config));
+    const sentence = "Confirm: sends 2 calls on Ethereum from your wallet: Approve USDC, then Swap";
+    await waitFor(() => expect(entry("Confirm")?.confirm).toBe(sentence));
+    let result = await run([{ ref: "Confirm", action: "press" }]);
+    expect(result.ok).toBe(false);
+
+    approve = true;
+    result = await run([{ ref: "Confirm", action: "press" }]);
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
+  });
+
+  it("reads holdings, transactions and events, and finds rows by their text", async () => {
+    const past: FeedEvent = {
+      address: usdc.address,
+      topics: [],
+      data: "0x",
+      eventName: "Transfer",
+      args: { from: testAccounts[0], to: recipient, value: 42n },
+      blockNumber: 99n,
+      blockHash: `0x${"44".repeat(32)}`,
+      transactionHash: `0x${"55".repeat(32)}`,
+      transactionIndex: 0,
+      logIndex: 0,
+      removed: false,
+    };
+    const history = [
+      { hash: `0x${"1".repeat(64)}` as const, chainId: 1, description: "Send 1 ETH", submittedAt: Date.now(), status: "confirmed" as const },
+      { hash: `0x${"2".repeat(64)}` as const, chainId: 1, description: "Approve USDC", submittedAt: Date.now(), status: "reverted" as const },
+    ];
+    renderWithWagmi(
+      <>
+        <Portfolio
+          tokens={[eth, usdc]}
+          chainId={1}
+          balances={{ [eth.address]: parseEther("2"), [usdc.address]: parseUnits("500", 6) }}
+          prices={{ ETH: 3000, USDC: 1 }}
+          pageSize={1}
+          locale="en-US"
+        />
+        <TransactionHistory from={null} transactions={history} />
+        <EventFeed address={usdc.address} abi={erc20Abi} eventName="Transfer" initialEvents={[past]} />
+      </>,
+      { config: createTestConfig({ rpc: { ...fakeChainRpc(), eth_newFilter: "0x1", eth_getFilterChanges: [], eth_uninstallFilter: true } }) }
+    );
+    await screen.findByText("$6,500.00");
+    expectNamed(["Token holdings", "Show more holdings (1)", "Recent transactions", "Live events"]);
+
+    const rowsOf = async (text: string) => {
+      const found = await act(() => agent.query({ text }));
+      if ("error" in found) throw new Error(found.error);
+      return found.flatMap((e) => (e.items ?? []).map((item) => `${e.label}: ${item.label}`));
+    };
+    expect(await rowsOf("Ether")).toEqual([expect.stringMatching(/^Token holdings: Ether 2.*ETH \$6,000\.00$/)]);
+    // Only the first page is on the page. The agent shows more, freely.
+    expect(await rowsOf("USD Coin")).toEqual([]);
+    const result = await run([{ ref: "Show more holdings", action: "press" }]);
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(await rowsOf("USD Coin")).toEqual([expect.stringMatching(/^Token holdings: USD Coin 500.*USDC \$500\.00$/)]);
+
+    expect(await rowsOf("Approve USDC")).toEqual([expect.stringMatching(/^Recent transactions: Approve USDC .* · Reverted View/)]);
+    expect(await rowsOf("Send 1 ETH")).toEqual([expect.stringMatching(/^Recent transactions: Send 1 ETH Confirmed · /)]);
+    expect(await rowsOf("Transfer")).toEqual([
+      expect.stringMatching(/^Live events: Transfer from 0xd8dA…6045 to 0x71C7…976F value 42 #99/),
+    ]);
+  });
+});
+
+/**
+ * Pairs of labels where every word of one is in the other, which a bridge
+ * step can't tell apart by name ("Amount" and "Max amount").
+ */
+function collisions(labels: readonly string[]) {
+  const words = (label: string) => new Set(label.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
+  const found: string[] = [];
+  labels.forEach((a, i) =>
+    labels.forEach((b, j) => {
+      if (i === j) return;
+      const wb = words(b);
+      if ([...words(a)].every((w) => wb.has(w))) found.push(`${a} / ${b}`);
+    })
+  );
+  return found;
+}

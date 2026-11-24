@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MorphText } from "@/components/morph-text";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 
 const labels = ["Send 0.01 ETH", "Confirm in wallet…", "Pending…", "Done"];
 
