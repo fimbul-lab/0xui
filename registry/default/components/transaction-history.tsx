@@ -1,112 +1,55 @@
 // Docs: https://0xui.io/components/transaction-history.md
+import {
+  Timeline,
+  TimelineItem,
+  TimelineTime,
+  TimelineTitle,
+} from "@ui-sdk/react/timeline";
 import { CheckIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
-import type { Address, Hash } from "viem";
+import type { Address } from "viem";
 import { useConnection } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
+import { Button } from "@/components/primitives/button";
 import { useMinedReceipt } from "@/components/transaction-status";
-import { Button } from "@/components/ui/button";
 import { truncateAddress } from "@/lib/0xui-utils";
+import {
+  clearTransactionHistory,
+  entryStatus,
+  filterTransactions,
+  formatRelativeTime,
+  receiptStatus,
+  recordTransaction,
+  transactionHistory,
+  updateTransaction,
+  type HistoryEntry,
+} from "@/lib/transaction-history-core";
 import { cn } from "@/lib/utils";
 
-export type HistoryStatus = "pending" | "confirmed" | "reverted";
-
-export type HistoryEntry = {
-  hash: Hash;
-  chainId: number;
-  /** Sender, so the list can show only the connected account's transactions. */
-  from?: Address;
-  /** What the transaction did, e.g. "Swap 1 ETH for USDC". */
-  description?: string;
-  /** Unix time in ms. */
-  submittedAt: number;
-  /** Stored once the transaction settles, so it isn't polled again. */
-  status: HistoryStatus;
-};
-
-const STORAGE_KEY = "0xui:transactions";
-const LIMIT = 50;
-const EMPTY: HistoryEntry[] = [];
-const listeners = new Set<() => void>();
-let cache: HistoryEntry[] | undefined;
-
-function load(): HistoryEntry[] {
-  if (cache) return cache;
-  try {
-    cache = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-  } catch {
-    cache = [];
-  }
-  return cache!;
-}
-
-function save(entries: HistoryEntry[]) {
-  cache = entries.slice(0, LIMIT);
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
-  } catch {
-    // Storage blocked or full: history lasts for this page only.
-  }
-  listeners.forEach((listener) => listener());
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  // Other tabs.
-  const onStorage = (e: StorageEvent) => {
-    if (e.key !== STORAGE_KEY) return;
-    cache = undefined;
-    listener();
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", onStorage);
-  };
-}
-
-/**
- * Add a transaction to the history. Call it from anywhere, e.g. a
- * TransactionButton's `onSubmitted`. Re-recording a hash updates it.
- */
-export function recordTransaction(
-  entry: Omit<HistoryEntry, "submittedAt" | "status"> &
-    Partial<Pick<HistoryEntry, "submittedAt" | "status">>
-) {
-  const rest = load().filter((e) => e.hash !== entry.hash);
-  save([{ submittedAt: Date.now(), status: "pending", ...entry }, ...rest]);
-}
-
-export function updateTransaction(hash: Hash, update: Partial<HistoryEntry>) {
-  save(load().map((e) => (e.hash === hash ? { ...e, ...update } : e)));
-}
-
-export function clearTransactionHistory() {
-  save([]);
-}
+export {
+  clearTransactionHistory,
+  entryStatus,
+  filterTransactions,
+  recordTransaction,
+  transactionHistory,
+  updateTransaction,
+  type HistoryEntry,
+  type HistoryStatus,
+} from "@/lib/transaction-history-core";
 
 /** Recorded transactions, newest first. Pass `from` to keep only one account's. */
 export function useTransactionHistory({ from }: { from?: Address } = {}) {
-  const entries = useSyncExternalStore(subscribe, load, () => EMPTY);
-  const transactions = from
-    ? entries.filter((e) => !e.from || e.from.toLowerCase() === from.toLowerCase())
-    : entries;
+  const entries = useSyncExternalStore(
+    transactionHistory.subscribe,
+    transactionHistory.get,
+    transactionHistory.getServerSnapshot,
+  );
   return {
-    transactions,
+    transactions: filterTransactions(entries, from),
     record: recordTransaction,
     clear: clearTransactionHistory,
   };
 }
-
-const relative = (ms: number, locale?: string) => {
-  const seconds = Math.round((ms - Date.now()) / 1000);
-  const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-  const abs = Math.abs(seconds);
-  if (abs < 60) return format.format(seconds, "second");
-  if (abs < 3600) return format.format(Math.round(seconds / 60), "minute");
-  if (abs < 86400) return format.format(Math.round(seconds / 3600), "hour");
-  return format.format(Math.round(seconds / 86400), "day");
-};
 
 function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string }) {
   // Only pending transactions are polled. Settled ones keep their stored status.
@@ -115,42 +58,45 @@ function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string })
     chainId: entry.chainId,
   });
   useEffect(() => {
-    if (receipt.data) {
-      updateTransaction(entry.hash, {
-        status: receipt.data.status === "success" ? "confirmed" : "reverted",
-      });
-    }
+    if (receipt.data) updateTransaction(entry.hash, { status: receiptStatus(receipt.data) });
   }, [receipt.data, entry.hash]);
 
-  // Entries from an indexer aren't in the local store, so derive the status too.
-  const status: HistoryStatus =
-    entry.status === "pending" && receipt.data
-      ? receipt.data.status === "success"
-        ? "confirmed"
-        : "reverted"
-      : entry.status;
+  const status = entryStatus(entry, receipt.data);
+  // The status is also text, so the row reads in one piece, to screen readers
+  // and agents alike: "Send 1 ETH, Confirmed · 2 min ago". The spaces between
+  // parts keep words apart in that text. Flex layout drops them.
   return (
-    <li data-status={status} className="flex items-center gap-3 py-2 text-sm">
+    <TimelineItem
+      data-status={status}
+      className="flex items-center gap-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
       {status === "pending" ? (
-        <Loader2Icon aria-label="Pending" className="size-4 shrink-0 animate-spin text-muted-foreground" />
+        <Loader2Icon aria-hidden className="size-4 shrink-0 animate-spin text-muted-foreground" />
       ) : status === "confirmed" ? (
-        <CheckIcon aria-label="Confirmed" className="size-4 shrink-0 text-emerald-500" />
+        <CheckIcon aria-hidden className="size-4 shrink-0 text-emerald-500" />
       ) : (
-        <XIcon aria-label="Reverted" className="size-4 shrink-0 text-destructive" />
+        <XIcon aria-hidden className="size-4 shrink-0 text-destructive" />
       )}
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate">
-          {entry.description ?? <span className="font-mono">{truncateAddress(entry.hash, { start: 10, end: 8 })}</span>}
-        </span>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TimelineTitle className="truncate">
+          {entry.description ?? (
+            <span className="font-mono">{truncateAddress(entry.hash, { start: 10, end: 8 })}</span>
+          )}
+        </TimelineTitle>{" "}
         <span className="text-xs text-muted-foreground">
-          <time dateTime={new Date(entry.submittedAt).toISOString()}>{relative(entry.submittedAt, locale)}</time>
+          {status !== "reverted" && (
+            <span className="sr-only">{status === "pending" ? "Pending" : "Confirmed"} · </span>
+          )}
+          <TimelineTime dateTime={new Date(entry.submittedAt).toISOString()}>
+            {formatRelativeTime(entry.submittedAt, { locale })}
+          </TimelineTime>
           {status === "reverted" && " · Reverted"}
         </span>
-      </span>
+      </div>{" "}
       <ExplorerLink tx={entry.hash} chainId={entry.chainId} className="shrink-0 text-xs text-muted-foreground">
         View
       </ExplorerLink>
-    </li>
+    </TimelineItem>
   );
 }
 
@@ -202,7 +148,7 @@ export function TransactionHistory({
         {title && <h3 className="font-semibold">{title}</h3>}
         {clearable && !transactionsProp && shown.length > 0 && (
           <Button variant="ghost" size="xs" onClick={local.clear}>
-            Clear
+            Clear <span className="sr-only">transaction history</span>
           </Button>
         )}
       </header>
@@ -211,20 +157,26 @@ export function TransactionHistory({
           Transactions you send will show up here.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y">
+        <Timeline
+          aria-label={typeof title === "string" ? title : "Recent transactions"}
+          className="flex flex-col divide-y"
+        >
           {shown.map((entry) => (
             <HistoryRow key={entry.hash} entry={entry} locale={locale} />
           ))}
-        </ul>
+        </Timeline>
       )}
       {transactions.length > visible && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => setVisible((v) => v + pageSize)}
-          className="self-center rounded-md px-3 py-1.5 text-sm font-medium hover:bg-muted"
+          className="h-auto self-center rounded-md px-3 py-1.5 dark:hover:bg-muted"
         >
-          Show more ({transactions.length - visible})
-        </button>
+          {/* One run of text, so the button lays out as "Show more (5)". */}
+          <span>
+            Show more <span className="sr-only">transactions</span> ({transactions.length - visible})
+          </span>
+        </Button>
       )}
     </section>
   );

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ResponsiveDialog, type ResponsiveDialogMode } from "@/components/responsive-dialog";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 import { demo } from "./demo";
 
 function Example({ mode, label }: { mode?: ResponsiveDialogMode; label: string }) {
@@ -16,7 +16,7 @@ function Example({ mode, label }: { mode?: ResponsiveDialogMode; label: string }
         title="Slippage"
         description="Choose how much the price may move before the swap is cancelled."
         mode={mode}
-        className="sm:max-w-sm"
+        className="sm:data-[presentation=dialog]:max-w-sm"
       >
         <p className="text-sm text-muted-foreground">
           Your swap is cancelled if the price moves more than this before it confirms.

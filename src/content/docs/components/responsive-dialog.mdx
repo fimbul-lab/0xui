@@ -1,17 +1,17 @@
 ---
 title: Responsive Dialog
-description: A dialog that becomes a bottom drawer on small screens.
+description: A dialog that becomes a bottom sheet on small touch screens.
 ---
 
 import Install from "@/components/docs/Install.astro";
 import Preview from "@/components/docs/Preview.astro";
 import { Auto, ForcedDrawer } from "@/demos/responsive-dialog";
 
-A centered dialog is out of thumb reach on a phone. This shell shows the same title and content as a dialog on larger screens and as a bottom drawer below 640px. The drawer has a handle and can be swiped away.
+A centered dialog is out of thumb reach on a phone. This shell shows the same title and content as a centered dialog on larger screens and as a bottom sheet on small touch screens. The sheet can be swiped down to close.
 
 It is what [Connect Wallet](/components/connect-wallet/) and [Token Select](/components/token-select/) open. Use it for your own pickers and small forms.
 
-Narrow the window below 640px to get the drawer.
+Open it on a phone, or in your browser's device mode, to get the sheet.
 
 <Preview>
   <Auto client:load />
@@ -21,7 +21,7 @@ Narrow the window below 640px to get the drawer.
 
 <Install name="responsive-dialog" />
 
-It installs the shadcn `dialog` and `drawer` primitives.
+It installs the 0xui `Dialog` primitive, built on the ui-sdk Dialog and its sheet presentation.
 
 ## Usage
 
@@ -35,7 +35,7 @@ const [open, setOpen] = useState(false);
   onOpenChange={setOpen}
   title="Slippage"
   description="Choose how much the price may move before the swap is cancelled."
-  className="sm:max-w-sm"
+  className="sm:data-[presentation=dialog]:max-w-sm"
 >
   {content}
 </ResponsiveDialog>;
@@ -47,7 +47,7 @@ const [open, setOpen] = useState(false);
 
 ### Force one
 
-`mode="drawer"` or `mode="dialog"` skips the media query.
+`mode="drawer"` or `mode="dialog"` skips the screen check.
 
 <Preview>
   <ForcedDrawer client:load />
@@ -57,7 +57,9 @@ const [open, setOpen] = useState(false);
 <ResponsiveDialog mode="drawer" …>
 ```
 
-### Another breakpoint
+### Your own breakpoint
+
+By default `auto` asks ui-sdk, which picks the sheet on small touch screens. Pass `drawerQuery` to pick it with a media query instead, touch or not.
 
 ```tsx
 <ResponsiveDialog drawerQuery="(max-width: 767px)" …>
@@ -65,16 +67,16 @@ const [open, setOpen] = useState(false);
 
 ### Headless
 
-`useMediaQuery(query)` is the hook behind `auto`. It is false on the server and where `matchMedia` is missing, such as jsdom.
+`useMediaQuery(query)` is the hook behind `drawerQuery`. It is false on the server and where `matchMedia` is missing, such as jsdom.
 
 ## Behavior
 
 | Case | What happens |
 | --- | --- |
-| Server render and first paint | Dialog. The drawer is chosen after hydration, while the dialog is still closed. |
-| The screen crosses the breakpoint while open | It stays open and switches. The content remounts, so lift state that must survive above it. |
-| Long content in the drawer | The content area scrolls. The drawer stops short of the top of the screen. |
-| `className` | Applies to the dialog panel only. The drawer is full width and sizes itself. |
+| Server render | Dialog. `auto` is decided each time it opens, in the browser. |
+| The screen crosses the breakpoint while open | It keeps its presentation until it closes, and the content keeps its state. |
+| Long content in the sheet | The panel scrolls. The sheet stops at 85% of the screen height. |
+| `className` | Applies to the panel in both presentations. Target one with `data-[presentation=dialog]:` or `data-[presentation=sheet]:`. The sheet is full width. |
 
 ## Props
 
@@ -83,7 +85,8 @@ const [open, setOpen] = useState(false);
 | `open` / `onOpenChange` | — | — | Control it. |
 | `title` | `ReactNode` | — | Shown at the top. |
 | `description` | `ReactNode` | — | For screen readers. Not shown. |
-| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Pick by screen size, or force one. |
-| `drawerQuery` | `string` | `"(max-width: 639px)"` | Media query that picks the drawer in `auto` mode. |
-| `className` | `string` | — | Class for the dialog panel. |
+| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Pick by screen, or force one. `drawer` is the bottom sheet. |
+| `drawerQuery` | `string` | — | Media query that picks the sheet in `auto` mode, in place of the small touch screen check. |
+| `closeLabel` | `string` | `"Close"` | Accessible name of the close button. Name it after the dialog, e.g. `"Close send form"`, so it stays unique for screen readers and browser agents. |
+| `className` | `string` | — | Class for the panel. |
 | `children` | `ReactNode` | — | Dialog content. |

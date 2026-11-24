@@ -16,29 +16,38 @@
         {
           "path": "registry/default/components/chain-selector.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/chain-switcher.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
         "lucide-react",
-        "skullet"
+        "skullet",
+        "@wagmi/core",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
-        "popover",
-        "dialog",
-        "tabs",
         "@0xui/chain-badge",
         "@0xui/morph-text",
         "@0xui/use-mounted",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-dialog",
+        "@0xui/primitive-popover",
+        "@0xui/primitive-tabs",
+        "@0xui/use-store"
       ]
     },
     {
       "name": "copy-button",
       "type": "registry:component",
       "title": "Copy Button",
-      "description": "Icon button that copies a value to the clipboard, swaps to a checkmark for a moment, and announces 'Copied' to screen readers. Hit area extends past the small visual size. onCopy only fires when the clipboard write succeeds. Icons are swappable. Built on the shadcn Button and the useCopy hook.",
+      "description": "Icon button that copies a value to the clipboard, swaps to a checkmark for a moment, and announces 'Copied' to screen readers. Hit area extends past the small visual size. onCopy only fires when the clipboard write succeeds. Icons are swappable. Built on the 0xui Button primitive and the useCopy hook.",
       "docs": "Docs: https://0xui.io/components/copy-button.md",
       "categories": [
         "utilities"
@@ -53,8 +62,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "button",
-        "@0xui/use-copy"
+        "@0xui/use-copy",
+        "@0xui/primitive-button",
+        "@0xui/primitive-class-name"
       ]
     },
     {
@@ -80,7 +90,7 @@
       "name": "responsive-dialog",
       "type": "registry:component",
       "title": "Responsive Dialog",
-      "description": "A dialog that becomes a bottom drawer on small screens, where a centered panel is out of thumb reach. Same title, description and content in both. mode forces 'dialog' or 'drawer'; 'auto' switches on a media query (below 640px by default). Used by the wallet picker and the token picker. Built on the shadcn Dialog and Drawer. Exports useMediaQuery, which is false on the server and where matchMedia is missing.",
+      "description": "A dialog that becomes a bottom sheet on small touch screens, where a centered panel is out of thumb reach. Same title, description and content in both; the sheet can be swiped down to close. mode forces 'dialog' or 'drawer' (the sheet); 'auto' picks the sheet on small touch screens, or on drawerQuery when set. Used by the wallet picker and the token picker. Built on the 0xui Dialog primitive (ui-sdk Dialog, presentation 'sheet'). Exports useMediaQuery, which is false on the server and where matchMedia is missing.",
       "docs": "Docs: https://0xui.io/components/responsive-dialog.md",
       "categories": [
         "utilities"
@@ -92,8 +102,7 @@
         }
       ],
       "registryDependencies": [
-        "dialog",
-        "drawer"
+        "@0xui/primitive-dialog"
       ]
     },
     {
@@ -136,13 +145,14 @@
       ],
       "dependencies": [
         "wagmi",
-        "viem"
+        "viem",
+        "@tanstack/react-query"
       ],
       "registryDependencies": [
         "@0xui/copy-button",
         "@0xui/explorer-link",
-        "@0xui/0xui-utils",
-        "@0xui/morph-text"
+        "@0xui/morph-text",
+        "@0xui/identity"
       ]
     },
     {
@@ -162,10 +172,12 @@
       ],
       "dependencies": [
         "wagmi",
-        "viem"
+        "viem",
+        "@tanstack/react-query"
       ],
       "registryDependencies": [
-        "avatar"
+        "@0xui/identity",
+        "@0xui/primitive-avatar"
       ]
     },
     {
@@ -189,7 +201,7 @@
         "skullet"
       ],
       "registryDependencies": [
-        "avatar"
+        "@0xui/primitive-avatar"
       ]
     },
     {
@@ -214,7 +226,7 @@
       "registryDependencies": [
         "@0xui/0xui-utils",
         "@0xui/chain-badge",
-        "avatar"
+        "@0xui/primitive-avatar"
       ]
     },
     {
@@ -230,6 +242,10 @@
         {
           "path": "registry/default/components/token-amount.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/token-amount-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
@@ -253,11 +269,17 @@
         {
           "path": "registry/default/components/block-number.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/block-number-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
-        "skullet"
+        "skullet",
+        "@tanstack/react-query",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/explorer-link",
@@ -277,13 +299,19 @@
         {
           "path": "registry/default/components/gas-price.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/gas-price-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
         "lucide-react",
-        "skullet"
+        "skullet",
+        "@tanstack/react-query",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/morph-text"
@@ -293,7 +321,7 @@
       "name": "connect-wallet",
       "type": "registry:component",
       "title": "Connect Wallet",
-      "description": "Wallet picker for wagmi: 'Connect wallet' button plus dialog listing the config's connectors and EIP-6963 browser extensions with their icons. Recent wallet first, then installed (badged), max N shown with an 'Other wallets' overflow, generic injected hidden when extensions announce themselves. Per-wallet spinner while connecting, a rejected request shows as cancelled (not an error), other errors inline. Exports ConnectWalletDialog (bring your own trigger), useConnectWallet and useWalletOptions. data-phase: idle | connecting | cancelled | error. On small screens the picker opens as a bottom drawer (mode: auto, dialog or drawer).",
+      "description": "Wallet picker for wagmi: 'Connect wallet' button plus dialog listing the config's connectors and EIP-6963 browser extensions with their icons. Recent wallet first, then installed (badged), max N shown with an 'Other wallets' overflow, generic injected hidden when extensions announce themselves. Per-wallet spinner while connecting, a rejected request shows as cancelled (not an error), other errors inline. Exports ConnectWalletDialog (bring your own trigger), useConnectWallet and useWalletOptions. data-phase: idle | connecting | cancelled | error. On small touch screens the picker opens as a bottom sheet (mode: auto, dialog or drawer).",
       "docs": "Docs: https://0xui.io/components/connect-wallet.md",
       "categories": [
         "wallet"
@@ -302,18 +330,27 @@
         {
           "path": "registry/default/components/connect-wallet.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/connect-wallet-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "@web3icons/react",
-        "lucide-react"
+        "lucide-react",
+        "@wagmi/core",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
-        "button",
-        "@0xui/responsive-dialog",
-        "avatar",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-avatar",
+        "@0xui/primitive-button",
+        "@0xui/primitive-dialog",
+        "@0xui/use-store"
       ]
     },
     {
@@ -329,12 +366,18 @@
         {
           "path": "registry/default/components/balance.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/balance-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "skullet"
+        "skullet",
+        "@tanstack/react-query",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/token-amount"
@@ -357,18 +400,24 @@
       ],
       "dependencies": [
         "wagmi",
-        "lucide-react"
+        "lucide-react",
+        "@tanstack/react-query",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
-        "button",
-        "popover",
         "@0xui/address-avatar",
         "@0xui/balance",
         "@0xui/chain-badge",
         "@0xui/copy-button",
         "@0xui/explorer-link",
         "@0xui/0xui-utils",
-        "@0xui/morph-text"
+        "@0xui/morph-text",
+        "@0xui/account-core",
+        "@0xui/identity",
+        "@0xui/primitive-button",
+        "@0xui/primitive-popover",
+        "@0xui/use-store"
       ]
     },
     {
@@ -393,7 +442,9 @@
       "registryDependencies": [
         "@0xui/connect-wallet",
         "@0xui/account",
-        "@0xui/use-mounted"
+        "@0xui/use-mounted",
+        "@0xui/account-core",
+        "@0xui/use-store"
       ]
     },
     {
@@ -409,13 +460,18 @@
         {
           "path": "registry/default/components/transaction-status.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/transaction-status-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
         "@tanstack/react-query",
-        "lucide-react"
+        "lucide-react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/copy-button",
@@ -436,19 +492,27 @@
         {
           "path": "registry/default/components/transaction-button.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/tx-flow.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "@tanstack/react-query",
+        "@wagmi/core"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/connect-wallet",
         "@0xui/transaction-status",
         "@0xui/morph-text",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button",
+        "@0xui/use-store"
       ]
     },
     {
@@ -464,20 +528,28 @@
         {
           "path": "registry/default/components/amount-input.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/amount-input-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
-        "viem"
+        "viem",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/primitive-button",
+        "@0xui/primitive-field"
       ]
     },
     {
       "name": "token-select",
       "type": "registry:component",
       "title": "Token Select",
-      "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading skeleton measured from the real rows (skullet) while the list downloads; and pagination (50 rows per page, infinite scroll plus a Show more button) so 400-token lists stay fast. Accepts balances from an indexer via the balances prop, which skips RPC reads. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type. On small screens the picker opens as a bottom drawer (mode: auto, dialog or drawer).",
+      "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading skeleton measured from the real rows (skullet) while the list downloads; and pagination (50 rows per page, infinite scroll plus a Show more button) so 400-token lists stay fast. Accepts balances from an indexer via the balances prop, which skips RPC reads. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type. On small touch screens the picker opens as a bottom sheet (mode: auto, dialog or drawer).",
       "docs": "Docs: https://0xui.io/components/token-select.md",
       "categories": [
         "tokens"
@@ -486,21 +558,29 @@
         {
           "path": "registry/default/components/token-select.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/token-select-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
         "lucide-react",
-        "skullet"
+        "skullet",
+        "@tanstack/react-query",
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
-        "button",
-        "@0xui/responsive-dialog",
         "@0xui/token-icon",
         "@0xui/token-amount",
         "@0xui/token-list",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/primitive-button",
+        "@0xui/primitive-dialog"
       ]
     },
     {
@@ -526,7 +606,8 @@
         "@0xui/token-select",
         "@0xui/balance",
         "@0xui/token-amount",
-        "@0xui/morph-text"
+        "@0xui/morph-text",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -542,17 +623,28 @@
         {
           "path": "registry/default/components/address-input.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/address-input-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "@tanstack/react-query",
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/address-avatar",
         "@0xui/0xui-utils",
-        "@0xui/morph-text"
+        "@0xui/morph-text",
+        "@0xui/identity",
+        "@0xui/primitive-button",
+        "@0xui/primitive-field"
       ]
     },
     {
@@ -568,11 +660,17 @@
         {
           "path": "registry/default/components/approve-button.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/approve-button-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
-        "viem"
+        "viem",
+        "@tanstack/react-query",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/transaction-button"
@@ -591,16 +689,24 @@
         {
           "path": "registry/default/components/network-guard.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/network-guard-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
-        "lucide-react"
+        "lucide-react",
+        "@wagmi/core",
+        "viem"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/use-mounted",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button",
+        "@0xui/use-store"
       ]
     },
     {
@@ -616,26 +722,33 @@
         {
           "path": "registry/default/components/sign-message.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/sign-message-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/connect-wallet",
         "@0xui/copy-button",
         "@0xui/morph-text",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button",
+        "@0xui/use-store"
       ]
     },
     {
       "name": "transaction-toast",
       "type": "registry:component",
       "title": "Transaction Toast",
-      "description": "useTransactionToast() returns toastTransaction(hash, options): one Sonner toast that goes from 'Transaction pending' to 'Transaction confirmed' or 'Transaction reverted' (or 'Couldn't track transaction'), with a View-on-explorer action and your description in every state. Waits with viem directly so reverted receipts are handled. Needs the shadcn Toaster mounted once.",
+      "description": "useTransactionToast() returns toastTransaction(hash, options): one toast that goes from 'Transaction pending' to 'Transaction confirmed' or 'Transaction reverted' (or 'Couldn't track transaction'), with a View-on-explorer action and your description in every state. Waits with viem directly so reverted receipts are handled. Needs the Toaster from @/components/primitives/toast mounted once.",
       "docs": "Docs: https://0xui.io/components/transaction-toast.md",
       "categories": [
         "transactions"
@@ -644,15 +757,19 @@
         {
           "path": "registry/default/components/transaction-toast.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/transaction-toast-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "sonner"
+        "@ui-sdk/core",
+        "@wagmi/core"
       ],
       "registryDependencies": [
-        "sonner",
         "@0xui/0xui-utils"
       ]
     },
@@ -669,17 +786,24 @@
         {
           "path": "registry/default/components/add-token.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/add-token-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/morph-text",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button",
+        "@0xui/use-store"
       ]
     },
     {
@@ -695,17 +819,23 @@
         {
           "path": "registry/default/components/send.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/send-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
-        "viem"
+        "viem",
+        "wagmi"
       ],
       "registryDependencies": [
         "@0xui/address-input",
         "@0xui/token-input",
         "@0xui/token-select",
         "@0xui/transaction-button",
-        "@0xui/transaction-status"
+        "@0xui/transaction-status",
+        "@0xui/token-list"
       ]
     },
     {
@@ -721,6 +851,10 @@
         {
           "path": "registry/default/components/swap.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/swap-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
@@ -734,7 +868,9 @@
         "@0xui/token-select",
         "@0xui/approve-button",
         "@0xui/transaction-button",
-        "@0xui/morph-text"
+        "@0xui/morph-text",
+        "@0xui/token-list",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -750,18 +886,27 @@
         {
           "path": "registry/default/components/batch-transaction.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/batch-transaction-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/connect-wallet",
         "@0xui/morph-text",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button",
+        "@0xui/use-store"
       ]
     },
     {
@@ -777,17 +922,25 @@
         {
           "path": "registry/default/components/contract-form.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/contract-form-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "viem",
         "wagmi",
-        "@tanstack/react-query"
+        "@tanstack/react-query",
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "@wagmi/core",
+        "lucide-react"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/transaction-button",
-        "@0xui/morph-text"
+        "@0xui/morph-text",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -803,20 +956,27 @@
         {
           "path": "registry/default/components/portfolio.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/portfolio-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
         "lucide-react",
-        "skullet"
+        "skullet",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
         "@0xui/token-select",
         "@0xui/token-icon",
         "@0xui/token-amount",
         "@0xui/morph-text",
-        "@0xui/token-list"
+        "@0xui/token-list",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -832,18 +992,24 @@
         {
           "path": "registry/default/components/transaction-history.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/transaction-history-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "lucide-react"
+        "lucide-react",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/explorer-link",
         "@0xui/transaction-status",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -859,6 +1025,10 @@
         {
           "path": "registry/default/components/ens-profile.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/ens-profile-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
@@ -866,11 +1036,13 @@
         "viem",
         "@tanstack/react-query",
         "lucide-react",
-        "skullet"
+        "skullet",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/address",
-        "@0xui/address-avatar"
+        "@0xui/address-avatar",
+        "@0xui/identity"
       ]
     },
     {
@@ -886,6 +1058,10 @@
         {
           "path": "registry/default/components/nft-card.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/nft-card-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
@@ -893,7 +1069,8 @@
         "viem",
         "@tanstack/react-query",
         "lucide-react",
-        "skullet"
+        "skullet",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/0xui-utils"
@@ -912,16 +1089,25 @@
         {
           "path": "registry/default/components/event-feed.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/event-feed-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
-        "@tanstack/react-query"
+        "@tanstack/react-query",
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/explorer-link",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/use-store"
       ]
     },
     {
@@ -975,6 +1161,10 @@
         {
           "path": "registry/default/components/shielded-balance.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/shielded-balance-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
@@ -983,10 +1173,11 @@
         "skullet"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/shielded-engine",
         "@0xui/token-amount",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -1002,14 +1193,21 @@
         {
           "path": "registry/default/components/shielded-sync-status.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/shielded-sync.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
-        "button",
-        "@0xui/shielded-engine"
+        "@0xui/shielded-engine",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -1025,15 +1223,21 @@
         {
           "path": "registry/default/components/proof-progress.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/proof-progress-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "lucide-react"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/shielded-engine",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button",
+        "@0xui/use-store"
       ]
     },
     {
@@ -1049,18 +1253,25 @@
         {
           "path": "registry/default/components/shielded-account.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/shielded-account-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
-        "lucide-react"
+        "lucide-react",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/shielded-engine",
         "@0xui/shielded-address",
         "@0xui/privacy-badge",
         "@0xui/copy-button",
-        "@0xui/use-mounted"
+        "@0xui/use-mounted",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -1076,11 +1287,17 @@
         {
           "path": "registry/default/components/shielded-transaction-status.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/shielded-transaction-status-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
-        "viem"
+        "viem",
+        "@tanstack/react-query",
+        "@wagmi/core"
       ],
       "registryDependencies": [
         "@0xui/shielded-engine",
@@ -1104,16 +1321,20 @@
         {
           "path": "registry/default/components/shield.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/shield-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
         "viem",
         "@tanstack/react-query",
-        "lucide-react"
+        "lucide-react",
+        "@wagmi/core"
       ],
       "registryDependencies": [
-        "button",
         "@0xui/shielded-engine",
         "@0xui/shielded-transaction-status",
         "@0xui/token-input",
@@ -1124,7 +1345,11 @@
         "@0xui/token-amount",
         "@0xui/privacy-badge",
         "@0xui/morph-text",
-        "@0xui/0xui-utils"
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store",
+        "@0xui/primitive-button",
+        "@0xui/token-list",
+        "@0xui/use-store"
       ]
     },
     {
@@ -1242,7 +1467,15 @@
         {
           "path": "registry/default/hooks/use-copy.ts",
           "type": "registry:hook"
+        },
+        {
+          "path": "registry/default/lib/copy.ts",
+          "type": "registry:lib"
         }
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-store",
+        "@0xui/use-store"
       ]
     },
     {
@@ -1262,6 +1495,10 @@
         {
           "path": "registry/default/components/shielded-provider.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/shielded-client.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
@@ -1295,7 +1532,7 @@
       "name": "agent-tools",
       "type": "registry:component",
       "title": "Agent Tools",
-      "description": "WebMCP tools for browser agents (document.modelContext): get_wallet, list_chains, get_balance (native or ERC-20), get_gas_price and switch_chain, read from the app's wagmi config. Sending and signing stay with the person; 0xui buttons mark those with data-agent-confirm. Exports AgentTools (renders nothing), useAgentTools (add your own tools) and walletAgentTools. Does nothing in browsers without WebMCP.",
+      "description": "Connects browser agents to your dapp. Render it once: it starts ui-sdk's agent bridge and registers WebMCP tools (document.modelContext) for reading and operating the page (snapshot, act, query) plus wallet reads from your wagmi config: get_wallet, list_chains, get_balance, get_token, get_allowance, get_gas_price, get_block_number, get_transaction, resolve_ens, and switch_chain. Agents can read and fill forms freely; anything that opens the wallet (send, sign, approve, connect, switch network, disconnect) is marked data-agent-confirm and waits for the person in an Allow / Don't allow dialog. Recovery phrases are hidden from agents. Replace the dialog with the confirm prop, or pass confirm={false} to refuse those steps. Exports AgentTools, useAgentTools, getAgent and pageAgentTools (for your own model loop). Does nothing in browsers without WebMCP unless you call getAgent().",
       "docs": "Docs: https://0xui.io/components/agent-tools.md",
       "categories": [
         "utilities"
@@ -1304,11 +1541,22 @@
         {
           "path": "registry/default/components/agent-tools.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/agent-tools-core.ts",
+          "type": "registry:lib"
         }
       ],
       "dependencies": [
         "wagmi",
-        "viem"
+        "viem",
+        "@wagmi/core",
+        "@ui-sdk/core",
+        "@ui-sdk/react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-alert-dialog",
+        "@0xui/primitive-button"
       ]
     },
     {
@@ -1713,7 +1961,7 @@
         "@0xui/shielded-balance",
         "@0xui/shielded-engine",
         "@0xui/shielded-sync-status",
-        "button"
+        "@0xui/primitive-button"
       ],
       "dependencies": [
         "viem"
@@ -1736,7 +1984,7 @@
       ],
       "registryDependencies": [
         "@0xui/morph-text",
-        "button"
+        "@0xui/primitive-button"
       ],
       "files": [
         {
@@ -1836,8 +2084,8 @@
       "registryDependencies": [
         "@0xui/proof-progress",
         "@0xui/shielded-engine",
-        "button",
-        "@0xui/mock-shielded-engine"
+        "@0xui/mock-shielded-engine",
+        "@0xui/primitive-button"
       ],
       "dependencies": [
         "viem"
@@ -1853,14 +2101,14 @@
       "name": "responsive-dialog-demo",
       "type": "registry:example",
       "title": "Responsive Dialog demo",
-      "description": "Slippage picker that opens as a dialog on desktop and a drawer on mobile.",
+      "description": "Slippage picker that opens as a dialog on desktop and a bottom sheet on small touch screens.",
       "docs": "Docs: https://0xui.io/components/responsive-dialog.md",
       "categories": [
         "utilities"
       ],
       "registryDependencies": [
         "@0xui/responsive-dialog",
-        "button"
+        "@0xui/primitive-button"
       ],
       "files": [
         {
@@ -2241,7 +2489,7 @@
       "registryDependencies": [
         "@0xui/transaction-toast",
         "@0xui/transaction-button",
-        "sonner"
+        "@0xui/primitive-toast"
       ],
       "dependencies": [
         "viem"
@@ -2290,6 +2538,240 @@
           "path": "registry/default/examples/agent-tools-demo.tsx",
           "type": "registry:example"
         }
+      ]
+    },
+    {
+      "name": "primitive-class-name",
+      "type": "registry:lib",
+      "title": "Primitive class names",
+      "description": "Helper the 0xui primitives use to put their base Tailwind classes under a caller className that may be a function of ui-sdk part state.",
+      "files": [
+        {
+          "path": "registry/default/lib/class-name.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "primitive-avatar",
+      "type": "registry:component",
+      "title": "Avatar primitive",
+      "description": "0xui's styled avatar on ui-sdk (@ui-sdk/react/avatar): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/avatar.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/avatar.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "primitive-button",
+      "type": "registry:component",
+      "title": "Button primitive",
+      "description": "0xui's styled button on ui-sdk (@ui-sdk/react/button): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/button.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/button.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "primitive-dialog",
+      "type": "registry:component",
+      "title": "Dialog primitive",
+      "description": "0xui's styled dialog on ui-sdk (@ui-sdk/react/dialog): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/dialog.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/dialog.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-button",
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "primitive-field",
+      "type": "registry:component",
+      "title": "Field primitive",
+      "description": "0xui's styled field on ui-sdk (@ui-sdk/react/field): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/field.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/field.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "primitive-popover",
+      "type": "registry:component",
+      "title": "Popover primitive",
+      "description": "0xui's styled popover on ui-sdk (@ui-sdk/react/popover): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/popover.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/popover.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "primitive-tabs",
+      "type": "registry:component",
+      "title": "Tabs primitive",
+      "description": "0xui's styled tabs on ui-sdk (@ui-sdk/react/tabs): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/tabs.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/tabs.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "primitive-toast",
+      "type": "registry:component",
+      "title": "Toast primitive",
+      "description": "0xui's styled toast on ui-sdk (@ui-sdk/react/toast): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/toast.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/toast.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "0xui-store",
+      "type": "registry:lib",
+      "title": "0xui Store",
+      "description": "Framework-free state container (get, set, subscribe) behind every 0xui controller. Starts watching wagmi when the first listener subscribes and stops when the last leaves.",
+      "files": [
+        {
+          "path": "registry/default/lib/0xui-store.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "use-store",
+      "type": "registry:hook",
+      "title": "useStore",
+      "description": "React hook that reads a 0xui store with useSyncExternalStore.",
+      "files": [
+        {
+          "path": "registry/default/hooks/use-store.ts",
+          "type": "registry:hook"
+        }
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-store"
+      ]
+    },
+    {
+      "name": "account-core",
+      "type": "registry:lib",
+      "title": "account core",
+      "description": "Framework-free logic shared by @0xui/account, @0xui/wallet-button: built on @wagmi/core and viem, no React, so a Vue or Svelte port reuses it as-is.",
+      "files": [
+        {
+          "path": "registry/default/lib/account-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "@wagmi/core",
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-store",
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "identity",
+      "type": "registry:lib",
+      "title": "identity core",
+      "description": "Framework-free logic shared by @0xui/account, @0xui/address, @0xui/address-avatar, @0xui/address-input, @0xui/ens-profile: built on @wagmi/core and viem, no React, so a Vue or Svelte port reuses it as-is.",
+      "files": [
+        {
+          "path": "registry/default/lib/identity.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "@wagmi/core",
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/0xui-utils"
+      ]
+    },
+    {
+      "name": "primitive-alert-dialog",
+      "type": "registry:component",
+      "title": "Alert-Dialog primitive",
+      "description": "0xui's styled alert-dialog on ui-sdk (@ui-sdk/react/alert-dialog): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/alert-dialog.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/alert-dialog.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/core",
+        "@ui-sdk/react"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
       ]
     }
   ]

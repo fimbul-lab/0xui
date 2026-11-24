@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createAgent } from "@ui-sdk/react/agent";
 import { useState, type ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { decodeFunctionData, erc20Abi, maxUint256, parseUnits, toHex, type Address } from "viem";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
   createTestConfig,
@@ -82,9 +83,34 @@ const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve
 
 afterEach(() => vi.useRealTimers());
 
+// One bridge for the file. A person approves only while `approve` is set.
+let approve = false;
+const asked: string[] = [];
+const agent = createAgent({
+  allow: (step) => {
+    if (step.confirm) asked.push(step.confirm);
+    return !step.confirm || approve;
+  },
+});
+const onPage = () => agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+const entry = (label: string) => onPage().find((e) => e.label === label);
+const run = (steps: { ref: string; action: string; args?: unknown[] }[]) => act(() => agent.act({ steps }));
+const expectNamed = (labels: string[]) => {
+  const components = onPage();
+  for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+  const names = components.map((e) => e.label);
+  for (const label of labels) expect(names, `${label} is missing from the snapshot`).toContain(label);
+};
+/** Everything an agent has been shown: the page now, and what its steps returned. */
+const seen = (...results: unknown[]) => JSON.stringify([agent.snapshot(), ...results]);
+const agentReset = () => {
+  approve = false;
+  asked.length = 0;
+};
+
 describe("ShieldedAccount", () => {
   const type = (label: string, value: string) =>
-    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    fireEvent.input(screen.getByLabelText(label), { target: { value } });
   const phase = () =>
     document.querySelector("[data-slot=shielded-account]")?.getAttribute("data-phase");
 
@@ -115,7 +141,7 @@ describe("ShieldedAccount", () => {
     expect(phase()).toBe("none");
 
     expect(screen.getByRole("button", { name: "Enter a password" })).toBeDisabled();
-    type("Password", "correct horse");
+    type("New password", "correct horse");
     expect(screen.getByRole("button", { name: "Passwords don't match" })).toBeDisabled();
     type("Confirm password", "correct horse");
 
@@ -123,7 +149,7 @@ describe("ShieldedAccount", () => {
     expect(phase()).toBe("creating");
     expect(screen.getByRole("button", { name: "Creating account…" })).toBeDisabled();
     expect(screen.getByRole("status")).toHaveTextContent("This takes a few seconds.");
-    expect(screen.getByLabelText("Password")).toBeDisabled();
+    expect(screen.getByLabelText("New password")).toBeDisabled();
 
     await act(() => vi.advanceTimersByTimeAsync(MOCK_TIMINGS.createAccount));
     expect(phase()).toBe("backup");
@@ -217,7 +243,7 @@ describe("ShieldedAccount", () => {
     await waitFor(() => expect(phase()).toBe("unlocked"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Lock" }));
+    await user.click(screen.getByRole("button", { name: "Lock private account" }));
     expect(phase()).toBe("locked");
     expect(engine.account.status()).toBe("locked");
     expect(screen.getByLabelText("Password")).toHaveValue("");
@@ -242,6 +268,108 @@ describe("ShieldedAccount", () => {
     act(() => engine.account.lock());
     expect(screen.queryByText("Private area")).not.toBeInTheDocument();
   });
+
+  describe("with an agent", () => {
+    beforeEach(agentReset);
+
+    it("fills a new password without seeing it, and needs a person to create the account", async () => {
+      const engine = createMockShieldedEngine({ account: "none", speed: Infinity });
+      render(withEngine(<ShieldedAccount />, engine));
+      expectNamed(["New password", "Confirm password", "Import a recovery phrase instead"]);
+
+      let result = await run([
+        { ref: "New password", action: "setValue", args: ["correct horse"] },
+        { ref: "Confirm password", action: "setValue", args: ["correct horse"] },
+      ]);
+      expect(result.ok, result.error?.message).toBe(true);
+      expect(entry("New password")?.value).toBe("[redacted]");
+      expect(seen(result)).not.toContain("correct horse");
+
+      const sentence = "Creates a new private account on this device, locked with the password entered here";
+      expect(entry("Create private account")?.confirm).toBe(sentence);
+      result = await run([{ ref: "Create private account", action: "press" }]);
+      expect(result.ok).toBe(false);
+      expect(asked).toEqual([sentence]);
+      expect(phase()).toBe("none");
+
+      approve = true;
+      result = await run([{ ref: "Create private account", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      await waitFor(() => expect(phase()).toBe("backup"));
+
+      // The backup step is the person's alone: the agent sees none of it.
+      for (const name of ["Reveal phrase", "Reveal the phrase first", "I saved my recovery phrase somewhere safe"]) {
+        expect(entry(name), name).toBeUndefined();
+      }
+      result = await run([{ ref: "Reveal phrase", action: "press" }]);
+      expect(result.ok).toBe(false);
+      fireEvent.click(screen.getByRole("button", { name: "Reveal phrase" }));
+      expect(screen.getAllByText("abandon")).toHaveLength(11);
+      expect(seen(result)).not.toContain("abandon");
+      expect(entry("Copy recovery phrase")).toBeUndefined();
+    });
+
+    it("pastes a recovery phrase it can't read back, and needs a person to import it", async () => {
+      const engine = createMockShieldedEngine({ account: "none", speed: Infinity });
+      const importAccount = vi.spyOn(engine.account, "import");
+      render(withEngine(<ShieldedAccount />, engine));
+
+      let result = await run([{ ref: "Import a recovery phrase instead", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      result = await run([
+        { ref: "Recovery phrase", action: "setValue", args: [MOCK_MNEMONIC] },
+        { ref: "New password", action: "setValue", args: ["correct horse"] },
+        { ref: "Confirm password", action: "setValue", args: ["correct horse"] },
+      ]);
+      expect(result.ok, result.error?.message).toBe(true);
+      expect(screen.getByLabelText("Recovery phrase")).toHaveValue(MOCK_MNEMONIC);
+      expect(entry("Recovery phrase")?.value).toBe("[redacted]");
+      expect(seen(result)).not.toContain("abandon");
+
+      result = await run([{ ref: "Import private account", action: "press" }]);
+      expect(result.ok).toBe(false);
+      expect(importAccount).not.toHaveBeenCalled();
+
+      approve = true;
+      result = await run([{ ref: "Import private account", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      await waitFor(() => expect(phase()).toBe("unlocked"));
+      expect(asked).toEqual([
+        "Restores the private account from the recovery phrase entered here and keeps it on this device, locked with the new password",
+        "Restores the private account from the recovery phrase entered here and keeps it on this device, locked with the new password",
+      ]);
+    });
+
+    it("needs a person to unlock and to lock", async () => {
+      const engine = createMockShieldedEngine({ speed: Infinity });
+      render(withEngine(<ShieldedAccount />, engine));
+
+      let result = await run([{ ref: "Password", action: "setValue", args: ["password"] }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      expect(entry("Password")?.value).toBe("[redacted]");
+      result = await run([{ ref: "Unlock", action: "press" }]);
+      expect(result.ok).toBe(false);
+      expect(phase()).toBe("locked");
+
+      approve = true;
+      result = await run([{ ref: "Unlock", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      await waitFor(() => expect(phase()).toBe("unlocked"));
+
+      approve = false;
+      expect(entry("Lock private account")?.confirm).toBe(
+        "Locks your private account. Unlocking it again takes its password"
+      );
+      result = await run([{ ref: "Lock private account", action: "press" }]);
+      expect(result.ok).toBe(false);
+      expect(phase()).toBe("unlocked");
+      approve = true;
+      result = await run([{ ref: "Lock private account", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      expect(phase()).toBe("locked");
+      expect(seen(result)).not.toContain('"password"');
+    });
+  });
 });
 
 describe("AddressInput with private addresses", () => {
@@ -262,7 +390,7 @@ describe("AddressInput with private addresses", () => {
 
   const paste = async (text: string) => {
     const user = userEvent.setup();
-    await user.click(screen.getByRole("textbox", { name: "Recipient" }));
+    await user.click(screen.getByRole("textbox", { name: "Recipient address" }));
     await user.paste(text);
     return user;
   };
@@ -342,8 +470,12 @@ describe("ShieldedTransactionStatus", () => {
   const phase = () =>
     document.querySelector("[data-slot=shielded-transaction-status]")!.getAttribute("data-phase");
   const steps = () => screen.getAllByRole("listitem").map((item) => item.textContent);
-  // The copy button has a status region of its own; the heading comes first.
-  const heading = () => screen.getAllByRole("status")[0]!;
+  // The copy button has a status region of its own; the heading comes first. Scoped to
+  // the card, because ui-sdk keeps a page-level announcer (also a status) on <body>.
+  const heading = () =>
+    within(document.querySelector<HTMLElement>("[data-slot=shielded-transaction-status]")!).getAllByRole(
+      "status"
+    )[0]!;
 
   it("formats a wait", () => {
     expect(formatWait(0)).toBeUndefined();
@@ -566,7 +698,7 @@ describe("Shield", () => {
 
   const root = () => document.querySelector("[data-slot=shield]")!;
   const phase = () => root().getAttribute("data-phase");
-  const input = () => screen.getByRole("textbox", { name: "Amount to shield" });
+  const input = () => screen.getByRole("textbox", { name: /^Amount to shield in / });
   const button = (name: string | RegExp, timeout = 5_000) =>
     screen.findByRole("button", { name }, { timeout });
   const card = () => document.querySelector("[data-slot=shielded-transaction-status]");
@@ -834,7 +966,7 @@ describe("Shield", () => {
     // Still on the signature step, ready for another try.
     expect(screen.getByRole("button", { name: "Sign in wallet" })).toBeEnabled();
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Cancel shield" }));
     expect(phase()).toBe("idle");
     expect(input()).toHaveValue("2");
     expect(input().closest("[inert]")).toBeNull();
@@ -925,7 +1057,7 @@ describe("Shield", () => {
       await button("Approve and shield TKN");
       expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
       expect(screen.getByText("1.995")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Edit" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Edit shield" })).toBeEnabled();
       expect(steps()).toEqual([
         ["done", "Signed"],
         ["ready", "Approve and shield TKNOne wallet prompt. Both happen together, or neither does."],
@@ -939,7 +1071,7 @@ describe("Shield", () => {
       expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
       expect(card()).toHaveTextContent("Submitted");
       expect(screen.getByText("1.995")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Edit shield" })).not.toBeInTheDocument();
 
       // The wait can be an hour: the form comes back on request, the card stays.
       await user.click(screen.getByRole("button", { name: "Shield more" }));
@@ -958,10 +1090,91 @@ describe("Shield", () => {
       await button("Approve TKN");
       expect(steps().map(([state]) => state)).toEqual(["done", "ready", "todo"]);
 
-      await user.click(screen.getByRole("button", { name: "Edit" }));
+      await user.click(screen.getByRole("button", { name: "Edit shield" }));
       expect(input()).toHaveValue("2");
       expect(phase()).toBe("idle");
       expect(await button("Shield TKN")).toBeEnabled();
+    });
+  });
+  describe("with an agent", () => {
+    beforeEach(agentReset);
+
+    it("fills the amount and reaches the shield, but can't shield without a person", async () => {
+      const sent: Sent[] = [];
+      const config = walletConfig({ allowance: 0n, onSend: (tx) => sent.push(tx) });
+      const engine = await unlockedEngine();
+      const prepare = vi.spyOn(engine, "prepareShield");
+      renderWithWagmi(withEngine(<Shield tokens={[tkn]} chainId={1} />, engine), { config });
+      // Opening the wallet picker is free: its wallets ask on their own.
+      expect(entry("Connect wallet")?.confirm).toBeUndefined();
+      await act(() => connectMock(config));
+      expectNamed(["Amount to shield in TKN"]);
+
+      let result = await run([{ ref: "Amount to shield", action: "setValue", args: ["2"] }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      const sentence =
+        "Shields 2 TKN from your wallet into your private balance on Ethereum: " +
+        "1.995 TKN arrives after a 0.005 TKN fee. Three wallet prompts: sign, approve, shield.";
+      await waitFor(() => expect(entry("Shield TKN")?.confirm).toBe(sentence), { timeout: 3_000 });
+
+      result = await run([{ ref: "Shield TKN", action: "press" }]);
+      expect(result.ok).toBe(false);
+      expect(asked).toEqual([sentence]);
+      expect(prepare).not.toHaveBeenCalled();
+      expect(phase()).toBe("idle");
+
+      // The person says yes: the signature goes, and the next prompt asks again.
+      approve = true;
+      result = await run([{ ref: "Shield TKN", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      await waitFor(() => expect(entry("Approve TKN")?.confirm).toBe(
+        "Approve TKN in your wallet, to shield 2 TKN. Lets the shield contract move this amount."
+      ));
+      expect(prepare).toHaveBeenCalledTimes(1);
+
+      approve = false;
+      result = await run([{ ref: "Approve TKN", action: "press" }]);
+      expect(result.ok).toBe(false);
+      expect(sent).toHaveLength(0);
+
+      // Backing out touches no wallet.
+      result = await run([{ ref: "Cancel shield", action: "press" }]);
+      expect(result.ok, result.error?.message).toBe(true);
+      expect(phase()).toBe("idle");
+      expect(seen(result)).not.toContain("abandon");
+    });
+
+    it("asks a person before switching the wallet's network", async () => {
+      const engine = await unlockedEngine({ chains: [11155111] });
+      await engine.sync(11155111);
+      const config = walletConfig();
+      renderWithWagmi(
+        withEngine(<Shield tokens={[{ ...tkn, chainId: 11155111 }]} chainId={11155111} />, engine),
+        { config }
+      );
+      await act(() => connectMock(config));
+      await run([{ ref: "Amount to shield", action: "setValue", args: ["2"] }]);
+      await waitFor(() =>
+        expect(entry("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia")
+      );
+      expect((await run([{ ref: "Switch to Sepolia", action: "press" }])).ok).toBe(false);
+    });
+
+    it("confirms each wallet step in the collapse variant too", async () => {
+      const config = walletConfig({ allowance: 0n });
+      const engine = await unlockedEngine();
+      renderWithWagmi(withEngine(<Shield tokens={[tkn]} chainId={1} variant="collapse" />, engine), { config });
+      await act(() => connectMock(config));
+      await run([{ ref: "Amount to shield", action: "setValue", args: ["2"] }]);
+      await waitFor(() => expect(entry("Shield TKN")?.confirm).toMatch(/^Shields 2 TKN/), { timeout: 3_000 });
+
+      approve = true;
+      expect((await run([{ ref: "Shield TKN", action: "press" }])).ok).toBe(true);
+      await waitFor(() => expect(entry("Approve TKN")?.confirm).toMatch(/^Approve TKN in your wallet/));
+      // Edit goes back to the form, free.
+      approve = false;
+      expect((await run([{ ref: "Edit shield", action: "press" }])).ok).toBe(true);
+      expect(phase()).toBe("idle");
     });
   });
 });

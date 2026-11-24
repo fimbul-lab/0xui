@@ -1,13 +1,14 @@
 // Docs: https://0xui.io/components/gas-price.md
+import { useQuery } from "@tanstack/react-query";
 import { FuelIcon } from "lucide-react";
 import type { ComponentType } from "react";
 import { SkeletonBox } from "skullet/react";
-import { formatGwei } from "viem";
-import { useGasPrice } from "wagmi";
+import { useChainId, useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
+import { formatGasPrice, gasPriceQueryOptions, gasTone, type GasTone } from "@/lib/gas-price-core";
 import { cn } from "@/lib/utils";
 
-export type GasTone = "low" | "medium" | "high";
+export { formatGasPrice, gasTone, type GasTone };
 
 /** SkeletonBox is a block by default. This one sits in a line of text. */
 const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
@@ -25,27 +26,10 @@ export type GasPriceProps = {
   thresholds?: { low: number; high: number };
   /** Custom icon. Pass false to hide. */
   icon?: ComponentType<{ className?: string }> | false;
+  /** Locale for the number. Defaults to the browser's. */
   locale?: string;
   className?: string;
 };
-
-/** Format gwei with 3 significant digits, so 0.0123 and 42.1 both read well. */
-export function formatGasPrice(wei: bigint, locale?: string) {
-  const gwei = Number(formatGwei(wei));
-  return new Intl.NumberFormat(locale, {
-    maximumSignificantDigits: 3,
-  }).format(gwei);
-}
-
-export function gasTone(
-  wei: bigint,
-  thresholds: { low: number; high: number }
-): GasTone {
-  const gwei = Number(formatGwei(wei));
-  if (gwei < thresholds.low) return "low";
-  if (gwei > thresholds.high) return "high";
-  return "medium";
-}
 
 /** Current gas price, refreshed on an interval. */
 export function useGasPriceInfo({
@@ -53,10 +37,11 @@ export function useGasPriceInfo({
   refreshInterval = 12_000,
   thresholds,
 }: Pick<GasPriceProps, "chainId" | "refreshInterval" | "thresholds"> = {}) {
-  const { data, isError, isPending } = useGasPrice({
-    chainId,
-    query: { refetchInterval: refreshInterval },
-  });
+  const config = useConfig();
+  const currentChainId = useChainId();
+  const { data, isError, isPending } = useQuery(
+    gasPriceQueryOptions(config, { chainId: chainId ?? currentChainId, refreshInterval })
+  );
   return {
     gasPrice: data,
     tone: data !== undefined && thresholds ? gasTone(data, thresholds) : undefined,

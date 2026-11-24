@@ -51,7 +51,7 @@ Use `insufficient` to block the action, and name the reason on the button:
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `label` | `ReactNode` | — | Label above the panel. |
+| `label` | `ReactNode` | — | Label above the panel. A string also names the panel's controls for screen readers and browser agents: the field "You pay in ETH", "Max You pay" and "You pay token: ETH, change". So a swap's two panels, or a send and a swap on one page, never share a name. |
 | `value` | `string` | — | Decimal string. |
 | `onValueChange` | `(value, { amount, insufficient, balance }) => void` | — | Called on change. |
 | `token` | `Token` | — | Selected token. |

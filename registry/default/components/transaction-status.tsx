@@ -3,13 +3,21 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import type { Hash, TransactionReceipt } from "viem";
-import { useChainId, usePublicClient, useTransactionConfirmations } from "wagmi";
+import { useChainId, useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
 import { ExplorerLink } from "@/components/explorer-link";
 import { errorCode, truncateAddress } from "@/lib/0xui-utils";
+import {
+  minedReceiptQueryOptions,
+  transactionConfirmationsQueryOptions,
+  transactionStatus,
+  transactionSteps,
+  type StepState,
+  type TxStatusPhase,
+} from "@/lib/transaction-status-core";
 import { cn } from "@/lib/utils";
 
-export type TxStatusPhase = "pending" | "confirming" | "confirmed" | "reverted" | "error";
+export type { StepState, TxStatusPhase };
 
 /**
  * Wait for a transaction to be mined. Unlike wagmi's
@@ -23,14 +31,8 @@ export function useMinedReceipt({
   hash: Hash | undefined;
   chainId: number | undefined;
 }) {
-  const client = usePublicClient({ chainId });
-  return useQuery({
-    queryKey: ["0xui", "mined-receipt", chainId, hash],
-    queryFn: () => client!.waitForTransactionReceipt({ hash: hash! }),
-    enabled: Boolean(hash && client),
-    staleTime: Infinity,
-    retry: false,
-  });
+  const config = useConfig();
+  return useQuery(minedReceiptQueryOptions(config, { hash, chainId }));
 }
 
 export type UseTransactionStatusParameters = {
@@ -47,38 +49,29 @@ export function useTransactionStatus({
   chainId: chainIdProp,
   confirmations = 1,
 }: UseTransactionStatusParameters) {
+  const config = useConfig();
   const currentChainId = useChainId();
   const chainId = chainIdProp ?? currentChainId;
 
   const receipt = useMinedReceipt({ hash, chainId });
   const mined = receipt.data;
-  const count = useTransactionConfirmations({
-    hash,
-    chainId,
-    query: {
-      enabled: Boolean(mined) && mined?.status === "success" && confirmations > 1,
-      refetchInterval: 4_000,
-    },
-  });
-
-  const confirmationCount = mined ? (confirmations > 1 ? Number(count.data ?? 1n) : 1) : 0;
-
-  const phase: TxStatusPhase = receipt.isError
-    ? "error"
-    : !mined
-      ? "pending"
-      : mined.status === "reverted"
-        ? "reverted"
-        : confirmationCount >= confirmations
-          ? "confirmed"
-          : "confirming";
+  const count = useQuery(
+    transactionConfirmationsQueryOptions(config, {
+      hash,
+      chainId,
+      enabled: mined?.status === "success" && confirmations > 1,
+    }),
+  );
 
   return {
-    phase,
+    ...transactionStatus({
+      receipt: mined,
+      failed: receipt.isError,
+      count: count.data,
+      required: confirmations,
+    }),
     chainId,
     receipt: mined,
-    confirmations: Math.min(confirmationCount, confirmations),
-    required: confirmations,
     error: receipt.error,
   };
 }
@@ -126,27 +119,7 @@ export function TransactionStatus({
     // Only a phase change should fire the callback.
   }, [phase, receipt]);
 
-  const steps: { label: ReactNode; state: StepState }[] = [
-    { label: "Submitted", state: "done" },
-    {
-      label: receipt
-        ? `Included in block ${receipt.blockNumber.toLocaleString()}`
-        : "Waiting to be included in a block",
-      state: receipt
-        ? receipt.status === "reverted"
-          ? "failed"
-          : "done"
-        : phase === "error"
-          ? "failed"
-          : "active",
-    },
-  ];
-  if (status.required > 1 && phase !== "reverted") {
-    steps.push({
-      label: `${status.confirmations} of ${status.required} confirmations`,
-      state: phase === "confirmed" ? "done" : phase === "confirming" ? "active" : "todo",
-    });
-  }
+  const steps = transactionSteps(status);
 
   return (
     <div
@@ -170,8 +143,8 @@ export function TransactionStatus({
       </div>
 
       <ol className="flex flex-col gap-2">
-        {steps.map((step, i) => (
-          <li key={i} className="flex items-center gap-2">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-center gap-2">
             <StepIcon state={step.state} />
             <span className={cn(step.state === "todo" && "text-muted-foreground")}>
               {step.label}
@@ -197,8 +170,6 @@ export function TransactionStatus({
     </div>
   );
 }
-
-export type StepState = "done" | "active" | "failed" | "todo";
 
 /** Icon for one step of a status list: a check, a spinner, a cross or an empty circle. */
 export function StepIcon({ state }: { state: StepState }) {

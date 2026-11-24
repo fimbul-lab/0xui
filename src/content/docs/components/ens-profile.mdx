@@ -32,7 +32,7 @@ import { EnsProfile } from "@/components/ens-profile";
   <ByAddress client:load />
 </Preview>
 
-ENS lives on Ethereum mainnet, so mainnet must be in your wagmi config. Pass `records` to read other text records. Unknown keys are fetched and returned by `useEnsProfile`, but not rendered.
+ENS lives on Ethereum mainnet, so mainnet must be in your wagmi config. Pass `records` to read other text records. Unknown keys are fetched and returned by `useEnsProfile`, but not rendered. Outside React, `ensProfileQueryOptions(config, { name, records })` from `@/lib/ens-profile` works with any TanStack Query adapter.
 
 ## States
 

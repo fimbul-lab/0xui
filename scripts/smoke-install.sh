@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Installs every 0xui registry item into a fresh shadcn Vite app on Base UI,
-# renders them in App.tsx, and builds. Proves `shadcn add @0xui/<item>` yields
-# code that compiles. Run after `bun run registry:build`.
+# Installs every 0xui registry item into a fresh shadcn Vite app, renders them
+# in App.tsx, and builds. Proves `shadcn add @0xui/<item>` yields code that
+# compiles. Run after `bun run registry:build`.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,6 +15,7 @@ trap 'kill $SERVER' EXIT
 
 cd "$WORK"
 # stdin from /dev/null: fail instead of hanging if shadcn adds a new prompt.
+# 0xui ships its own primitives on ui-sdk, so --base only skips the flavor prompt.
 bunx --bun shadcn@latest init --template vite --base base --preset nova \
   --name app --no-monorepo --yes </dev/null
 cd app

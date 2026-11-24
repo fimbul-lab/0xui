@@ -3,7 +3,7 @@ import { TokenIcon as Web3TokenIcon } from "@web3icons/react/dynamic";
 import { useEffect, useState, type ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
 import { ChainIcon } from "@/components/chain-badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/primitives/avatar";
 import { resolveUri } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,11 @@ export type TokenIconProps = {
   size?: number;
   /** Icon style for the built-in icons. */
   variant?: "background" | "branded" | "mono";
+  /**
+   * Hide the icon from screen readers and agents. Set it where the symbol is
+   * already written next to the icon, so it isn't read twice.
+   */
+  decorative?: boolean;
   className?: string;
 };
 
@@ -35,6 +40,7 @@ export function TokenIcon({
   chainId,
   size = 24,
   variant = "branded",
+  decorative = false,
   className,
 }: TokenIconProps) {
   const badge = Math.max(10, Math.round(size * 0.45));
@@ -49,8 +55,7 @@ export function TokenIcon({
 
   return (
     <span
-      role="img"
-      aria-label={symbol}
+      {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": symbol })}
       className={cn("relative inline-flex shrink-0", className)}
       style={{ width: size, height: size }}
     >
@@ -84,7 +89,7 @@ function Letters({ symbol }: { symbol: string }) {
   }, []);
 
   return (
-    <Avatar className="size-full">
+    <Avatar aria-hidden className="size-full">
       {settled ? (
         <AvatarFallback className="text-[0.6em] font-medium uppercase">{symbol.slice(0, 2)}</AvatarFallback>
       ) : (
@@ -103,12 +108,12 @@ function ListLogo({ src, fallback }: { src: string; fallback: ReactNode }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <>{fallback}</>;
   return (
-    <Avatar className="size-full">
-      <AvatarImage
-        src={src}
-        alt=""
-        onLoadingStatusChange={(status) => status === "error" && setFailed(true)}
-      />
+    <Avatar
+      aria-hidden
+      className="size-full"
+      onLoadingStatusChange={(status) => status === "error" && setFailed(true)}
+    >
+      <AvatarImage src={src} alt="" />
       <AvatarFallback className="bg-transparent">
         <SkeletonBox width="100%" height="100%" radius="9999px" />
       </AvatarFallback>

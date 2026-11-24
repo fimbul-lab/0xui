@@ -1,64 +1,44 @@
 // Docs: https://0xui.io/components/account.md
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, LogOutIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
-import {
-  useConnection,
-  useConnections,
-  useDisconnect,
-  useEnsName,
-  useSwitchConnection,
-  type Connector,
-} from "wagmi";
-import { mainnet } from "wagmi/chains";
+import { useMemo, useState, type ReactNode } from "react";
+import { useConfig } from "wagmi";
 import { AddressAvatar } from "@/components/address-avatar";
 import { Balance } from "@/components/balance";
 import { ChainBadge } from "@/components/chain-badge";
 import { CopyButton } from "@/components/copy-button";
 import { ExplorerLink } from "@/components/explorer-link";
 import { MorphText } from "@/components/morph-text";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
+import { Button } from "@/components/primitives/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/primitives/popover";
+import { useStore } from "@/hooks/use-store";
 import { truncateAddress } from "@/lib/0xui-utils";
+import {
+  accountDisplayName,
+  createConnectedAccount,
+} from "@/lib/account-core";
+import { ensNameQueryOptions } from "@/lib/identity";
 import { cn } from "@/lib/utils";
 
 /**
  * The connected account with its ENS name, plus disconnect. When more than
  * one wallet is connected, `otherAccounts` lists the rest and
- * `switchAccount` makes one of them the current account.
+ * `switchAccount` makes one of them the current account. The logic lives in
+ * `createConnectedAccount` (framework-free).
  */
 export function useConnectedAccount() {
-  const { address, connector, chain, chainId, status } = useConnection();
-  const { data: ensName } = useEnsName({
-    address,
-    chainId: mainnet.id,
-    query: { enabled: Boolean(address) },
-  });
-  const { mutate: disconnect, isPending: isDisconnecting } = useDisconnect();
-  const connections = useConnections();
-  const { mutate: switchConnection, isPending: isSwitching } = useSwitchConnection();
-  const otherAccounts = connections.flatMap((connection) =>
-    connection.connector.uid === connector?.uid || !connection.accounts[0]
-      ? []
-      : [{ address: connection.accounts[0], connector: connection.connector }]
-  );
+  const config = useConfig();
+  const account = useMemo(() => createConnectedAccount(config), [config]);
+  const state = useStore(account);
+  const { data: ensName } = useQuery(ensNameQueryOptions(config, { address: state.address }));
 
   return {
-    address,
+    ...state,
     ensName: ensName ?? undefined,
-    displayName: ensName ?? (address ? truncateAddress(address) : undefined),
-    connector,
-    chain,
-    chainId,
-    status,
-    disconnect: () => disconnect({ connector }),
-    isDisconnecting,
-    otherAccounts,
-    switchAccount: (to: Connector) => switchConnection({ connector: to }),
-    isSwitching,
+    displayName: accountDisplayName(state.address, ensName),
+    disconnect: account.disconnect,
+    switchAccount: account.switchAccount,
   };
 }
 
@@ -111,6 +91,8 @@ export function Account({
           className
         )}
       >
+        {/* Names the trigger "Account …" for screen readers and agents. */}
+        <span className="sr-only">Account </span>
         <AddressAvatar address={address} size={30} />
         {showBalance && (
           <Balance className="text-muted-foreground" maxDecimals={3} />
@@ -124,7 +106,7 @@ export function Account({
           className={cn("size-4 transition-transform", open && "rotate-180")}
         />
       </PopoverTrigger>
-      <PopoverContent align="end" className="flex w-72 flex-col gap-4 p-4">
+      <PopoverContent align="end" aria-label="Account" className="flex w-72 flex-col gap-4 p-4">
         <div className="flex items-center gap-3">
           <AddressAvatar address={address} size={44} />
           <div className="flex min-w-0 flex-col">
@@ -139,7 +121,7 @@ export function Account({
           </div>
           <CopyButton
             value={address}
-            label="Copy address"
+            label="Copy your address"
             className="ml-auto"
           />
         </div>
@@ -160,18 +142,18 @@ export function Account({
             <ul className="-mx-2 flex flex-col">
               {account.otherAccounts.map((other) => (
                 <li key={other.connector.uid}>
-                  <button
-                    type="button"
+                  <ButtonPrimitive
                     disabled={account.isSwitching}
                     onClick={() => account.switchAccount(other.connector)}
+                    data-agent-confirm={`Switches this site to your ${other.connector.name} account ${truncateAddress(other.address)}`}
                     className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left text-sm outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                   >
                     <AddressAvatar address={other.address} size={24} />
-                    <span className="font-mono">{truncateAddress(other.address)}</span>
+                    <span className="font-mono">{truncateAddress(other.address)}</span>{" "}
                     <span className="ml-auto truncate text-xs text-muted-foreground">
                       {other.connector.name}
                     </span>
-                  </button>
+                  </ButtonPrimitive>
                 </li>
               ))}
             </ul>
@@ -190,6 +172,7 @@ export function Account({
             variant="ghost"
             size="sm"
             disabled={account.isDisconnecting}
+            data-agent-confirm={`Disconnects ${connector?.name ?? "your wallet"} from this site`}
             onClick={() => {
               account.disconnect();
               setOpen(false);

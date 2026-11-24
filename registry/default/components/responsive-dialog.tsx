@@ -11,14 +11,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+} from "@/components/primitives/dialog";
 
 /**
  * Whether a media query matches, kept up to date. False on the server and
@@ -50,13 +43,18 @@ export type ResponsiveDialogProps = {
   /** What the dialog is for. Read by screen readers, not shown. */
   description: ReactNode;
   /**
-   * `auto` is a bottom drawer on small screens and a centered dialog on
-   * larger ones. `dialog` and `drawer` force one.
+   * `auto` is a bottom sheet on small touch screens and a centered dialog
+   * elsewhere, decided each time it opens. `dialog` and `drawer` force one.
    */
   mode?: ResponsiveDialogMode;
-  /** Media query that picks the drawer in `auto` mode. */
+  /**
+   * Media query that picks the sheet in `auto` mode, in place of the small
+   * touch screen check. A change applies from the next open.
+   */
   drawerQuery?: string;
-  /** Class for the dialog panel. The drawer sizes itself. */
+  /** Accessible name of the close button, e.g. "Close send form". Defaults to "Close". */
+  closeLabel?: string;
+  /** Class for the panel, in both presentations. Style `data-presentation="dialog"` or `"sheet"` to target one. */
   className?: string;
   onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
   "data-phase"?: string;
@@ -64,10 +62,12 @@ export type ResponsiveDialogProps = {
   children: ReactNode;
 };
 
+const presentations = { auto: "auto", dialog: "dialog", drawer: "sheet" } as const;
+
 /**
- * A dialog that becomes a bottom drawer on small screens, where a centered
- * panel is out of thumb reach. Same title, description and content either
- * way. Switching between the two keeps `open`, but remounts the content.
+ * A dialog that becomes a bottom sheet on small touch screens, where a
+ * centered panel is out of thumb reach. Same title, description and content
+ * either way; a sheet can be swiped down to close.
  */
 export function ResponsiveDialog({
   open,
@@ -75,36 +75,23 @@ export function ResponsiveDialog({
   title,
   description,
   mode = "auto",
-  drawerQuery = "(max-width: 639px)",
+  drawerQuery,
+  closeLabel,
   className,
   onKeyDown,
   "data-phase": phase,
   "data-error": error,
   children,
 }: ResponsiveDialogProps) {
-  const small = useMediaQuery(drawerQuery);
-  const drawer = mode === "drawer" || (mode === "auto" && small);
-
-  if (drawer) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle>
-        <DrawerContent data-phase={phase} data-error={error} onKeyDown={onKeyDown}>
-          <DrawerHeader>
-            <DrawerTitle>{title}</DrawerTitle>
-            <DrawerDescription className="sr-only">{description}</DrawerDescription>
-          </DrawerHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {children}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
+  const matches = useMediaQuery(drawerQuery ?? "not all");
+  const presentation =
+    mode === "auto" && drawerQuery ? (matches ? "sheet" : "dialog") : presentations[mode];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} presentation={presentation}>
       <DialogContent
         className={className}
+        closeLabel={closeLabel}
         data-phase={phase}
         data-error={error}
         onKeyDown={onKeyDown}

@@ -1,62 +1,58 @@
 // Docs: https://0xui.io/blocks/shield.md
 import { useQuery } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { encodeFunctionData, erc20Abi, type Hash } from "viem";
-import {
-  useCapabilities,
-  useChains,
-  useConfig,
-  useConnection,
-  useReadContract,
-  useSendCalls,
-  useSendTransaction,
-  useSignMessage,
-  useSwitchChain,
-} from "wagmi";
-import { getPublicClient, waitForCallsStatus } from "wagmi/actions";
-import { requiresAllowanceReset } from "@/components/approve-button";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { Hash } from "viem";
+import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
+import { Button } from "@/components/primitives/button";
 import { PrivacyBadge } from "@/components/privacy-badge";
 import { useShieldedAccount, useShieldedEngine } from "@/components/shielded-provider";
 import { ShieldedTransactionStatus, formatWait } from "@/components/shielded-transaction-status";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenInput, type TokenInputState } from "@/components/token-input";
-import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
+import type { Token, TokenPrices } from "@/components/token-select";
 import { StepIcon } from "@/components/transaction-status";
-import { Button } from "@/components/ui/button";
-import { agentConfirmText, errorCode, isUserRejection, type ErrorCode } from "@/lib/0xui-utils";
-import type {
-  PreparedShield,
-  PublicCall,
-  ShieldDraft,
-  ShieldQuote,
-  ShieldedAccountStatus,
-  ShieldedTransaction,
-} from "@/lib/shielded-engine";
+import { useStore } from "@/hooks/use-store";
+import { errorCode } from "@/lib/0xui-utils";
+import {
+  createShieldFlow,
+  describeShieldSteps,
+  formatFeePercent,
+  isAtomic,
+  planShield,
+  shieldAllowanceQueryOptions,
+  shieldBlocker,
+  shieldConfirmText,
+  shieldFormAction,
+  shieldPhase,
+  shieldQuoteQueryOptions,
+  shieldStepCopy,
+  shieldStepConfirmText,
+  shieldStepLabel,
+  shieldStepStates,
+  shieldSteps,
+  walletCapabilitiesQueryOptions,
+  type ShieldPhase,
+  type ShieldStepKind,
+  type ShieldStepPhase,
+} from "@/lib/shield-core";
+import type { ShieldDraft, ShieldQuote, ShieldedTransaction } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
 
-/**
- * What the form is doing. Each wallet prompt has its own phase; what
- * happens after the shield is sent is ShieldedTransactionStatus's.
- */
-export type ShieldPhase =
-  | "idle"
-  /** The wallet step for the signature the engine needs. */
-  | "signing"
-  /** The wallet step for the token approval (or the reset before it). */
-  | "approving"
-  /** The wallet step that sends the shield, alone or batched with the approval. */
-  | "shielding"
-  | "cancelled"
-  | "error";
-
-/** One wallet prompt. `batch` is the approval and the shield in a single atomic prompt. */
-export type ShieldStepKind = "sign" | "reset" | "approve" | "shield" | "batch";
-
-/** `ready`: waiting for a click. `wallet`: the prompt is open. `pending`: sent, waiting to be mined. */
-export type ShieldStepPhase = "ready" | "wallet" | "pending";
+export {
+  describeShieldSteps,
+  formatFeePercent,
+  shieldBlocker,
+  shieldConfirmText,
+  shieldStepConfirmText,
+  shieldStepCopy,
+  shieldSteps,
+  type ShieldPhase,
+  type ShieldStepKind,
+  type ShieldStepPhase,
+};
 
 function useDebounced<T>(value: T, delay: number) {
   const [debounced, setDebounced] = useState(value);
@@ -76,13 +72,11 @@ export function useShieldQuote(draft: ShieldDraft | undefined, { debounce = 300 
   const engine = useShieldedEngine();
   const amount = useDebounced(draft?.amount, debounce);
   const settled = amount === draft?.amount;
-  const query = useQuery({
-    queryKey: ["0xui", "shield-quote", engine.id, draft?.chainId, draft?.token, amount?.toString()],
-    queryFn: () => engine.quoteShield({ ...draft!, amount: amount! }),
-    enabled: Boolean(draft && settled && amount && amount > 0n),
-    staleTime: 30_000,
-    retry: false,
-  });
+  const query = useQuery(
+    shieldQuoteQueryOptions(engine, draft && amount !== undefined ? { ...draft, amount } : undefined, {
+      enabled: settled,
+    })
+  );
   return {
     quote: draft && settled ? query.data : undefined,
     isLoading: Boolean(draft) && (!settled || query.isPending),
@@ -91,106 +85,14 @@ export function useShieldQuote(draft: ShieldDraft | undefined, { debounce = 300 
 }
 
 /**
- * The wallet prompts a shield takes, in order.
- *
- * The approval and the shield are one prompt (`batch`) only when the wallet
- * can send them as one atomic transaction. Otherwise they are separate, with
- * a reset in front for tokens that need their old allowance cleared.
- */
-export function shieldSteps({
-  needsSignature,
-  needsApproval,
-  needsReset,
-  atomic,
-}: {
-  needsSignature: boolean;
-  needsApproval: boolean;
-  needsReset: boolean;
-  atomic: boolean;
-}): ShieldStepKind[] {
-  const send: ShieldStepKind[] = !needsApproval
-    ? ["shield"]
-    : atomic
-      ? ["batch"]
-      : needsReset
-        ? ["reset", "approve", "shield"]
-        : ["approve", "shield"];
-  return needsSignature ? ["sign", ...send] : send;
-}
-
-/** Default copy for one wallet step. */
-export function shieldStepCopy(kind: ShieldStepKind, symbol: string) {
-  const copy: Record<
-    ShieldStepKind,
-    { title: string; hint: string; cta: string; wallet: string; pending?: string; done: string }
-  > = {
-    sign: {
-      title: "Sign to prepare the shield",
-      hint: "A free signature. It sends nothing.",
-      cta: "Sign in wallet",
-      wallet: "Sign in wallet…",
-      done: "Signed",
-    },
-    reset: {
-      title: `Reset ${symbol} approval`,
-      hint: "This token needs its old approval cleared first.",
-      cta: `Reset ${symbol} approval`,
-      wallet: "Confirm in wallet…",
-      pending: "Resetting…",
-      done: "Approval reset",
-    },
-    approve: {
-      title: `Approve ${symbol}`,
-      hint: "Lets the shield contract move this amount.",
-      cta: `Approve ${symbol}`,
-      wallet: "Confirm in wallet…",
-      pending: "Approving…",
-      done: `${symbol} approved`,
-    },
-    shield: {
-      title: `Shield ${symbol}`,
-      hint: "Moves the funds into your private balance.",
-      cta: `Shield ${symbol}`,
-      wallet: "Confirm in wallet…",
-      done: "Shield sent",
-    },
-    batch: {
-      title: `Approve and shield ${symbol}`,
-      hint: "One wallet prompt. Both happen together, or neither does.",
-      cta: `Approve and shield ${symbol}`,
-      wallet: "Confirm in wallet…",
-      pending: "Pending…",
-      done: "Approved and shield sent",
-    },
-  };
-  return copy[kind];
-}
-
-const stepWords: Record<ShieldStepKind, string> = {
-  sign: "sign",
-  reset: "reset approval",
-  approve: "approve",
-  shield: "shield",
-  batch: "approve and shield together",
-};
-
-/** "Two wallet prompts: sign, approve and shield together." */
-export function describeShieldSteps(steps: readonly ShieldStepKind[]) {
-  if (steps.length === 1) return "One wallet prompt.";
-  const count = ["", "", "Two", "Three", "Four"][steps.length] ?? String(steps.length);
-  return `${count} wallet prompts: ${steps.map((kind) => stepWords[kind]).join(", ")}.`;
-}
-
-const toError = (cause: unknown) => (cause instanceof Error ? cause : new Error(String(cause)));
-
-/**
  * Runs a shield as a list of wallet steps, one click each: the signature
  * the engine needs, the approval, the shield. Approval and shield go out as
  * one atomic batch (EIP-5792) when the wallet reports that as "supported".
  *
  * The steps are known before anything starts, from the quote, the allowance
  * and the wallet's capabilities. `start` freezes them together with the
- * draft, so what is sent is what was on screen when the user began.
+ * draft, so what is sent is what was on screen when the user began. The
+ * logic lives in `createShieldFlow` (framework-free).
  */
 export function useShieldFlow({
   draft,
@@ -206,155 +108,41 @@ export function useShieldFlow({
 }) {
   const engine = useShieldedEngine();
   const config = useConfig();
-  const connection = useConnection();
-  const signMessage = useSignMessage();
-  const sendTransaction = useSendTransaction();
-  const sendCalls = useSendCalls();
-
-  const spender = quote?.spender;
-  const allowance = useReadContract({
-    address: draft?.token,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: [connection.address!, spender!],
-    chainId: draft?.chainId,
-    query: { enabled: Boolean(draft && spender && connection.address) },
-  });
-  const capabilities = useCapabilities({
-    chainId: draft?.chainId,
-    query: { enabled: Boolean(draft) && connection.status === "connected" },
-  });
-  // "ready" means the wallet would first ask to upgrade the account, and a
-  // wallet that batches without atomicity could approve and then fail to
-  // shield. Neither counts.
-  const atomic =
-    (capabilities.data as { atomic?: { status?: string } } | undefined)?.atomic?.status ===
-    "supported";
-
-  const planned =
-    draft && quote && (!spender || allowance.data !== undefined)
-      ? {
-          steps: shieldSteps({
-            needsSignature: quote.needsSignature,
-            needsApproval: Boolean(spender) && allowance.data! < draft.amount,
-            needsReset:
-              Boolean(allowance.data) && requiresAllowanceReset(draft.chainId, draft.token),
-            atomic,
-          }),
-          // A batch clears any leftover allowance first: it costs no extra prompt.
-          leftover: Boolean(allowance.data),
-        }
-      : undefined;
-
-  const [active, setActive] = useState<{
-    draft: ShieldDraft;
-    quote: ShieldQuote;
-    steps: ShieldStepKind[];
-    leftover: boolean;
-  }>();
-  const [index, setIndex] = useState(0);
-  const [stepPhase, setStepPhase] = useState<ShieldStepPhase>("ready");
-  const [problem, setProblem] = useState<{
-    kind: "cancelled" | "error";
-    message?: string;
-    code?: ErrorCode;
-  }>();
-
-  const prepared = useRef<PreparedShield>(undefined);
-  // Bumped whenever the flow is left. Work from an older run stops when it notices.
-  const run = useRef(0);
-  // The latest callback, for runs that finish after a re-render.
-  const submitted = useRef(onSubmitted);
-  submitted.current = onSubmitted;
-
-  type Active = NonNullable<typeof active>;
-
-  /** Open the wallet for one step. Advances, finishes, or records why it didn't. */
-  const perform = async (flow: Active, at: number) => {
-    const id = ++run.current;
-    const live = () => run.current === id;
-    const { draft: shield, quote: terms } = flow;
-    const { chainId, token, amount } = shield;
-    const kind = flow.steps[at]!;
-
-    // Built once per flow. If the engine needs a signature, this is where the wallet asks.
-    const prepare = async () =>
-      (prepared.current ??= await engine.prepareShield(shield, {
-        sign: (message) => signMessage.mutateAsync({ message }),
-      }));
-    const approval = (value: bigint): PublicCall => ({
-      to: token,
-      data: encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [terms.spender!, value],
+  // The latest callbacks, for runs that finish after a re-render.
+  const latest = useRef({ onSubmitted, refetchAllowance: () => {} });
+  latest.current.onSubmitted = onSubmitted;
+  const controller = useMemo(
+    () =>
+      createShieldFlow(config, engine, {
+        onSubmitted: (hash, shield) => {
+          latest.current.refetchAllowance();
+          latest.current.onSubmitted?.(hash, shield);
+        },
       }),
-    });
+    [config, engine]
+  );
+  const state = useStore(controller);
 
-    setProblem(undefined);
-    setStepPhase("wallet");
-    try {
-      let hash: Hash | undefined;
-      if (kind === "sign") {
-        await prepare();
-      } else if (kind === "reset" || kind === "approve") {
-        const sent = await sendTransaction.mutateAsync({
-          chainId,
-          ...approval(kind === "reset" ? 0n : amount),
-        });
-        if (live()) setStepPhase("pending");
-        const receipt = await getPublicClient(config, { chainId })!.waitForTransactionReceipt({
-          hash: sent,
-        });
-        if (receipt.status === "reverted") {
-          throw new Error("The approval reverted. Nothing changed except the gas fee.");
-        }
-      } else if (kind === "shield") {
-        const { transaction } = await prepare();
-        hash = await sendTransaction.mutateAsync({ chainId, ...transaction });
-      } else {
-        const { transaction } = await prepare();
-        const batch = await sendCalls.mutateAsync({
-          chainId,
-          calls: [...(flow.leftover ? [approval(0n)] : []), approval(amount), transaction],
-        });
-        if (live()) setStepPhase("pending");
-        const result = await waitForCallsStatus(config, { id: batch.id });
-        const receipts = result.receipts ?? [];
-        // The shield is the last call. A wallet can call a batch done while a
-        // call in it reverted, so every receipt has to have succeeded.
-        hash = receipts.at(-1)?.transactionHash;
-        if (result.status !== "success" || !hash || receipts.some((r) => r.status !== "success")) {
-          throw new Error("The batch reverted. Nothing was approved or shielded.");
-        }
-      }
-      if (!live()) return;
+  const allowance = useQuery(
+    shieldAllowanceQueryOptions(config, { draft, owner: state.account, spender: quote?.spender })
+  );
+  latest.current.refetchAllowance = () => void allowance.refetch();
+  const capabilities = useQuery(
+    walletCapabilitiesQueryOptions(config, {
+      chainId: draft?.chainId,
+      account: state.account,
+      connector: state.connector,
+      enabled: Boolean(draft) && state.connected,
+    })
+  );
 
-      if (hash) {
-        prepared.current = undefined;
-        setActive(undefined);
-        setStepPhase("ready");
-        void allowance.refetch();
-        submitted.current?.(hash, { draft: shield, quote: terms });
-      } else {
-        setIndex(at + 1);
-        setStepPhase("ready");
-      }
-    } catch (cause) {
-      if (!live()) return;
-      const error = toError(cause);
-      setStepPhase("ready");
-      setProblem(
-        isUserRejection(error)
-          ? { kind: "cancelled" }
-          : {
-              kind: "error",
-              message: (error as { shortMessage?: string }).shortMessage ?? error.message,
-              code: errorCode("error", error),
-            },
-      );
-    }
-  };
+  const planned = planShield({
+    draft,
+    quote,
+    allowance: allowance.data,
+    atomic: isAtomic(capabilities.data),
+  });
+  const { active, index, stepPhase } = state;
 
   return {
     /** The wallet prompts the form's shield would take. Undefined until the quote and allowance are known. */
@@ -362,17 +150,7 @@ export function useShieldFlow({
     /** The shield in progress, frozen at `start`. Undefined while on the form. */
     active: active && { draft: active.draft, quote: active.quote },
     /** The steps of the shield in progress, with where each one is. */
-    steps: (active?.steps ?? []).map((kind, i) => ({
-      kind,
-      state:
-        i < index
-          ? ("done" as const)
-          : i > index
-            ? ("todo" as const)
-            : stepPhase === "ready"
-              ? ("ready" as const)
-              : ("active" as const),
-    })),
+    steps: shieldStepStates(state),
     /** The step waiting for a click, or running. */
     step: active?.steps[index],
     stepIndex: index,
@@ -380,65 +158,30 @@ export function useShieldFlow({
     /** A wallet prompt is open or a transaction is pending. */
     busy: Boolean(active) && stepPhase !== "ready",
     /** Why the last step didn't go through: a dismissed prompt, or an error. Cleared by the next click. */
-    problem,
+    problem: state.problem,
+    /** The form's phase, for `data-phase`. */
+    phase: shieldPhase(state),
+    /** The connected wallet: whether there is one, and its chain. */
+    wallet: { connected: state.connected, chainId: state.walletChainId },
+    /** A network switch is waiting on the wallet. */
+    switching: state.switching,
     /**
      * Leave the form and open the first wallet prompt. The click that starts
      * the shield is the click for its first step.
      */
     start: () => {
-      if (!draft || !quote || !planned) return;
-      const flow = { draft, quote, ...planned };
-      prepared.current = undefined;
-      setActive(flow);
-      setIndex(0);
-      void perform(flow, 0);
+      if (draft && quote && planned) controller.start({ draft, quote, ...planned });
     },
     /** Open the wallet for the current step. One click, one prompt. */
-    act: () => {
-      if (active && stepPhase === "ready") void perform(active, index);
-    },
+    act: controller.act,
     /** Back to the form. Anything already mined (an approval) stays mined. */
-    leave: () => {
-      run.current++;
-      prepared.current = undefined;
-      setActive(undefined);
-      setStepPhase("ready");
-      setProblem(undefined);
-    },
+    leave: controller.leave,
+    /** Ask the wallet to move to another network. */
+    switchChain: controller.switchChain,
   };
 }
 
 export type ShieldFlow = ReturnType<typeof useShieldFlow>;
-
-/**
- * Why the shield can't start yet, as button text, or undefined when it can.
- * Order matches how people get there: account, token, amount, balance.
- */
-export function shieldBlocker({
-  accountStatus,
-  token,
-  amount,
-  insufficient,
-}: {
-  accountStatus: ShieldedAccountStatus;
-  token: Token | undefined;
-  amount: bigint | undefined;
-  insufficient: boolean;
-}) {
-  if (accountStatus === "none") return "Create a private account first";
-  if (accountStatus === "locked") return "Unlock your private account";
-  if (!token) return "Select a token";
-  if (isNativeToken(token)) return `Wrap ${token.symbol} to shield it`;
-  if (!amount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${token.symbol} balance`;
-  return undefined;
-}
-
-/** A fee as a share of the amount: "0.25%". */
-export function formatFeePercent(fee: bigint, amount: bigint) {
-  if (amount === 0n) return "0%";
-  return `${Number((fee * 10_000n) / amount) / 100}%`;
-}
 
 const enter =
   "animate-in fade-in-0 slide-in-from-bottom-1 duration-200 ease-out motion-reduce:animate-none";
@@ -549,7 +292,7 @@ export function ShieldSummary({
       </div>
       {onEdit && (
         <Button variant="ghost" size="sm" disabled={editDisabled} onClick={onEdit}>
-          Edit
+          Edit <span className="sr-only">shield</span>
         </Button>
       )}
     </div>
@@ -620,14 +363,6 @@ export type ShieldProps = {
   className?: string;
 };
 
-const phaseOf: Record<ShieldStepKind, ShieldPhase> = {
-  sign: "signing",
-  reset: "approving",
-  approve: "approving",
-  shield: "shielding",
-  batch: "shielding",
-};
-
 /**
  * Shield form: move an ERC-20 from the connected wallet into the private
  * balance. Shows the fee, what arrives and how long until it can be spent,
@@ -650,9 +385,7 @@ export function Shield({
   className,
 }: ShieldProps) {
   const account = useShieldedAccount();
-  const connection = useConnection();
-  const chains = useChains();
-  const switchChain = useSwitchChain();
+  const { chains } = useConfig();
   const onChain = tokens.filter((t) => t.chainId === chainId);
 
   const [token, setToken] = useState<Token | undefined>(defaultToken ?? onChain[0]);
@@ -696,52 +429,61 @@ export function Shield({
     },
   });
 
-  const connected = connection.status === "connected";
-  const wrongChain = connected && connection.chainId !== chainId;
+  const connected = flow.wallet.connected;
+  const wrongChain = connected && flow.wallet.chainId !== chainId;
   const chainName = chains.find((c) => c.id === chainId)?.name ?? "the right network";
   const running = flow.active !== undefined;
   const shown = started.current;
-
-  const phase: ShieldPhase = flow.problem
-    ? flow.problem.kind
-    : flow.step
-      ? phaseOf[flow.step]
-      : "idle";
+  const phase = flow.phase;
 
   // The form's button: names the blocker, or starts the shield.
-  let label: string;
-  let action: (() => void) | undefined;
-  if (!connected) {
-    label = "Connect wallet";
-    action = () => setConnectOpen(true);
-  } else if (blocker) {
-    label = blocker;
-  } else if (wrongChain) {
-    label = switchChain.isPending ? "Switching network…" : `Switch to ${chainName}`;
-    action = switchChain.isPending
-      ? undefined
-      : () => switchChain.mutate({ chainId: chainId as (typeof chains)[number]["id"] });
-  } else if (quoteError) {
-    label = "Can't shield this amount";
-  } else if (quoting || !flow.plannedSteps) {
-    label = "Fetching quote…";
-  } else {
-    label = `Shield ${token!.symbol}`;
-    action = () => {
-      started.current = { amountText, token: token! };
-      flow.start();
-    };
-  }
+  const form = shieldFormAction({
+    connected,
+    blocker,
+    wrongChain,
+    switching: flow.switching,
+    chainName,
+    quoteFailed: Boolean(quoteError),
+    quoting,
+    planned: flow.plannedSteps !== undefined,
+    symbol: token?.symbol,
+  });
+  const label = form.label;
+  const action =
+    form.action === "connect"
+      ? () => setConnectOpen(true)
+      : form.action === "switch"
+        ? () => void flow.switchChain(chainId)
+        : form.action === "start"
+          ? () => {
+              started.current = { amountText, token: token! };
+              flow.start();
+            }
+          : undefined;
 
   // The button of the step in progress.
   const copy = flow.step && shown ? shieldStepCopy(flow.step, shown.token.symbol) : undefined;
   const stepLabel =
-    copy &&
-    (flow.stepPhase === "wallet"
-      ? copy.wallet
-      : flow.stepPhase === "pending"
-        ? (copy.pending ?? "Pending…")
-        : copy.cta);
+    flow.step && shown && shieldStepLabel(flow.step, flow.stepPhase, shown.token.symbol);
+
+  // What a person confirms before an agent's press opens the wallet. Opening
+  // the wallet picker needs no one: its wallets ask on their own.
+  const formConfirm =
+    form.action === "switch"
+      ? `Asks your wallet to switch to ${chainName}`
+      : form.action === "start" && draft && quote && flow.plannedSteps && token
+        ? shieldConfirmText({
+            amount: draft.amount,
+            token,
+            quote,
+            steps: flow.plannedSteps,
+            chainName,
+          })
+        : undefined;
+  const stepConfirm =
+    flow.step && flow.active && shown
+      ? shieldStepConfirmText(flow.step, { amount: flow.active.draft.amount, token: shown.token })
+      : undefined;
 
   const problem = flow.problem && (
     <>
@@ -828,11 +570,14 @@ export function Shield({
               // While a prompt is open the button is the progress display, so it keeps full strength.
               className={cn(
                 "relative h-11 w-full overflow-hidden",
-                flow.busy && "disabled:opacity-100",
+                flow.busy && "aria-disabled:opacity-100",
               )}
               disabled={running ? flow.busy : !action}
+              // Keeps focus on the button while it steps through the wallet prompts.
+              focusableWhenDisabled={running}
               aria-busy={flow.busy || undefined}
               onClick={running ? flow.act : action}
+              data-agent-confirm={running ? stepConfirm : formConfirm}
             >
               {flow.busy && (
                 <Loader2Icon aria-hidden className="animate-spin motion-reduce:animate-none" />
@@ -863,14 +608,15 @@ export function Shield({
                     {flow.steps.length > 1 && `${flow.stepIndex + 1} of ${flow.steps.length} · `}
                     {copy.hint}
                   </span>
-                  <button
-                    type="button"
-                    className="shrink-0 font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-50"
+                  <Button
+                    variant="link"
+                    // Reads as a text link inside the hint line.
+                    className="h-auto border-0 p-0 text-xs text-foreground active:not-aria-[haspopup]:translate-y-0"
                     disabled={flow.busy}
                     onClick={flow.leave}
                   >
-                    Cancel
-                  </button>
+                    Cancel <span className="sr-only">shield</span>
+                  </Button>
                 </>
               ) : (
                 flow.plannedSteps && <span>{describeShieldSteps(flow.plannedSteps)}</span>
@@ -897,10 +643,12 @@ export function Shield({
               <div className="flex flex-col gap-2">
                 <Button
                   size="lg"
-                  className="h-11 w-full"
+                  className={cn("h-11 w-full", flow.busy && "aria-disabled:opacity-100")}
                   disabled={flow.busy}
+                  focusableWhenDisabled
                   aria-busy={flow.busy || undefined}
                   onClick={flow.act}
+                  data-agent-confirm={stepConfirm}
                 >
                   {flow.busy && (
                     <Loader2Icon aria-hidden className="animate-spin motion-reduce:animate-none" />
@@ -949,11 +697,7 @@ export function Shield({
                 className="h-11 w-full"
                 disabled={!action}
                 onClick={action}
-                data-agent-confirm={
-                  action && connected
-                    ? agentConfirmText(label, "asks your wallet to approve or send a transaction")
-                    : undefined
-                }
+                data-agent-confirm={formConfirm}
               >
                 <MorphText>{label}</MorphText>
               </Button>

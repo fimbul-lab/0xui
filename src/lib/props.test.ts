@@ -67,7 +67,7 @@ const sections = ["components", "blocks"].flatMap((dir) =>
 /**
  * Props the docs should mention: declared in 0xui code, and neither in the
  * table nor covered by an "Also accepts" sentence naming them or where they
- * come from. Props from npm packages (Base UI, torph) and DOM attributes are
+ * come from. Props from npm packages (ui-sdk, torph) and DOM attributes are
  * documented by reference, and `className` on the root is a convention.
  */
 function undocumented(section: PropsSection, props: PropDoc[]) {

@@ -31,7 +31,7 @@ Always pass a specific `label`. It is the button's only accessible name.
 
 ### Other button styles
 
-Accepts every shadcn `Button` prop, including `variant` and `size`.
+Accepts every `Button` prop (the ui-sdk Button with 0xui's variants), including `variant` and `size`.
 
 <Preview>
   <Outline client:load />
@@ -51,12 +51,12 @@ Accepts every shadcn `Button` prop, including `variant` and `size`.
 
 ## Props
 
-Also accepts all shadcn `Button` props except `onClick` and `children`.
+Also accepts all `Button` props except `onClick` and `children`.
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
 | `value` | `string` | — | Text to copy. |
-| `label` | `string` | `"Copy"` | Accessible label and tooltip. |
+| `label` | `string` | from `value` | Accessible label and tooltip. Name what it copies, so it's unique on the page for screen readers and browser agents. Defaults to `"Copy address"` for an address, `"Copy hash"` for a 32-byte hash, otherwise `"Copy"`. |
 | `timeout` | `number` | `2000` | How long the copied state lasts, in ms. |
 | `onCopy` | `(value: string) => void` | — | Called after a successful copy. |
 | `copyIcon` | `ComponentType \| false` | `CopyIcon` | Custom icon, or `false` to hide it. |

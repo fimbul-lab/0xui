@@ -1,7 +1,7 @@
 import { parseEther } from "viem";
 import { ProofProgress, useProof } from "@/components/proof-progress";
 import { useShieldedState } from "@/components/shielded-provider";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 import type { PrivateDraft } from "@/lib/shielded-engine";
 import { demo } from "./demo";
 import { demoAccounts } from "./wagmi-config";

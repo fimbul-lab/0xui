@@ -3,7 +3,7 @@ import { NetworkIcon } from "@web3icons/react/dynamic";
 import { useEffect, useState, type ComponentProps, type ComponentType } from "react";
 import { SkeletonBox } from "skullet/react";
 import { useChains } from "wagmi";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { cn } from "@/lib/utils";
 
 export type ChainIconVariant = "background" | "branded" | "mono";
@@ -47,8 +47,9 @@ function ChainIconFallback({ className }: { className?: string }) {
     return () => clearTimeout(timer);
   }, []);
 
+  // Decorative: the chain's name is always shown or announced next to it.
   return (
-    <Avatar className={cn("size-6", className)}>
+    <Avatar aria-hidden className={cn("size-6", className)}>
       {settled ? (
         <AvatarFallback className="text-xs">?</AvatarFallback>
       ) : (

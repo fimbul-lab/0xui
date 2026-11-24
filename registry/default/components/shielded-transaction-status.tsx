@@ -1,36 +1,28 @@
 // Docs: https://0xui.io/components/shielded-transaction-status.md
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Hash } from "viem";
-import { useBlock } from "wagmi";
+import { useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
 import { ExplorerLink } from "@/components/explorer-link";
 import { useShieldedEngine, useShieldedState } from "@/components/shielded-provider";
 import { TokenAmount } from "@/components/token-amount";
-import { StepIcon, useMinedReceipt, type StepState } from "@/components/transaction-status";
+import { StepIcon, useMinedReceipt } from "@/components/transaction-status";
 import { truncateAddress } from "@/lib/0xui-utils";
 import type { ShieldedTransaction } from "@/lib/shielded-engine";
+import {
+  formatWait,
+  shieldedStatusText,
+  shieldedTxHeadings,
+  shieldedTxPhase,
+  shieldedTxSteps,
+  spendableAt as standbyEnd,
+  standbyBlockQueryOptions,
+  type ShieldedTxStatusPhase,
+} from "@/lib/shielded-transaction-status-core";
 import { cn } from "@/lib/utils";
 
-export type ShieldedTxStatusPhase =
-  /** Sent, not mined yet. */
-  | "pending"
-  /** Mined. The private account has not found it yet. */
-  | "confirmed"
-  /** In the private balance, waiting out the standby period. */
-  | "standby"
-  | "spendable"
-  | "restricted"
-  | "reverted"
-  | "error";
-
-/** "about 2 min", "45 s", or undefined once there is nothing left to wait for. */
-export function formatWait(seconds: number) {
-  if (seconds <= 0) return undefined;
-  if (seconds >= 5_400) return `about ${Math.round(seconds / 3_600)} hours`;
-  if (seconds >= 3_000) return "about 1 hour";
-  if (seconds >= 90) return `about ${Math.ceil(seconds / 60)} min`;
-  return `${seconds} s`;
-}
+export { formatWait, shieldedStatusText, type ShieldedTxStatusPhase };
 
 /** Seconds until `target` (Unix ms), counting down, or undefined without a target. */
 function useSecondsUntil(target: number | undefined) {
@@ -64,6 +56,7 @@ export function useShieldedTransactionStatus({
   standby,
 }: UseShieldedTransactionStatusParameters) {
   const engine = useShieldedEngine();
+  const config = useConfig();
   const receipt = useMinedReceipt({ hash, chainId });
   const mined = receipt.data;
   const transaction = useShieldedState(
@@ -82,30 +75,12 @@ export function useShieldedTransactionStatus({
   }, [mined, hash, chainId, engine]);
 
   // The standby period runs from the block the transaction was mined in.
-  const block = useBlock({
-    blockNumber: mined?.blockNumber,
-    chainId,
-    query: { enabled: Boolean(mined) && standby !== undefined, staleTime: Infinity },
-  });
-  const spendableAt =
-    block.data && standby !== undefined
-      ? (Number(block.data.timestamp) + standby) * 1_000
-      : undefined;
+  const block = useQuery(
+    standbyBlockQueryOptions(config, { chainId, blockNumber: mined?.blockNumber, standby })
+  );
+  const spendableAt = standbyEnd(block.data?.timestamp, standby);
 
-  // What the private side says wins: it is the balance that matters.
-  const phase: ShieldedTxStatusPhase = transaction
-    ? transaction.state === "spendable"
-      ? "spendable"
-      : transaction.state === "restricted"
-        ? "restricted"
-        : "standby"
-    : receipt.isError
-      ? "error"
-      : !mined
-        ? "pending"
-        : mined.status === "reverted"
-          ? "reverted"
-          : "confirmed";
+  const phase = shieldedTxPhase({ transaction, receipt: mined, receiptFailed: receipt.isError });
 
   const secondsLeft = useSecondsUntil(phase === "standby" ? spendableAt : undefined);
 
@@ -134,29 +109,6 @@ export type ShieldedTransactionStatusProps = UseShieldedTransactionStatusParamet
   /** "card" lists every step. "line" is one line of status, for under a form. */
   variant?: "card" | "line";
   className?: string;
-};
-
-/** What a shield is waiting for, as the end of a sentence: "waiting for a block". */
-export function shieldedStatusText(phase: ShieldedTxStatusPhase, secondsLeft?: number) {
-  if (phase === "pending") return "waiting for a block";
-  if (phase === "confirmed") return "updating private balance";
-  if (phase === "spendable") return "spendable";
-  if (phase === "restricted") return "restricted, it can only go back where it came from";
-  if (phase === "reverted") return "reverted, nothing was shielded";
-  if (phase === "error") return "couldn't be tracked";
-  if (secondsLeft === undefined) return "in its waiting period";
-  const wait = formatWait(secondsLeft);
-  return wait ? `spendable in ${wait}` : "spendable any moment now";
-}
-
-const headings: Record<ShieldedTxStatusPhase, string> = {
-  pending: "Shield pending",
-  confirmed: "Confirmed, updating private balance",
-  standby: "Shielded, not spendable yet",
-  spendable: "Shielded and spendable",
-  restricted: "Shielded, but restricted",
-  reverted: "Shield reverted",
-  error: "Couldn't track shield",
 };
 
 /**
@@ -189,7 +141,6 @@ export function ShieldedTransactionStatus({
   }, [phase, transaction]);
 
   const found = transaction !== undefined;
-  const wait = secondsLeft === undefined ? undefined : formatWait(secondsLeft);
 
   if (variant === "line") {
     const failed = phase === "restricted" || phase === "reverted" || phase === "error";
@@ -218,48 +169,12 @@ export function ShieldedTransactionStatus({
     );
   }
 
-  const steps: { label: ReactNode; state: StepState }[] = [
-    { label: "Submitted", state: "done" },
-    {
-      label: receipt
-        ? `Included in block ${receipt.blockNumber.toLocaleString()}`
-        : found
-          ? "Included in a block"
-          : "Waiting to be included in a block",
-      state:
-        phase === "reverted" || phase === "error" ? "failed" : receipt || found ? "done" : "active",
-    },
-  ];
-  if (phase !== "reverted" && phase !== "error") {
-    steps.push(
-      {
-        label: found ? "Added to your private balance" : "Updating your private balance",
-        state: found ? "done" : phase === "confirmed" ? "active" : "todo",
-      },
-      {
-        label:
-          phase === "spendable"
-            ? "Spendable"
-            : phase === "restricted"
-              ? "Not spendable: restricted"
-              : phase !== "standby"
-                ? "Waiting period before it can be spent"
-                : secondsLeft === undefined
-                  ? "Waiting period"
-                  : wait
-                    ? `Waiting period: ${wait} left`
-                    : "Waiting period: any moment now",
-        state:
-          phase === "spendable"
-            ? "done"
-            : phase === "restricted"
-              ? "failed"
-              : phase === "standby"
-                ? "active"
-                : "todo",
-      }
-    );
-  }
+  const steps = shieldedTxSteps({
+    phase,
+    blockNumber: receipt?.blockNumber,
+    found,
+    secondsLeft,
+  });
 
   return (
     <div
@@ -277,7 +192,7 @@ export function ShieldedTransactionStatus({
               "text-destructive"
           )}
         >
-          {title ?? headings[phase]}
+          {title ?? shieldedTxHeadings[phase]}
         </p>
         {children && <div className="text-muted-foreground">{children}</div>}
         {transaction && token && (
@@ -294,8 +209,8 @@ export function ShieldedTransactionStatus({
       </div>
 
       <ol className="flex flex-col gap-2">
-        {steps.map((step, i) => (
-          <li key={i} className="flex items-center gap-2">
+        {steps.map((step) => (
+          <li key={step.id} className="flex items-center gap-2">
             <StepIcon state={step.state} />
             <span className={cn("tabular-nums", step.state === "todo" && "text-muted-foreground")}>
               {step.label}

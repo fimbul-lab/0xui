@@ -11,7 +11,14 @@ import Install from "@/components/docs/Install.astro";
 
 If your project doesn't use shadcn yet, follow the [shadcn installation guide](https://ui.shadcn.com/docs/installation) for your framework. You need Tailwind CSS v4 and a `components.json`.
 
-0xui needs the [Base UI](https://base-ui.com) flavor of shadcn (`npx shadcn@latest init --base base`). The Radix flavor isn't supported: components use Base UI props that Radix primitives don't have.
+Either shadcn flavor works, Base UI or Radix. 0xui components don't use shadcn's `components/ui`: they bring their own primitives, built on [ui-sdk](https://ui-sdk.dev). shadcn is still needed for Tailwind, `cn` and the theme's CSS variables.
+
+Put the ui-sdk layer at the very top of your global stylesheet, above `@import "tailwindcss"`, so your styles win over ui-sdk's:
+
+```css title="globals.css" ins={1}
+@layer ui-sdk;
+@import "tailwindcss";
+```
 
 ## 2. Add the 0xui registry
 
@@ -63,11 +70,11 @@ If you already have a wagmi setup, skip this step. Every 0xui component reads fr
 
 <Install name="chain-selector" />
 
-Shared helpers (`@0xui/0xui-utils`, `@0xui/use-mounted`, …) and shadcn primitives (`popover`, `dialog`, …) install automatically as dependencies.
+Shared helpers (`@0xui/0xui-utils`, `@0xui/use-mounted`, …) and 0xui primitives (`@0xui/primitive-dialog`, `@0xui/primitive-popover`, …) install automatically as dependencies. Primitives land in `components/primitives/`.
 
 ### If the CLI asks to overwrite a file
 
-A later install can ask to overwrite a shadcn primitive you never edited, like `components/ui/dialog.tsx`. In projects without React Server Components (Vite, for one), the shadcn CLI adds or drops the `"use client"` line depending on what else it installs, and that line is the whole difference. Answer either way: the install finishes and the component works.
+A later install can ask to overwrite a file you never edited. In projects without React Server Components (Vite, for one), the shadcn CLI can add or drop the `"use client"` line depending on what else it installs, and that line is the whole difference. Answer either way: the install finishes and the component works.
 
 Without a terminal (CI, a coding agent) the CLI can't ask. It stops there, exits with code 0 and leaves the install half done. Pass `--overwrite` to skip the question. It also replaces your own edits to any file the install touches, so check with `--dry-run` first if you have changed 0xui files.
 

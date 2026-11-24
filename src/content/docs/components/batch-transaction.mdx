@@ -55,4 +55,4 @@ Atomic batches are all-or-nothing: if one call reverts, none take effect. Sequen
 
 `data-phase` holds the current state, and `data-atomic` is set when batching. Phases: `idle`, `switching`, `confirming`, `pending`, `success`, `reverted`, `cancelled`, `error`. Sequential labels count steps: "Confirm 2 of 3 in wallet…".
 
-Headless: `useBatchTransaction({ calls, chainId, mode })`.
+Headless: `useBatchTransaction({ calls, chainId, mode })`. Without React, `createBatchTransaction(config, { chainId, mode })` from `@/lib/batch-transaction` exposes the same state through `get`/`subscribe`, with `execute(calls)`, `switchToTarget()` and `reset()`.

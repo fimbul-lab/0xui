@@ -1,211 +1,72 @@
 // Docs: https://0xui.io/components/transaction-button.md
+import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, Loader2Icon } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from "react";
-import { BaseError, ContractFunctionRevertedError, type Hash, type TransactionReceipt } from "viem";
-import {
-  useCall,
-  useChains,
-  useConnection,
-  useSendTransaction,
-  useSimulateContract,
-  useSwitchChain,
-  useTransactionConfirmations,
-  useWriteContract,
-} from "wagmi";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { useChainId, useConfig, useConnection } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
-import { useMinedReceipt } from "@/components/transaction-status";
-import { Button } from "@/components/ui/button";
-import { agentConfirmText, errorCode, isUserRejection } from "@/lib/0xui-utils";
+import { Button } from "@/components/primitives/button";
+import { useStore } from "@/hooks/use-store";
+import { agentConfirmText, errorCode } from "@/lib/0xui-utils";
+import {
+  createTransactionFlow,
+  revertReason,
+  simulationStatus,
+  transactionSimulationQueryOptions,
+  type ContractRequest,
+  type SimulationStatus,
+  type TransactionFlowOptions,
+  type TransactionRequest,
+  type TxPhase,
+} from "@/lib/tx-flow";
 import { cn } from "@/lib/utils";
 
-export type TxPhase =
-  | "idle"
-  | "switching"
-  | "confirming"
-  | "pending"
-  | "success"
-  | "reverted"
-  | "cancelled"
-  | "error";
-
-/** Arguments for `writeContract`: `{ address, abi, functionName, args, value? }`. */
-export type ContractRequest = Parameters<ReturnType<typeof useWriteContract>["mutateAsync"]>[0];
-
-/** Arguments for `sendTransaction`: `{ to, value?, data? }`. */
-export type TransactionRequest = Parameters<
-  ReturnType<typeof useSendTransaction>["mutateAsync"]
->[0];
-
-export type TransactionFlowOptions = {
-  /** Chain the transaction must run on. Defaults to the current chain. */
-  chainId?: number;
-  /** Confirmations to wait for before success. */
-  confirmations?: number;
-  /** Called once the wallet returns a transaction hash. */
-  onSubmitted?: (hash: Hash) => void;
-  /** Called when the transaction is mined successfully. */
-  onSuccess?: (receipt: TransactionReceipt) => void;
-  /** Called on failure, including a reverted transaction. Not called when the user cancels. */
-  onError?: (error: Error) => void;
+export type {
+  ContractRequest,
+  SimulationStatus,
+  TransactionFlowOptions,
+  TransactionRequest,
+  TxPhase,
 };
+export { revertReason };
 
 /**
  * Transaction lifecycle as one phase: switching network, waiting for the
  * wallet, pending on-chain, then success, reverted, cancelled or error.
+ * The logic lives in `createTransactionFlow` (framework-free).
  */
 export function useTransactionFlow({
   chainId,
-  confirmations = 1,
+  confirmations,
   onSubmitted,
   onSuccess,
   onError,
 }: TransactionFlowOptions = {}) {
-  const connection = useConnection();
-  const chains = useChains();
-  const switchChain = useSwitchChain();
-  const write = useWriteContract();
-  const send = useSendTransaction();
-
-  const [step, setStep] = useState<TxPhase>("idle");
-  const [hash, setHash] = useState<Hash>();
-  const [error, setError] = useState<Error>();
-
-  const targetChainId = chainId ?? connection.chainId;
-  const targetChain = chains.find((c) => c.id === targetChainId);
-  const wrongChain =
-    connection.status === "connected" &&
-    targetChainId !== undefined &&
-    connection.chainId !== targetChainId;
-
-  const receipt = useMinedReceipt({ hash, chainId: targetChainId });
-  const confirmed = useTransactionConfirmations({
-    hash,
-    chainId: targetChainId,
-    query: {
-      enabled: receipt.data?.status === "success" && confirmations > 1,
-      refetchInterval: 4_000,
-    },
-  });
-  const enoughConfirmations = confirmations <= 1 || Number(confirmed.data ?? 0n) >= confirmations;
-
-  const phase: TxPhase =
-    hash && step === "pending"
-      ? receipt.data
-        ? receipt.data.status === "reverted"
-          ? "reverted"
-          : enoughConfirmations
-            ? "success"
-            : "pending"
-        : receipt.isError
-          ? "error"
-          : "pending"
-      : step;
-
-  // Fire callbacks once per transaction, when it settles.
-  const reported = useRef<Hash>(undefined);
+  const config = useConfig();
+  const callbacks = useRef({ onSubmitted, onSuccess, onError });
   useEffect(() => {
-    const data = receipt.data;
-    if (!data || reported.current === data.transactionHash) return;
-    if (phase !== "success" && phase !== "reverted") return;
-    reported.current = data.transactionHash;
-    if (phase === "success") onSuccess?.(data);
-    else onError?.(new Error("Transaction reverted"));
-    // Callbacks are deliberately not dependencies: only settling should fire them.
-  }, [phase, receipt.data]);
-
-  const fail = (e: unknown) => {
-    const err = e instanceof Error ? e : new Error(String(e));
-    setError(err);
-    if (isUserRejection(err)) {
-      setStep("cancelled");
-    } else {
-      setStep("error");
-      onError?.(err);
-    }
-  };
-
-  const switchToTarget = async () => {
-    if (targetChainId === undefined) return;
-    setError(undefined);
-    setStep("switching");
-    try {
-      // Narrow to the chain-id union when the app registers its config type.
-      await switchChain.mutateAsync({
-        chainId: targetChainId as (typeof chains)[number]["id"],
-      });
-      setStep("idle");
-    } catch (e) {
-      fail(e);
-    }
-  };
-
-  const execute = async (
-    request: { contract: ContractRequest } | { transaction: TransactionRequest },
-  ) => {
-    setError(undefined);
-    setHash(undefined);
-    setStep("confirming");
-    try {
-      // Pin the chain so the wallet can't send on a different one.
-      const txHash =
-        "contract" in request
-          ? await write.mutateAsync({
-              chainId: targetChainId,
-              ...request.contract,
-            } as ContractRequest)
-          : await send.mutateAsync({
-              chainId: targetChainId,
-              ...request.transaction,
-            } as TransactionRequest);
-      setHash(txHash);
-      setStep("pending");
-      onSubmitted?.(txHash);
-    } catch (e) {
-      fail(e);
-    }
-  };
-
-  const reset = useCallback(() => {
-    setStep("idle");
-    setHash(undefined);
-    setError(undefined);
-  }, []);
+    callbacks.current = { onSubmitted, onSuccess, onError };
+  });
+  const flow = useMemo(
+    () =>
+      createTransactionFlow(config, {
+        chainId,
+        confirmations,
+        onSubmitted: (hash) => callbacks.current.onSubmitted?.(hash),
+        onSuccess: (receipt) => callbacks.current.onSuccess?.(receipt),
+        onError: (error) => callbacks.current.onError?.(error),
+      }),
+    [config, chainId, confirmations],
+  );
+  const state = useStore(flow);
 
   return {
-    phase,
-    hash,
-    receipt: receipt.data,
-    error: phase === "error" ? (error ?? receipt.error ?? undefined) : error,
-    isConnected: connection.status === "connected",
-    wrongChain,
-    targetChain,
-    execute,
-    switchToTarget,
-    reset,
+    ...state,
+    execute: flow.execute,
+    switchToTarget: flow.switchToTarget,
+    reset: flow.reset,
   };
 }
-
-/** Why a call failed, in the contract's own words when it gave a revert reason. */
-export function revertReason(error: unknown) {
-  if (!(error instanceof BaseError)) {
-    return error instanceof Error ? error.message : "Something went wrong.";
-  }
-  const revert = error.walk((e) => e instanceof ContractFunctionRevertedError);
-  if (revert instanceof ContractFunctionRevertedError) {
-    return revert.reason ?? revert.data?.errorName ?? revert.shortMessage;
-  }
-  return error.shortMessage;
-}
-
-export type SimulationStatus = "idle" | "checking" | "ok" | "failed";
 
 export type UseTransactionSimulationParameters = {
   /** Contract call to simulate. Pass this or `transaction`. */
@@ -229,30 +90,23 @@ export function useTransactionSimulation({
   chainId,
   enabled = true,
 }: UseTransactionSimulationParameters) {
+  const config = useConfig();
+  const currentChainId = useChainId();
   const { address } = useConnection();
-  const on = enabled && Boolean(address);
-  const simulated = useSimulateContract({
-    ...contract,
-    chainId,
-    account: address,
-    query: { enabled: on && Boolean(contract), retry: false },
-  } as never);
-  const called = useCall({
-    ...transaction,
-    chainId,
-    account: address,
-    query: { enabled: on && !contract && Boolean(transaction), retry: false },
-  } as never);
-  const query = contract ? simulated : called;
-
-  const status: SimulationStatus =
-    !on || (!contract && !transaction)
-      ? "idle"
-      : query.isError
-        ? "failed"
-        : query.isPending
-          ? "checking"
-          : "ok";
+  const query = useQuery(
+    transactionSimulationQueryOptions(config, {
+      contract,
+      transaction,
+      chainId: chainId ?? currentChainId,
+      account: address,
+      enabled,
+    }),
+  );
+  const status = simulationStatus({
+    active: enabled && Boolean(address) && Boolean(contract || transaction),
+    isError: query.isError,
+    isPending: query.isPending,
+  });
 
   return {
     status,
@@ -264,7 +118,7 @@ export function useTransactionSimulation({
 
 export type TransactionButtonProps = Omit<
   ComponentProps<typeof Button>,
-  "onClick" | "onError" | "children"
+  "onClick" | "onError" | "children" | "className"
 > &
   TransactionFlowOptions & {
     /** Contract call to make. Pass this or `transaction`. */
@@ -289,9 +143,13 @@ export type TransactionButtonProps = Omit<
     /**
      * What a browser agent must ask a person before pressing the button, set
      * as `data-agent-confirm`. Defaults to the label plus what it does. Pass
-     * `false` to drop it.
+     * `false` to drop it. While the button offers a network switch it asks
+     * about the switch instead, and while it opens the wallet picker it
+     * asks nothing (each wallet in the picker asks before connecting).
      */
     agentConfirm?: string | false;
+    /** Class for the root, which holds the button and its status line. Target the button with `[&>button]:`. */
+    className?: string;
   };
 
 const statusText: Partial<Record<TxPhase, string>> = {
@@ -359,12 +217,24 @@ export function TransactionButton({
   }, [simulate, phase, resimulate]);
 
   let label: ReactNode = children;
-  let action: (() => void) | undefined;
+  let action: (() => unknown) | undefined;
+  // What an agent must ask the person before pressing: the transaction by
+  // default, the network switch while that's what the button does, and
+  // nothing while it only opens the wallet picker (connecting asks there).
+  let confirm: string | undefined =
+    agentConfirm === false
+      ? undefined
+      : (agentConfirm ??
+        agentConfirmText(
+          children,
+          `sends a transaction on ${flow.targetChain?.name ?? "the selected network"} from your wallet`,
+        ));
   // In-flight and success states win over `disabledReason`: a form that
   // clears itself on success shouldn't hide the confirmation.
   if (!flow.isConnected) {
     label = "Connect wallet";
     action = () => setConnectOpen(true);
+    confirm = undefined;
   } else if (phase === "switching") {
     label = "Switching network…";
   } else if (phase === "confirming") {
@@ -378,6 +248,7 @@ export function TransactionButton({
   } else if (flow.wrongChain) {
     label = `Switch to ${flow.targetChain?.name ?? "the right network"}`;
     action = flow.switchToTarget;
+    confirm = `Asks your wallet to switch to ${flow.targetChain?.name ?? "the right network"}`;
   } else if (simulation.status === "checking") {
     label = "Checking…";
   } else if (simulation.status === "failed") {
@@ -409,17 +280,13 @@ export function TransactionButton({
       <Button
         {...buttonProps}
         disabled={disabled || busy || !action}
+        // Keeps focus on the button while it waits on the wallet and the chain.
+        focusableWhenDisabled={busy}
+        // The status line already announces each phase.
+        pendingAnnouncement={buttonProps.pendingAnnouncement ?? (hideStatus ? undefined : "")}
         aria-busy={busy || undefined}
         onClick={action}
-        data-agent-confirm={
-          agentConfirm === false
-            ? undefined
-            : (agentConfirm ??
-              agentConfirmText(
-                children,
-                `sends a transaction on ${flow.targetChain?.name ?? "the selected network"} from your wallet`,
-              ))
-        }
+        data-agent-confirm={confirm}
       >
         {busy && <Loader2Icon aria-hidden className="animate-spin" />}
         {phase === "success" && <CheckIcon aria-hidden />}

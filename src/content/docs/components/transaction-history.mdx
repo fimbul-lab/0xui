@@ -59,4 +59,4 @@ Local history only knows what this browser recorded. For full history across dev
 | `title` | `ReactNode` | `"Recent transactions"` | Heading. |
 | `locale` | `string` | runtime locale | Locale for the relative times. |
 
-Also exported: `useTransactionHistory`, `updateTransaction`, `clearTransactionHistory`.
+Also exported: `useTransactionHistory`, `updateTransaction`, `clearTransactionHistory`. The store itself is framework-free: `transactionHistory.get()` and `transactionHistory.subscribe(listener)` from `@/lib/transaction-history`.

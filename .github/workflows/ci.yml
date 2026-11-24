@@ -17,7 +17,7 @@ jobs:
       - run: bun run test
       - run: bun run build
 
-  # Install every registry item into a fresh shadcn Base UI app and build it.
+  # Install every registry item into a fresh shadcn Vite app and build it.
   smoke-install:
     runs-on: ubuntu-latest
     steps:

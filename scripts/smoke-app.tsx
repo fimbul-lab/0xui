@@ -21,7 +21,7 @@ import { SignMessage } from "@/components/sign-message";
 import { TokenInput } from "@/components/token-input";
 import { NATIVE_TOKEN_ADDRESS, TokenSelect, type Token } from "@/components/token-select";
 import { useTransactionToast } from "@/components/transaction-toast";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/primitives/toast";
 import { useTokenList } from "@/hooks/use-token-list";
 import { UNISWAP_DEFAULT_LIST } from "@/lib/token-list";
 import { Address } from "@/components/address";

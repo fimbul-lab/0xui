@@ -1,13 +1,13 @@
 /* `docs` holds the docs chrome (src/styles/docs.css): above Starlight, below
    Tailwind, so utilities inside demos still win. */
-@layer base, starlight, docs, theme, components, utilities;
+@layer ui-sdk, base, starlight, docs, theme, components, utilities;
 
 @import "@astrojs/starlight-tailwind";
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 @import "tailwindcss";
 @import "tw-animate-css";
-/* data-open / data-closed variants used by the Base UI primitives. */
+/* data-open / data-closed variants used by the primitives. */
 @import "shadcn/tailwind.css";
 
 @theme inline {

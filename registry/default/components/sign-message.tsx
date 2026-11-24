@@ -1,82 +1,46 @@
 // Docs: https://0xui.io/components/sign-message.md
 import { CheckIcon, Loader2Icon } from "lucide-react";
-import { useState, type ComponentProps, type ReactNode } from "react";
-import type { Hex, SignableMessage, TypedDataDefinition } from "viem";
-import { useConnection, usePublicClient, useSignMessage, useSignTypedData } from "wagmi";
+import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import type { Hex } from "viem";
+import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { CopyButton } from "@/components/copy-button";
 import { MorphText } from "@/components/morph-text";
-import { Button } from "@/components/ui/button";
-import { agentConfirmText, errorCode, isUserRejection, truncateAddress } from "@/lib/0xui-utils";
+import { Button } from "@/components/primitives/button";
+import { useStore } from "@/hooks/use-store";
+import { agentConfirmText, errorCode, truncateAddress } from "@/lib/0xui-utils";
+import { createMessageSigner, type SignPhase, type SignRequest } from "@/lib/sign-message-core";
 import { cn } from "@/lib/utils";
 
-export type SignPhase =
-  | "idle"
-  | "signing"
-  | "verifying"
-  | "signed"
-  | "invalid"
-  | "cancelled"
-  | "error";
-
-export type SignRequest =
-  | { message: SignableMessage; typedData?: never }
-  | { typedData: TypedDataDefinition; message?: never };
+export type { SignPhase, SignRequest };
 
 /**
  * Sign a message (EIP-191) or typed data (EIP-712) with the connected
- * wallet, and optionally verify the signature. Verification goes through
- * the RPC, so smart-contract wallets (ERC-1271/6492) verify too.
+ * wallet, and optionally verify the signature. The logic lives in
+ * `createMessageSigner` (framework-free); this only renders it.
  */
 export function useSignFlow(
   request: SignRequest,
   { verify = false, onSigned }: { verify?: boolean; onSigned?: (signature: Hex) => void } = {},
 ) {
-  const { address } = useConnection();
-  const client = usePublicClient();
-  const signMessage = useSignMessage();
-  const signTypedData = useSignTypedData();
-  const [phase, setPhase] = useState<SignPhase>("idle");
-  const [signature, setSignature] = useState<Hex>();
-  const [error, setError] = useState<Error>();
+  const config = useConfig();
+  const signer = useMemo(() => createMessageSigner(config), [config]);
+  const { phase, signature, error, address } = useStore(signer);
 
-  const sign = async () => {
-    if (!address) return;
-    setError(undefined);
-    setSignature(undefined);
-    setPhase("signing");
-    try {
-      const sig = request.typedData
-        ? await signTypedData.mutateAsync(request.typedData)
-        : await signMessage.mutateAsync({ message: request.message! });
-      setSignature(sig);
-      onSigned?.(sig);
-      if (verify && client) {
-        setPhase("verifying");
-        const valid = request.typedData
-          ? await client.verifyTypedData({ ...request.typedData, address, signature: sig })
-          : await client.verifyMessage({ address, signature: sig, message: request.message! });
-        setPhase(valid ? "signed" : "invalid");
-      } else {
-        setPhase("signed");
-      }
-    } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      setError(err);
-      setPhase(isUserRejection(err) ? "cancelled" : "error");
-    }
+  return {
+    phase,
+    signature,
+    error,
+    sign: () => signer.sign(request, { verify, onSigned }),
+    reset: signer.reset,
+    isConnected: Boolean(address),
   };
-
-  const reset = () => {
-    setPhase("idle");
-    setSignature(undefined);
-    setError(undefined);
-  };
-
-  return { phase, signature, error, sign, reset, isConnected: Boolean(address) };
 }
 
-export type SignMessageProps = Omit<ComponentProps<typeof Button>, "onClick" | "children"> &
+export type SignMessageProps = Omit<
+  ComponentProps<typeof Button>,
+  "onClick" | "children" | "className"
+> &
   SignRequest & {
     /** Check the signature against the connected address after signing. */
     verify?: boolean;
@@ -90,9 +54,10 @@ export type SignMessageProps = Omit<ComponentProps<typeof Button>, "onClick" | "
     /**
      * What a browser agent must ask a person before pressing the button, set
      * as `data-agent-confirm`. Defaults to the label plus what it does. Pass
-     * `false` to drop it.
+     * `false` to drop it. Not set while the button opens the wallet picker.
      */
     agentConfirm?: string | false;
+    className?: string;
   };
 
 const statusText: Partial<Record<SignPhase, string>> = {
@@ -158,11 +123,11 @@ export function SignMessage({
       )}
       <Button
         {...buttonProps}
-        disabled={disabled || busy}
-        aria-busy={busy || undefined}
+        disabled={disabled}
         onClick={flow.isConnected ? flow.sign : () => setConnectOpen(true)}
         data-agent-confirm={
-          agentConfirm === false
+          // Disconnected, it only opens the wallet picker, which asks per wallet.
+          agentConfirm === false || !flow.isConnected
             ? undefined
             : (agentConfirm ??
               agentConfirmText(

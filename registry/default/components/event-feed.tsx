@@ -1,23 +1,35 @@
 // Docs: https://0xui.io/components/event-feed.md
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState, type ReactNode } from "react";
-import { isAddress, type Abi, type Address, type Log } from "viem";
-import { usePublicClient, useWatchContractEvent } from "wagmi";
+import {
+  Timeline,
+  TimelineDescription,
+  TimelineItem,
+  TimelineTitle,
+} from "@ui-sdk/react/timeline";
+import { useMemo, type ReactNode } from "react";
+import type { Abi, Address } from "viem";
+import { useConfig } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
-import { truncateAddress } from "@/lib/0xui-utils";
+import { useStore } from "@/hooks/use-store";
+import {
+  createEventWatcher,
+  eventFilterKey,
+  eventHistoryQueryOptions,
+  feedEventId,
+  formatEventArg,
+  mergeFeedEvents,
+  type FeedEvent,
+} from "@/lib/event-feed-core";
 import { cn } from "@/lib/utils";
 
-export type FeedEvent = Log & {
-  eventName?: string;
-  args?: Record<string, unknown> | readonly unknown[];
-};
-
-const logId = (log: FeedEvent) => `${log.transactionHash}-${log.logIndex}`;
-
-function newestFirst(a: FeedEvent, b: FeedEvent) {
-  const block = Number((b.blockNumber ?? 0n) - (a.blockNumber ?? 0n));
-  return block || (b.logIndex ?? 0) - (a.logIndex ?? 0);
-}
+export {
+  createEventWatcher,
+  eventHistoryQueryOptions,
+  formatEventArg,
+  mergeFeedEvents,
+  type EventWatcherState,
+  type FeedEvent,
+} from "@/lib/event-feed-core";
 
 export type UseEventFeedParameters = {
   address: Address;
@@ -39,7 +51,11 @@ export type UseEventFeedParameters = {
   initialEvents?: readonly FeedEvent[];
 };
 
-/** Contract events, newest first: optional recent history plus live updates. */
+/**
+ * Contract events, newest first: optional recent history plus live updates.
+ * The logic lives in `createEventWatcher` and `eventHistoryQueryOptions`
+ * (framework-free).
+ */
 export function useEventFeed({
   address,
   abi,
@@ -50,61 +66,24 @@ export function useEventFeed({
   max = 20,
   initialEvents,
 }: UseEventFeedParameters) {
-  const client = usePublicClient({ chainId });
-  const [live, setLive] = useState<FeedEvent[]>([]);
+  const config = useConfig();
+  const filterKey = eventFilterKey({ address, eventName, args, chainId });
+  const history = useQuery(
+    eventHistoryQueryOptions(config, { address, abi, eventName, args, chainId, blocks: historyBlocks }),
+  );
+  // Keyed by value, so a new `args` object on each render doesn't restart the watch.
+  const watcher = useMemo(
+    () => createEventWatcher(config, { address, abi, eventName, args, chainId, keep: max * 2 }),
+    [config, abi, filterKey, max],
+  );
+  const live = useStore(watcher);
 
-  const history = useQuery({
-    queryKey: ["0xui", "event-feed", chainId, address, eventName, args, historyBlocks],
-    queryFn: async () => {
-      const latest = await client!.getBlockNumber();
-      const logs = await client!.getContractEvents({
-        address,
-        abi,
-        eventName,
-        args,
-        fromBlock: latest - BigInt(historyBlocks) + 1n,
-        toBlock: latest,
-      });
-      return logs as FeedEvent[];
-    },
-    enabled: Boolean(client) && historyBlocks > 0,
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-  });
-
-  useWatchContractEvent({
-    address,
-    abi,
-    eventName,
-    args,
-    chainId,
-    onLogs: (logs: Log[]) => setLive((prev) => [...(logs as FeedEvent[]), ...prev].slice(0, max * 2)),
-  });
-
-  const events = useMemo(() => {
-    const seen = new Set<string>();
-    return [...live, ...(history.data ?? []), ...(initialEvents ?? [])]
-      .filter((log) => {
-        const id = logId(log);
-        if (seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      })
-      .sort(newestFirst)
-      .slice(0, max);
-  }, [live, history.data, initialEvents, max]);
+  const events = useMemo(
+    () => mergeFeedEvents([live.events, history.data ?? [], initialEvents ?? []], max),
+    [live.events, history.data, initialEvents, max],
+  );
 
   return { events, isLoadingHistory: history.isLoading, historyError: history.error };
-}
-
-/** Short display text for an event argument. */
-export function formatEventArg(value: unknown): string {
-  if (typeof value === "bigint") return value.toLocaleString();
-  if (typeof value === "string" && isAddress(value)) return truncateAddress(value);
-  if (typeof value === "string" && value.startsWith("0x") && value.length > 20)
-    return truncateAddress(value, { start: 10, end: 6 });
-  if (Array.isArray(value)) return `[${value.map(formatEventArg).join(", ")}]`;
-  return String(value);
 }
 
 export type EventFeedProps = UseEventFeedParameters & {
@@ -142,47 +121,59 @@ export function EventFeed({
           Couldn't load past events. Showing new ones as they arrive.
         </p>
       )}
-      <ol role="log" aria-live="polite" className="flex flex-col divide-y">
+      <div role="log" aria-live="polite">
         {events.length === 0 ? (
-          <li className="py-4 text-center text-sm text-muted-foreground">
+          <p className="py-4 text-center text-sm text-muted-foreground">
             {isLoadingHistory ? "Loading recent events…" : "Waiting for events…"}
-          </li>
+          </p>
         ) : (
-          events.map((event) => (
-            <li key={logId(event)} className="flex items-start gap-3 py-2 text-sm">
-              <div className="min-w-0 flex-1">
-                {renderEvent ? (
-                  renderEvent(event)
-                ) : (
-                  <>
-                    <span className="font-medium">{event.eventName ?? "Event"}</span>
-                    {event.args && (
-                      <dl className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                        {Object.entries(event.args).map(([key, value]) => (
-                          <div key={key} className="flex gap-1">
-                            <dt>{key}</dt>
-                            <dd className="font-mono text-foreground">{formatEventArg(value)}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    )}
-                  </>
+          <Timeline
+            aria-label={typeof title === "string" ? title : "Live events"}
+            className="flex flex-col divide-y"
+          >
+            {events.map((event) => (
+              <TimelineItem
+                key={feedEventId(event)}
+                className="flex items-start gap-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              >
+                {/* The spaces between parts keep the row's text readable in one
+                    piece, for screen readers and agents: "Transfer from 0x… value 42". */}
+                <div className="min-w-0 flex-1">
+                  {renderEvent ? (
+                    renderEvent(event)
+                  ) : (
+                    <>
+                      <TimelineTitle className="font-medium">{event.eventName ?? "Event"}</TimelineTitle>{" "}
+                      {event.args && (
+                        <TimelineDescription>
+                          <dl className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                            {Object.entries(event.args).map(([key, value]) => (
+                              <div key={key} className="flex gap-1">
+                                <dt>{key}</dt>{" "}
+                                <dd className="font-mono text-foreground">{formatEventArg(value)}</dd>{" "}
+                              </div>
+                            ))}
+                          </dl>
+                        </TimelineDescription>
+                      )}
+                    </>
+                  )}
+                </div>{" "}
+                {event.transactionHash && (
+                  <ExplorerLink
+                    tx={event.transactionHash}
+                    chainId={params.chainId}
+                    icon={false}
+                    className="shrink-0 text-xs text-muted-foreground"
+                  >
+                    {event.blockNumber !== null ? `#${event.blockNumber.toLocaleString()}` : "View"}
+                  </ExplorerLink>
                 )}
-              </div>
-              {event.transactionHash && (
-                <ExplorerLink
-                  tx={event.transactionHash}
-                  chainId={params.chainId}
-                  icon={false}
-                  className="shrink-0 text-xs text-muted-foreground"
-                >
-                  {event.blockNumber !== null ? `#${event.blockNumber.toLocaleString()}` : "View"}
-                </ExplorerLink>
-              )}
-            </li>
-          ))
+              </TimelineItem>
+            ))}
+          </Timeline>
         )}
-      </ol>
+      </div>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 # 0xui — Plan
 
-0xui is a shadcn-style registry of web3 React components built on **wagmi v3 + viem v2 + Base UI + Tailwind v4**, with docs on Astro Starlight. You install components with `shadcn add`, and the source is copied into your app.
+0xui is a shadcn-style registry of web3 React components built on **wagmi v3 + viem v2 + ui-sdk + Tailwind v4**, with docs on Astro Starlight. You install components with `shadcn add`, and the source is copied into your app.
 
 **North star:** the web3 component library with the best DX and the best support for agents. Every component installs with one command, compiles on the first try, exposes its state as named types, and can be used either headless (hook only) or styled.
 
@@ -16,8 +16,8 @@
 | Shared items | `0xui-utils`, `use-mounted`, `use-copy`, `wagmi-config` (config + `Web3Provider`). |
 | Docs | Installation, Conventions and component pages. Demos live in `src/demos/*.tsx`, use the `demo()` wrapper, and run on a mock "Demo Wallet" connector, so no extension is needed. |
 | Tests | Vitest + Testing Library + jsdom. `test/wagmi.tsx` provides `createTestConfig` / `renderWithWagmi` / `connectMock`. 40 tests. |
-| CI | `.github/workflows/ci.yml`: lint, check, test, build, plus a smoke job that installs every item into a fresh shadcn Vite app on Base UI and builds it. |
-| Primitives | **Base UI only** (shadcn `base-nova` style), decided 2026-11-18. Radix is not supported, so registry code can use Base UI props such as `render`. |
+| CI | `.github/workflows/ci.yml`: lint, check, test, build, plus a smoke job that installs every item into a fresh shadcn Vite app and builds it. |
+| Primitives | **0xui's own, on ui-sdk** (`@0xui/primitive-{button,popover,dialog,tabs,avatar,field,toast}`, installed to `components/primitives/`), since the 2026-11-24 rebuild. Registry code no longer imports shadcn's `components/ui` or Base UI, so either shadcn flavor works. Apps put `@layer ui-sdk;` at the top of their global stylesheet. Was Base UI only from 2026-11-18. |
 
 ---
 
@@ -29,6 +29,11 @@ These come from the chain-selector refactor. They are what make the library pred
 1. **Hook**: `useChainSwitcher`, `useConnectWallet`, `useTxFlow`… It holds all wagmi calls and state, and is **exported** so people can build their own UI on it.
 2. **Parts**: small presentational pieces (rows, triggers, lists) that take plain props.
 3. **Shell(s)**: the default composed component. Variants (popover / dialog / drawer) are thin shells over the same hook and parts and never fork the logic.
+
+**Since the 2026-11-24 rebuild**, the logic under the hook is framework-free:
+- `registry/default/lib/*.ts` holds controllers on `@wagmi/core` and viem, over a tiny store (`@0xui/0xui-store`). No React, wagmi React or ui-sdk React imports; `lib/framework-free.test.ts` checks it.
+- The React hook is thin: it reads the store with `@0xui/use-store`. A Vue or Svelte port replaces only the hook and the markup.
+- UI behavior (keyboard, focus, ARIA, overlays) comes from ui-sdk through 0xui's styled primitives in `components/primitives/*`. The responsive dialog's drawer is the ui-sdk Dialog with `presentation="sheet"`.
 
 ### 2.2 Prop contract
 - `variant`, `size`, `className` on the root.
@@ -154,7 +159,7 @@ Each phase ends with something shippable: components live on the docs site and i
 **Phase 0 follow-ups**
 - **Registry domain.** The docs live at `https://0xui.io`, set in the docs, README, registry and Astro `site`. Later, list `@0xui` in the shadcn registry index so users don't need the `components.json` entry.
 - **`@web3icons/react/dynamic` emits about 2k lazy chunks** (every token and network icon) in a consumer's build. They are never loaded unless used, but they slow builds and add noise. Consider a static per-chain import map.
-- **Radix**: dropped 2026-11-18. 0xui targets the Base UI flavor of shadcn only, and the Radix smoke job is gone.
+- **Radix**: dropped 2026-11-18, back since the 2026-11-24 rebuild: components use 0xui's ui-sdk primitives, so the shadcn flavor no longer matters. The Radix smoke job is still gone.
 - **Docs demos share one wagmi config**, so switching chain in one demo moves every demo on the page. Fine for now. Give each island its own config if it starts to confuse.
 - `wagmi-config` is **not** a `registryDependency` of components. Components only need some `WagmiProvider` above them, and forcing the file in would clash with existing setups.
 
@@ -187,7 +192,7 @@ These are fast and they lock in the conventions before the big components.
 **Phase 3 notes**
 - **`address-input` callbacks:** `onValueChange(text)` fires on every keystroke and `onResolve(state)` fires when validation settles. One callback can't carry both, because ENS resolution is async.
 - **Approvals:** `approve-button` approves the exact amount by default. `unlimited` is opt-in. The USDT approve-0-first quirk is handled since 2026-11-18 (`resetFirst`).
-- **Toasts:** `transaction-toast` adds the shadcn `sonner` primitive, which pulls in `next-themes`.
+- **Toasts:** `transaction-toast` adds the shadcn `sonner` primitive, which pulls in `next-themes`. Since 2026-11-24 it uses `@0xui/primitive-toast` (ui-sdk Toast) instead; apps mount its `Toaster`.
 - **Repo setup:** `tsconfig` `@/*` now lists `src/` before `registry/default/`. A path exists in only one of them, so resolution is unaffected, but `shadcn add <primitive>` now writes into `src/`.
 - **Demo Wallet:** signs with a throwaway key, so its signatures don't verify against the demo address. It also remembers demo approvals. The docs config sets `batch.multicall: false` so allowance reads can be intercepted.
 - **Test helpers:** `erc20CallRpc()` and `ensResolveRpc()` in `test/wagmi.tsx`, plus custom `accounts` in `createTestConfig`, so signatures can verify with a real key.
@@ -249,7 +254,7 @@ These are fast and they lock in the conventions before the big components.
   - It injects one `<style>` element, which a strict CSP blocks.
 
 ### Planned features (2026-11-18)
-- **Mobile drawer:** `@0xui/responsive-dialog` is a dialog on larger screens and a bottom drawer below 640px.
+- **Mobile drawer:** `@0xui/responsive-dialog` is a dialog on larger screens and a bottom drawer below 640px. Rebuilt 2026-11-24 on the ui-sdk Dialog (`presentation="sheet"`); `auto` is now the sheet on small touch screens. The notes below describe the first version.
   - `connect-wallet` and `token-select` open it. Both take `mode` (`auto`, `dialog`, `drawer`).
   - Built on the shadcn `dialog` and `drawer` primitives, not ui-sdk: it sits under the flagship, and ui-sdk is still beta.
   - The drawer shows a swipe handle (`showSwipeHandle`, a Base UI drawer prop).
@@ -516,7 +521,7 @@ export interface ShieldedEngine {
 - **`proof-progress` is controlled by props.** `useProof` wraps `engine.prove` and can be swapped for the step 4 flow hook. The phase while proving is the stage name.
 - **`privacy-badge` is filled for private, outlined for public,** with different icons, so it does not depend on color. It uses theme variables only.
 - **Default copy has no protocol words.** A test fails if "POI", "innocence", "Railgun" or "UTXO" appears in `shielded-balance`.
-- **ui-sdk is not used.** No registry code uses it today; these follow the existing Base UI and shadcn pattern.
+- **ui-sdk is not used.** No registry code uses it today; these follow the existing Base UI and shadcn pattern. (Superseded by the 2026-11-24 rebuild onto ui-sdk.)
 
 *Mock*
 - **Timings** (`MOCK_TIMINGS`, divided by `speed`): account creation 6 s, first scan 40 s, repeat scan 3.5 s, proof 13 s on the first run (4 s circuits, 8 s proving, 1 s verifying), standby 60 s. Three are guesses, not measurements: unlock 0.8 s, change settling 15 s, one proof retry 5 s.
@@ -659,8 +664,8 @@ export type PrivateTxPhase =
 | Question | Leaning |
 |---|---|
 | Fiat prices: wagmi has no price source. | No built-in API. Components take a `price` / `formatFiat` prop. Document a CoinGecko / DefiLlama example. |
-| Toasts: Sonner as a dependency? | Yes for `transaction-toast` only. Everything else stays toast-free. |
-| Drawer on mobile for dialogs (connect, token-select)? | Done 2026-11-18 with the shadcn `drawer` primitive. In the Base UI style that is Base UI's own Drawer, so no `vaul`. |
+| Toasts: Sonner as a dependency? | No longer. Since 2026-11-24 `transaction-toast` uses the ui-sdk Toast through `@0xui/primitive-toast`. Everything else stays toast-free. |
+| Drawer on mobile for dialogs (connect, token-select)? | Done 2026-11-18 with the shadcn `drawer` primitive. Since 2026-11-24 it is the ui-sdk Dialog with `presentation="sheet"`, so no `vaul` and no Base UI. |
 | Commit `public/r/*.json` or generate at build? | Generate in CI and the build. Stop committing it once CI is in place. |
 | Token list source for `token-select` | Prop only, in Uniswap tokenlist format. Ship a small default list for docs. |
 | Shielded account: seed or wallet signature? | Seed (BIP-39 + password). A signature-derived account is easier to onboard but ties the private account to the public one. |

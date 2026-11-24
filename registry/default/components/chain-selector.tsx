@@ -2,16 +2,18 @@
 import {
   Popover,
   PopoverContent,
+  PopoverTitle,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/primitives/popover";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+} from "@/components/primitives/dialog";
+import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/primitives/tabs";
+import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
 import { cn } from "@/lib/utils";
 import {
   CheckIcon,
@@ -19,14 +21,15 @@ import {
   Loader2Icon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { useState, type ComponentType, type ReactNode } from "react";
+import { useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
 import { type Chain } from "viem";
-import { useChainId, useChains, useConnection, useSwitchChain } from "wagmi";
+import { useConfig } from "wagmi";
 import { ChainIcon, type ChainIconProps } from "@/components/chain-badge";
 import { MorphText } from "@/components/morph-text";
 import { useMounted } from "@/hooks/use-mounted";
-import { isUserRejection } from "@/lib/0xui-utils";
+import { useStore } from "@/hooks/use-store";
+import { createChainSwitcher } from "@/lib/chain-switcher";
 
 type IconStyleProps =
   | {
@@ -75,54 +78,34 @@ function groupChainsByNetwork(chains: readonly Chain[]) {
   return { mainnet, testnet };
 }
 
-function useChainSwitcher() {
+/**
+ * The chain switcher for the app's wagmi config, as React state. The logic
+ * lives in `createChainSwitcher` (framework-free); this only renders it.
+ */
+export function useChainSwitcher() {
+  const config = useConfig();
+  const switcher = useMemo(() => createChainSwitcher(config), [config]);
+  const state = useStore(switcher);
   const [open, setOpen] = useState(false);
   const mounted = useMounted();
 
-  const chainId = useChainId();
-  const chains = useChains();
-  const connection = useConnection();
-  // The wallet can be on a chain the app doesn't configure. useChainId would
-  // still report the last configured chain, so check the connection directly.
-  const unsupported =
-    connection.status === "connected" &&
-    connection.chainId !== undefined &&
-    !chains.some((c) => c.id === connection.chainId);
-  const currentChain = unsupported
-    ? undefined
-    : chains.find((c) => c.id === chainId);
-
-  const { mutateAsync, isPending, variables, error, reset } = useSwitchChain();
-  const pendingChainId = isPending ? variables?.chainId : undefined;
-  const cancelled = isUserRejection(error);
-
   const onSwitch = async (id: number) => {
-    try {
-      // Narrow to the chain-id union when the app registers its config type.
-      await mutateAsync({ chainId: id as (typeof chains)[number]["id"] });
-      setOpen(false);
-    } catch {
-      // Surfaced via `error` below.
-    }
+    if (await switcher.switchTo(id)) setOpen(false);
   };
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) reset();
+    if (next) switcher.reset();
   };
 
   return {
+    ...state,
     open,
     onOpenChange,
     mounted,
-    chains,
-    currentChain,
     onSwitch,
-    isPending,
-    pendingChainId,
-    error: cancelled ? null : error,
-    cancelled,
-    unsupported: mounted && unsupported,
+    isPending: state.pendingChainId !== undefined,
+    unsupported: mounted && state.unsupported,
   };
 }
 
@@ -202,6 +185,8 @@ function TriggerContent({
 }) {
   return (
     <>
+      {/* Names the trigger "Network: <chain>" for screen readers and agents. */}
+      <span className="sr-only">Network: </span>
       {unsupported && (
         <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />
       )}
@@ -283,10 +268,11 @@ function ChainItem({
   LoaderIcon?: ComponentType<{ className?: string }>;
 }) {
   return (
-    <button
+    <ButtonPrimitive
       onClick={() => onSwitch(chain.id)}
       disabled={disabled || isActive}
       aria-current={isActive || undefined}
+      data-agent-confirm={`Asks your wallet to switch to ${chain.name}`}
       className={cn(
         "flex items-center w-full gap-2 p-2 rounded-md hover:bg-accent/20 group active:scale-97 cursor-pointer disabled:cursor-default disabled:opacity-50",
         isActive && "bg-accent/20 opacity-100"
@@ -298,7 +284,7 @@ function ChainItem({
         />
       )}
       <div className="flex min-w-0 flex-col items-start text-left">
-        <span className="text-sm">{chain.name}</span>
+        <span className="text-sm">{chain.name}</span>{" "}
         {meta && (
           <span className="text-xs text-muted-foreground">{meta}</span>
         )}
@@ -307,7 +293,7 @@ function ChainItem({
       {isSwitching && LoaderIcon && (
         <LoaderIcon className="size-4 ml-auto shrink-0 animate-spin" />
       )}
-    </button>
+    </ButtonPrimitive>
   );
 }
 
@@ -419,29 +405,29 @@ function ChainListContent({
         </p>
       )}
       {groupByNetwork && (mainnet.length > 0 || testnet.length > 0) ? (
-        <Tabs defaultValue="mainnet" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="mainnet" disabled={mainnet.length === 0}>
+        <Tabs defaultValue={mainnet.length > 0 ? "mainnet" : "testnet"} className="w-full">
+          <TabsList aria-label="Network type" className="grid w-full grid-cols-2">
+            <TabsTab value="mainnet" disabled={mainnet.length === 0}>
               Mainnet
-            </TabsTrigger>
-            <TabsTrigger value="testnet" disabled={testnet.length === 0}>
+            </TabsTab>
+            <TabsTab value="testnet" disabled={testnet.length === 0}>
               Testnet
-            </TabsTrigger>
+            </TabsTab>
           </TabsList>
-          <TabsContent value="mainnet" className="mt-2">
+          <TabsPanel value="mainnet" className="mt-2">
             {mainnet.length > 0 ? (
               <ChainsGrid chains={mainnet} {...gridProps} />
             ) : (
               empty("mainnet")
             )}
-          </TabsContent>
-          <TabsContent value="testnet" className="mt-2">
+          </TabsPanel>
+          <TabsPanel value="testnet" className="mt-2">
             {testnet.length > 0 ? (
               <ChainsGrid chains={testnet} {...gridProps} />
             ) : (
               empty("testnet")
             )}
-          </TabsContent>
+          </TabsPanel>
         </Tabs>
       ) : (
         <ChainsGrid chains={chains} {...gridProps} />
@@ -472,7 +458,7 @@ function useChainSelectorParts(props: ChainSelectorProps) {
     ...switcher,
     ...icons,
     chainName,
-    ariaLabel: iconOnly ? chainName : undefined,
+    ariaLabel: iconOnly ? `Network: ${chainName}` : undefined,
     tooltipTitle: iconOnly ? chainName : undefined,
     iconOnly,
     disableIcons,
@@ -508,8 +494,8 @@ export function ChainSelector(props: ChainSelectorProps) {
           LoaderIcon={s.LoaderIcon}
         />
       </PopoverTrigger>
-      <PopoverContent className="min-w-48 flex flex-col gap-4 w-full">
-        <div className="text-sm font-medium">Select Network</div>
+      <PopoverContent className="flex w-max max-w-[calc(100vw-2rem)] min-w-48 flex-col gap-4">
+        <PopoverTitle>Select Network</PopoverTitle>
         <ChainListContent
           mounted={s.mounted}
           chains={s.chains}
@@ -557,7 +543,7 @@ export function ChainSelectorDialog(props: ChainSelectorProps) {
           LoaderIcon={s.LoaderIcon}
         />
       </DialogTrigger>
-      <DialogContent className="min-w-96">
+      <DialogContent className="min-w-96" closeLabel="Close network picker">
         <DialogHeader>
           <DialogTitle>Select Network</DialogTitle>
         </DialogHeader>

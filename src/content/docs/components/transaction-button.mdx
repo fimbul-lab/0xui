@@ -123,7 +123,7 @@ flow.execute({ transaction: { to, value } });
 
 ## Props
 
-Also accepts shadcn `Button` props.
+Also accepts `Button` props (`variant`, `size`…). `className` goes on the root, which holds the button and its status line.
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -137,7 +137,7 @@ Also accepts shadcn `Button` props.
 | `successLabel` | `ReactNode` | `"Done"` | Label after success. |
 | `resetAfter` | `number \| false` | `4000` | Back to idle after success, in ms. |
 | `hideStatus` | `boolean` | `false` | Hide the status line. |
-| `agentConfirm` | `string \| false` | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. |
+| `agentConfirm` | `string \| false` | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. While the button offers a network switch it asks about the switch instead; while it opens the wallet picker it asks nothing, since each wallet there asks before connecting. |
 | `onSubmitted` | `(hash) => void` | — | Wallet returned a hash. |
 | `onSuccess` | `(receipt) => void` | — | Mined successfully. |
 | `onError` | `(error) => void` | — | Failed or reverted. Not called on cancel. |

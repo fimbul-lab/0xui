@@ -99,6 +99,17 @@ export async function fetchTokenList(url: string, { gateway }: { gateway?: strin
   return parseTokenList(await response.json());
 }
 
+/** TanStack Query options that download a token list, cached for the session. */
+export function tokenListQueryOptions(url: string, { gateway }: { gateway?: string } = {}) {
+  return {
+    queryKey: ["0xui", "token-list", url, gateway] as const,
+    queryFn: () => fetchTokenList(url, { gateway }),
+    staleTime: 60 * 60_000,
+    gcTime: Number.POSITIVE_INFINITY,
+    retry: 1,
+  };
+}
+
 /**
  * Tokens from several lists, merged. The first list wins when two lists
  * share a token (same chain and address).
@@ -147,6 +158,29 @@ export function applyTokenFilters<T extends Pick<TokenInfo, "chainId" | "address
   const allowed = allowlist ? matcher(allowlist) : () => true;
   const blocked = blocklist ? matcher(blocklist) : () => false;
   return tokens.filter((t) => allowed(t) && !blocked(t));
+}
+
+export type SelectTokensOptions = TokenFilters & {
+  /** Only tokens on this chain, or every chain with null. */
+  chainId: number | null;
+  /** The chain whose native currency goes first. Leave out to skip it. */
+  nativeChain?: Pick<Chain, "id" | "nativeCurrency">;
+  /** Extra tokens, e.g. ones the user imported. They come first and win over list entries. */
+  extraTokens?: readonly TokenInfo[];
+};
+
+/** The tokens of loaded lists for one chain: merged, filtered, with the native currency first. */
+export function selectTokens(
+  lists: readonly Pick<TokenList, "tokens">[],
+  { chainId, nativeChain, extraTokens = [], allowlist, blocklist }: SelectTokensOptions,
+) {
+  const merged = mergeTokenLists([{ tokens: [...extraTokens] }, ...lists]);
+  const filtered = applyTokenFilters(merged, { allowlist, blocklist });
+  const onChain = chainId === null ? filtered : filtered.filter((t) => t.chainId === chainId);
+  // Filters don't apply to the native currency: it can't be spoofed. Skip it
+  // if a list (or extraTokens) already has an entry for it.
+  if (!nativeChain || onChain.some(isNativeToken)) return onChain;
+  return [nativeToken(nativeChain), ...onChain];
 }
 
 /**

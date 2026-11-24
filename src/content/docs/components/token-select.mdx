@@ -43,9 +43,11 @@ const [token, setToken] = useState<Token>();
 
 Only tokens on `chainId` (the current chain by default) are listed. `useTokenList` adds the native currency (ETH) first, since lists don't include it, and takes an `allowlist` or `blocklist` to control which tokens appear.
 
-The list is paged, 50 rows at a time (`pageSize`): more load as the user scrolls, or with "Show more".
+The list is paged, 50 rows at a time (`pageSize`): more load as the user scrolls or arrows to the last row, or with "Show more".
 
-Below 640px the picker opens as a bottom drawer. Set `mode` to force a dialog or a drawer. See [Responsive Dialog](/components/responsive-dialog/).
+The search field and list are a ui-sdk [Command](https://ui-sdk.dev/docs/components/command): focus stays in the field while the arrow keys move through the tokens, and Enter picks one.
+
+On small touch screens the picker opens as a bottom sheet you can swipe away. Set `mode` to force a dialog or a sheet (`"drawer"`).
 
 <Aside type="tip" title="In production">
 Balances are read over RPC by default: fine for prototypes, but heavy for long lists. With an [index of the chain](/getting-started/indexed-data/), pass `balances` and nothing is read over RPC:
@@ -70,13 +72,29 @@ Pass `isLoading` and the picker shows skeleton rows under the tokens it already 
 <TokenSelectDialog open={open} onOpenChange={setOpen} tokens={tokens} onValueChange={setToken} />
 ```
 
+### With a browser agent
+
+Through ui-sdk's agent bridge, the closed picker is one button, "Select token" (or "ETH, change token"). Picking a token is free; nothing here asks the person.
+
+```ts
+await agent.act({
+  steps: [
+    { ref: "Select token", action: "press" }, // opens the list: "Search tokens"
+    { ref: "Search tokens", action: "setQuery", args: ["usdc"] }, // only needed past the first page
+    { ref: "Search tokens", action: "run", args: ["USDC"] }, // by symbol
+  ],
+})
+```
+
+`run` takes a token's symbol, which is its row's value. Two tokens with the same symbol get the symbol and the address, like `"USDC 0xa0b8…"`. It also takes the row's whole text, like `"USDC USD Coin"`, but not a part of it. While the list is open, `agent.query({ within: "Search tokens", text: "usd" })` lists the matching rows with their values. A row only takes `run` while it's shown, so search first for a token past the first page.
+
 ### Headless
 
-`filterTokens(tokens, query)` is the search, and `useTokenBalances(tokens)` reads every balance in one batch.
+`filterTokens(tokens, query)` is the search, and `useTokenBalances(tokens)` reads every balance in one batch. Both live in `lib/token-select-core.ts` with no React, next to `tokenBalancesQueryOptions` for other frameworks' TanStack Query adapters.
 
 ## Props
 
-Also accepts shadcn `Button` props for the trigger.
+Also accepts `Button` props for the trigger.
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -90,7 +108,7 @@ Also accepts shadcn `Button` props for the trigger.
 | `isLoading` | `boolean` | `false` | The list is still downloading. Shows skeleton rows, and "Loading tokens…" for screen readers. |
 | `pageSize` | `number` | `50` | Rows per page. More load on scroll or with "Show more". |
 | `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
-| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom drawer on small screens, dialog otherwise. Or force one. |
+| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom sheet on small touch screens, dialog otherwise. Or force one. |
 | `placeholder` | `string` | `"Select token"` | Trigger text with nothing selected. |
 | `title` | `ReactNode` | `"Select a token"` | Picker title. |
 

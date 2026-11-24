@@ -14,7 +14,7 @@ export type MorphTextProps = Omit<TextMorphProps, "children" | "as"> & {
 // torph animates with the Web Animations API and throws without it. jsdom
 // doesn't implement it, so tests render plain text instead.
 const noWebAnimations =
-  typeof Element !== "undefined" && typeof Element.prototype.getAnimations !== "function";
+  typeof Element !== "undefined" && typeof Element.prototype.animate !== "function";
 
 /** The text of plain children, or undefined when they hold an element. */
 function textOf(node: ReactNode): string | undefined {

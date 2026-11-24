@@ -1,8 +1,16 @@
 // Docs: https://0xui.io/components/approve-button.md
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { erc20Abi, maxUint256, type Address } from "viem";
-import { useConnection, useReadContract } from "wagmi";
+import { erc20Abi, formatUnits, type Address } from "viem";
+import { useChainId, useConfig, useConnection } from "wagmi";
 import { TransactionButton, type TransactionButtonProps } from "@/components/transaction-button";
+import {
+  allowanceQueryOptions,
+  nextApproval,
+  requiresAllowanceReset,
+} from "@/lib/approve-button-core";
+
+export { requiresAllowanceReset };
 
 export type UseAllowanceParameters = {
   /** ERC-20 contract. */
@@ -16,36 +24,25 @@ export type UseAllowanceParameters = {
 
 /** Current ERC-20 allowance of `spender` over the owner's tokens. */
 export function useAllowance({ token, spender, owner, chainId }: UseAllowanceParameters) {
+  const config = useConfig();
   const { address } = useConnection();
-  const account = owner ?? address;
-  return useReadContract({
-    address: token,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: [account!, spender],
-    chainId,
-    query: { enabled: Boolean(account) },
-  });
-}
-
-/**
- * Tokens that revert when a non-zero allowance is changed to another
- * non-zero value, as `chainId:address` in lower case. Mainnet USDT is the
- * well-known one.
- */
-const RESET_FIRST = new Set(["1:0xdac17f958d2ee523a2206206994597c13d831ec7"]);
-
-/** True for a token whose leftover allowance must be set to 0 before it can be raised. */
-export function requiresAllowanceReset(chainId: number, token: Address) {
-  return RESET_FIRST.has(`${chainId}:${token.toLowerCase()}`);
+  const currentChainId = useChainId();
+  return useQuery(
+    allowanceQueryOptions(config, {
+      token,
+      spender,
+      owner: owner ?? address,
+      chainId: chainId ?? currentChainId,
+    }),
+  );
 }
 
 export type ApproveButtonProps = Omit<
   TransactionButtonProps,
   "contract" | "transaction" | "children" | "chainId"
 > & {
-  /** Token to approve. */
-  token: { address: Address; symbol: string };
+  /** Token to approve. With `decimals`, the agent confirm states the amount in tokens rather than base units. */
+  token: { address: Address; symbol: string; decimals?: number };
   /** Contract that will spend the tokens. */
   spender: Address;
   /** Amount the next action needs, in the token's smallest unit. */
@@ -83,15 +80,18 @@ export function ApproveButton({
 }: ApproveButtonProps) {
   const { status } = useConnection();
   const allowance = useAllowance({ token: token.address, spender, chainId });
-
-  const approved = allowance.data !== undefined && allowance.data >= amount;
-  if (amount === 0n || approved) return <>{children}</>;
+  const step = nextApproval({
+    allowance: allowance.data,
+    amount,
+    chainId,
+    token: token.address,
+    unlimited,
+    resetFirst,
+  });
+  if (step.kind === "none") return <>{children}</>;
 
   const checking = status === "connected" && allowance.isPending;
-  const reset =
-    (resetFirst ?? requiresAllowanceReset(chainId, token.address)) &&
-    allowance.data !== undefined &&
-    allowance.data > 0n;
+  const reset = step.kind === "reset";
 
   return (
     <TransactionButton
@@ -103,14 +103,20 @@ export function ApproveButton({
         address: token.address,
         abi: erc20Abi,
         functionName: "approve",
-        args: [spender, reset ? 0n : unlimited ? maxUint256 : amount],
+        args: [spender, step.value],
       }}
       disabledReason={checking ? "Checking allowance…" : buttonProps.disabledReason}
       agentConfirm={
         buttonProps.agentConfirm ??
         (reset
           ? `Reset ${token.symbol} approval: sets ${spender}'s allowance to 0`
-          : `Approve ${token.symbol}: lets ${spender} spend ${unlimited ? `all of your ${token.symbol}` : `the ${token.symbol} this action needs`}`)
+          : unlimited
+            ? `Approve ${token.symbol}: lets ${spender} spend all of your ${token.symbol}, with no limit`
+            : `Approve ${token.symbol}: lets ${spender} spend up to ${
+                token.decimals === undefined
+                  ? `${amount} base units of ${token.symbol}`
+                  : `${formatUnits(amount, token.decimals)} ${token.symbol}`
+              }`)
       }
       successLabel={reset ? "Approval reset" : "Approved"}
       resetAfter={false}

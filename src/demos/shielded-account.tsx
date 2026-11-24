@@ -1,6 +1,6 @@
 import { ShieldedAccount } from "@/components/shielded-account";
 import { ShieldedBalance } from "@/components/shielded-balance";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 import { parseEther } from "viem";
 import { demoWeth, quickStart, shieldedDemo } from "./shielded-demo";
 

@@ -43,9 +43,18 @@ When an action fails, `data-error` says why, as one stable word next to `data-ph
 
 ## Agents
 
-Buttons that send, sign or approve carry `data-agent-confirm` with a sentence saying what they do, like "Send 0.1 ETH: sends a transaction on Ethereum from your wallet". Browser agents treat it as "a person must approve this first". Override the sentence with `agentConfirm`, or pass `agentConfirm={false}` to drop it.
+Every 0xui control is a ui-sdk component with a name, so an AI agent can read and use it through ui-sdk's [agent bridge](https://ui-sdk.dev/docs/agents). Render [Agent Tools](/components/agent-tools/) once to connect it. The rule is simple: reading and filling are free, anything that touches the wallet needs a person, and secrets stay hidden.
 
-Together with `data-phase` and `data-error`, an agent can drive a 0xui interface and know what happened without reading the page. [Agent Tools](/components/agent-tools/) also gives agents the wallet state directly.
+| Mark | What the agent gets | Where 0xui puts it |
+| --- | --- | --- |
+| none | Reads and changes it freely. | Inputs, token and chain pickers, tabs, popovers, dialogs, copy buttons. |
+| `data-agent-confirm="<sentence>"` | Its step waits until the person allows the sentence. | Send, sign, approve, batch and shield; connect a wallet; switch networks; disconnect or switch account; add a token to the wallet; create, unlock, import or lock a shielded account. |
+| `data-agent-secret` | Can type into it, but reads `"[redacted]"`. | Password and recovery-phrase import fields. |
+| `data-agent-hidden` | Nothing at all. | Recovery phrases and private or viewing keys. |
+
+The sentence is written for the person, from what the control will do, like "Send 0.1 ETH: sends a transaction on Ethereum from your wallet". Override it with `agentConfirm`, or pass `agentConfirm={false}` to drop it. Only an agent's steps are asked about: a person pressing the same button sees nothing new.
+
+Together with `data-phase` and `data-error`, an agent can drive a 0xui interface and know what happened without reading the page.
 
 ## Web3 rules
 

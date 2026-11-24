@@ -1,6 +1,6 @@
 import { parseEther, parseUnits } from "viem";
 import { ShieldedBalance } from "@/components/shielded-balance";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 import { demoShieldedUsdc, demoWeth, quickStart, shieldedDemo } from "./shielded-demo";
 
 const weth = demoWeth.address;

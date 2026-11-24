@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { createAgent } from "@ui-sdk/react/agent";
 import { parseUnits } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestConfig, renderWithWagmi } from "../../../test/wagmi";
@@ -6,16 +7,20 @@ import { Address } from "./address";
 import { AddressAvatar, addressGradient } from "./address-avatar";
 import { BlockNumber } from "./block-number";
 import { ChainBadge } from "./chain-badge";
-import { CopyButton } from "./copy-button";
+import { CopyButton, copyLabel } from "./copy-button";
 import { ExplorerLink } from "./explorer-link";
 import { GasPrice, formatGasPrice, gasTone } from "./gas-price";
 import { MorphText } from "./morph-text";
+import { ResponsiveDialog, type ResponsiveDialogProps } from "./responsive-dialog";
 import { TokenAmount, formatFiat } from "./token-amount";
 import { TokenIcon } from "./token-icon";
 
 const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("CopyButton", () => {
   it("copies, confirms, and announces", async () => {
@@ -91,8 +96,9 @@ describe("Address", () => {
     renderWithWagmi(<Address address={lowercase} ens={false} />);
     expect(screen.getByText("0xd8dA…6045")).toBeInTheDocument();
     expect(screen.getByText(vitalik)).toHaveClass("sr-only");
+    // Named for its address, so several Address components stay apart.
     expect(
-      screen.getByRole("button", { name: "Copy address" })
+      screen.getByRole("button", { name: "Copy address 0xd8dA…6045" })
     ).toBeInTheDocument();
   });
 
@@ -166,7 +172,8 @@ describe("TokenAmount", () => {
       />
     );
     const amount = screen.getByTitle("1234.567891 USDC");
-    expect(amount).toHaveTextContent("1,234.5678USDC");
+    // A real space between amount and symbol for screen readers and agents.
+    expect(amount.textContent).toBe("1,234.5678 USDC");
   });
 
   it("shows a fiat value when given a price", () => {
@@ -256,5 +263,134 @@ describe("MorphText", () => {
       </MorphText>
     );
     expect(screen.getByText("Swap").tagName).toBe("STRONG");
+  });
+});
+
+describe("ResponsiveDialog", () => {
+  const dialog = (props: Partial<ResponsiveDialogProps>) => (
+    <ResponsiveDialog
+      open
+      onOpenChange={() => {}}
+      title="Slippage"
+      description="Choose how much the price may move."
+      data-phase="idle"
+      {...props}
+    >
+      <p>Content</p>
+    </ResponsiveDialog>
+  );
+
+  it("is a dialog named by its title and described for screen readers", () => {
+    render(dialog({}));
+    const content = screen.getByRole("dialog", { name: "Slippage" });
+    expect(content).toHaveAccessibleDescription("Choose how much the price may move.");
+    expect(content).toHaveAttribute("data-phase", "idle");
+    expect(content).toHaveAttribute("data-presentation", "dialog");
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+  });
+
+  it("presents as a sheet in drawer mode", async () => {
+    render(dialog({ mode: "drawer" }));
+    expect(await screen.findByRole("dialog", { name: "Slippage" })).toHaveAttribute("data-presentation", "sheet");
+  });
+
+  it("follows drawerQuery in auto mode", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          matches: query === "(max-width: 767px)",
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList
+    );
+    render(dialog({ drawerQuery: "(max-width: 767px)" }));
+    expect(await screen.findByRole("dialog")).toHaveAttribute("data-presentation", "sheet");
+  });
+
+  it("reports a close", async () => {
+    const onOpenChange = vi.fn();
+    render(dialog({ onOpenChange }));
+    await act(async () => screen.getByRole("button", { name: "Close" }).click());
+    expect(onOpenChange).toHaveBeenCalledWith(false, expect.anything());
+  });
+});
+
+describe("agent", () => {
+  const agent = createAgent();
+  const onPage = () =>
+    agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+  const hash = `0x${"ab".repeat(32)}`;
+
+  it("names copy buttons by what they copy", () => {
+    expect(copyLabel(vitalik)).toBe("Copy address");
+    expect(copyLabel(hash)).toBe("Copy hash");
+    expect(copyLabel("hello")).toBe("Copy");
+    render(
+      <>
+        <CopyButton value={vitalik} />
+        <CopyButton value={hash} />
+      </>,
+    );
+    expect(onPage().map((entry) => entry.label)).toEqual(["Copy address", "Copy hash"]);
+  });
+
+  it("tells several addresses' copy buttons apart, and copies one", async () => {
+    const other = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    renderWithWagmi(
+      <>
+        <Address address={vitalik} ens={false} />
+        <Address address={other} ens={false} />
+      </>,
+    );
+    expect(onPage().map((entry) => entry.label)).toEqual([
+      "Copy address 0xd8dA…6045",
+      "Copy address 0x71C7…976F",
+    ]);
+    const result = await agent.act({ steps: [{ ref: "Copy address 0x71C7…976F", action: "press" }] });
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(writeText).toHaveBeenCalledWith(other);
+  });
+
+  it("adds no unnamed entries for display components", () => {
+    renderWithWagmi(
+      <>
+        <AddressAvatar address={vitalik} ens={false} />
+        <ChainBadge chainId={1} />
+        <ChainBadge chainId={424242} chainIcon={false} />
+        <TokenIcon symbol="ZZZ" chainId={1} />
+        <TokenIcon symbol="ZZZ" decorative />
+        <TokenAmount value={parseUnits("1.5", 6)} decimals={6} symbol="USDC" />
+        <BlockNumber watch={false} />
+        <GasPrice refreshInterval={false} />
+        <MorphText>Text</MorphText>
+      </>,
+      { config: createTestConfig({ rpc: { eth_blockNumber: "0x10", eth_gasPrice: "0x3b9aca00" } }) },
+    );
+    expect(onPage()).toEqual([]);
+    // Decorative where its symbol is written next to it, an image otherwise.
+    expect(screen.getAllByRole("img", { name: "ZZZ" })).toHaveLength(1);
+  });
+
+  it("finds a ResponsiveDialog by its title and closes it by a specific name", async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ResponsiveDialog
+        open
+        onOpenChange={onOpenChange}
+        title="Slippage"
+        description="Choose how much the price may move."
+        closeLabel="Close slippage settings"
+      >
+        <p>Content</p>
+      </ResponsiveDialog>,
+    );
+    const labels = onPage().map((entry) => entry.label);
+    expect(labels.sort()).toEqual(["Close slippage settings", "Slippage"]);
+    const result = await agent.act({ steps: [{ ref: "Close slippage settings", action: "press" }] });
+    expect(result.ok, result.error?.message).toBe(true);
+    expect(onOpenChange).toHaveBeenCalledWith(false, expect.anything());
   });
 });

@@ -30,7 +30,7 @@ import { Portfolio } from "@/components/portfolio";
 
 It shows the connected account's holdings, or pass `address` for anyone's. Only tokens on `chainId` (the current chain by default) are read.
 
-Headless: `usePortfolio({ tokens, prices })` returns the shown `rows`, the `hidden` ones (each with its reason), and the `total`.
+Headless: `usePortfolio({ tokens, prices })` returns the shown `rows`, the `hidden` ones (each with its reason), and the `total`. The sorting and filtering is `summarizePortfolio` in `@/lib/portfolio`, which needs no framework.
 
 ## Prices
 

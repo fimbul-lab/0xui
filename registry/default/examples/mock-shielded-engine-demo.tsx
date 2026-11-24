@@ -3,7 +3,7 @@ import { parseEther } from "viem";
 import { ShieldedBalance } from "@/components/shielded-balance";
 import { ShieldedProvider } from "@/components/shielded-provider";
 import { ShieldedSyncStatus } from "@/components/shielded-sync-status";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/primitives/button";
 import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
 
 const weth = {

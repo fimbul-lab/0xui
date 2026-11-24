@@ -15,7 +15,7 @@ export interface PropDoc {
   default?: string;
   /** File an inherited 0xui prop is declared in, like `token-amount` or `button`. */
   from?: string;
-  /** npm package an inherited prop is declared in, like `torph` or `@base-ui/react`. */
+  /** npm package an inherited prop is declared in, like `torph` or `@ui-sdk/react`. */
   package?: string;
   /** A DOM attribute from `extends` that the component handles itself, like a default `title`. */
   attribute?: true;

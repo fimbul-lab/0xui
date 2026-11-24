@@ -33,7 +33,7 @@ Most apps want [Wallet Button](/components/wallet-button/), which shows this but
 
 ### Custom trigger
 
-`ConnectWallet` accepts every shadcn `Button` prop. Its children become the label.
+`ConnectWallet` accepts every `Button` prop (`variant`, `size`, `className`…). Its children become the label.
 
 <Preview>
   <CustomTrigger client:load />
@@ -72,7 +72,7 @@ const { wallets, connect, phase, pendingId } = useConnectWallet();
 - **Fewer choices:** shows `maxVisible` wallets (4 by default). The rest sit behind "Other wallets".
 - **Duplicates:** the generic `injected()` connector is hidden when extensions announce themselves, since it would duplicate one of them.
 - **Closing:** the dialog closes itself after a successful connection.
-- **Small screens:** below 640px the picker opens as a bottom drawer, within thumb reach, and can be swiped away. Set `mode` to force a dialog or a drawer. See [Responsive Dialog](/components/responsive-dialog/).
+- **Small screens:** on a small touch screen the picker opens as a bottom sheet, within thumb reach, and can be swiped away. Set `mode` to force a dialog or a sheet (`"drawer"`).
 
 ## States
 
@@ -87,7 +87,7 @@ const { wallets, connect, phase, pendingId } = useConnectWallet();
 
 ## Props
 
-`ConnectWallet` also accepts all shadcn `Button` props.
+`ConnectWallet` also accepts all `Button` props.
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -96,4 +96,4 @@ const { wallets, connect, phase, pendingId } = useConnectWallet();
 | `title` | `ReactNode` | `"Connect a wallet"` | Dialog title. |
 | `maxVisible` | `number` | `4` | Wallets shown before "Other wallets". |
 | `footer` | `ReactNode` | privacy note | Small print under the list. `null` hides it. |
-| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom drawer on small screens, dialog otherwise. Or force one. |
+| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom sheet on small touch screens, dialog otherwise. Or force one. |

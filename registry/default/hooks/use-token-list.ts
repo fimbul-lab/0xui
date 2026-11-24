@@ -3,11 +3,8 @@ import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useChainId, useChains } from "wagmi";
 import {
-  applyTokenFilters,
-  fetchTokenList,
-  isNativeToken,
-  mergeTokenLists,
-  nativeToken,
+  selectTokens,
+  tokenListQueryOptions,
   type TokenFilters,
   type TokenInfo,
   type TokenList,
@@ -51,30 +48,25 @@ export function useTokenList(
   const list = typeof urls === "string" ? [urls] : urls;
 
   const queries = useQueries({
-    queries: list.map((url) => ({
-      queryKey: ["0xui", "token-list", url, gateway],
-      queryFn: () => fetchTokenList(url, { gateway }),
-      staleTime: 60 * 60_000,
-      gcTime: Number.POSITIVE_INFINITY,
-      retry: 1,
-    })),
+    queries: list.map((url) => tokenListQueryOptions(url, { gateway })),
   });
 
   const lists = queries.map((q) => q.data).filter(Boolean) as TokenList[];
   const dataKey = queries.map((q) => q.dataUpdatedAt).join();
 
-  const tokens = useMemo(() => {
-    const merged = mergeTokenLists([{ tokens: [...extraTokens] }, ...lists]);
-    const filtered = applyTokenFilters(merged, { allowlist, blocklist });
-    const onChain = chainId === null ? filtered : filtered.filter((t) => t.chainId === chainId);
-    const chain = chains.find((c) => c.id === chainId);
-    if (!includeNative || !chain) return onChain;
-    // Filters don't apply to the native currency: it can't be spoofed.
-    // Skip it if a list (or extraTokens) already has an entry for it.
-    return onChain.some(isNativeToken) ? onChain : [nativeToken(chain), ...onChain];
+  const tokens = useMemo(
+    () =>
+      selectTokens(lists, {
+        chainId,
+        nativeChain: includeNative ? chains.find((c) => c.id === chainId) : undefined,
+        extraTokens,
+        allowlist,
+        blocklist,
+      }),
     // `lists` is rebuilt every render; dataKey tracks its contents.
     // Filters are compared by content, so inline arrays don't recompute every render.
-  }, [dataKey, chainId, chains, includeNative, extraTokens, allowlist?.join(), blocklist?.join()]);
+    [dataKey, chainId, chains, includeNative, extraTokens, allowlist?.join(), blocklist?.join()]
+  );
 
   return {
     tokens,
