@@ -874,6 +874,88 @@
       ]
     },
     {
+      "name": "add-liquidity",
+      "type": "registry:block",
+      "title": "Add Liquidity",
+      "description": "Add liquidity block for concentrated liquidity pools (Uniswap v3 style new-position flow): optional FeeTierSelect, PriceRange on the pool's liquidity chart, two TokenInputs linked by the exact deposit ratio (type either, the other fills; one side locks for single-sided ranges / range orders), balances, ApproveButton for each ERC-20, and a mint button naming the blocker. Agent-ready: the mint button's data-agent-confirm states the exact deposit, range and network. Bring your own transaction via getTransaction(MintRequest), or use v3Mint({ positionManager, weth }) for NonfungiblePositionManager.mint (native ETH via multicall + refundETH). Logic in lib/add-liquidity-core.ts (framework-free: getDepositAmounts, mintRequest, mintTransactionQueryOptions, addLiquidityBlocker, addLiquidityConfirmText). Exports useDepositAmounts, withSlippage, v3Mint and MintRequest/GetMintTransaction types. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": [
+        "blocks"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/add-liquidity.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/add-liquidity-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "wagmi",
+        "@tanstack/react-query",
+        "lucide-react",
+        "skullet"
+      ],
+      "registryDependencies": [
+        "@0xui/approve-button",
+        "@0xui/balance",
+        "@0xui/fee-tier-select",
+        "@0xui/price-range",
+        "@0xui/slippage-input",
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/transaction-button",
+        "@0xui/concentrated-liquidity",
+        "@0xui/v3-position-manager",
+        "@0xui/0xui-utils",
+        "@0xui/liquidity-utils",
+        "@0xui/token-list"
+      ]
+    },
+    {
+      "name": "remove-liquidity",
+      "type": "registry:block",
+      "title": "Remove Liquidity",
+      "description": "Remove liquidity block for a concentrated liquidity position: ui-sdk slider plus 25/50/75/Max presets, 'You receive' with principal at the current price plus all uncollected fees (fiat total), SlippageInput, compact RangeIndicator, and one transaction via getTransaction or v3Remove({ positionManager, weth }) (decreaseLiquidity + collect, native ETH unwrapped). Deadline refreshed every minute. data-agent-confirm states the share, the slippage floor and the fees. Logic in lib/remove-liquidity-core.ts (framework-free). Exports getRemoveAmounts, removeBlocker, removeRequest and removeConfirmText. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/blocks/remove-liquidity.md",
+      "categories": [
+        "blocks"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/remove-liquidity.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/remove-liquidity-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "skullet",
+        "viem",
+        "wagmi"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-button",
+        "@0xui/primitive-slider",
+        "@0xui/range-indicator",
+        "@0xui/slippage-input",
+        "@0xui/token-amount",
+        "@0xui/token-icon",
+        "@0xui/token-select",
+        "@0xui/transaction-button",
+        "@0xui/concentrated-liquidity",
+        "@0xui/fee-tier-select",
+        "@0xui/liquidity-utils",
+        "@0xui/v3-position-manager",
+        "@0xui/token-list"
+      ]
+    },
+    {
       "name": "batch-transaction",
       "type": "registry:component",
       "title": "Batch Transaction",
@@ -1823,6 +1905,47 @@
       ]
     },
     {
+      "name": "liquidity-utils",
+      "type": "registry:lib",
+      "title": "Liquidity utils",
+      "description": "Framework-free helpers shared by the LP blocks: positionValue (fiat value of two token amounts from prices), formatMoney and formatPair ('1.5 ETH and 300 USDC', used in agent confirm text).",
+      "docs": "Docs: https://0xui.io/components/position-card.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/lib/liquidity-utils.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ],
+      "registryDependencies": [
+        "@0xui/token-list"
+      ]
+    },
+    {
+      "name": "v3-position-manager",
+      "type": "registry:lib",
+      "title": "Uniswap v3 position manager",
+      "description": "Transaction builders for Uniswap v3's NonfungiblePositionManager (and forks with the same ABI: PancakeSwap v3, Sushi v3): v3Mint (mint, native ETH as value + refundETH), v3Remove (decreaseLiquidity + collect in one multicall), v3Collect (collect fees). Native ETH withdrawals collect to the manager, then unwrapWETH9 + sweepToken. Also positionManagerAbi (mint, decreaseLiquidity, collect, positions, multicall, refundETH, unwrapWETH9, sweepToken), withSlippage(amount, bps) and deadlineIn(seconds).",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/lib/v3-position-manager.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "viem"
+      ]
+    },
+    {
       "name": "liquidity-chart",
       "type": "registry:component",
       "title": "Liquidity Chart",
@@ -1966,6 +2089,43 @@
       ],
       "registryDependencies": [
         "@0xui/primitive-field"
+      ]
+    },
+    {
+      "name": "position-card",
+      "type": "registry:component",
+      "title": "Position Card",
+      "description": "Concentrated liquidity position card (Uniswap v3 style): pair icons, fee tier and token id, RangeIndicator (in range / out of range / closed, data-status), tokens held now (exact getPositionAmounts) and uncollected fees with fiat totals, a Collect fees TransactionButton (bring getCollectTransaction or v3Collect) that names its blocker and states the exact fees in data-agent-confirm, and an actions slot for Add / Remove. Exports positionValue and collectConfirmText. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/position-card.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/position-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/position-card-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "viem",
+        "wagmi",
+        "skullet"
+      ],
+      "registryDependencies": [
+        "@0xui/range-indicator",
+        "@0xui/token-amount",
+        "@0xui/token-icon",
+        "@0xui/token-select",
+        "@0xui/transaction-button",
+        "@0xui/concentrated-liquidity",
+        "@0xui/fee-tier-select",
+        "@0xui/liquidity-utils",
+        "@0xui/v3-position-manager",
+        "@0xui/token-list"
       ]
     },
     {
@@ -3233,6 +3393,47 @@
       ]
     },
     {
+      "name": "add-liquidity-demo",
+      "type": "registry:example",
+      "title": "Add Liquidity demo",
+      "description": "USDC/WETH 0.05% position on made-up liquidity, minted through Uniswap v3's position manager.",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": [
+        "blocks"
+      ],
+      "registryDependencies": [
+        "@0xui/add-liquidity",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/add-liquidity-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "position-card-demo",
+      "type": "registry:example",
+      "title": "Position Card demo",
+      "description": "An in-range USDC/ETH position with fees and a Collect button.",
+      "docs": "Docs: https://0xui.io/components/position-card.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/position-card",
+        "@0xui/concentrated-liquidity",
+        "@0xui/v3-position-manager"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/position-card-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
       "name": "slippage-input-demo",
       "type": "registry:example",
       "title": "Slippage Input demo",
@@ -3247,6 +3448,27 @@
       "files": [
         {
           "path": "registry/default/examples/slippage-input-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "remove-liquidity-demo",
+      "type": "registry:example",
+      "title": "Remove Liquidity demo",
+      "description": "Remove part of a USDC/ETH position through Uniswap v3's position manager.",
+      "docs": "Docs: https://0xui.io/blocks/remove-liquidity.md",
+      "categories": [
+        "blocks"
+      ],
+      "registryDependencies": [
+        "@0xui/remove-liquidity",
+        "@0xui/concentrated-liquidity",
+        "@0xui/v3-position-manager"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/remove-liquidity-demo.tsx",
           "type": "registry:example"
         }
       ]

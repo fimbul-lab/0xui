@@ -1,0 +1,82 @@
+---
+title: Position Card
+description: One concentrated liquidity position with its range status, tokens, uncollected fees and a Collect fees button.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, States } from "@/demos/position-card";
+
+Shows an LP position the way position lists on Uniswap, Aerodrome and Orca do: the pair and fee tier, a [Range Indicator](/components/range-indicator/), what the position holds right now, its uncollected fees, and a button to collect them.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+## Installation
+
+<Install name="position-card" />
+
+## Usage
+
+```tsx
+import { PositionCard } from "@/components/position-card";
+import { Button } from "@/components/primitives/button";
+import { v3Collect } from "@/lib/v3-position-manager";
+
+<PositionCard
+  position={{ tokenId, token0: usdc, token1: eth, fee: 500, tickLower, tickUpper, liquidity, fees0, fees1 }}
+  pool={pool}
+  prices={prices}
+  invert
+  getCollectTransaction={v3Collect({ positionManager, weth })}
+  actions={<Button onClick={openRemove}>Remove</Button>}
+/>;
+```
+
+## Loading
+
+Leave out `position` and `pool` while it loads. The component shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading position" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
+## Reading a position
+
+For Uniswap v3, read `positions(tokenId)` from the position manager. It returns the tokens, fee, ticks and liquidity. Its `tokensOwed0` and `tokensOwed1` only count fees up to the last time the position was touched, so get the real uncollected fees by simulating `collect` with the maximum amounts:
+
+```ts
+import { maxUint128 } from "viem";
+import { positionManagerAbi } from "@/lib/v3-position-manager";
+
+const { result: [fees0, fees1] } = await client.simulateContract({
+  address: positionManager,
+  abi: positionManagerAbi,
+  functionName: "collect",
+  args: [{ tokenId, recipient: owner, amount0Max: maxUint128, amount1Max: maxUint128 }],
+  account: owner,
+});
+```
+
+The amounts the position holds come from `getPositionAmounts(position, pool)` in `concentrated-liquidity`, exact to the wei.
+
+## States
+
+Out of range (it holds one token and earns nothing until the price comes back) and closed (all liquidity withdrawn). The status is on `data-status`.
+
+<Preview>
+  <States client:load />
+</Preview>
+
+The Collect fees button names its blocker ("No fees to collect"). For agents its [`data-agent-confirm`](/getting-started/conventions/#agents) states the exact fees, like "Collects the fees of position #7 on Ethereum: 18.42 USDC and 0.0057 ETH, to your wallet" (`collectConfirmText` in `@/lib/position-card-core`). `v3Collect` pays fees to the connected account and unwraps WETH to ETH when one side is native.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `position` | `Position<Token>` | — | `{ tokenId, token0, token1, fee?, tickLower, tickUpper, liquidity, fees0?, fees1? }`. Leave out while loading. |
+| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. Leave out while loading. |
+| `prices` | `TokenPrices` | — | Fiat totals. |
+| `currency` | `string` | `"USD"` | ISO 4217 currency. |
+| `invert` | `boolean` | `false` | Quote the range in token0. |
+| `getCollectTransaction` | `(request) => tx` | — | Adds Collect fees. `v3Collect({ positionManager, weth })`. |
+| `onCollected` / `onSubmitted` | `(receipt)` / `(hash)` | — | Collect callbacks. |
+| `actions` | `ReactNode` | — | Extra footer buttons. |
+| `locale` | `string` | runtime locale | Number formatting locale. |
