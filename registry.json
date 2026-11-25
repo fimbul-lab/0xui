@@ -1807,6 +1807,195 @@
       ]
     },
     {
+      "name": "concentrated-liquidity",
+      "type": "registry:lib",
+      "title": "Concentrated liquidity",
+      "description": "Uniswap v3/v4 concentrated liquidity math for LP components (also PancakeSwap v3, Aerodrome Slipstream, Sushi v3). Framework-free. Exact bigint ports of TickMath and LiquidityAmounts: getSqrtRatioAtTick, getAmountsForLiquidity, getLiquidityForAmounts, getDependentAmount (other side of a two-sided deposit). Display math: tickToPrice, priceToTick, nearestUsableTick, priceRangeToTicks, rangeAroundTick (±%), displayPrice and priceUnit (inverted quotes), moveRangeEdge and shiftRange (snapped range edits), getDepositMode, getRangeStatus, getLiquidityBins (distribution rebuilt from liquidityNet), ticksFromPositions, getDepthCurve and getMarketDepth (±2% depth), formatPrice. Types: PoolState, TickData, LiquidityBin, TickRange, PairToken.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/lib/concentrated-liquidity.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "liquidity-chart",
+      "type": "registry:component",
+      "title": "Liquidity Chart",
+      "description": "Liquidity distribution histogram for a concentrated liquidity pool (Uniswap v3/v4 style): one bar per tick range, token0 above the price and token1 below it in their own colors, current price line, tooltip with tokens locked per bar, keyboard reading, zoom, invert. Optional range highlight with draggable handles (a ui-sdk range slider over the visible window, arrow keys step one tick spacing) and a draggable band. Hand-drawn SVG, no chart library. Viewport, bar and handle math in lib/liquidity-chart-core.ts (framework-free). Exports useChartViewport, TickRange and liquidityColors (--lp-token0 / --lp-token1). Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/liquidity-chart.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/liquidity-chart-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/react",
+        "@ui-sdk/core",
+        "lucide-react",
+        "skullet"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-button",
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "price-range",
+      "type": "registry:component",
+      "title": "Price Range",
+      "description": "'Set price range' panel for a new LP position, like Uniswap's: liquidity chart with draggable handles, presets by tick spacing (±0.05% for stables to ±50%, plus full range) as a segmented control, min/max price fields with -/+ tick steppers that snap to the spacing, a token toggle to invert the quote, and a notice when the range is out of range and single-sided. data-deposit-mode (both/token0/token1) and data-full-range. Range math in lib/price-range-core.ts (framework-free). Exports usePriceRange and defaultRangePresets. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/price-range.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/price-range.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/price-range-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/react",
+        "@ui-sdk/core",
+        "lucide-react",
+        "skullet"
+      ],
+      "registryDependencies": [
+        "@0xui/liquidity-chart",
+        "@0xui/primitive-button",
+        "@0xui/primitive-field",
+        "@0xui/primitive-segmented-control",
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "depth-chart",
+      "type": "registry:component",
+      "title": "Depth Chart",
+      "description": "Order book style market depth for a concentrated liquidity pool: cumulative bids (quote token, price down) and asks (base token, price up) from the current price, both valued in the quote token on one axis, headline ±2% depth figures, a window segmented control (±2/5/10/25%), crosshair tooltip, keyboard reading, screen reader table, invert. Depth math in lib/depth-chart-core.ts (framework-free). Exports readDepth and sampleDepth. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/depth-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/depth-chart.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/depth-chart-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "skullet"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-segmented-control",
+        "@0xui/concentrated-liquidity",
+        "@0xui/liquidity-chart"
+      ]
+    },
+    {
+      "name": "range-indicator",
+      "type": "registry:component",
+      "title": "Range Indicator",
+      "description": "LP position range status: In range / Out of range / Closed badge (data-status, text not just color) and a log-scale bar with the range and a marker at the current price, min/current/max labels, full range and invert support. Bar math in lib/range-indicator-core.ts (framework-free, getRangeBar). Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/range-indicator.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/range-indicator.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/range-indicator-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "skullet"
+      ],
+      "registryDependencies": [
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "fee-tier-select",
+      "type": "registry:component",
+      "title": "Fee Tier Select",
+      "description": "Fee tier picker for a new LP position: a ui-sdk radio group of cards with fee (0.01/0.05/0.3/1%), when to use it, share of the pair's liquidity ('71% select') and 'Not created' for missing pools. onValueChange returns the tier with its tickSpacing. Exports defaultFeeTiers, formatFee and feeTierBadge (lib/fee-tier-core.ts, framework-free). Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/fee-tier-select.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/fee-tier-select.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/fee-tier-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/react",
+        "@ui-sdk/core",
+        "lucide-react",
+        "skullet"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-field"
+      ]
+    },
+    {
+      "name": "slippage-input",
+      "type": "registry:component",
+      "title": "Slippage Input",
+      "description": "Slippage tolerance control in basis points: presets (0.1/0.5/1%) as a ui-sdk segmented control, custom percent field (decimal text input, max 50%), and warnings for too low (may revert) or too high (sandwich risk) on data-warning. Exports formatSlippage, parseSlippageInput, slippageWarning and the LOW/HIGH/MAX thresholds (lib/slippage-core.ts, framework-free).",
+      "docs": "Docs: https://0xui.io/components/slippage-input.md",
+      "categories": [
+        "liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/components/slippage-input.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/slippage-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/react",
+        "@ui-sdk/core"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-segmented-control"
+      ]
+    },
+    {
       "name": "account-demo",
       "type": "registry:example",
       "title": "Account demo",
@@ -2940,6 +3129,124 @@
       "files": [
         {
           "path": "registry/default/examples/agent-tools-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "liquidity-chart-demo",
+      "type": "registry:example",
+      "title": "Liquidity Chart demo",
+      "description": "Liquidity chart with a draggable ±8% range.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/liquidity-chart",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/liquidity-chart-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "price-range-demo",
+      "type": "registry:example",
+      "title": "Price Range demo",
+      "description": "Set price range panel on a made-up ETH/USDC pool.",
+      "docs": "Docs: https://0xui.io/components/price-range.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/price-range",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/price-range-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "depth-chart-demo",
+      "type": "registry:example",
+      "title": "Depth Chart demo",
+      "description": "Market depth with ±2% figures on a made-up ETH/USDC pool.",
+      "docs": "Docs: https://0xui.io/components/depth-chart.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/depth-chart",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/depth-chart-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "range-indicator-demo",
+      "type": "registry:example",
+      "title": "Range Indicator demo",
+      "description": "An in-range and an out-of-range position.",
+      "docs": "Docs: https://0xui.io/components/range-indicator.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/range-indicator",
+        "@0xui/concentrated-liquidity"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/range-indicator-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "fee-tier-select-demo",
+      "type": "registry:example",
+      "title": "Fee Tier Select demo",
+      "description": "Fee tiers with liquidity shares and a tier without a pool.",
+      "docs": "Docs: https://0xui.io/components/fee-tier-select.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/fee-tier-select"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/fee-tier-select-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "slippage-input-demo",
+      "type": "registry:example",
+      "title": "Slippage Input demo",
+      "description": "Slippage tolerance at 0.5%.",
+      "docs": "Docs: https://0xui.io/components/slippage-input.md",
+      "categories": [
+        "liquidity"
+      ],
+      "registryDependencies": [
+        "@0xui/slippage-input"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/slippage-input-demo.tsx",
           "type": "registry:example"
         }
       ]

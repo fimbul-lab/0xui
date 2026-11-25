@@ -1,0 +1,61 @@
+---
+title: Fee Tier Select
+description: Fee tier picker for a new LP position, with how much liquidity each tier already holds.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, WithShares } from "@/demos/fee-tier-select";
+
+Picks the fee tier, and with it the pool, for a new position. It's a ui-sdk radio group, so arrow keys move between tiers.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+## Installation
+
+<Install name="fee-tier-select" />
+
+## Usage
+
+```tsx
+import { FeeTierSelect } from "@/components/fee-tier-select";
+
+<FeeTierSelect value={fee} onValueChange={(tier) => setFee(tier.fee)} />;
+```
+
+`onValueChange` gets the whole tier, including `tickSpacing`, which the [Price Range](/components/price-range/) needs.
+
+`defaultFeeTiers`, `formatFee` and `feeTierBadge` live in `@/lib/fee-tier-core` and need no framework.
+
+## Examples
+
+### With liquidity shares
+
+Pass `share` to show how much of the pair's liquidity sits in each tier, the way Uniswap shows "71% select". Set `exists: false` for tiers without a pool yet. Creating one means setting its starting price.
+
+<Preview>
+  <WithShares client:load />
+</Preview>
+
+```tsx
+<FeeTierSelect
+  tiers={defaultFeeTiers.map((tier) => ({ ...tier, share: tvlShare[tier.fee], exists: tier.fee in tvlShare }))}
+/>
+```
+
+While the shares load, pass `loading`: each tier shows a skeleton where its share goes. The demo above loads for a second first.
+
+The defaults are Uniswap v3's tiers. Other DEXes use other fees and spacings (PancakeSwap v3 has 0.25%, Aerodrome Slipstream uses spacing to pick a pool). Pass your own `tiers`.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` / `defaultValue` | `number` | `3000` | Fee in hundredths of a bip. |
+| `onValueChange` | `(tier: FeeTier) => void` | — | Called with the picked tier. |
+| `tiers` | `FeeTier[]` | Uniswap v3 tiers | `{ fee, tickSpacing, description?, share?, exists? }`. |
+| `loading` | `boolean` | `false` | Shares are loading. Skeleton badges, `aria-busy`. |
+| `label` | `ReactNode` | `"Fee tier"` | Group label. |
+| `locale` | `string` | runtime locale | Number formatting locale. |

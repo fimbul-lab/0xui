@@ -1,0 +1,61 @@
+---
+title: Range Indicator
+description: In range, out of range or closed badge for an LP position, with a bar showing the range against the price.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, States } from "@/demos/range-indicator";
+
+Shows where a position's range sits against the current price. The bar uses a log scale, so a ±10% range looks the same whatever the price.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+## Installation
+
+<Install name="range-indicator" />
+
+## Usage
+
+```tsx
+import { RangeIndicator } from "@/components/range-indicator";
+
+<RangeIndicator
+  tickLower={position.tickLower}
+  tickUpper={position.tickUpper}
+  liquidity={position.liquidity}
+  pool={pool}
+  token0={eth}
+  token1={usdc}
+/>;
+```
+
+## Loading
+
+Leave out `pool` while it loads. The component shows a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading position range" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
+## States
+
+Out of range, closed, full range and inverted.
+
+<Preview>
+  <States client:load />
+</Preview>
+
+The status is on `data-status` (`in-range`, `out-of-range` or `closed`) and is written next to the dot, so it never relies on color. A position is in range when `tickLower <= tick < tickUpper`, the same rule the pool uses. `getRangeStatus` from `concentrated-liquidity` gives you the status without the UI.
+
+`getRangeBar` in `@/lib/range-indicator-core` returns the status, the bar positions and the labels without any framework.
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tickLower` / `tickUpper` | `number` | — | The position's range. |
+| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. Leave out while loading. |
+| `liquidity` | `bigint` | — | `0n` shows the position as closed. |
+| `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
+| `invert` | `boolean` | `false` | Quote in token0. |
+| `compact` | `boolean` | `false` | Hide the min, current and max labels. |
+| `locale` | `string` | runtime locale | Number formatting locale. |
