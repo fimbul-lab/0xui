@@ -3074,6 +3074,44 @@
       ]
     },
     {
+      "name": "primitive-segmented-control",
+      "type": "registry:component",
+      "title": "Segmented control primitive",
+      "description": "0xui's styled segmented control (one choice from a few, with a sliding indicator) on ui-sdk (@ui-sdk/react/segmented-control): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/segmented-control.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/segmented-control.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/react",
+        "@ui-sdk/core"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
+      "name": "primitive-slider",
+      "type": "registry:component",
+      "title": "Slider primitive",
+      "description": "0xui's styled slider (one thumb or a range) on ui-sdk (@ui-sdk/react/slider): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/slider.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/slider.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": [
+        "@ui-sdk/react",
+        "@ui-sdk/core"
+      ],
+      "registryDependencies": [
+        "@0xui/primitive-class-name"
+      ]
+    },
+    {
       "name": "primitive-toast",
       "type": "registry:component",
       "title": "Toast primitive",
