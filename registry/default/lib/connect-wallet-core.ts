@@ -93,8 +93,8 @@ export function createConnectWallet(config: Config): ConnectWalletController {
         await connect(config, { connector: wallet.connector });
         store.set({ phase: "idle", pendingId: undefined });
         return true;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
+      } catch (error_) {
+        const error = error_ instanceof Error ? error_ : new Error(String(error_));
         store.set({
           phase: isUserRejection(error) ? "cancelled" : "error",
           pendingId: undefined,

@@ -94,8 +94,8 @@ export function createMessageSigner(config: Config): MessageSigner {
           : await verifyMessage(config, { address, signature, message: request.message });
         store.set({ phase: valid ? "signed" : "invalid" });
         return signature;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
+      } catch (error_) {
+        const error = error_ instanceof Error ? error_ : new Error(String(error_));
         store.set({ error, phase: isUserRejection(error) ? "cancelled" : "error" });
         return undefined;
       }

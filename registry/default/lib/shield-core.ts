@@ -560,9 +560,9 @@ export function createShieldFlow(
       } else {
         store.set({ index: at + 1, stepPhase: "ready" });
       }
-    } catch (cause) {
+    } catch (error_) {
       if (!live()) return;
-      const error = toError(cause);
+      const error = toError(error_);
       store.set({
         stepPhase: "ready",
         problem: isUserRejection(error)

@@ -154,8 +154,8 @@ export function createTransactionFlow(
                 chainId: target,
                 ...request.transaction,
               } as TransactionRequest);
-      } catch (e) {
-        if (id === run) fail(e);
+      } catch (error) {
+        if (id === run) fail(error);
         return;
       }
       if (id !== run) return;
@@ -175,9 +175,9 @@ export function createTransactionFlow(
         if (id !== run) return;
         store.set({ phase: "success" });
         onSuccess?.(receipt);
-      } catch (e) {
+      } catch (error_) {
         if (id !== run) return;
-        const error = toError(e);
+        const error = toError(error_);
         store.set({ phase: "error", error });
         onError?.(error);
       }
@@ -190,8 +190,8 @@ export function createTransactionFlow(
       try {
         await switchChain(config, { chainId: target });
         if (id === run) store.set({ phase: "idle", ...readTarget(config, chainId) });
-      } catch (e) {
-        if (id === run) fail(e);
+      } catch (error) {
+        if (id === run) fail(error);
       }
     },
     reset() {

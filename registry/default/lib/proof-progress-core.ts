@@ -83,13 +83,13 @@ export function createProver(engine: ShieldedEngine, callbacks: ProofCallbacks =
         store.set({ ...idle, phase: "done", operation });
         callbacks.onProved?.(operation);
         return operation;
-      } catch (cause) {
+      } catch (error_) {
         if (!isCurrent()) return undefined;
         if (run.signal.aborted) {
           stopped();
           return undefined;
         }
-        const error = cause instanceof Error ? cause : new Error(String(cause));
+        const error = error_ instanceof Error ? error_ : new Error(String(error_));
         store.set((s) => ({ ...idle, phase: "error", stage: s.stage, error }));
         callbacks.onError?.(error);
         return undefined;

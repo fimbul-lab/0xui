@@ -85,8 +85,8 @@ export function parseAbiInput(param: AbiParameter, raw: string): ParsedAbiInput 
       return { value: text };
     }
     return { error: `Unsupported type ${type}` };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Invalid JSON" };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invalid JSON" };
   }
 }
 

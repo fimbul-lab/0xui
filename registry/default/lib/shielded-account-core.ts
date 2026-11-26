@@ -82,8 +82,8 @@ export function createShieldedAccountFlow(engine: ShieldedEngine): ShieldedAccou
     try {
       await action();
       return true;
-    } catch (cause) {
-      error = toError(cause);
+    } catch (error_) {
+      error = toError(error_);
       return false;
     } finally {
       busy = undefined;

@@ -189,8 +189,8 @@ export function createBatchTransaction(
           if (receipt.status === "reverted") return store.set({ phase: "reverted" });
         }
         store.set({ step: calls.length, phase: "success" });
-      } catch (e) {
-        fail(e);
+      } catch (error) {
+        fail(error);
       }
     },
     async switchToTarget() {
@@ -198,8 +198,8 @@ export function createBatchTransaction(
       try {
         await switchChain(config, { chainId });
         store.set({ phase: "idle", ...readConnection() });
-      } catch (e) {
-        fail(e);
+      } catch (error) {
+        fail(error);
       }
     },
     reset() {
