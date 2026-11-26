@@ -170,7 +170,7 @@ export function bannerC(): string {
   const tagY = 312;
   const start = 2;
   const next = hexStream(101);
-  [...line].forEach((ch, i) => {
+  Array.from(line).forEach((ch, i) => {
     if (ch === " ") return;
     const x = tagX + tagAdv * i;
     const from = start + i * 0.04;

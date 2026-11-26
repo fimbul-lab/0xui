@@ -213,7 +213,7 @@ export function TransactionButton({
   // The transaction just sent may have changed what the next one would do.
   const resimulate = simulation.refetch;
   useEffect(() => {
-    if (simulate && (phase === "success" || phase === "reverted")) resimulate();
+    if (simulate && (phase === "success" || phase === "reverted")) void resimulate();
   }, [simulate, phase, resimulate]);
 
   let label: ReactNode = children;

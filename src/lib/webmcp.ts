@@ -198,7 +198,9 @@ export function registerDocsTools(options?: DocsToolsOptions) {
   if (!context) return () => {};
 
   for (const tool of docsTools(options)) {
-    // Early builds of navigator.modelContext returned synchronously.
+    // Early builds of navigator.modelContext returned synchronously. A refused
+    // tool leaves the rest registered, with nothing to recover.
+    // oxlint-disable-next-line landmines/no-silent-catch
     Promise.resolve()
       .then(() => context.registerTool(tool, { signal: controller.signal }))
       .catch(() => {});

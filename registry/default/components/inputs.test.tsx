@@ -273,7 +273,7 @@ describe("TokenSelect", () => {
 
   it("pages through long lists", async () => {
     const user = userEvent.setup();
-    const many: Token[] = Array.from({ length: 150 }, (_, i) => ({
+    const many: Token[] = Array.from({ length: 7 }, (_, i) => ({
       chainId: 1,
       address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
       symbol: `T${i}`,
@@ -281,21 +281,27 @@ describe("TokenSelect", () => {
       decimals: 18,
     }));
     renderWithWagmi(
-      <TokenSelect tokens={many} onValueChange={() => {}} chainId={1} showBalances={false} />,
+      <TokenSelect
+        tokens={many}
+        pageSize={3}
+        onValueChange={() => {}}
+        chainId={1}
+        showBalances={false}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Select token" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getAllByRole("option")).toHaveLength(50);
-    expect(within(dialog).getByText("Showing 50 of 150")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("option")).toHaveLength(3);
+    expect(within(dialog).getByText("Showing 3 of 7")).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "Show more tokens" }));
-    expect(within(dialog).getAllByRole("option")).toHaveLength(100);
+    expect(within(dialog).getAllByRole("option")).toHaveLength(6);
 
     // A search starts from the first page again and finds tokens beyond it.
-    await user.type(within(dialog).getByRole("combobox", { name: "Search tokens" }), "T149");
-    expect(within(dialog).getByRole("option", { name: /T149/ })).toBeInTheDocument();
-  }, 15_000);
+    await user.type(within(dialog).getByRole("combobox", { name: "Search tokens" }), "T6");
+    expect(within(dialog).getByRole("option", { name: /T6/ })).toBeInTheDocument();
+  });
 
   it("loads the next page when the arrow keys reach the last row", async () => {
     const user = userEvent.setup();
@@ -315,7 +321,7 @@ describe("TokenSelect", () => {
     await user.click(within(dialog).getByRole("combobox", { name: "Search tokens" }));
     await user.keyboard("{ArrowDown}");
     expect(within(dialog).getAllByRole("option")).toHaveLength(4);
-  }, 15_000);
+  });
 
   it("uses balances from your own source instead of the RPC", async () => {
     const user = userEvent.setup();

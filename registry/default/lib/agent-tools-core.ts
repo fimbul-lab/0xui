@@ -484,7 +484,9 @@ export function registerAgentTools(
   if (!context) return () => {};
   const controller = new AbortController();
   for (const tool of tools) {
-    // Early builds returned synchronously, and a second registration of a name rejects.
+    // Early builds returned synchronously, and a second registration of a name
+    // rejects while the first stays, so there is nothing to undo.
+    // oxlint-disable-next-line landmines/no-silent-catch
     Promise.resolve()
       .then(() => context.registerTool(tool, { signal: controller.signal }))
       .catch(() => {});

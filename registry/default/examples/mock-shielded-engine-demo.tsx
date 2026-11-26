@@ -25,7 +25,7 @@ export default function MockShieldedEngineDemo() {
     return () => engine.account.lock();
   }, [engine]);
 
-  const run = (action: () => Promise<unknown>) => () => void action().catch(() => {});
+  const run = (action: () => Promise<unknown>) => () => void action().catch(console.error);
 
   return (
     <ShieldedProvider engine={engine}>

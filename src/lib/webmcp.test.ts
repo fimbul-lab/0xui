@@ -99,13 +99,16 @@ test("every tool is read-only with a valid name", () => {
 
 test("registers with document.modelContext and unregisters on abort", async () => {
   const signals: AbortSignal[] = [];
+  const allRegistered = Promise.withResolvers<void>();
   const registerTool = vi.fn(async (_tool: unknown, options: { signal: AbortSignal }) => {
     signals.push(options.signal);
+    if (signals.length === 4) allRegistered.resolve();
   });
   Object.defineProperty(document, "modelContext", { value: { registerTool }, configurable: true });
 
   const unregister = registerDocsTools({ fetch });
-  await vi.waitFor(() => expect(registerTool).toHaveBeenCalledTimes(4));
+  await allRegistered.promise;
+  expect(registerTool).toHaveBeenCalledTimes(4);
   unregister();
   expect(signals.every((signal) => signal.aborted)).toBe(true);
 

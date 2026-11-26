@@ -23,6 +23,7 @@ export const Default = shieldedDemo(
             size="sm"
             onClick={() =>
               // Fails when less than 0.2 WETH is spendable. Nothing to show for that here.
+              // oxlint-disable-next-line landmines/no-silent-catch
               void engine.simulate
                 .unshield({ token: weth, amount: parseEther("0.2") })
                 .catch(() => {})

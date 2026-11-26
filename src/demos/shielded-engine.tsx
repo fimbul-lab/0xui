@@ -30,7 +30,11 @@ function Playground({ engine }: ShieldedDemoProps) {
   }
 
   const act = (label: string, run: () => unknown) => (
-    <Button variant="outline" size="sm" onClick={() => void Promise.resolve(run()).catch(() => {})}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => void Promise.resolve(run()).catch(console.error)}
+    >
       {label}
     </Button>
   );

@@ -33,13 +33,15 @@ const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af" as Address;
 // host mounted through that check; otherwise it lands between two tests,
 // with no host, and fails the run.
 beforeAll(async () => {
+  vi.useFakeTimers();
   const { unmount } = render(<Toaster />);
   act(() => {
     toast("Warm-up");
     toast.dismiss();
   });
-  await new Promise((resolve) => setTimeout(resolve, 1_100));
+  await act(() => vi.advanceTimersByTimeAsync(1_100));
   unmount();
+  vi.useRealTimers();
 });
 
 // Each test's toasts go before its host does.

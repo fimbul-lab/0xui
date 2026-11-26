@@ -437,6 +437,7 @@ describe("prove", () => {
       onStage: (s) => stages.push(s),
       signal: controller.signal,
     });
+    // oxlint-disable-next-line vitest/valid-expect -- awaited after the abort below
     const outcome = expect(proof).rejects.toMatchObject({ name: "AbortError" });
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.loadCircuits + 100);
     controller.abort();

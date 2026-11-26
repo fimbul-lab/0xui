@@ -35,7 +35,9 @@ describe("useCopy", () => {
     expect(writeText).toHaveBeenCalledWith("0xabc");
     expect(result.current.copied).toBe(true);
 
-    act(() => vi.advanceTimersByTime(1000));
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
     expect(result.current.copied).toBe(false);
   });
 

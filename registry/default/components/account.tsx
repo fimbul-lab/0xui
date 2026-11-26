@@ -163,7 +163,7 @@ export function Account({
             disabled={account.isDisconnecting}
             data-agent-confirm={`Disconnects ${connector?.name ?? "your wallet"} from this site`}
             onClick={() => {
-              account.disconnect();
+              void account.disconnect();
               setOpen(false);
               onDisconnect?.();
             }}

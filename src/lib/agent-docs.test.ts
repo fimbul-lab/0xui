@@ -105,8 +105,7 @@ test("the overview pages list every listed page in their section, and no unliste
     );
     for (const doc of docs.filter((doc) => doc.id.startsWith(`${section}/`))) {
       const link = `(https://0xui.io/${doc.id}.md)`;
-      if (unlistedPages.has(doc.id)) expect(overview).not.toContain(link);
-      else expect(overview).toContain(link);
+      expect(overview.includes(link), link).toBe(!unlistedPages.has(doc.id));
     }
   }
 });
