@@ -66,8 +66,8 @@ export function shieldSteps({
   needsApproval: boolean;
   needsReset: boolean;
   atomic: boolean;
-}): ShieldStepKind[] {
-  const send: ShieldStepKind[] = !needsApproval
+}): Array<ShieldStepKind> {
+  const send: Array<ShieldStepKind> = !needsApproval
     ? ["shield"]
     : atomic
       ? ["batch"]
@@ -144,7 +144,7 @@ const stepWords: Record<ShieldStepKind, string> = {
 };
 
 /** "Two wallet prompts: sign, approve and shield together." */
-export function describeShieldSteps(steps: readonly ShieldStepKind[]) {
+export function describeShieldSteps(steps: ReadonlyArray<ShieldStepKind>) {
   if (steps.length === 1) return "One wallet prompt.";
   const count = ["", "", "Two", "Three", "Four"][steps.length] ?? String(steps.length);
   return `${count} wallet prompts: ${steps.map((kind) => stepWords[kind]).join(", ")}.`;
@@ -168,7 +168,7 @@ export function shieldConfirmText({
   amount: bigint;
   token: ShieldTokenLabel;
   quote: Pick<ShieldQuote, "fee" | "received">;
-  steps: readonly ShieldStepKind[];
+  steps: ReadonlyArray<ShieldStepKind>;
   chainName?: string;
 }) {
   const units = (raw: bigint) => `${formatUnits(raw, token.decimals)} ${token.symbol}`;
@@ -296,7 +296,7 @@ export function isAtomic(capabilities: unknown) {
 
 /** The wallet steps of a shield, frozen when it starts. */
 export type ShieldPlan = {
-  steps: ShieldStepKind[];
+  steps: Array<ShieldStepKind>;
   /** The spender already has an allowance below the amount. A batch clears it first, at no extra prompt. */
   leftover: boolean;
 };

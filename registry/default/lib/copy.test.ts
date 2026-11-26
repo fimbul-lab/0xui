@@ -12,7 +12,7 @@ describe("createCopier", () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { clipboard: { writeText } });
     const copier = createCopier({ timeout: 1000 });
-    const seen: boolean[] = [];
+    const seen: Array<boolean> = [];
     const stop = copier.subscribe(() => seen.push(copier.get().copied));
 
     expect(await copier.copy("0xabc")).toBe(true);

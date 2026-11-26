@@ -60,8 +60,8 @@ function hexStream(seed: number) {
 
 export function bannerC(): string {
   const tl = new Timeline(T, "c");
-  const out: string[] = [];
-  const defs: string[] = [];
+  const out: Array<string> = [];
+  const defs: Array<string> = [];
   const end = 11.4;
 
   // ── Corners: the chain's pulse ─────────────────────────────────────────

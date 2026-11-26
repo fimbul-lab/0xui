@@ -69,7 +69,7 @@ export function ContractFunction({
 }: ContractFunctionProps) {
   const config = useConfig();
   const currentChainId = useChainId();
-  const [values, setValues] = useState<string[]>(() => initialFunctionValues(fn));
+  const [values, setValues] = useState<Array<string>>(() => initialFunctionValues(fn));
   const [ethValue, setEthValue] = useState("");
   const [touched, setTouched] = useState(false);
 
@@ -283,7 +283,7 @@ export type ContractFormProps = {
   abi: Abi;
   chainId?: number;
   /** Only these function names, in this order. */
-  functions?: readonly string[];
+  functions?: ReadonlyArray<string>;
   /** Show read functions, write functions, or both. */
   show?: "all" | "read" | "write";
   className?: string;

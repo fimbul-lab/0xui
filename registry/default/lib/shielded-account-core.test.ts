@@ -9,7 +9,7 @@ describe("createShieldedAccountFlow", () => {
     vi.useFakeTimers();
     const engine = createMockShieldedEngine({ account: "none" });
     const flow = createShieldedAccountFlow(engine);
-    const phases: string[] = [];
+    const phases: Array<string> = [];
     const stop = flow.subscribe(() => phases.push(flow.get().phase));
     expect(flow.get().phase).toBe("none");
 

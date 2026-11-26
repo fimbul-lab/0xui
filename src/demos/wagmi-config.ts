@@ -90,7 +90,7 @@ function demoAllowanceResult(token: Hex, data: Hex) {
  */
 async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
   const result = (await forward()) as Hex;
-  let calls: readonly { target: Hex; callData: Hex }[];
+  let calls: ReadonlyArray<{ target: Hex; callData: Hex }>;
   try {
     const decoded = decodeFunctionData({ abi: multicall3Abi, data });
     if (decoded.functionName !== "aggregate3") return result;
@@ -115,7 +115,7 @@ async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
 }
 
 /** Demo call batches (EIP-5792) by id, each a list of demo transaction hashes. */
-const demoBatches = new Map<Hex, Hex[]>();
+const demoBatches = new Map<Hex, Array<Hex>>();
 
 /** Allowance set by a mined demo approve, so approval demos can complete. */
 function demoAllowance(token: Hex, owner: Hex, spender: Hex) {
@@ -193,7 +193,7 @@ function demoWallet() {
             }
             if (args.method === "wallet_sendCalls") {
               const [{ from, calls }] = args.params as [
-                { from: Hex; calls: { to: Hex; data?: Hex; value?: Hex }[] },
+                { from: Hex; calls: Array<{ to: Hex; data?: Hex; value?: Hex }> },
               ];
               const hashes = calls.map((call) => sendDemoTransaction({ from, ...call }));
               const id = keccak256(toHex(hashes.join("")));

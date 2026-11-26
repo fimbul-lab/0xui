@@ -21,7 +21,7 @@ interface PagefindResult {
 }
 
 interface Pagefind {
-  search(query: string): Promise<{ results: PagefindResult[] }>;
+  search(query: string): Promise<{ results: Array<PagefindResult> }>;
 }
 
 export interface DocsToolsOptions {
@@ -54,14 +54,14 @@ function pageId(url: string) {
 export function docsTools({
   fetch: get = (url) => fetch(url),
   pagefind = loadPagefind,
-}: DocsToolsOptions = {}): Tool[] {
+}: DocsToolsOptions = {}): Array<Tool> {
   const read = async (url: string) => {
     const response = await get(url);
     if (!response.ok) throw new Error(`${url} returned ${response.status}.`);
     return response.text();
   };
 
-  let index: Promise<IndexEntry[]> | undefined;
+  let index: Promise<Array<IndexEntry>> | undefined;
   const pages = () =>
     (index ??= read("/llms.txt").then((text) =>
       [...text.matchAll(/^- \[([^\]]+)\]\(([^)]+\.md)\): ?(.*)$/gm)].map(

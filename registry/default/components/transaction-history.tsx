@@ -106,7 +106,7 @@ export type TransactionHistoryProps = {
    * Transactions from your own source, e.g. an indexer, instead of the ones
    * recorded in this browser. Pending entries still update live.
    */
-  transactions?: readonly HistoryEntry[];
+  transactions?: ReadonlyArray<HistoryEntry>;
   /** Rows per page, with "Show more" for the rest. */
   pageSize?: number;
   /** Show a "Clear" button. */

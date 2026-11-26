@@ -10,7 +10,7 @@ export type NetworkGuardState = {
   /** A wallet is connected to a chain outside the allowed ones. */
   wrongNetwork: boolean;
   /** The allowed chains the config knows. */
-  allowedChains: Chain[];
+  allowedChains: Array<Chain>;
   /** The chain the wallet is on. */
   currentChainId: number | undefined;
   /** The chain a switch goes to: the first allowed one. */
@@ -31,7 +31,7 @@ export type NetworkGuard = {
 /** Whether the connected wallet is on one of `chainIds`, and a way to switch to the first. Framework-free. */
 export function createNetworkGuard(
   config: Config,
-  chainIds: number | readonly number[],
+  chainIds: number | ReadonlyArray<number>,
 ): NetworkGuard {
   const allowed = typeof chainIds === "number" ? [chainIds] : chainIds;
   const allowedChains = config.chains.filter((c) => allowed.includes(c.id));

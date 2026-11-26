@@ -85,7 +85,7 @@ afterEach(() => vi.useRealTimers());
 
 // One bridge for the file. A person approves only while `approve` is set.
 let approve = false;
-const asked: string[] = [];
+const asked: Array<string> = [];
 const agent = createAgent({
   allow: (step) => {
     if (step.confirm) asked.push(step.confirm);
@@ -95,9 +95,9 @@ const agent = createAgent({
 const onPage = () =>
   agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
 const entry = (label: string) => onPage().find((e) => e.label === label);
-const run = (steps: { ref: string; action: string; args?: unknown[] }[]) =>
+const run = (steps: Array<{ ref: string; action: string; args?: Array<unknown> }>) =>
   act(() => agent.act({ steps }));
-const expectNamed = (labels: string[]) => {
+const expectNamed = (labels: Array<string>) => {
   const components = onPage();
   for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
   const names = components.map((e) => e.label);
@@ -105,7 +105,7 @@ const expectNamed = (labels: string[]) => {
     expect(names, `${label} is missing from the snapshot`).toContain(label);
 };
 /** Everything an agent has been shown: the page now, and what its steps returned. */
-const seen = (...results: unknown[]) => JSON.stringify([agent.snapshot(), ...results]);
+const seen = (...results: Array<unknown>) => JSON.stringify([agent.snapshot(), ...results]);
 const agentReset = () => {
   approve = false;
   asked.length = 0;
@@ -827,7 +827,7 @@ describe("Shield", () => {
 
   it("takes a plain wallet through sign, approve and shield, one click each", async () => {
     let allowance = 0n;
-    const sent: Sent[] = [];
+    const sent: Array<Sent> = [];
     const config = walletConfig({
       allowance: () => allowance,
       onSend: (tx) => {
@@ -881,7 +881,7 @@ describe("Shield", () => {
   });
 
   it("skips the approval when the allowance already covers the amount", async () => {
-    const sent: Sent[] = [];
+    const sent: Array<Sent> = [];
     const { user, onSubmitted } = await setup(walletConfig({ onSend: (tx) => sent.push(tx) }));
 
     expect(await screen.findByText("Two wallet prompts: sign, shield.")).toBeInTheDocument();
@@ -894,7 +894,7 @@ describe("Shield", () => {
 
   describe("with a wallet that batches", () => {
     it("approves and shields in one prompt: two prompts in all", async () => {
-      const sent: Sent[] = [];
+      const sent: Array<Sent> = [];
       const config = walletConfig({
         allowance: 0n,
         capabilities: atomic,
@@ -926,7 +926,7 @@ describe("Shield", () => {
     });
 
     it("clears a leftover allowance inside the same batch", async () => {
-      const sent: Sent[] = [];
+      const sent: Array<Sent> = [];
       const config = walletConfig({
         allowance: 5n,
         capabilities: atomic,
@@ -1003,7 +1003,7 @@ describe("Shield", () => {
     });
 
     it("opens the wallet from the form when the shield takes a single prompt", async () => {
-      const sent: Sent[] = [];
+      const sent: Array<Sent> = [];
       const config = walletConfig({
         allowance: 0n,
         capabilities: atomic,
@@ -1065,7 +1065,7 @@ describe("Shield", () => {
   });
 
   it("shields what was on screen when it started, not what a later quote says", async () => {
-    const sent: Sent[] = [];
+    const sent: Array<Sent> = [];
     const { user, engine, onSubmitted } = await setup(
       walletConfig({ onSend: (tx) => sent.push(tx) }),
     );
@@ -1178,7 +1178,7 @@ describe("Shield", () => {
     beforeEach(agentReset);
 
     it("fills the amount and reaches the shield, but can't shield without a person", async () => {
-      const sent: Sent[] = [];
+      const sent: Array<Sent> = [];
       const config = walletConfig({ allowance: 0n, onSend: (tx) => sent.push(tx) });
       const engine = await unlockedEngine();
       const prepare = vi.spyOn(engine, "prepareShield");

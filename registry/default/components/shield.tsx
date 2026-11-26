@@ -337,7 +337,7 @@ export function ShieldStepList({ steps, symbol, className }: ShieldStepListProps
 
 export type ShieldProps = {
   /** ERC-20 tokens the user can shield. Only those on `chainId` are offered. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Chain to shield on. */
   chainId: number;
   /**
@@ -355,7 +355,7 @@ export type ShieldProps = {
   /** Initially selected token. Defaults to the first on `chainId`. */
   defaultToken?: Token;
   /** Symbols or addresses for quick picks. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Prices keyed by `chainId:address`, address or symbol, for the fiat line. */
   prices?: TokenPrices;
   /** Called with the shield transaction's hash. For a batched shield, that is once it is mined. */

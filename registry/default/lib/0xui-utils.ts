@@ -140,7 +140,7 @@ export type ErrorCode =
   | "network"
   | "unknown";
 
-const errorNames: [ErrorCode, string[]][] = [
+const errorNames: Array<[ErrorCode, Array<string>]> = [
   ["reverted", ["ContractFunctionRevertedError", "ExecutionRevertedError"]],
   ["insufficient-funds", ["InsufficientFundsError"]],
   [
@@ -204,7 +204,7 @@ const BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 const BECH32M_CONSTANT = 0x2bc830a3;
 const BECH32_GENERATORS = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
 
-function bech32Polymod(values: readonly number[]) {
+function bech32Polymod(values: ReadonlyArray<number>) {
   let checksum = 1;
   for (const value of values) {
     const top = checksum >>> 25;
@@ -225,7 +225,7 @@ function bech32PrefixWords(prefix: string) {
  * Encode 5-bit words as a bech32m string (BIP-350): prefix, `1`, the words,
  * then a six-character checksum.
  */
-export function encodeBech32m(prefix: string, words: readonly number[]) {
+export function encodeBech32m(prefix: string, words: ReadonlyArray<number>) {
   const polymod =
     bech32Polymod([...bech32PrefixWords(prefix), ...words, 0, 0, 0, 0, 0, 0]) ^ BECH32M_CONSTANT;
   const checksum = Array.from({ length: 6 }, (_, i) => (polymod >>> (5 * (5 - i))) & 31);

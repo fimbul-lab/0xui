@@ -8,16 +8,16 @@ const docsRoot = join(process.cwd(), "src/content/docs");
 
 interface Row {
   /** A cell can name several props, like `open` / `onOpenChange`. */
-  names: string[];
+  names: Array<string>;
   /** The Default cell, when the table has one. */
   default?: string;
 }
 
 interface PropsSection {
   page: string;
-  rows: Row[];
+  rows: Array<Row>;
   /** Prop names an "Also accepts …" sentence lists, like the Token Amount formatting props. */
-  accepts: string[];
+  accepts: Array<string>;
   /** Normalized text of those sentences, to tell which inherited props they cover. */
   acceptsText: string;
 }
@@ -70,7 +70,7 @@ const sections = ["components", "blocks"].flatMap((dir) =>
  * come from. Props from npm packages (ui-sdk, torph) and DOM attributes are
  * documented by reference, and `className` on the root is a convention.
  */
-function undocumented(section: PropsSection, props: PropDoc[]) {
+function undocumented(section: PropsSection, props: Array<PropDoc>) {
   const listed = new Set([...section.rows.flatMap((row) => row.names), ...section.accepts]);
   return props
     .filter((prop) => !listed.has(prop.name) && prop.name !== "className")
@@ -84,7 +84,7 @@ const sameValue = (a: string, b: string) =>
   a.replace(/'/g, '"').replace(/\s/g, "") === b.replace(/'/g, '"').replace(/\s/g, "");
 
 /** Rows whose Default cell is a literal, like `"auto"`, that the code's default disagrees with. */
-function defaultMismatches(section: PropsSection, props: PropDoc[]) {
+function defaultMismatches(section: PropsSection, props: Array<PropDoc>) {
   return section.rows.flatMap((row) => {
     const documented = row.default?.match(/^`([^`]+)`$/)?.[1];
     if (row.names.length !== 1 || !documented) return [];
@@ -95,7 +95,7 @@ function defaultMismatches(section: PropsSection, props: PropDoc[]) {
 }
 
 const docs = new Map<string, ComponentDoc | undefined>();
-const report: string[] = [];
+const report: Array<string> = [];
 
 beforeAll(() => {
   for (const { page } of sections) {

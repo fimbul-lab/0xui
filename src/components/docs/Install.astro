@@ -10,7 +10,7 @@ import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
 
 interface Props {
   /** Registry item name(s), without the `@0xui/` prefix. */
-  name: string | string[];
+  name: string | Array<string>;
 }
 
 const items = [Astro.props.name]

@@ -60,7 +60,7 @@ export function usePortfolio({
   hideUnpriced,
   minValue,
 }: {
-  tokens?: readonly Token[];
+  tokens?: ReadonlyArray<Token>;
   prices?: TokenPrices;
   address?: Address;
   chainId?: number;
@@ -68,7 +68,7 @@ export function usePortfolio({
   /** Balances from your own source (e.g. an indexer), keyed by token address. Skips RPC reads. */
   balances?: PortfolioBalances;
   /** Holdings from your own source, each with its token's metadata. Skips RPC reads and wins over `balances`. */
-  holdings?: readonly PortfolioHolding[];
+  holdings?: ReadonlyArray<PortfolioHolding>;
 } & PortfolioFilters) {
   const currentChainId = useChainId();
   const chainId = chainIdProp ?? currentChainId;
@@ -115,12 +115,12 @@ export function usePortfolio({
   };
 }
 
-const noTokens: readonly Token[] = [];
-const noHoldings: readonly PortfolioHolding[] = [];
+const noTokens: ReadonlyArray<Token> = [];
+const noHoldings: ReadonlyArray<PortfolioHolding> = [];
 
 export type PortfolioProps = PortfolioFilters & {
   /** Tokens to show. With `holdings`, the allowlist: holdings off it are hidden unless `showUnlisted`. */
-  tokens?: readonly Token[];
+  tokens?: ReadonlyArray<Token>;
   /** Prices keyed by `chainId:address`, address or symbol. Tokens without one are hidden by default. */
   prices?: TokenPrices;
   /** Whose holdings. Defaults to the connected account. */
@@ -134,7 +134,7 @@ export type PortfolioProps = PortfolioFilters & {
   /** Balances from your own source, e.g. an indexer. See usePortfolio. */
   balances?: ReadonlyMap<string, bigint> | Record<string, bigint>;
   /** Holdings from your own source, each with its token's metadata. See usePortfolio. */
-  holdings?: readonly PortfolioHolding[];
+  holdings?: ReadonlyArray<PortfolioHolding>;
   /**
    * Your own `balances` or `holdings` are still loading, e.g. `query.isLoading`.
    * Shows the skeleton and skips RPC reads. Set over data you already have

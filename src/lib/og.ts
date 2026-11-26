@@ -36,8 +36,8 @@ const escape = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** Greedy word wrap to `width`, at most `max` lines. The last line ends in "…" if cut. */
-function wrap(str: string, width: number, max: number, o: TextOptions): string[] {
-  const lines: string[] = [];
+function wrap(str: string, width: number, max: number, o: TextOptions): Array<string> {
+  const lines: Array<string> = [];
   let line = "";
   for (const word of str.split(/\s+/)) {
     const next = line ? `${line} ${word}` : word;
@@ -56,7 +56,7 @@ function wrap(str: string, width: number, max: number, o: TextOptions): string[]
 }
 
 /** `wrap`, then narrowed until the lines are about the same length, so none ends in an orphan. */
-function balance(str: string, width: number, max: number, o: TextOptions): string[] {
+function balance(str: string, width: number, max: number, o: TextOptions): Array<string> {
   let lines = wrap(str, width, max, o);
   for (let narrower = width - 20; narrower > width / 2; narrower -= 20) {
     const next = wrap(str, narrower, max, o);
@@ -96,7 +96,7 @@ function watermark(): string {
 }
 
 /** Where the page sits in the docs, like "Components / Wallet". */
-function eyebrow(id: string): string[] {
+function eyebrow(id: string): Array<string> {
   const [section, name] = id.split("/");
   if (id === "shielded") return ["Preview"];
   if (!name) return ["Overview"];
@@ -111,7 +111,7 @@ function pageCard(page: OgPage): string {
   const name = page.id.split("/")[1];
   const install = page.installable && name;
   // A page with no install command has its address at the bottom instead.
-  const out: string[] = [watermark(), header(Boolean(install))];
+  const out: Array<string> = [watermark(), header(Boolean(install))];
   let y = H - M;
 
   // Bottom up, so the text block always sits on the same line.
@@ -183,7 +183,7 @@ function pageCard(page: OgPage): string {
 
 /** The landing page card: the README banner's still frame, at card size. */
 function homeCard(): string {
-  const out: string[] = [];
+  const out: Array<string> = [];
   const label = { family: "mono" as const, size: 21, tracking: 0.02, fill: c.gray3 };
   const top = M + 14;
 

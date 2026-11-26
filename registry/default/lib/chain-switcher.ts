@@ -12,7 +12,7 @@ import { isUserRejection } from "@/lib/0xui-utils";
 
 export type ChainSwitcherState = {
   /** Every chain in the wagmi config. */
-  chains: readonly Chain[];
+  chains: ReadonlyArray<Chain>;
   /** The chain the app is on, or undefined while the wallet is on one it doesn't configure. */
   currentChain: Chain | undefined;
   /** The wallet is connected to a chain missing from the config. */

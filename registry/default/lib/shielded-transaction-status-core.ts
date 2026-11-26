@@ -131,9 +131,9 @@ export function shieldedTxSteps({
   found: boolean;
   /** Seconds of standby left, when known. */
   secondsLeft: number | undefined;
-}): ShieldedTxStep[] {
+}): Array<ShieldedTxStep> {
   const failed = phase === "reverted" || phase === "error";
-  const steps: ShieldedTxStep[] = [
+  const steps: Array<ShieldedTxStep> = [
     { id: "submitted", label: "Submitted", state: "done" },
     {
       id: "included",

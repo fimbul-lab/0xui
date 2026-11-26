@@ -43,7 +43,7 @@ export type UseEventFeedParameters = {
    * live events and de-duplicated. Prefer this over `historyBlocks` in
    * production.
    */
-  initialEvents?: readonly FeedEvent[];
+  initialEvents?: ReadonlyArray<FeedEvent>;
 };
 
 /**

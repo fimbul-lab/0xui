@@ -112,9 +112,9 @@ export function createTestConfig({
   features?: MockParameters["features"];
   rpc?: RpcResponses;
   /** Accounts the mock wallet exposes. The first one is used. */
-  accounts?: readonly [Address, ...Address[]];
+  accounts?: readonly [Address, ...Array<Address>];
   /** One mock wallet per entry, each with its own accounts. Defaults to a single wallet with `accounts`. */
-  wallets?: readonly (readonly [Address, ...Address[]])[];
+  wallets?: ReadonlyArray<readonly [Address, ...Array<Address>]>;
   /** EIP-5792 capabilities the wallet reports, by chain id. Without it the wallet can't batch. */
   capabilities?: Record<number, unknown>;
 } = {}) {
@@ -284,7 +284,7 @@ const universalResolverAbi = parseAbi([
 /** Decode a DNS wire-format name ("\x07vitalik\x03eth\x00") to "vitalik.eth". */
 function decodeDnsName(data: Hex) {
   const bytes = hexToBytes(data);
-  const labels: string[] = [];
+  const labels: Array<string> = [];
   for (let i = 0; bytes[i]; i += bytes[i]! + 1) {
     labels.push(new TextDecoder().decode(bytes.slice(i + 1, i + 1 + bytes[i]!)));
   }

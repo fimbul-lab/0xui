@@ -16,7 +16,7 @@ export type ShieldedBalancesState = {
   phase: ShieldedBalancePhase;
   chainId: number;
   /** One entry per token held. Undefined until the first scan finishes. */
-  balances: readonly ShieldedTokenBalance[] | undefined;
+  balances: ReadonlyArray<ShieldedTokenBalance> | undefined;
   /** A scan is running and the balances shown may be about to change. */
   isUpdating: boolean;
   retryPhase: ShieldedRetryPhase;
@@ -103,7 +103,7 @@ const NO_FUNDS: ShieldedTokenBalance["amounts"] = {
 };
 
 /** One token's amounts from a balances snapshot, any address casing. A token not held is all zeros. */
-export function tokenAmounts(balances: readonly ShieldedTokenBalance[], token: Address) {
+export function tokenAmounts(balances: ReadonlyArray<ShieldedTokenBalance>, token: Address) {
   return balances.find((b) => b.token.toLowerCase() === token.toLowerCase())?.amounts ?? NO_FUNDS;
 }
 

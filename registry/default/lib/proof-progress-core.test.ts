@@ -27,7 +27,7 @@ describe("createProver", () => {
     const engine = await timedEngine();
     const onProved = vi.fn();
     const prover = createProver(engine, { onProved });
-    const phases: string[] = [];
+    const phases: Array<string> = [];
     prover.subscribe(() => phases.push(prover.get().phase));
 
     const proved = prover.prove(draft);

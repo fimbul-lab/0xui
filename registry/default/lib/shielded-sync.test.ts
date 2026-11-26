@@ -9,7 +9,7 @@ describe("createShieldedSync", () => {
     vi.useFakeTimers();
     const engine = createMockShieldedEngine();
     const sync = createShieldedSync(engine, 1);
-    const seen: number[] = [];
+    const seen: Array<number> = [];
     const stop = sync.subscribe(() => seen.push(sync.get().progress));
     expect(sync.get().phase).toBe("idle");
 

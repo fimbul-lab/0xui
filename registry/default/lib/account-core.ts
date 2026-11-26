@@ -26,7 +26,7 @@ export type ConnectedAccountState = {
   chainId: number | undefined;
   status: ConnectionStatus;
   /** The other connected wallets, each with its first account. */
-  otherAccounts: OtherAccount[];
+  otherAccounts: Array<OtherAccount>;
   isDisconnecting: boolean;
   isSwitching: boolean;
 };

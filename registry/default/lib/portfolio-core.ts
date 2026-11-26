@@ -77,21 +77,21 @@ export function normalizeBalances(balances: PortfolioBalances): Map<string, bigi
 
 export type PortfolioInput = {
   /** The token list, already narrowed to `chainId`. */
-  tokens: readonly TokenInfo[];
+  tokens: ReadonlyArray<TokenInfo>;
   chainId: number;
   /** Balances by lowercase address, for `tokens`. Ignored when `holdings` is set. */
   balances: ReadonlyMap<string, bigint>;
   /** Holdings with their own metadata. Win over `balances`. */
-  holdings?: readonly PortfolioHolding[];
+  holdings?: ReadonlyArray<PortfolioHolding>;
   prices?: TokenPrices;
   hideZero?: boolean;
 } & PortfolioFilters;
 
 export type PortfolioSummary = {
   /** Shown holdings, by value then amount. */
-  rows: PortfolioRow[];
+  rows: Array<PortfolioRow>;
   /** Holdings tucked away, each with its reason. */
-  hidden: PortfolioRow[];
+  hidden: Array<PortfolioRow>;
   /** Fiat total of the shown rows. */
   total: number;
   /** Shown rows without a price, left out of the total. */
@@ -128,7 +128,7 @@ export function summarizePortfolio({
         balance: balances.get(token.address.toLowerCase()) ?? 0n,
         unlisted: false,
       }));
-  const all: PortfolioRow[] = held
+  const all: Array<PortfolioRow> = held
     .map((row) => {
       const price = getTokenPrice(prices, row.token);
       const value =

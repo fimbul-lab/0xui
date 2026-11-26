@@ -12,7 +12,7 @@ import { createTransactionFlow, simulationStatus, type TxPhase } from "./tx-flow
 const send = { transaction: { to: testAccounts[1], value: parseEther("0.1") } };
 
 function track(flow: ReturnType<typeof createTransactionFlow>) {
-  const phases: TxPhase[] = [];
+  const phases: Array<TxPhase> = [];
   const stop = flow.subscribe(() => {
     const { phase } = flow.get();
     if (phases.at(-1) !== phase) phases.push(phase);

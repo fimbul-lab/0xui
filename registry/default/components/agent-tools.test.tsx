@@ -40,7 +40,7 @@ function config() {
   });
 }
 
-const tool = (tools: AgentTool[], name: string) => tools.find((t) => t.name === name)!;
+const tool = (tools: Array<AgentTool>, name: string) => tools.find((t) => t.name === name)!;
 
 describe("walletAgentTools", () => {
   it("reports a disconnected wallet", async () => {
@@ -201,7 +201,7 @@ type Registered = Omit<AgentTool, "execute"> & { execute: (input: object) => Pro
 
 describe("AgentTools", () => {
   let tools: Map<string, Registered>;
-  let signals: AbortSignal[];
+  let signals: Array<AbortSignal>;
 
   beforeEach(() => {
     tools = new Map();

@@ -61,7 +61,7 @@ export {
  * token addresses.
  */
 export function useTokenBalances(
-  tokens: readonly Token[],
+  tokens: ReadonlyArray<Token>,
   {
     chainId,
     address: addressProp,
@@ -92,7 +92,7 @@ export type TokenSelectDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Tokens to choose from. Only those on `chainId` are shown. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Called with the chosen token. The dialog closes itself. */
   onValueChange: (token: Token) => void;
   /** Currently selected token, marked in the list. */
@@ -100,7 +100,7 @@ export type TokenSelectDialogProps = {
   /** Chain to list tokens for. Defaults to the current chain. */
   chainId?: number;
   /** Symbols or addresses shown as quick-pick chips. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Read and show the connected account's balances. */
   showBalances?: boolean;
   /** Prices keyed by `chainId:address`, address or symbol. Held tokens are sorted by value when given. */
@@ -122,7 +122,7 @@ export type TokenSelectDialogProps = {
 const presentations = { auto: "auto", dialog: "dialog", drawer: "sheet" } as const;
 
 /** Stand-in rows the loading skeleton is measured from. Never shown as text. */
-const sampleTokens: Token[] = [
+const sampleTokens: Array<Token> = [
   "Sample token",
   "Another one",
   "Third token name",
@@ -187,7 +187,7 @@ function TokenPicker({
   const currentChainId = useChainId();
   const chainId = chainIdProp ?? currentChainId;
   const [query, setQuery] = useState("");
-  const [recent, setRecent] = useState<string[]>([]);
+  const [recent, setRecent] = useState<Array<string>>([]);
   const [visible, setVisible] = useState(pageSize);
 
   const tokens = useMemo(

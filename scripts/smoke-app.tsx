@@ -53,7 +53,7 @@ import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
 
 const address = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-const tokens: Token[] = [
+const tokens: Array<Token> = [
   { chainId: 1, address: NATIVE_TOKEN_ADDRESS, symbol: "ETH", name: "Ether", decimals: 18 },
   { chainId: 1, address: usdc, symbol: "USDC", name: "USD Coin", decimals: 6 },
 ];

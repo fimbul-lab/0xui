@@ -27,7 +27,7 @@ const amount = parseUnits("2", 18);
 type Sent = { to: Address; data?: `0x${string}` };
 
 /** A wallet holding 10 TKN, with no allowance until the first transaction raises it. */
-function walletConfig({ sent, reject }: { sent: Sent[]; reject?: boolean }) {
+function walletConfig({ sent, reject }: { sent: Array<Sent>; reject?: boolean }) {
   let allowance = 0n;
   const chain = fakeChainRpc();
   const send = chain.eth_sendTransaction as (params: unknown) => unknown;
@@ -52,12 +52,12 @@ const ready = (flow: ShieldFlow) =>
 
 describe("createShieldFlow", () => {
   it("signs, approves and shields, one call each, without any framework", async () => {
-    const sent: Sent[] = [];
+    const sent: Array<Sent> = [];
     const config = walletConfig({ sent });
     await connectMock(config);
     const engine = createMockShieldedEngine({ speed: Infinity });
     await engine.account.unlock("password");
-    const submitted: Hash[] = [];
+    const submitted: Array<Hash> = [];
     const flow = createShieldFlow(config, engine, { onSubmitted: (hash) => submitted.push(hash) });
     const stop = flow.subscribe(() => {});
     expect(flow.get()).toMatchObject({
@@ -100,7 +100,7 @@ describe("createShieldFlow", () => {
   });
 
   it("treats a declined signature as a cancel, and leave goes back to the form", async () => {
-    const sent: Sent[] = [];
+    const sent: Array<Sent> = [];
     const config = walletConfig({ sent, reject: true });
     await connectMock(config);
     const engine = createMockShieldedEngine({ speed: Infinity });

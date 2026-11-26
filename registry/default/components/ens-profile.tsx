@@ -35,7 +35,7 @@ export function useEnsProfile({
 }: {
   address?: AddressType;
   name?: string;
-  records?: readonly string[];
+  records?: ReadonlyArray<string>;
 }) {
   const config = useConfig();
   const profile = useQuery(
@@ -76,7 +76,7 @@ export type EnsProfileProps = {
   /** Or look up this name directly. */
   name?: string;
   /** Text records to read. Known ones (url, com.twitter, com.github, email) render as links. */
-  records?: readonly string[];
+  records?: ReadonlyArray<string>;
   className?: string;
 };
 

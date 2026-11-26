@@ -17,7 +17,7 @@ type Phase =
   | "error";
 
 // Column by column, the order the union is declared in.
-const members: Phase[] = [
+const members: Array<Phase> = [
   "idle",
   "switching",
   "confirming",
@@ -53,7 +53,7 @@ const pending: Omit<Beat, "from"> = {
   busy: true,
   status: "Transaction submitted. Waiting for confirmation…",
 };
-const beats: Beat[] = [
+const beats: Array<Beat> = [
   { phase: "idle", from: 0, label: "Switch to Base" },
   {
     phase: "switching",
@@ -84,7 +84,7 @@ const clicks = [1.3, 3.7, 10.1, 13.2];
 
 export function bannerB(): string {
   const tl = new Timeline(T, "b");
-  const out: string[] = [];
+  const out: Array<string> = [];
   const until = (i: number) => beats[i + 1]?.from ?? T;
 
   // ── Left: copy ─────────────────────────────────────────────────────────

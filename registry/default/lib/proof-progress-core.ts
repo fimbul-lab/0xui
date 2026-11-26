@@ -11,7 +11,7 @@ import {
 export type ProofPhase = "idle" | ProofStage | "done" | "cancelled" | "error";
 
 export const isProofStage = (phase: ProofPhase): phase is ProofStage =>
-  (PROOF_STAGES as readonly string[]).includes(phase);
+  (PROOF_STAGES as ReadonlyArray<string>).includes(phase);
 
 export type ProofState = {
   phase: ProofPhase;

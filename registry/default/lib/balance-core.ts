@@ -21,7 +21,7 @@ export type TokenBalanceParameters = {
 
 /** TanStack query options whose data is a `TokenBalance`, whichever read backs them. */
 export type TokenBalanceQueryOptions = {
-  queryKey: readonly unknown[];
+  queryKey: ReadonlyArray<unknown>;
   queryFn: (context: any) => unknown;
   select: (data: any) => TokenBalance;
   enabled: boolean;

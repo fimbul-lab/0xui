@@ -401,7 +401,7 @@ describe("Portfolio", () => {
 
   it("uses balances from your own source and pages the rows", async () => {
     const user = userEvent.setup();
-    const many: Token[] = Array.from({ length: 12 }, (_, i) => ({
+    const many: Array<Token> = Array.from({ length: 12 }, (_, i) => ({
       chainId: 1,
       address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
       symbol: `T${i}`,
@@ -824,7 +824,7 @@ describe("EventFeed", () => {
 describe("Agents", () => {
   // One bridge for the file. A person approves only while `approve` is set.
   let approve = false;
-  const asked: string[] = [];
+  const asked: Array<string> = [];
   const agent = createAgent({
     allow: (step) => {
       if (step.confirm) asked.push(step.confirm);
@@ -839,7 +839,7 @@ describe("Agents", () => {
   const onPage = () =>
     agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
   const entry = (label: string) => onPage().find((e) => e.label === label);
-  const expectNamed = (labels: string[]) => {
+  const expectNamed = (labels: Array<string>) => {
     const components = onPage();
     for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
     const names = components.map((e) => e.label);
@@ -854,7 +854,7 @@ describe("Agents", () => {
     expect(value, `${text} isn't in ${within}`).toBeDefined();
     return value;
   };
-  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) =>
+  const run = (steps: Array<{ ref: string; action: string; args?: Array<unknown> }>) =>
     act(() => agent.act({ steps }));
 
   it("sends: fills recipient, token and amount, and needs a person to press Send", async () => {
@@ -1191,9 +1191,9 @@ describe("Agents", () => {
  * Pairs of labels where every word of one is in the other, which a bridge
  * step can't tell apart by name ("Amount" and "Max amount").
  */
-function collisions(labels: readonly string[]) {
+function collisions(labels: ReadonlyArray<string>) {
   const words = (label: string) => new Set(label.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
-  const found: string[] = [];
+  const found: Array<string> = [];
   labels.forEach((a, i) =>
     labels.forEach((b, j) => {
       if (i === j) return;

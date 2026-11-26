@@ -17,7 +17,7 @@ const use = "c";
 
 const path = (relative: string) => fileURLToPath(new URL(relative, import.meta.url));
 
-const banners: Record<string, { out: string; make: () => string; times: number[] }> = {
+const banners: Record<string, { out: string; make: () => string; times: Array<number> }> = {
   a: {
     out: path("./variants/a-hero/banner.svg"),
     make: bannerA,

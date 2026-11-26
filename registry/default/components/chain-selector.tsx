@@ -58,9 +58,9 @@ export type ChainSelectorProps = {
   chainMeta?: (chain: Chain) => ReactNode;
 } & IconStyleProps;
 
-function groupChainsByNetwork(chains: readonly Chain[]) {
-  const mainnet: Chain[] = [];
-  const testnet: Chain[] = [];
+function groupChainsByNetwork(chains: ReadonlyArray<Chain>) {
+  const mainnet: Array<Chain> = [];
+  const testnet: Array<Chain> = [];
 
   chains.forEach((chain) => {
     if ((chain as Chain & { testnet?: boolean }).testnet) {
@@ -283,7 +283,7 @@ function ChainsGrid({
   variant,
   monoColor,
 }: {
-  chains: readonly Chain[];
+  chains: ReadonlyArray<Chain>;
   chainMeta?: (chain: Chain) => ReactNode;
   currentChainId?: number;
   pendingChainId?: number;
@@ -325,7 +325,7 @@ function ChainListContent({
   ...gridProps
 }: {
   mounted: boolean;
-  chains: readonly Chain[];
+  chains: ReadonlyArray<Chain>;
   groupByNetwork?: boolean;
   error: { message: string; shortMessage?: string } | null;
   cancelled: boolean;
@@ -353,7 +353,7 @@ function ChainListContent({
 
   const { mainnet, testnet } = groupByNetwork
     ? groupChainsByNetwork(chains)
-    : { mainnet: chains, testnet: [] as Chain[] };
+    : { mainnet: chains, testnet: [] as Array<Chain> };
 
   const empty = (label: string) => (
     <p className="text-sm text-muted-foreground text-center py-4">No {label} chains available</p>

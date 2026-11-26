@@ -113,7 +113,7 @@ const pageTitles: Record<string, string> = {
  * for your own model loop next to `walletAgentTools`. `act` goes through the
  * bridge's `allow`, so marked steps still wait for the person.
  */
-export function pageAgentTools(agent: Agent): AgentTool[] {
+export function pageAgentTools(agent: Agent): Array<AgentTool> {
   return agentTools.map((tool) => {
     const name = tool.name as "snapshot" | "act" | "query";
     return {
@@ -180,7 +180,7 @@ export type WalletAgentToolsOptions = {
 export function walletAgentTools(
   config: Config,
   { confirm }: WalletAgentToolsOptions = {},
-): AgentTool[] {
+): Array<AgentTool> {
   return [
     {
       name: "get_wallet",
@@ -475,7 +475,7 @@ export type RegisterAgentToolsOptions = {
  * page tools too. Returns the cleanup. Does nothing without WebMCP.
  */
 export function registerAgentTools(
-  tools: AgentTool[],
+  tools: Array<AgentTool>,
   { agent, allow }: RegisterAgentToolsOptions = {},
 ) {
   if (agent && !allow) throw new Error("registerAgentTools needs an allow with an agent.");

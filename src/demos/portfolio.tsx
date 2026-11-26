@@ -37,7 +37,7 @@ const tokens = [demoEth, wbtc, usdt, usdc, dai, aave, uni, shib];
  * and the hidden-token rules; it doesn't need a live wallet, and with the
  * data known up front the skeleton has its exact shape, so nothing moves.
  */
-const holdings: PortfolioHolding[] = [
+const holdings: Array<PortfolioHolding> = [
   { token: demoEth, balance: parseUnits("5.7989", 18) },
   { token: wbtc, balance: parseUnits("0.0472", 8) },
   { token: usdt, balance: parseUnits("296.3682", 6) },

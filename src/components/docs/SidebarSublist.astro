@@ -13,13 +13,13 @@ import GroupIcon from "./GroupIcon.astro";
 type SidebarEntry = StarlightRouteData["sidebar"][number];
 
 interface Props {
-  sublist: SidebarEntry[];
+  sublist: Array<SidebarEntry>;
   nested?: boolean;
 }
 
 const { sublist, nested } = Astro.props;
 
-const hasCurrent = (entries: SidebarEntry[]): boolean =>
+const hasCurrent = (entries: Array<SidebarEntry>): boolean =>
   entries.some((entry) => (entry.type === "group" ? hasCurrent(entry.entries) : entry.isCurrent));
 ---
 

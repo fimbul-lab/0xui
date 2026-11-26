@@ -15,7 +15,7 @@ export type TokenInfo = {
   /** Logo URL. May be `ipfs://`. Resolve with `resolveUri`. */
   logoURI?: string;
   /** Keys into the list's `tags`. */
-  tags?: string[];
+  tags?: Array<string>;
   /** List-specific data, e.g. Uniswap's `bridgeInfo` (the same token on other chains). */
   extensions?: {
     bridgeInfo?: Record<string, { tokenAddress: Address }>;
@@ -28,9 +28,9 @@ export type TokenList = {
   name: string;
   timestamp: string;
   version: { major: number; minor: number; patch: number };
-  tokens: TokenInfo[];
+  tokens: Array<TokenInfo>;
   logoURI?: string;
-  keywords?: string[];
+  keywords?: Array<string>;
   tags?: Record<string, { name: string; description: string }>;
 };
 
@@ -122,9 +122,9 @@ export function tokenListQueryOptions(url: string, { gateway }: { gateway?: stri
  * Tokens from several lists, merged. The first list wins when two lists
  * share a token (same chain and address).
  */
-export function mergeTokenLists(lists: readonly Pick<TokenList, "tokens">[]) {
+export function mergeTokenLists(lists: ReadonlyArray<Pick<TokenList, "tokens">>) {
   const seen = new Set<string>();
-  const tokens: TokenInfo[] = [];
+  const tokens: Array<TokenInfo> = [];
   for (const list of lists) {
     for (const token of list.tokens) {
       const key = `${token.chainId}:${token.address.toLowerCase()}`;
@@ -142,12 +142,12 @@ export type TokenFilters = {
    * `chainId:address` to pin a chain. Symbols aren't accepted: spam tokens
    * copy the symbols of real ones.
    */
-  allowlist?: readonly string[];
+  allowlist?: ReadonlyArray<string>;
   /** Never these tokens (a blacklist), e.g. known scams. Same format as `allowlist`. */
-  blocklist?: readonly string[];
+  blocklist?: ReadonlyArray<string>;
 };
 
-function matcher(entries: readonly string[]) {
+function matcher(entries: ReadonlyArray<string>) {
   const set = new Set(entries.map((e) => e.toLowerCase()));
   return (token: Pick<TokenInfo, "chainId" | "address">) => {
     const address = token.address.toLowerCase();
@@ -160,9 +160,9 @@ function matcher(entries: readonly string[]) {
  * token is on both.
  */
 export function applyTokenFilters<T extends Pick<TokenInfo, "chainId" | "address">>(
-  tokens: readonly T[],
+  tokens: ReadonlyArray<T>,
   { allowlist, blocklist }: TokenFilters,
-): T[] {
+): Array<T> {
   const allowed = allowlist ? matcher(allowlist) : () => true;
   const blocked = blocklist ? matcher(blocklist) : () => false;
   return tokens.filter((t) => allowed(t) && !blocked(t));
@@ -174,12 +174,12 @@ export type SelectTokensOptions = TokenFilters & {
   /** The chain whose native currency goes first. Leave out to skip it. */
   nativeChain?: Pick<Chain, "id" | "nativeCurrency">;
   /** Extra tokens, e.g. ones the user imported. They come first and win over list entries. */
-  extraTokens?: readonly TokenInfo[];
+  extraTokens?: ReadonlyArray<TokenInfo>;
 };
 
 /** The tokens of loaded lists for one chain: merged, filtered, with the native currency first. */
 export function selectTokens(
-  lists: readonly Pick<TokenList, "tokens">[],
+  lists: ReadonlyArray<Pick<TokenList, "tokens">>,
   { chainId, nativeChain, extraTokens = [], allowlist, blocklist }: SelectTokensOptions,
 ) {
   const merged = mergeTokenLists([{ tokens: [...extraTokens] }, ...lists]);

@@ -8,8 +8,8 @@ const T = 14;
 
 export function bannerA(): string {
   const tl = new Timeline(T, "a");
-  const out: string[] = [];
-  const defs: string[] = [];
+  const out: Array<string> = [];
+  const defs: Array<string> = [];
 
   // Beats, in seconds.
   const typeFrom = 0.7;

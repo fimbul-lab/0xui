@@ -45,7 +45,6 @@ export default defineConfig({
     "react/button-has-type": "off",
     "react/no-unescaped-entities": "off",
     "react/no-unknown-property": "off",
-    "typescript/array-type": "off",
     "typescript/no-explicit-any": "off",
     "typescript/no-import-type-side-effects": "off",
     "typescript/no-misused-promises": "off",

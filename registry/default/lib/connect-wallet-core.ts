@@ -21,7 +21,7 @@ export type WalletOption = {
  * the rest. The generic "injected" connector is dropped when installed
  * wallets announce themselves (EIP-6963), since it would duplicate one of them.
  */
-export function walletOptions(connectors: readonly Connector[], recentId?: string) {
+export function walletOptions(connectors: ReadonlyArray<Connector>, recentId?: string) {
   const announced = connectors.some((c) => c.rdns);
   const rank = (o: WalletOption) => (o.recent ? 0 : o.installed ? 1 : 2);
   return connectors
@@ -40,7 +40,7 @@ export function walletOptions(connectors: readonly Connector[], recentId?: strin
 }
 
 export type ConnectWalletState = {
-  wallets: WalletOption[];
+  wallets: Array<WalletOption>;
   phase: ConnectPhase;
   /** The wallet a connection is waiting on. */
   pendingId: string | undefined;

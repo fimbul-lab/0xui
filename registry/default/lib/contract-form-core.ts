@@ -34,7 +34,7 @@ function coerce(param: AbiParameter, value: unknown): unknown {
     return value.map((item) => coerce({ ...param, type: array[1]! }, item));
   }
   if (param.type === "tuple") {
-    const components = (param as { components: readonly AbiParameter[] }).components;
+    const components = (param as { components: ReadonlyArray<AbiParameter> }).components;
     if (Array.isArray(value)) return components.map((c, i) => coerce(c, value[i]));
     if (value && typeof value === "object")
       return Object.fromEntries(
@@ -127,7 +127,7 @@ export function contractFunctions(
   {
     functions,
     show = "all",
-  }: { functions?: readonly string[]; show?: "all" | "read" | "write" } = {},
+  }: { functions?: ReadonlyArray<string>; show?: "all" | "read" | "write" } = {},
 ) {
   const all = abi.filter((item): item is AbiFunction => item.type === "function");
   const picked = functions
@@ -145,9 +145,9 @@ export function initialFunctionValues(fn: AbiFunction) {
 
 export type FunctionCallDraft = {
   /** Parsed values, one per input. */
-  args: unknown[];
+  args: Array<unknown>;
   /** Why each input is invalid, or undefined. */
-  errors: (string | undefined)[];
+  errors: Array<string | undefined>;
   /** The ETH value in wei, undefined when blank, null when it doesn't parse. */
   value: bigint | undefined | null;
   /** What to fix before calling, as button text, or undefined when ready. */
@@ -157,7 +157,7 @@ export type FunctionCallDraft = {
 /** Parse a function's form: its inputs and, for payable functions, the ETH value. */
 export function functionCallDraft(
   fn: AbiFunction,
-  values: readonly string[],
+  values: ReadonlyArray<string>,
   ethValue = "",
 ): FunctionCallDraft {
   const parsed = fn.inputs.map((input, i) => parseAbiInput(input, values[i] ?? ""));
@@ -223,7 +223,7 @@ export function readFunctionMutationOptions(
 ) {
   return {
     mutationKey: ["0xui", "contract-read", chainId, address, functionSignature(fn)] as const,
-    mutationFn: (args: readonly unknown[]) =>
+    mutationFn: (args: ReadonlyArray<unknown>) =>
       readContract(config, {
         address,
         abi: [fn],

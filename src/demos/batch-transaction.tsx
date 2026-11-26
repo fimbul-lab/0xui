@@ -4,7 +4,7 @@ import { demoUsdc } from "./tokens";
 import { demo } from "./demo";
 
 const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af";
-const calls: BatchCall[] = [
+const calls: Array<BatchCall> = [
   {
     label: "Approve 100 USDC",
     to: demoUsdc.address,

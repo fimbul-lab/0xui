@@ -18,7 +18,7 @@ export interface DocPage {
 export interface DocSection {
   title: string;
   blurb?: string;
-  pages: DocPage[];
+  pages: Array<DocPage>;
 }
 
 /** URL of a page's Markdown, like `https://0xui.io/components/balance.md`. */
@@ -32,9 +32,9 @@ export function markdownPath(id: string) {
 }
 
 /** Every listed page except the landing page, in sidebar order. Unlisted pages are left out. */
-export function docSections(docs: DocPage[]): DocSection[] {
+export function docSections(docs: Array<DocPage>): Array<DocSection> {
   const byId = new Map(docs.map((doc) => [doc.id, doc]));
-  const pick = (ids: string[]) =>
+  const pick = (ids: Array<string>) =>
     ids.map((id) => byId.get(id)).filter((doc): doc is DocPage => Boolean(doc));
   const names = (section: string) =>
     docs
@@ -64,7 +64,7 @@ export function docSections(docs: DocPage[]): DocSection[] {
 const runner = "npx shadcn@latest";
 
 /** The `shadcn add` command for one or more registry items. */
-export function installCommand(names: string[]) {
+export function installCommand(names: Array<string>) {
   return `${runner} add ${names.map((name) => `@0xui/${name}`).join(" ")}`;
 }
 
@@ -94,7 +94,7 @@ function rewriteLinks(line: string) {
  */
 export function mdxToMarkdown(mdx: string, index: (section: string) => string = () => "") {
   const lines = mdx.replace(/^---\n[\s\S]*?\n---\n/, "").split("\n");
-  const out: string[] = [];
+  const out: Array<string> = [];
   let fence: string | undefined;
 
   for (let i = 0; i < lines.length; i++) {
@@ -123,7 +123,7 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
     let open = line;
     while (!/>\s*$/.test(open) && i + 1 < lines.length) open += `\n${lines[++i]}`;
     const selfClosing = /\/>\s*$/.test(open);
-    const children: string[] = [];
+    const children: Array<string> = [];
     if (!selfClosing && !open.includes(`</${name}>`)) {
       while (i + 1 < lines.length && !lines[i + 1].includes(`</${name}>`)) {
         children.push(lines[++i]);
@@ -152,14 +152,14 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
     .trim();
 }
 
-function pageList(pages: DocPage[]) {
+function pageList(pages: Array<DocPage>) {
   return pages
     .map((page) => `- [${page.title}](${markdownUrl(page.id)}): ${page.description}`)
     .join("\n");
 }
 
 /** The list a `<ComponentIndex section>` renders, as Markdown. */
-export function sectionIndex(docs: DocPage[], section: string) {
+export function sectionIndex(docs: Array<DocPage>, section: string) {
   return docSections(docs)
     .filter((group) =>
       section === "components"
@@ -180,11 +180,11 @@ export interface RegistryItem {
   name: string;
   type: string;
   description?: string;
-  files?: { path: string }[];
+  files?: Array<{ path: string }>;
 }
 
 /** One page as a standalone Markdown document. */
-export function pageMarkdown(page: DocPage, docs: DocPage[], registry: RegistryItem[]) {
+export function pageMarkdown(page: DocPage, docs: Array<DocPage>, registry: Array<RegistryItem>) {
   const [section, name] = page.id.split("/");
   const item =
     section === "components" || section === "blocks"
@@ -225,7 +225,7 @@ AI agents can use apps built with 0xui: render \`<AgentTools />\` (\`@0xui/agent
 Every page below is Markdown. Append \`.md\` to any docs URL for its Markdown, read everything at once at ${site}/llms-full.txt, or install the agent skill: \`npx skills add ${site}\`.`;
 
 /** `/llms.txt`, as https://llmstxt.org describes it. */
-export function llmsTxt(docs: DocPage[], registry: RegistryItem[]) {
+export function llmsTxt(docs: Array<DocPage>, registry: Array<RegistryItem>) {
   const documented = new Set(docs.map((doc) => doc.id.split("/")[1]));
   const extras = registry.filter(
     (item) => !documented.has(item.name) && item.type !== "registry:example",
@@ -250,7 +250,7 @@ export function llmsTxt(docs: DocPage[], registry: RegistryItem[]) {
 }
 
 /** `/llms-full.txt`: every page, in sidebar order. */
-export function llmsFullTxt(docs: DocPage[], registry: RegistryItem[]) {
+export function llmsFullTxt(docs: Array<DocPage>, registry: Array<RegistryItem>) {
   const pages = docSections(docs).flatMap((section) => section.pages);
   return [
     "# 0xui",

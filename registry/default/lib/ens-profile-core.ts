@@ -27,7 +27,7 @@ export type EnsProfileParameters = {
   /** Or look up this name directly. */
   name?: string;
   /** Text records to read. */
-  records?: readonly string[];
+  records?: ReadonlyArray<string>;
 };
 
 export type EnsProfileData = {
@@ -116,8 +116,8 @@ const linkFormats: Record<
 };
 
 /** The records that render as links (url, com.twitter, com.github, email), in that order. */
-export function ensProfileLinks(records: Record<string, string | undefined>): EnsLink[] {
-  return (Object.keys(linkFormats) as EnsLinkKey[]).flatMap((key) => {
+export function ensProfileLinks(records: Record<string, string | undefined>): Array<EnsLink> {
+  return (Object.keys(linkFormats) as Array<EnsLinkKey>).flatMap((key) => {
     const value = records[key];
     if (!value) return [];
     const format = linkFormats[key];

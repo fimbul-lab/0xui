@@ -88,7 +88,7 @@ export function transactionSteps({
   confirmations,
   required,
 }: ReturnType<typeof transactionStatus> & { receipt: TransactionReceipt | undefined }) {
-  const steps: TransactionStep[] = [
+  const steps: Array<TransactionStep> = [
     { id: "submitted", label: "Submitted", state: "done" },
     {
       id: "included",

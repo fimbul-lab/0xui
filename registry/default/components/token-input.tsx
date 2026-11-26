@@ -32,9 +32,9 @@ export type TokenInputProps = {
   token?: Token;
   onTokenChange?: (token: Token) => void;
   /** Tokens for the picker. Omit to lock the token. */
-  tokens?: readonly Token[];
+  tokens?: ReadonlyArray<Token>;
   /** Symbols or addresses shown as quick picks in the token picker. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Price of one token, for the fiat line. Defaults to the token's entry in `prices`. */
   price?: number;
   /** Prices keyed by `chainId:address`, address or symbol: the fiat line, and sorting held tokens in the picker by value. */

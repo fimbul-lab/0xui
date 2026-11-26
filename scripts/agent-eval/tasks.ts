@@ -2,9 +2,9 @@ export type Task = {
   id: string;
   prompt: string;
   /** Passes when every item in at least one group is installed and imported by app code. */
-  expect: string[][];
+  expect: Array<Array<string>>;
   /** Regexes that must not match app code (files the registry didn't write). */
-  forbid?: { pattern: string; why: string }[];
+  forbid?: Array<{ pattern: string; why: string }>;
 };
 
 /** Checked on every task: the app must wrap itself in a wagmi provider. */
@@ -12,7 +12,7 @@ export const requireAll = [
   { pattern: "\\b(Web3Provider|WagmiProvider)\\b", why: "app is wrapped in a wagmi provider" },
 ];
 
-export const tasks: Task[] = [
+export const tasks: Array<Task> = [
   {
     id: "header-balance",
     prompt:

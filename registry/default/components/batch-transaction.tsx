@@ -38,7 +38,7 @@ export function useBatchTransaction({
   chainId,
   mode = "auto",
 }: {
-  calls: readonly BatchCall[];
+  calls: ReadonlyArray<BatchCall>;
   chainId: number;
   mode?: BatchMode;
 }) {
@@ -66,7 +66,7 @@ const timelineStatus: Record<StepState, TimelineStatus> = {
 };
 
 export type BatchTransactionProps = Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
-  calls: readonly BatchCall[];
+  calls: ReadonlyArray<BatchCall>;
   chainId: number;
   mode?: BatchMode;
   /** Button label. */

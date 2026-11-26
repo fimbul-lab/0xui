@@ -14,7 +14,7 @@ import { requireAll, tasks, type Task } from "./tasks.ts";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 type Options = {
-  tasks: string[];
+  tasks: Array<string>;
   model: string;
   keep: boolean;
   timeoutMin: number;
@@ -22,7 +22,7 @@ type Options = {
   out?: string;
 };
 
-function parseArgs(argv: string[]): Options {
+function parseArgs(argv: Array<string>): Options {
   const o: Options = {
     tasks: [],
     model: "claude-sonnet-5-5",
@@ -56,7 +56,7 @@ type RunResult = { code: number | null; output: string; timedOut: boolean };
 
 function run(
   cmd: string,
-  args: string[],
+  args: Array<string>,
   opts: {
     cwd: string;
     timeoutMs?: number;
@@ -98,7 +98,7 @@ function run(
   });
 }
 
-async function must(cmd: string, args: string[], cwd: string) {
+async function must(cmd: string, args: Array<string>, cwd: string) {
   const r = await run(cmd, args, { cwd });
   if (r.code !== 0)
     throw new Error(`${cmd} ${args.join(" ")} failed (${r.code}):\n${r.output.slice(-4000)}`);
@@ -174,7 +174,7 @@ type Transcript = {
   toolCalls: number;
   tools: Record<string, number>;
   skillUsed: boolean;
-  shadcnAdds: string[];
+  shadcnAdds: Array<string>;
   costUsd?: number;
   durationMs?: number;
   turns?: number;
@@ -191,11 +191,11 @@ function summarizeTool(b: ContentBlock) {
   return `${b.name} ${String(detail).replace(/\s+/g, " ").slice(0, 120)}`;
 }
 
-function parseTranscript(lines: string[]): Transcript {
+function parseTranscript(lines: Array<string>): Transcript {
   const t: Transcript = { toolCalls: 0, tools: {}, skillUsed: false, shadcnAdds: [] };
   const seen = new Set<string>();
   for (const line of lines) {
-    let ev: { type?: string; message?: { content?: ContentBlock[] }; [k: string]: unknown };
+    let ev: { type?: string; message?: { content?: Array<ContentBlock> }; [k: string]: unknown };
     try {
       ev = JSON.parse(line);
     } catch {
@@ -225,8 +225,8 @@ function parseTranscript(lines: string[]): Transcript {
   return t;
 }
 
-async function listFiles(dir: string, base = dir): Promise<string[]> {
-  const out: string[] = [];
+async function listFiles(dir: string, base = dir): Promise<Array<string>> {
+  const out: Array<string> = [];
   for (const e of await readdir(dir, { withFileTypes: true })) {
     if (e.name === "node_modules" || e.name === ".git" || e.name === "dist") continue;
     const p = join(dir, e.name);
@@ -236,13 +236,13 @@ async function listFiles(dir: string, base = dir): Promise<string[]> {
   return out;
 }
 
-type Registry = Map<string, string[]>; // item name -> file paths relative to registry/default
+type Registry = Map<string, Array<string>>; // item name -> file paths relative to registry/default
 
 async function loadRegistry(): Promise<Registry> {
   // The source manifest: the built index leaves out the unlisted items.
   const index = JSON.parse(await readFile(join(ROOT, "registry.json"), "utf8"));
   const reg: Registry = new Map();
-  for (const item of index.items as { name: string; files?: { path: string }[] }[]) {
+  for (const item of index.items as Array<{ name: string; files?: Array<{ path: string }> }>) {
     reg.set(
       item.name,
       (item.files ?? []).map((f) => f.path.replace(/^registry\/[^/]+\//, "")),
@@ -318,10 +318,10 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
           .join(" | or | "),
   };
 
-  const scan = (rules: { pattern: string; why: string }[]) =>
+  const scan = (rules: Array<{ pattern: string; why: string }>) =>
     rules.flatMap((r) => {
       const re = new RegExp(r.pattern);
-      const hits: string[] = [];
+      const hits: Array<string> = [];
       for (const [f, src] of sources)
         src.split("\n").forEach((line, i) => {
           if (re.test(line)) hits.push(`${f}:${i + 1}`);
@@ -369,7 +369,7 @@ async function runTask(
   delete env.CLAUDECODE;
   delete env.CLAUDE_CODE_ENTRYPOINT;
   const started = Date.now();
-  const lines: string[] = [];
+  const lines: Array<string> = [];
   const agent = await run(
     "claude",
     [
@@ -457,7 +457,7 @@ async function runTask(
 
 type Result = Awaited<ReturnType<typeof runTask>>;
 
-function summary(results: Result[], o: Options) {
+function summary(results: Array<Result>, o: Options) {
   const yn = (b: boolean) => (b ? "✅" : "❌");
   const money = (n?: number) => (n === undefined ? "–" : `$${n.toFixed(2)}`);
   const mins = (ms?: number) => (ms === undefined ? "–" : `${(ms / 60_000).toFixed(1)}m`);
@@ -507,7 +507,7 @@ async function main() {
   const out = o.out ?? join(work, "results");
   await mkdir(out, { recursive: true });
   const server = await serveRegistry();
-  const results: Result[] = [];
+  const results: Array<Result> = [];
   try {
     const reg = await loadRegistry();
     await mkdir(join(work, "template"));

@@ -10,7 +10,7 @@ import {
   type TokenList,
 } from "@/lib/token-list";
 
-const NO_TOKENS: readonly TokenInfo[] = [];
+const NO_TOKENS: ReadonlyArray<TokenInfo> = [];
 
 export type UseTokenListOptions = TokenFilters & {
   /** Only tokens on this chain. Defaults to the current chain. Pass null for every chain. */
@@ -18,7 +18,7 @@ export type UseTokenListOptions = TokenFilters & {
   /** Put the chain's native currency (e.g. ETH) first. Lists don't include it. */
   includeNative?: boolean;
   /** Extra tokens, e.g. ones the user imported. They come first and win over list entries. */
-  extraTokens?: readonly TokenInfo[];
+  extraTokens?: ReadonlyArray<TokenInfo>;
   /** IPFS gateway for `ipfs://` list URLs. */
   gateway?: string;
 };
@@ -32,7 +32,7 @@ export type UseTokenListOptions = TokenFilters & {
  *   <TokenSelect tokens={tokens} … />
  */
 export function useTokenList(
-  urls: string | readonly string[],
+  urls: string | ReadonlyArray<string>,
   {
     chainId: chainIdOption,
     includeNative = true,
@@ -51,7 +51,7 @@ export function useTokenList(
     queries: list.map((url) => tokenListQueryOptions(url, { gateway })),
   });
 
-  const lists = queries.map((q) => q.data).filter(Boolean) as TokenList[];
+  const lists = queries.map((q) => q.data).filter(Boolean) as Array<TokenList>;
   const dataKey = queries.map((q) => q.dataUpdatedAt).join();
 
   const tokens = useMemo(

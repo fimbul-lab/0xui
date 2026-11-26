@@ -353,8 +353,8 @@ describe("advanceSync", () => {
     progress,
   });
 
-  const run = (states: ShieldedSync[], from?: ShieldedSyncView) => {
-    const views: ShieldedSyncView[] = [];
+  const run = (states: Array<ShieldedSync>, from?: ShieldedSyncView) => {
+    const views: Array<ShieldedSyncView> = [];
     let view = from;
     for (const state of states) views.push((view = advanceSync(view, state)));
     return views;
@@ -411,12 +411,12 @@ describe("ShieldedSyncStatus", () => {
     const engine = createMockShieldedEngine();
     const { container } = renderShielded(<ShieldedSyncStatus chainId={1} />, engine);
 
-    const raw: number[] = [];
+    const raw: Array<number> = [];
     engine.subscribe("sync", () => raw.push(engine.getSync(1).progress));
     void engine.account.unlock("password");
     await advance(MOCK_TIMINGS.unlock);
 
-    const shown: number[] = [];
+    const shown: Array<number> = [];
     const labels = new Set<string>();
     while (engine.getSync(1).status === "syncing") {
       shown.push(bar());
@@ -691,7 +691,7 @@ describe("Agents", () => {
   const agent = createAgent();
   const onPage = () =>
     agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
-  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) =>
+  const run = (steps: Array<{ ref: string; action: string; args?: Array<unknown> }>) =>
     act(() => agent.act({ steps }));
 
   it("names every control apart on one page, and runs the free ones", async () => {
@@ -742,9 +742,9 @@ describe("Agents", () => {
 });
 
 /** Pairs of labels where every word of one is in the other, which a step can't tell apart by name. */
-function collisions(labels: readonly string[]) {
+function collisions(labels: ReadonlyArray<string>) {
   const words = (label: string) => new Set(label.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
-  const found: string[] = [];
+  const found: Array<string> = [];
   labels.forEach((a, i) =>
     labels.forEach((b, j) => {
       const wb = words(b);

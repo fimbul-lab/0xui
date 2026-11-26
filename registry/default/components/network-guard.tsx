@@ -15,7 +15,7 @@ export type { NetworkGuardPhase };
  * Whether the connected wallet is on one of `chainIds`, and a way to switch
  * to the first. The logic lives in `createNetworkGuard` (framework-free).
  */
-export function useNetworkGuard(chainIds: number | readonly number[]) {
+export function useNetworkGuard(chainIds: number | ReadonlyArray<number>) {
   const config = useConfig();
   const key = typeof chainIds === "number" ? String(chainIds) : chainIds.join(",");
   // Keyed by the ids rather than the array, which callers often pass inline.
@@ -34,7 +34,7 @@ export function useNetworkGuard(chainIds: number | readonly number[]) {
 
 export type NetworkGuardProps = {
   /** Chain or chains the content works on. The first one is offered as the switch target. */
-  chainId: number | readonly number[];
+  chainId: number | ReadonlyArray<number>;
   /**
    * "banner" shows a notice above the content. "replace" shows only the
    * notice until the wallet is on a supported chain.

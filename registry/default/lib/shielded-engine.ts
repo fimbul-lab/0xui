@@ -33,7 +33,7 @@ export const SHIELDED_BALANCE_STATES = [
   "proving",
   "incomplete",
   "restricted",
-] as const satisfies readonly ShieldedBalanceState[];
+] as const satisfies ReadonlyArray<ShieldedBalanceState>;
 
 /** One token's private balance, split by state. */
 export type ShieldedTokenBalance = {
@@ -53,7 +53,7 @@ export type ShieldedSyncStage = "notes" | "transactions";
 export const SHIELDED_SYNC_STAGES = [
   "notes",
   "transactions",
-] as const satisfies readonly ShieldedSyncStage[];
+] as const satisfies ReadonlyArray<ShieldedSyncStage>;
 
 export type ShieldedSyncStatus = "idle" | "syncing" | "synced" | "error";
 
@@ -84,7 +84,7 @@ export const PROOF_STAGES = [
   "loading-circuits",
   "proving",
   "verifying",
-] as const satisfies readonly ProofStage[];
+] as const satisfies ReadonlyArray<ProofStage>;
 
 /** `none`: no private account on this device. `locked`: one exists, encrypted. */
 export type ShieldedAccountStatus = "none" | "locked" | "unlocked";
@@ -191,7 +191,7 @@ export interface ShieldedEngine {
    * `undefined` until the first scan finishes (and whenever the account is
    * not unlocked). Returns the same array until the balances change.
    */
-  getBalances(chainId: number): readonly ShieldedTokenBalance[] | undefined;
+  getBalances(chainId: number): ReadonlyArray<ShieldedTokenBalance> | undefined;
 
   /**
    * What the private side knows about a public transaction, e.g. a shield.

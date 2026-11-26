@@ -31,12 +31,12 @@ export interface ComponentDoc {
    * the ones it handles itself are in `props`, marked `attribute`.
    */
   extends?: string;
-  props: PropDoc[];
+  props: Array<PropDoc>;
 }
 
 interface RegistryItemFiles {
   name: string;
-  files?: { path: string }[];
+  files?: Array<{ path: string }>;
 }
 
 const root = process.cwd();
@@ -112,7 +112,7 @@ const elementNames: Record<string, string> = {
   "": "HTML",
 };
 
-function domElement(types: string[]) {
+function domElement(types: Array<string>) {
   for (const text of types) {
     const match = text.match(/\bHTML(\w*)Element\b/);
     if (match) return elementNames[match[1]] ?? match[1].toLowerCase();
@@ -146,8 +146,8 @@ export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined 
   const names = [...new Set(variants.flatMap((t) => t.getProperties().map((p) => p.name)))];
   const bound = destructured(declaration);
 
-  const props: PropDoc[] = [];
-  const domTypes: string[] = [];
+  const props: Array<PropDoc> = [];
+  const domTypes: Array<string> = [];
   let hasDom = false;
 
   for (const name of names) {
@@ -208,6 +208,6 @@ export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined 
 }
 
 /** Every registry item with a main component. */
-export function allComponentDocs(): ComponentDoc[] {
+export function allComponentDocs(): Array<ComponentDoc> {
   return registry.items.flatMap((item: RegistryItemFiles) => extractProps(item) ?? []);
 }

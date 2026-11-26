@@ -59,7 +59,7 @@ export type BatchTransaction = {
   get(): BatchTransactionState;
   subscribe(listener: () => void): () => void;
   /** Send the calls, atomically or one by one. Resolves once they settle or fail. */
-  execute(calls: readonly BatchCall[]): Promise<void>;
+  execute(calls: ReadonlyArray<BatchCall>): Promise<void>;
   /** Ask the wallet to switch to the calls' chain. */
   switchToTarget(): Promise<void>;
   /** Back to idle. */
@@ -67,7 +67,7 @@ export type BatchTransaction = {
 };
 
 /** "Approve USDC, then Swap": the calls in order, by label. */
-export function describeBatchCalls(calls: readonly Pick<BatchCall, "label">[]) {
+export function describeBatchCalls(calls: ReadonlyArray<Pick<BatchCall, "label">>) {
   return calls.map((call, i) => call.label ?? `Step ${i + 1}`).join(", then ");
 }
 

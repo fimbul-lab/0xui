@@ -40,13 +40,13 @@ export {
 // One bridge and one place to ask per page, however many AgentTools render:
 // the first one mounted registers the tools and asks the person.
 type Instance = { confirm: () => AgentConfirm | false };
-let instances: Instance[] = [];
+let instances: Array<Instance> = [];
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
 };
-const setInstances = (next: Instance[]) => {
+const setInstances = (next: Array<Instance>) => {
   instances = next;
   for (const listener of listeners) listener();
 };
@@ -78,7 +78,7 @@ export function getAgent(): Agent {
 
 export type UseAgentToolsOptions = {
   /** Your own tools, registered next to the wallet tools. */
-  tools?: AgentTool[];
+  tools?: Array<AgentTool>;
   /** Set to false to register nothing, e.g. until the person opts in. */
   enabled?: boolean;
   /**
@@ -89,7 +89,7 @@ export type UseAgentToolsOptions = {
   confirm?: AgentConfirm | false;
 };
 
-const noTools: AgentTool[] = [];
+const noTools: Array<AgentTool> = [];
 
 /**
  * Registers ui-sdk's `snapshot`, `act` and `query` for the page and the

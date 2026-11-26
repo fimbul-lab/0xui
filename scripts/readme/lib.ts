@@ -196,8 +196,8 @@ export function runs(
  */
 export class Timeline {
   private n = 0;
-  private motion: string[] = [];
-  private stillCss: string[] = [];
+  private motion: Array<string> = [];
+  private stillCss: Array<string> = [];
   constructor(
     readonly duration: number,
     readonly prefix: string,

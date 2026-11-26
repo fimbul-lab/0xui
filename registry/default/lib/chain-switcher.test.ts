@@ -8,7 +8,7 @@ describe("createChainSwitcher", () => {
     const config = createTestConfig();
     await connect(config, { connector: config.connectors[0]! });
     const switcher = createChainSwitcher(config);
-    const seen: (number | undefined)[] = [];
+    const seen: Array<number | undefined> = [];
     const stop = switcher.subscribe(() => seen.push(switcher.get().pendingChainId));
 
     expect(switcher.get().currentChain?.name).toBe("Ethereum");

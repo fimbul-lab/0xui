@@ -19,7 +19,7 @@ describe("createMessageSigner", () => {
     const config = signingConfig();
     await connect(config, { connector: config.connectors[0]! });
     const flow = createMessageSigner(config);
-    const phases: SignPhase[] = [];
+    const phases: Array<SignPhase> = [];
     const stop = flow.subscribe(() => phases.push(flow.get().phase));
     const onSigned = vi.fn();
 

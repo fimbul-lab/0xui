@@ -17,11 +17,11 @@ export type HistoryEntry = {
 
 const STORAGE_KEY = "0xui:transactions";
 const LIMIT = 50;
-const EMPTY: readonly HistoryEntry[] = [];
+const EMPTY: ReadonlyArray<HistoryEntry> = [];
 const listeners = new Set<() => void>();
-let cache: HistoryEntry[] | undefined;
+let cache: Array<HistoryEntry> | undefined;
 
-function load(): readonly HistoryEntry[] {
+function load(): ReadonlyArray<HistoryEntry> {
   if (cache) return cache;
   if (typeof localStorage === "undefined") return EMPTY;
   try {
@@ -32,7 +32,7 @@ function load(): readonly HistoryEntry[] {
   return cache!;
 }
 
-function save(entries: readonly HistoryEntry[]) {
+function save(entries: ReadonlyArray<HistoryEntry>) {
   cache = entries.slice(0, LIMIT);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
@@ -91,7 +91,10 @@ export function clearTransactionHistory() {
 }
 
 /** Entries sent by `from`, plus those with no sender. All of them when `from` is undefined. */
-export function filterTransactions(entries: readonly HistoryEntry[], from: Address | undefined) {
+export function filterTransactions(
+  entries: ReadonlyArray<HistoryEntry>,
+  from: Address | undefined,
+) {
   if (!from) return entries;
   const sender = from.toLowerCase();
   return entries.filter((e) => !e.from || e.from.toLowerCase() === sender);

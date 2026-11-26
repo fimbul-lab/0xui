@@ -79,12 +79,12 @@ export function useSwapQuote({
 
 export type SwapProps = {
   /** Tokens for both pickers. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Fetch a quote. Call your aggregator or router here. */
   getQuote: GetQuote;
   defaultSellToken?: Token;
   defaultBuyToken?: Token;
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Prices keyed by `chainId:address`, address or symbol, for fiat lines. */
   prices?: TokenPrices;
   onSubmitted?: (hash: Hash) => void;

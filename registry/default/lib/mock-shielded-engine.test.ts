@@ -33,7 +33,7 @@ const amountsOf = (engine: MockShieldedEngine, token: string = weth) =>
   engine.getBalances(1)?.find((balance) => balance.token === token)?.amounts;
 
 function recordSync(engine: MockShieldedEngine) {
-  const states: ShieldedSync[] = [];
+  const states: Array<ShieldedSync> = [];
   engine.subscribe("sync", () => states.push(engine.getSync(1)));
   return states;
 }
@@ -85,7 +85,7 @@ describe("account", () => {
 
   it("clears balances and scan state on lock, and tells listeners", async () => {
     const engine = await unlocked({ funds: [{ token: weth, amount: 5n }] });
-    const events: string[] = [];
+    const events: Array<string> = [];
     engine.subscribe("account", () => events.push("account"));
     engine.subscribe("balances", () => events.push("balances"));
     engine.subscribe("sync", () => events.push("sync"));
@@ -394,7 +394,7 @@ describe("prove", () => {
 
   it("reports the three stages in order and returns the operation", async () => {
     const engine = await unlocked({ funds });
-    const stages: ProofStage[] = [];
+    const stages: Array<ProofStage> = [];
     const operation = await engine.prove(draft, { onStage: (stage) => stages.push(stage) });
 
     expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
@@ -411,7 +411,7 @@ describe("prove", () => {
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan + 100);
 
     const time = async () => {
-      const stages: ProofStage[] = [];
+      const stages: Array<ProofStage> = [];
       let done = false;
       void engine.prove(draft, { onStage: (s) => stages.push(s) }).then(() => (done = true));
       await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.loadCircuits - 100);
@@ -432,7 +432,7 @@ describe("prove", () => {
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan + 100);
 
     const controller = new AbortController();
-    const stages: ProofStage[] = [];
+    const stages: Array<ProofStage> = [];
     const proof = engine.prove(draft, {
       onStage: (s) => stages.push(s),
       signal: controller.signal,

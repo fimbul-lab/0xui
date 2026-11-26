@@ -83,9 +83,9 @@ export type MockShieldedEngineOptions = {
   /** Password of the initial locked account. */
   password?: string;
   /** Chains scanned automatically after unlock. Other chains scan when `sync` is called. */
-  chains?: readonly number[];
+  chains?: ReadonlyArray<number>;
   /** Funds the account already holds. They show up after the first scan. */
-  funds?: readonly MockFunds[];
+  funds?: ReadonlyArray<MockFunds>;
   /** Pretend the circuit files are already downloaded, so the first proof is as fast as the rest. */
   circuitsCached?: boolean;
   /** Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. */
@@ -136,9 +136,9 @@ type Note = { token: Address; amount: bigint; state: ShieldedBalanceState; hash?
 
 type ChainState = {
   /** What the account really holds. Only a scan copies it into `balances`. */
-  notes: Note[];
+  notes: Array<Note>;
   sync: ShieldedSync;
-  balances: readonly ShieldedTokenBalance[] | undefined;
+  balances: ReadonlyArray<ShieldedTokenBalance> | undefined;
   /** Public transactions the last scan found, by lower-case hash. */
   transactions: Map<string, ShieldedTransaction>;
   /** A scan has finished at least once, so the next one is a short repeat scan. */
@@ -149,7 +149,7 @@ type ChainState = {
 
 type ScanStep = { stage: ShieldedSyncStage; progress: number };
 
-const ramp = (stage: ShieldedSyncStage, from: number, to: number, count: number): ScanStep[] =>
+const ramp = (stage: ShieldedSyncStage, from: number, to: number, count: number): Array<ScanStep> =>
   Array.from({ length: count }, (_, i) => ({
     stage,
     progress: from + ((to - from) * i) / (count - 1),
@@ -186,7 +186,7 @@ function mockAddress(seed: string) {
   return encodeBech32m("0zk", words);
 }
 
-function toBalances(notes: readonly Note[]): ShieldedTokenBalance[] {
+function toBalances(notes: ReadonlyArray<Note>): Array<ShieldedTokenBalance> {
   const byToken = new Map<
     string,
     { token: Address; amounts: Record<ShieldedBalanceState, bigint> }
@@ -206,7 +206,10 @@ function toBalances(notes: readonly Note[]): ShieldedTokenBalance[] {
   return [...byToken.values()];
 }
 
-function sameBalances(a: readonly ShieldedTokenBalance[], b: readonly ShieldedTokenBalance[]) {
+function sameBalances(
+  a: ReadonlyArray<ShieldedTokenBalance>,
+  b: ReadonlyArray<ShieldedTokenBalance>,
+) {
   return (
     a.length === b.length &&
     a.every(

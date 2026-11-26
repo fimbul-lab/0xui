@@ -20,11 +20,11 @@ export {
 
 export type SendProps = {
   /** Tokens the user can send. Pass one to lock the token. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Initially selected token. Defaults to the first in `tokens`. */
   defaultToken?: Token;
   /** Symbols or addresses for quick picks. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Prices keyed by `chainId:address`, address or symbol, for the fiat line. */
   prices?: TokenPrices;
   /** Called once the wallet returns a hash. */

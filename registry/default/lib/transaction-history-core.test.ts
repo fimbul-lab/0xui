@@ -36,7 +36,7 @@ describe("transactionHistory", () => {
   });
 
   it("filters by sender, keeping entries without one", () => {
-    const entries: HistoryEntry[] = [
+    const entries: Array<HistoryEntry> = [
       { hash, chainId: 1, from: me, submittedAt: 0, status: "pending" },
       {
         hash,

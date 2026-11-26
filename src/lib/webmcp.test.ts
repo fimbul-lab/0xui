@@ -98,7 +98,7 @@ test("every tool is read-only with a valid name", () => {
 });
 
 test("registers with document.modelContext and unregisters on abort", async () => {
-  const signals: AbortSignal[] = [];
+  const signals: Array<AbortSignal> = [];
   const allRegistered = Promise.withResolvers<void>();
   const registerTool = vi.fn(async (_tool: unknown, options: { signal: AbortSignal }) => {
     signals.push(options.signal);

@@ -15,10 +15,10 @@ type RegistryItem = {
   name: string;
   type: string;
   docs?: string;
-  registryDependencies?: string[];
-  files: { path: string; type: string }[];
+  registryDependencies?: Array<string>;
+  files: Array<{ path: string; type: string }>;
 };
-const registry: { items: RegistryItem[] } = JSON.parse(
+const registry: { items: Array<RegistryItem> } = JSON.parse(
   readFileSync(join(root, "registry.json"), "utf8"),
 );
 

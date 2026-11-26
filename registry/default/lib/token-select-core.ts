@@ -16,7 +16,7 @@ export const tokenKey = (token: Pick<TokenInfo, "address">) => token.address.toL
  * Search tokens by symbol, name or exact address. Symbol prefix matches
  * rank first, then other symbol matches, then name matches.
  */
-export function filterTokens(tokens: readonly TokenInfo[], query: string) {
+export function filterTokens(tokens: ReadonlyArray<TokenInfo>, query: string) {
   const q = query.trim().toLowerCase();
   if (!q) return [...tokens];
   if (/^0x[0-9a-f]{40}$/.test(q)) return tokens.filter((t) => tokenKey(t) === q);
@@ -41,7 +41,7 @@ export function filterTokens(tokens: readonly TokenInfo[], query: string) {
  * aren't compared: a billion airdropped tokens shouldn't outrank 2 ETH.
  */
 export function sortByHoldings(
-  tokens: readonly TokenInfo[],
+  tokens: ReadonlyArray<TokenInfo>,
   balances: ReadonlyMap<string, bigint>,
   prices: TokenPrices = {},
 ) {
@@ -73,7 +73,7 @@ export function toBalanceMap(balances: ReadonlyMap<string, bigint> | Record<stri
  */
 export function tokenBalancesQueryOptions(
   config: Config,
-  tokens: readonly TokenInfo[],
+  tokens: ReadonlyArray<TokenInfo>,
   { chainId, address, enabled = true }: { chainId?: number; address?: Address; enabled?: boolean },
 ) {
   const erc20 = tokens.filter((t) => !isNativeToken(t));
@@ -105,9 +105,9 @@ export function tokenBalancesQueryOptions(
 
 /** One map of lowercase token address to balance, from the two balance queries. Failed reads are left out. */
 export function mergeTokenBalances(
-  tokens: readonly TokenInfo[],
+  tokens: ReadonlyArray<TokenInfo>,
   native: { value: bigint } | null | undefined,
-  erc20: readonly { status: "success" | "failure"; result?: unknown }[] | undefined,
+  erc20: ReadonlyArray<{ status: "success" | "failure"; result?: unknown }> | undefined,
 ) {
   const map = new Map<string, bigint>();
   if (native) map.set(tokenKey({ address: NATIVE_TOKEN_ADDRESS }), native.value);
@@ -124,12 +124,12 @@ export function mergeTokenBalances(
  * addresses), each found among `tokens` and listed once.
  */
 export function quickPickTokens(
-  tokens: readonly TokenInfo[],
-  recent: readonly string[],
-  popular: readonly string[],
+  tokens: ReadonlyArray<TokenInfo>,
+  recent: ReadonlyArray<string>,
+  popular: ReadonlyArray<string>,
 ) {
   const wanted = [...recent, ...popular.map((p) => p.toLowerCase())];
-  const picked: TokenInfo[] = [];
+  const picked: Array<TokenInfo> = [];
   for (const w of wanted) {
     const token = tokens.find((t) => tokenKey(t) === w || t.symbol.toLowerCase() === w);
     if (token && !picked.includes(token)) picked.push(token);
@@ -141,7 +141,7 @@ const RECENT_LIMIT = 4;
 const recentKey = (chainId: number) => `0xui:recent-tokens:${chainId}`;
 
 /** Addresses of the tokens last picked on a chain, newest first. */
-export function readRecentTokens(chainId: number): string[] {
+export function readRecentTokens(chainId: number): Array<string> {
   try {
     return JSON.parse(localStorage.getItem(recentKey(chainId)) ?? "[]");
   } catch {

@@ -14,7 +14,7 @@ export type NftMetadata = {
   description?: string;
   image?: string;
   image_url?: string;
-  attributes?: { trait_type?: string; value?: unknown }[];
+  attributes?: Array<{ trait_type?: string; value?: unknown }>;
 };
 
 /** ERC-1155 URIs may contain `{id}`: the token id as 64 lowercase hex characters. */

@@ -37,7 +37,7 @@ const solana = {
   decimals: 6,
 };
 
-const list = (tokens: unknown[], name = "Test List") => ({
+const list = (tokens: Array<unknown>, name = "Test List") => ({
   name,
   timestamp: "2026-10-08T17:54:32.750Z",
   version: { major: 1, minor: 0, patch: 0 },

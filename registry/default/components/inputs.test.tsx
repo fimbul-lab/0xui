@@ -273,7 +273,7 @@ describe("TokenSelect", () => {
 
   it("pages through long lists", async () => {
     const user = userEvent.setup();
-    const many: Token[] = Array.from({ length: 7 }, (_, i) => ({
+    const many: Array<Token> = Array.from({ length: 7 }, (_, i) => ({
       chainId: 1,
       address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
       symbol: `T${i}`,
@@ -694,7 +694,7 @@ describe("agents", () => {
   });
 
   it("reaches tokens past the first page by searching", async () => {
-    const many: Token[] = Array.from({ length: 12 }, (_, i) => ({
+    const many: Array<Token> = Array.from({ length: 12 }, (_, i) => ({
       chainId: 1,
       address: `0x${String(i + 1).padStart(40, "0")}` as Address,
       symbol: `TK${i}`,

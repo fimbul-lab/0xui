@@ -109,7 +109,7 @@ describe("ApproveButton", () => {
       symbol: "USDT",
     };
     let allowance = parseUnits("5", 6);
-    const approved: bigint[] = [];
+    const approved: Array<bigint> = [];
     const chain = fakeChainRpc();
     const send = chain.eth_sendTransaction as (p: unknown) => unknown;
     const config = createTestConfig({
