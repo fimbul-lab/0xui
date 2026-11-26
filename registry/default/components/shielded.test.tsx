@@ -420,7 +420,7 @@ describe("ShieldedSyncStatus", () => {
     const labels = new Set<string>();
     while (engine.getSync(1).status === "syncing") {
       shown.push(bar());
-      labels.add(screen.getByRole("status").textContent!);
+      labels.add(screen.getByRole("status").textContent);
       await advance(500);
     }
 

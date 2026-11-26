@@ -88,7 +88,7 @@ describe("createShieldFlow", () => {
     await ready(flow);
     expect(shieldPhase(flow.get())).toBe("shielding");
     const { args } = decodeFunctionData({ abi: erc20Abi, data: sent[0]!.data! });
-    expect([String(args![0]).toLowerCase(), args![1]]).toEqual([
+    expect([String(args[0]).toLowerCase(), args[1]]).toEqual([
       MOCK_SHIELD_CONTRACT.toLowerCase(),
       amount,
     ]);

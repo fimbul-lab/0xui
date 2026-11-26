@@ -35,7 +35,7 @@ function offlineConfig() {
   const rpcFetch = globalThis.fetch;
   vi.stubGlobal("fetch", (url: string, init?: { body?: string }) =>
     typeof init?.body === "string"
-      ? rpcFetch(url, init as RequestInit)
+      ? rpcFetch(url, init)
       : Promise.reject(new Error(`Offline: ${url}`)),
   );
   return config;

@@ -422,16 +422,13 @@ export function shieldStepStates({
   active,
   index,
   stepPhase,
-}: Pick<ShieldFlowState, "active" | "index" | "stepPhase">) {
+}: Pick<ShieldFlowState, "active" | "index" | "stepPhase">): Array<{
+  kind: ShieldStepKind;
+  state: ShieldStepState;
+}> {
   return (active?.steps ?? []).map((kind, i) => ({
     kind,
-    state: (i < index
-      ? "done"
-      : i > index
-        ? "todo"
-        : stepPhase === "ready"
-          ? "ready"
-          : "active") as ShieldStepState,
+    state: i < index ? "done" : i > index ? "todo" : stepPhase === "ready" ? "ready" : "active",
   }));
 }
 

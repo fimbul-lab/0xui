@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { useState } from "react";
 import { parseEther, parseUnits } from "viem";
-import type { Address } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -435,7 +434,7 @@ describe("AddressInput", () => {
     const user = userEvent.setup();
     const onResolve = vi.fn();
     const config = createTestConfig({
-      rpc: { eth_call: ensResolveRpc({ "vitalik.eth": vitalik as Address }) },
+      rpc: { eth_call: ensResolveRpc({ "vitalik.eth": vitalik }) },
     });
     renderWithWagmi(<ControlledAddress onResolve={onResolve} />, { config });
 
@@ -701,7 +700,7 @@ describe("agents", () => {
   it("reaches tokens past the first page by searching", async () => {
     const many: Array<Token> = Array.from({ length: 12 }, (_, i) => ({
       chainId: 1,
-      address: `0x${String(i + 1).padStart(40, "0")}` as Address,
+      address: `0x${String(i + 1).padStart(40, "0")}`,
       symbol: `TK${i}`,
       name: `Token ${i}`,
       decimals: 18,

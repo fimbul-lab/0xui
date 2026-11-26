@@ -98,7 +98,7 @@ export function eventHistoryQueryOptions(
         chainId,
         fromBlock: latest - BigInt(blocks) + 1n,
         toBlock: latest,
-      } as never);
+      });
       return logs as Array<FeedEvent>;
     },
     enabled: blocks > 0,
@@ -138,7 +138,7 @@ export function createEventWatcher(
         store.set(({ events }) => ({
           events: [...(logs as Array<FeedEvent>), ...events].slice(0, keep),
         })),
-    } as never),
+    }),
   );
   return {
     get: store.get,

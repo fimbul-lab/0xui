@@ -113,9 +113,7 @@ async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
   return encodeFunctionResult({
     abi: multicall3Abi,
     functionName: "aggregate3",
-    result: results.map((r, i) =>
-      overrides[i] ? { success: true, returnData: overrides[i]! } : r,
-    ),
+    result: results.map((r, i) => (overrides[i] ? { success: true, returnData: overrides[i] } : r)),
   });
 }
 

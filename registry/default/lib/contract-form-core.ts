@@ -256,6 +256,6 @@ export function readFunctionMutationOptions(
         functionName: fn.name,
         args,
         chainId,
-      } as Parameters<typeof readContract>[1]) as Promise<unknown>,
+      }) as Promise<unknown>,
   };
 }

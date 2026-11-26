@@ -65,7 +65,7 @@ function groupChainsByNetwork(chains: ReadonlyArray<Chain>) {
   const testnet: Array<Chain> = [];
 
   chains.forEach((chain) => {
-    if ((chain as Chain & { testnet?: boolean }).testnet) {
+    if (chain.testnet) {
       testnet.push(chain);
     } else {
       mainnet.push(chain);

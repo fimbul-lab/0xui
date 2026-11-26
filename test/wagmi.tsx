@@ -52,7 +52,7 @@ function stubWalletRpc(rpc: RpcResponses) {
   vi.stubGlobal("fetch", async (url: string, init?: { body?: string }) => {
     // Not JSON-RPC (e.g. NFT metadata, data: URIs): use the real fetch.
     if (typeof init?.body !== "string") {
-      return realFetch(url, init as RequestInit);
+      return realFetch(url, init);
     }
     const { id, method, params } = JSON.parse(init.body);
     try {
@@ -279,7 +279,7 @@ export function erc20CallRpc({
     if (result === undefined) {
       throw new Error(`erc20 ${functionName} not mocked`);
     }
-    return encodeFunctionResult({ abi: erc20Abi, functionName, result } as never);
+    return encodeFunctionResult({ abi: erc20Abi, functionName, result });
   };
 }
 

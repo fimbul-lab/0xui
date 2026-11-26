@@ -18,7 +18,6 @@ import { useChainId, useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { TransactionButton } from "@/components/transaction-button";
-import type { ContractRequest } from "@/components/transaction-button";
 import {
   contractFunctions,
   formatAbiValue,
@@ -226,13 +225,13 @@ export function ContractFunction({
                   draft.blocker
                     ? undefined
                     : // The ABI is only known at runtime, so wagmi can't type-check this call.
-                      ({
+                      {
                         address,
                         abi: [fn],
                         functionName: fn.name,
                         args: draft.args,
                         value: draft.value ?? undefined,
-                      } as ContractRequest)
+                      }
                 }
                 disabledReason={
                   draft.blocker &&

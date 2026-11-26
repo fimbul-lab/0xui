@@ -753,7 +753,7 @@ describe("Shield", () => {
   /** Spender (lower case) and amount of an `approve` call. */
   const approveArgs = (tx: Sent) => {
     const { args } = decodeFunctionData({ abi: erc20Abi, data: tx.data as `0x${string}` });
-    return [String(args![0]).toLowerCase(), args![1]];
+    return [String(args[0]).toLowerCase(), args[1]];
   };
 
   const root = () => document.querySelector("[data-slot=shield]")!;
