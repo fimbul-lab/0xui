@@ -289,15 +289,16 @@ describe("ResponsiveDialog", () => {
   });
 
   it("follows drawerQuery in auto mode", async () => {
-    vi.spyOn(window, "matchMedia").mockImplementation(
-      (query) =>
-        ({
-          matches: query === "(max-width: 767px)",
-          media: query,
-          addEventListener: () => {},
-          removeEventListener: () => {},
-        }) as unknown as MediaQueryList,
-    );
+    vi.spyOn(window, "matchMedia").mockImplementation((query): MediaQueryList => ({
+      matches: query === "(max-width: 767px)",
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }));
     render(dialog({ drawerQuery: "(max-width: 767px)" }));
     expect(await screen.findByRole("dialog")).toHaveAttribute("data-presentation", "sheet");
   });

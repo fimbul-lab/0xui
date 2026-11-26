@@ -43,7 +43,7 @@ HTMLElement.prototype.hidePopover = function () {};
 Element.prototype.getAnimations = () => [];
 Element.prototype.scrollIntoView = function () {};
 Element.prototype.checkVisibility = () => true;
-Element.prototype.getClientRects = () => [] as unknown as DOMRectList;
+Element.prototype.getClientRects = () => Object.assign([], { item: () => null });
 document.elementFromPoint = () => null;
 document.elementsFromPoint = () => [];
 document.head.append(
@@ -51,14 +51,15 @@ document.head.append(
     textContent: "[popover] { display: block !important }",
   }),
 );
-globalThis.IntersectionObserver ??= class {
-  root = null;
-  rootMargin = "";
-  thresholds = [];
+globalThis.IntersectionObserver ??= class implements IntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly scrollMargin = "";
+  readonly thresholds: ReadonlyArray<number> = [];
   observe() {}
   unobserve() {}
   disconnect() {}
   takeRecords() {
     return [];
   }
-} as unknown as typeof IntersectionObserver;
+};
