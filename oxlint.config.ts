@@ -32,7 +32,6 @@ export default defineConfig({
     "no-console": "off",
     "no-promise-executor-return": "off",
     "no-undef": "off",
-    "no-useless-assignment": "off",
     "quality/no-array-filter-map": "off",
     "quality/no-chained-type-assertions": "off",
     "quality/no-known-value-widening": "off",

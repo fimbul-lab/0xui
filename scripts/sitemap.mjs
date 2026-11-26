@@ -26,7 +26,8 @@ const git = (/** @type {string[]} */ ...args) =>
 function commitDates() {
   /** @type {Map<string, string>} */
   const dates = new Map();
-  let log = "";
+  /** @type {string} */
+  let log;
   try {
     const shallow = () => git("rev-parse", "--is-shallow-repository").trim() === "true";
     if (shallow()) {
