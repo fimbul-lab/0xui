@@ -101,7 +101,7 @@ export function tokenBalancesQueryOptions(
           address: token.address,
           abi: erc20Abi,
           functionName: "balanceOf" as const,
-          args: [address!] as const,
+          args: [address] as const,
           chainId,
         })),
         query: { enabled: enabled && Boolean(address) && erc20.length > 0 },

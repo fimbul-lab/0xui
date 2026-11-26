@@ -209,7 +209,7 @@ function demoWallet() {
             }
             if (args.method === "wallet_getCallsStatus") {
               const [id] = args.params as [Hex];
-              const txs = (demoBatches.get(id) ?? []).map((hash) => demoTxs.get(hash)!);
+              const txs = (demoBatches.get(id) ?? []).flatMap((hash) => demoTxs.get(hash) ?? []);
               const mined = txs.length > 0 && txs.every(isMined);
               return {
                 version: "2.0.0",

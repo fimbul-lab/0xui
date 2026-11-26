@@ -76,11 +76,15 @@ const markdown = markdownPath(id);
   // The fetch goes inside the ClipboardItem so Safari still counts the click
   // as the user gesture that allows the write.
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-markdown]")) {
-    const label = button.querySelector("[data-label]")!;
-    const status = button.querySelector("[data-status]")!;
+    const label = button.querySelector("[data-label]");
+    const status = button.querySelector("[data-status]");
+    const markdown = button.dataset.markdown;
+    if (!label || !status || !markdown) {
+      continue;
+    }
     let reset: ReturnType<typeof setTimeout>;
     button.addEventListener("click", async () => {
-      const text = fetch(button.dataset.markdown!).then((response) => response.text());
+      const text = fetch(markdown).then((response) => response.text());
       try {
         if (typeof ClipboardItem === "function") {
           await navigator.clipboard.write([

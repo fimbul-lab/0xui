@@ -51,7 +51,13 @@ export function tokenBalanceQueryOptions(
     ...readContractsQueryOptions(config, {
       allowFailure: false,
       contracts: [
-        { address: token, abi: erc20Abi, functionName: "balanceOf", args: [address!], chainId },
+        {
+          address: token,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: address ? [address] : undefined,
+          chainId,
+        },
         { address: token, abi: erc20Abi, functionName: "decimals", chainId },
         { address: token, abi: erc20Abi, functionName: "symbol", chainId },
       ],

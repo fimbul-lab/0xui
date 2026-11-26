@@ -71,7 +71,9 @@ export function swapQuoteQueryOptions({
       taker,
     ] as const,
     queryFn: () =>
-      getQuote({ sellToken: sellToken!, buyToken: buyToken!, sellAmount: sellAmount!, taker }),
+      sellToken && buyToken && sellAmount !== undefined
+        ? getQuote({ sellToken, buyToken, sellAmount, taker })
+        : Promise.reject(new Error("Pick both tokens and an amount to quote.")),
     enabled: Boolean(sellToken && buyToken && sellAmount && sellAmount > 0n),
     refetchInterval: refreshInterval,
     retry: false,

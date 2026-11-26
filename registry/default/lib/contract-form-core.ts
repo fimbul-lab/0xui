@@ -17,15 +17,15 @@ function intBounds(type: string) {
 
 /** Turn an already-parsed JSON value into the shape viem expects for `param`. */
 function coerce(param: AbiParameter, value: unknown): unknown {
-  const array = param.type.match(/^(.*)\[(\d*)\]$/);
-  if (array) {
+  const [, itemType, length] = param.type.match(/^(.*)\[(\d*)\]$/) ?? [];
+  if (itemType !== undefined) {
     if (!Array.isArray(value)) {
       throw new Error("Expected a JSON array");
     }
-    if (array[2] && value.length !== Number(array[2])) {
-      throw new Error(`Expected ${array[2]} items`);
+    if (length && value.length !== Number(length)) {
+      throw new Error(`Expected ${length} items`);
     }
-    return value.map((item) => coerce({ ...param, type: array[1]! }, item));
+    return value.map((item) => coerce({ ...param, type: itemType }, item));
   }
   if (param.type === "tuple") {
     const components = (param as { components: ReadonlyArray<AbiParameter> }).components;
@@ -195,12 +195,12 @@ export function functionCallDraft(
       value = null;
     }
   }
-  const blocker =
-    firstError >= 0
-      ? `Check ${fn.inputs[firstError]!.name || `argument ${firstError + 1}`}`
-      : value === null
-        ? "Check the ETH value"
-        : undefined;
+  const errorInput = fn.inputs[firstError];
+  const blocker = errorInput
+    ? `Check ${errorInput.name || `argument ${firstError + 1}`}`
+    : value === null
+      ? "Check the ETH value"
+      : undefined;
   return { args: parsed.map((p) => p.value), errors: parsed.map((p) => p.error), value, blocker };
 }
 

@@ -199,7 +199,10 @@ export function createBatchTransaction(
           });
           store.set({ phase: "pending" });
           // viem resolves a reverted receipt; wagmi's action would throw instead.
-          const receipt = await client!.waitForTransactionReceipt({ hash });
+          if (!client) {
+            throw new Error(`Chain ${chainId} is not in the wagmi config.`);
+          }
+          const receipt = await client.waitForTransactionReceipt({ hash });
           if (receipt.status === "reverted") {
             return store.set({ phase: "reverted" });
           }

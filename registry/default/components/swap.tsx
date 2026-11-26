@@ -278,10 +278,10 @@ export function Swap({
         )}
       </div>
 
-      {needsApproval ? (
+      {needsApproval && quote?.spender ? (
         <ApproveButton
           token={sellToken}
-          spender={quote!.spender!}
+          spender={quote.spender}
           amount={sellAmount}
           chainId={sellToken.chainId}
           className="w-full [&>button]:h-11 [&>button]:w-full"

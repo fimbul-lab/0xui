@@ -429,7 +429,9 @@ export function Shield({
     draft,
     quote,
     onSubmitted: (hash, shield) => {
-      setSent({ hash, ...started.current!, quote: shield.quote });
+      if (started.current) {
+        setSent({ hash, ...started.current, quote: shield.quote });
+      }
       setFollowing(true);
       setAmountText("");
       setAmount(undefined);
@@ -440,7 +442,8 @@ export function Shield({
   const connected = flow.wallet.connected;
   const wrongChain = connected && flow.wallet.chainId !== chainId;
   const chainName = chains.find((c) => c.id === chainId)?.name ?? "the right network";
-  const running = flow.active !== undefined;
+  const active = flow.active;
+  const running = active !== undefined;
   const shown = started.current;
   const phase = flow.phase;
 
@@ -462,9 +465,9 @@ export function Shield({
       ? () => setConnectOpen(true)
       : form.action === "switch"
         ? () => void flow.switchChain(chainId)
-        : form.action === "start"
+        : form.action === "start" && token
           ? () => {
-              started.current = { amountText, token: token! };
+              started.current = { amountText, token };
               flow.start();
             }
           : undefined;
@@ -566,8 +569,8 @@ export function Shield({
             {input}
           </div>
           <ShieldQuoteRows
-            quote={running ? flow.active!.quote : quote}
-            amount={running ? flow.active!.draft.amount : draft?.amount}
+            quote={running ? active.quote : quote}
+            amount={running ? active.draft.amount : draft?.amount}
             token={running ? shown?.token : token}
             // Space is held for the quote, so nothing below shifts as it arrives.
             className={cn("transition-opacity duration-200", !running && !quote && "opacity-50")}
@@ -643,7 +646,7 @@ export function Shield({
               <ShieldSummary
                 amountText={shown.amountText}
                 token={shown.token}
-                received={flow.active!.quote.received}
+                received={active.quote.received}
                 onEdit={flow.leave}
                 editDisabled={flow.busy}
               />

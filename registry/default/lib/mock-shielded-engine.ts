@@ -215,11 +215,14 @@ function sameBalances(
 ) {
   return (
     a.length === b.length &&
-    a.every(
-      (balance, i) =>
-        balance.token === b[i]!.token &&
-        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === b[i]!.amounts[state]),
-    )
+    a.every((balance, i) => {
+      const other = b[i];
+      return (
+        other !== undefined &&
+        balance.token === other.token &&
+        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === other.amounts[state])
+      );
+    })
   );
 }
 
@@ -310,7 +313,7 @@ export function createMockShieldedEngine({
       }
       const onAbort = () => {
         clearTimeout(timer);
-        reject(signal!.reason);
+        reject(signal?.reason);
       };
       const timer = setTimeout(() => {
         signal?.removeEventListener("abort", onAbort);

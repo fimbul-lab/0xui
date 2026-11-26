@@ -250,7 +250,8 @@ export function shieldQuoteQueryOptions(
       draft?.token,
       draft?.amount.toString(),
     ],
-    queryFn: () => engine.quoteShield(draft!),
+    queryFn: () =>
+      draft ? engine.quoteShield(draft) : Promise.reject(new Error("Nothing to quote yet.")),
     enabled: Boolean(enabled && draft && draft.amount > 0n),
     staleTime: 30_000,
     retry: false,
@@ -271,7 +272,7 @@ export function shieldAllowanceQueryOptions(
       address: draft?.token,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [owner!, spender!],
+      args: owner && spender ? [owner, spender] : undefined,
       chainId: draft?.chainId,
       query: { enabled: Boolean(draft && spender && owner) },
     }),
@@ -343,7 +344,7 @@ export function planShield({
   return {
     steps: shieldSteps({
       needsSignature: quote.needsSignature,
-      needsApproval: Boolean(quote.spender) && allowance! < draft.amount,
+      needsApproval: Boolean(quote.spender) && allowance !== undefined && allowance < draft.amount,
       needsReset: Boolean(allowance) && requiresAllowanceReset(draft.chainId, draft.token),
       atomic,
     }),
@@ -526,21 +527,29 @@ export function createShieldFlow(
     const live = () => run === id;
     const { draft, quote } = flow;
     const { chainId, token, amount } = draft;
-    const kind = flow.steps[at]!;
+    const kind = flow.steps[at];
+    if (kind === undefined) {
+      return;
+    }
 
     // Built once per flow. If the engine needs a signature, this is where the wallet asks.
     const prepare = async () =>
       (prepared ??= await engine.prepareShield(draft, {
         sign: (message) => signMessage(config, { message }),
       }));
-    const approval = (value: bigint): PublicCall => ({
-      to: token,
-      data: encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [quote.spender!, value],
-      }),
-    });
+    const approval = (value: bigint): PublicCall => {
+      if (!quote.spender) {
+        throw new Error("This shield has no spender to approve.");
+      }
+      return {
+        to: token,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [quote.spender, value],
+        }),
+      };
+    };
 
     store.set({ problem: undefined, stepPhase: "wallet" });
     try {
@@ -555,9 +564,11 @@ export function createShieldFlow(
         if (live()) {
           store.set({ stepPhase: "pending" });
         }
-        const receipt = await getPublicClient(config, { chainId })!.waitForTransactionReceipt({
-          hash: sent,
-        });
+        const client = getPublicClient(config, { chainId });
+        if (!client) {
+          throw new Error(`Chain ${chainId} is not in the wagmi config.`);
+        }
+        const receipt = await client.waitForTransactionReceipt({ hash: sent });
         if (receipt.status === "reverted") {
           throw new Error("The approval reverted. Nothing changed except the gas fee.");
         }

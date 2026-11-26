@@ -82,14 +82,14 @@ export function BlockNumber({
       />
       {phase === "error" ? (
         <span>RPC unavailable</span>
-      ) : formatted === undefined ? (
+      ) : blockNumber === undefined || formatted === undefined ? (
         <span>
           {/* About the width of "21,000,000". */}
           <SkeletonBox width="10ch" height="1em" style={inlineBox} />
           <span className="sr-only">Loading block…</span>
         </span>
       ) : explorer ? (
-        <ExplorerLink block={blockNumber!} chainId={chainId} icon={false}>
+        <ExplorerLink block={blockNumber} chainId={chainId} icon={false}>
           <span className="sr-only">Block </span>
           <MorphText>{formatted}</MorphText>
         </ExplorerLink>

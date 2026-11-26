@@ -87,7 +87,8 @@ export function nftMetadataQueryOptions({
 }) {
   return {
     queryKey: ["0xui", "nft-metadata", uri, gateway] as const,
-    queryFn: () => fetchNftMetadata(uri!, gateway),
+    queryFn: () =>
+      uri ? fetchNftMetadata(uri, gateway) : Promise.reject(new Error("No token URI to fetch.")),
     enabled: Boolean(uri),
     staleTime: Number.POSITIVE_INFINITY,
     retry: 1,

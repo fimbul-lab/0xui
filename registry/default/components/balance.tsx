@@ -123,11 +123,15 @@ export function Balance({
     );
   }
 
+  if (value === undefined || decimals === undefined) {
+    return null;
+  }
+
   return (
     <span data-slot="balance" data-phase={phase} className={cn("inline-flex", className)}>
       <TokenAmount
-        value={value!}
-        decimals={decimals!}
+        value={value}
+        decimals={decimals}
         symbol={symbolProp ?? symbol}
         animate={animate}
         {...format}

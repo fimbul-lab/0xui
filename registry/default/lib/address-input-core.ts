@@ -197,7 +197,7 @@ export function addressInputMessage(state: AddressInputState, value: string, sho
     return `Private address ${truncateAddress(state.shieldedAddress, { start: 9, end: 6 })}`;
   }
   if (state.phase === "valid" && state.ensName) {
-    return value.includes(".") ? truncateAddress(state.address!) : state.ensName;
+    return value.includes(".") && state.address ? truncateAddress(state.address) : state.ensName;
   }
   if (state.phase === "resolving") {
     return `Looking up ${state.ensName}…`;

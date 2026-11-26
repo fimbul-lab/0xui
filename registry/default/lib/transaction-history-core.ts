@@ -28,12 +28,14 @@ function load(): ReadonlyArray<HistoryEntry> {
   if (typeof localStorage === "undefined") {
     return EMPTY;
   }
+  let entries: Array<HistoryEntry>;
   try {
-    cache = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    entries = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
   } catch {
-    cache = [];
+    entries = [];
   }
-  return cache!;
+  cache = entries;
+  return entries;
 }
 
 function save(entries: ReadonlyArray<HistoryEntry>) {

@@ -56,7 +56,13 @@ export function Send({
 }: SendProps) {
   const [recipientText, setRecipientText] = useState("");
   const [recipient, setRecipient] = useState<AddressInputState>();
-  const [token, setToken] = useState<Token>(defaultToken ?? tokens[0]!);
+  const [token, setToken] = useState<Token>(() => {
+    const initial = defaultToken ?? tokens[0];
+    if (!initial) {
+      throw new Error("Send needs at least one token.");
+    }
+    return initial;
+  });
   const [amountText, setAmountText] = useState("");
   const [amount, setAmount] = useState<TokenInputState>();
   const [hash, setHash] = useState<Hash>();
