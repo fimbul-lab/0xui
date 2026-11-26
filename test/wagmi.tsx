@@ -227,7 +227,7 @@ export function erc20CallRpc({
   decimals?: number;
   symbol?: string;
 } = {}) {
-  const value = <T,>(v: T | (() => T)) => (typeof v === "function" ? (v as () => T)() : v);
+  const value = (v: bigint | (() => bigint)) => (typeof v === "function" ? v() : v);
   return ([{ data }]: EthCall) => {
     const { functionName } = decodeFunctionData({ abi: erc20Abi, data });
     const result =

@@ -36,6 +36,17 @@ function parseRpcRequest(request: unknown) {
   };
 }
 
+/** The JSON-RPC error for what a canned response threw, e.g. `{ code: 4001 }`. */
+function rpcError(error: unknown) {
+  const fields = typeof error === "object" && error !== null ? error : {};
+  return {
+    code: "code" in fields && typeof fields.code === "number" ? fields.code : -32_603,
+    message:
+      "message" in fields && typeof fields.message === "string" ? fields.message : String(error),
+    data: "data" in fields ? fields.data : undefined,
+  };
+}
+
 const nodes: Array<RpcResponses> = [];
 
 /**
@@ -55,12 +66,7 @@ export const rpcNodes = http.post<{ node: string }>(
       const result = await respond(rpc, method, params);
       return HttpResponse.json({ jsonrpc: "2.0", id, result });
     } catch (error) {
-      const {
-        code = -32_603,
-        message = String(error),
-        data,
-      } = error as { code?: number; message?: string; data?: unknown };
-      return HttpResponse.json({ jsonrpc: "2.0", id, error: { code, message, data } });
+      return HttpResponse.json({ jsonrpc: "2.0", id, error: rpcError(error) });
     }
   },
 );

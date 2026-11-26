@@ -29,7 +29,7 @@ export function provideModelContext() {
   Object.defineProperty(document, "modelContext", { value: modelContext, configurable: true });
   onTestFinished(() => {
     // oxlint-disable-next-line landmines/no-test-doubles -- removes the WebMCP added above
-    delete (document as { modelContext?: unknown }).modelContext;
+    Reflect.deleteProperty(document, "modelContext");
   });
 
   return {
