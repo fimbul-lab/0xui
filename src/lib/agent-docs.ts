@@ -35,11 +35,16 @@ export function markdownPath(id: string) {
 export function docSections(docs: Array<DocPage>): Array<DocSection> {
   const byId = new Map(docs.map((doc) => [doc.id, doc]));
   const pick = (ids: Array<string>) =>
-    ids.map((id) => byId.get(id)).filter((doc): doc is DocPage => Boolean(doc));
+    ids.flatMap((id) => {
+      const doc = byId.get(id);
+      return doc ? [doc] : [];
+    });
   const names = (section: string) =>
-    docs
-      .filter((doc) => doc.id.startsWith(`${section}/`) && !unlistedPages.has(doc.id))
-      .map((doc) => doc.id.slice(section.length + 1));
+    docs.flatMap((doc) =>
+      doc.id.startsWith(`${section}/`) && !unlistedPages.has(doc.id)
+        ? [doc.id.slice(section.length + 1)]
+        : [],
+    );
 
   return [
     { title: "Getting started", pages: pick(gettingStarted.map((item) => item.slug)) },

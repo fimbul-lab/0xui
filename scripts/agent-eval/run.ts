@@ -570,19 +570,20 @@ function summary(results: Array<Result>, o: Options) {
     return `| ${r.task} | ${yn(r.pass)} | ${yn(c.build.pass)} | ${yn(c.items.pass)} | ${yn(c.forbid.pass)} | ${yn(c.required.pass)} | ${r.agent.skillUsed ? "yes" : "no"} | ${r.agent.toolCalls} | ${r.agent.turns ?? "–"} | ${money(r.agent.costUsd)} | ${mins(r.agent.wallMs)} |`;
   });
   const passed = results.filter((r) => r.pass).length;
-  const failures = results
-    .filter((r) => !r.pass)
-    .map((r) => {
-      const bad = Object.entries(r.checks)
-        .filter(([, c]) => !c.pass)
-        .map(([k, c]) => `- ${k}: ${k === "build" ? "see build.log" : c.detail}`);
-      const agentNote = r.agent.timedOut
-        ? ["- agent timed out"]
-        : r.agent.exitCode !== 0
-          ? [`- agent exited ${r.agent.exitCode}`]
-          : [];
-      return [`### ${r.task}`, ...agentNote, ...bad].join("\n");
-    });
+  const failures = results.flatMap((r) => {
+    if (r.pass) {
+      return [];
+    }
+    const bad = Object.entries(r.checks)
+      .filter(([, c]) => !c.pass)
+      .map(([k, c]) => `- ${k}: ${k === "build" ? "see build.log" : c.detail}`);
+    const agentNote = r.agent.timedOut
+      ? ["- agent timed out"]
+      : r.agent.exitCode !== 0
+        ? [`- agent exited ${r.agent.exitCode}`]
+        : [];
+    return [[`### ${r.task}`, ...agentNote, ...bad].join("\n")];
+  });
   return [
     `## 0xui agent eval: ${passed}/${results.length} passed`,
     "",

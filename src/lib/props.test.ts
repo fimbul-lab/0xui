@@ -81,8 +81,9 @@ function undocumented(section: PropsSection, props: Array<PropDoc>) {
   return props
     .filter((prop) => !listed.has(prop.name) && prop.name !== "className")
     .filter((prop) => !prop.package && !prop.attribute)
-    .filter((prop) => !prop.from || !section.acceptsText.includes(normalize(prop.from)))
-    .map((prop) => prop.name);
+    .flatMap((prop) =>
+      !prop.from || !section.acceptsText.includes(normalize(prop.from)) ? [prop.name] : [],
+    );
 }
 
 const literal = /^(["'\d[{-]|true$|false$|null$)/;
