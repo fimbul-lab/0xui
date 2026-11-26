@@ -26,7 +26,6 @@ export default defineConfig({
     // Temporarily off while adopting @cloudflare/oxlint-config. Each gets its own
     // commit: fixed and turned on, or kept off with the reason.
     "no-console": "off",
-    "no-undef": "off",
     "quality/no-array-filter-map": "off",
     "quality/no-chained-type-assertions": "off",
     "quality/no-known-value-widening": "off",
@@ -85,6 +84,11 @@ export default defineConfig({
         "vitest/require-mock-type-parameters": "off",
         "vitest/require-to-throw-message": "off",
       },
+    },
+    {
+      // Astro components get `Astro` and `Fragment` as globals.
+      files: ["**/*.astro"],
+      env: { astro: true },
     },
   ],
 });
