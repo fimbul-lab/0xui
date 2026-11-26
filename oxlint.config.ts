@@ -28,7 +28,6 @@ export default defineConfig({
     "@nkzw/no-instanceof": "off",
     "@nkzw/require-use-effect-arguments": "off",
     "import/namespace": "off",
-    "import/no-namespace": "off",
     "no-console": "off",
     "no-promise-executor-return": "off",
     "no-undef": "off",

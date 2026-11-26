@@ -4,7 +4,7 @@
 // so a banner renders the same on GitHub (where an <img> SVG cannot load
 // fonts) as it does on 0xui.io, and a card renders without installed fonts.
 import { createRequire } from "node:module";
-import * as fontkit from "fontkit";
+import { openSync } from "fontkit";
 
 // Resolved like an import rather than by relative path, so this also works
 // from the bundle Astro builds the social card endpoint into.
@@ -21,7 +21,7 @@ const instances: Record<string, any> = {};
 function font(family: Family, weight: number) {
   const key = `${family}-${weight}`;
   if (!instances[key]) {
-    base[family] ??= fontkit.openSync(files[family]);
+    base[family] ??= openSync(files[family]);
     instances[key] = base[family].getVariation({ wght: weight });
   }
   return instances[key];
