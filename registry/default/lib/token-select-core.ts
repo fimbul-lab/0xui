@@ -68,9 +68,13 @@ export function sortByHoldings(
     .map((t) => t.token);
 }
 
+const isBalanceMap = (
+  balances: ReadonlyMap<string, bigint> | Record<string, bigint>,
+): balances is ReadonlyMap<string, bigint> => balances instanceof Map;
+
 /** Caller-supplied balances, keyed by lowercase address. */
 export function toBalanceMap(balances: ReadonlyMap<string, bigint> | Record<string, bigint>) {
-  const entries = balances instanceof Map ? [...balances] : Object.entries(balances);
+  const entries = isBalanceMap(balances) ? [...balances] : Object.entries(balances);
   return new Map(entries.map(([address, value]) => [address.toLowerCase(), value]));
 }
 

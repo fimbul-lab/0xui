@@ -74,9 +74,12 @@ const byValue = (a: PortfolioRow, b: PortfolioRow) =>
 /** Balances from your own source, keyed by token address in any case. */
 export type PortfolioBalances = ReadonlyMap<string, bigint> | Record<string, bigint>;
 
+const isBalanceMap = (balances: PortfolioBalances): balances is ReadonlyMap<string, bigint> =>
+  balances instanceof Map;
+
 /** Balances keyed by lowercase address. */
 export function normalizeBalances(balances: PortfolioBalances): Map<string, bigint> {
-  const entries = balances instanceof Map ? [...balances] : Object.entries(balances);
+  const entries = isBalanceMap(balances) ? [...balances] : Object.entries(balances);
   return new Map(entries.map(([key, value]) => [key.toLowerCase(), value]));
 }
 

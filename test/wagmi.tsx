@@ -34,12 +34,16 @@ export const testAccounts = [
  */
 export type RpcResponses = Record<string, unknown>;
 
+/** A canned response that is a function: it's called with the request's params. */
+const isHandler = (response: unknown): response is (params: unknown) => unknown =>
+  typeof response === "function";
+
 async function respond(rpc: RpcResponses, method: string, params: unknown) {
   if (!(method in rpc)) {
     throw new Error(`RPC method not mocked: ${method}`);
   }
   const response = rpc[method];
-  return typeof response === "function" ? response(params) : response;
+  return isHandler(response) ? response(params) : response;
 }
 
 /**
