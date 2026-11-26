@@ -47,7 +47,6 @@ export default defineConfig({
     "typescript/no-import-type-side-effects": "off",
     "typescript/no-misused-promises": "off",
     "typescript/no-unsafe-argument": "off",
-    "typescript/no-unsafe-assignment": "off",
     "typescript/no-unsafe-return": "off",
     "typescript/no-unsafe-type-assertion": "off",
     "typescript/use-unknown-in-catch-callback-variable": "off",

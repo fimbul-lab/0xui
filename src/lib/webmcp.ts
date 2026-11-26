@@ -183,7 +183,10 @@ export function docsTools({
         if (!/^[a-z0-9-]+$/.test(name)) {
           throw new Error(`"${name}" isn't a registry item name.`);
         }
-        const item = JSON.parse(await read(`/r/${name}.json`));
+        const item: unknown = JSON.parse(await read(`/r/${name}.json`));
+        if (typeof item !== "object" || item === null) {
+          throw new Error(`/r/${name}.json isn't a registry item.`);
+        }
         return { install: `npx shadcn@latest add @0xui/${name}`, ...item };
       },
     },

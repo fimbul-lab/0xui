@@ -252,7 +252,7 @@ function demoWallet() {
 function demoTransport(chain: Chain) {
   const rpc = http()({ chain, retryCount: 1 });
   return custom({
-    async request({ method, params }) {
+    async request({ method, params }: { method: string; params?: unknown }) {
       const hash = (params as [Hex] | undefined)?.[0];
       const tx = typeof hash === "string" ? demoTxs.get(hash) : undefined;
 

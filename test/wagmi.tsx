@@ -46,6 +46,24 @@ async function respond(rpc: RpcResponses, method: string, params: unknown) {
   return isHandler(response) ? response(params) : response;
 }
 
+/** The id, method and params of a JSON-RPC request body. */
+function parseRpcRequest(body: string) {
+  const request: unknown = JSON.parse(body);
+  if (
+    typeof request !== "object" ||
+    request === null ||
+    !("method" in request) ||
+    typeof request.method !== "string"
+  ) {
+    throw new Error(`Not a JSON-RPC request: ${body}`);
+  }
+  return {
+    id: "id" in request ? request.id : undefined,
+    method: request.method,
+    params: "params" in request ? request.params : undefined,
+  };
+}
+
 /**
  * The mock connector forwards wallet methods it doesn't handle (e.g.
  * eth_sendTransaction) to the chain's RPC URL with fetch. Answer those from
@@ -58,7 +76,7 @@ function stubWalletRpc(rpc: RpcResponses) {
     if (typeof init?.body !== "string") {
       return realFetch(url, init);
     }
-    const { id, method, params } = JSON.parse(init.body);
+    const { id, method, params } = parseRpcRequest(init.body);
     try {
       const result = await respond(rpc, method, params);
       return Response.json({ jsonrpc: "2.0", id, result });
