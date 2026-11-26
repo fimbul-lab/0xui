@@ -86,6 +86,18 @@ describe("account", () => {
     expect(imported).not.toBe(other.account.address());
   });
 
+  it("can refuse the next import only", async () => {
+    const engine = instant({ account: "none" });
+    engine.simulate.failNextImport();
+    await expect(engine.account.import(MOCK_MNEMONIC, "pw")).rejects.toThrow(
+      "That recovery phrase isn't valid.",
+    );
+    expect(engine.account.status()).toBe("none");
+
+    await engine.account.import(MOCK_MNEMONIC, "pw");
+    expect(engine.account.status()).toBe("unlocked");
+  });
+
   it("clears balances and scan state on lock, and tells listeners", async () => {
     const engine = await unlocked({ funds: [{ token: weth, amount: 5n }] });
     const events: Array<string> = [];
@@ -311,10 +323,14 @@ describe("shielding through the interface", () => {
 
   it("asks the wallet for one signature and returns a call for it to send", async () => {
     const engine = await unlocked();
-    const sign = vi.fn().mockResolvedValue("0x1234");
+    const asked: Array<string> = [];
+    const sign = async (message: string) => {
+      asked.push(message);
+      return "0x1234" as const;
+    };
     const prepared = await engine.prepareShield(draft, { sign });
 
-    expect(sign).toHaveBeenCalledExactlyOnceWith(MOCK_SHIELD_MESSAGE);
+    expect(asked).toEqual([MOCK_SHIELD_MESSAGE]);
     expect(prepared.transaction).toMatchObject({ to: MOCK_SHIELD_CONTRACT, value: 0n });
     expect(prepared.transaction.data).toMatch(/^0x[0-9a-f]{128}$/);
     // Preparing moves nothing.
@@ -342,6 +358,23 @@ describe("shielding through the interface", () => {
       "Unlock the private account",
     );
     expect(sign).not.toHaveBeenCalled();
+  });
+
+  it("can fail the next shield before asking for a signature", async () => {
+    const engine = await unlocked();
+    engine.simulate.failNextShield("This token can't be shielded.");
+    const asked: Array<string> = [];
+    const sign = async (message: string) => {
+      asked.push(message);
+      return "0x1234" as const;
+    };
+    await expect(engine.prepareShield(draft, { sign })).rejects.toThrow(
+      "This token can't be shielded.",
+    );
+    expect(asked).toEqual([]);
+
+    await engine.prepareShield(draft, { sign });
+    expect(asked).toEqual([MOCK_SHIELD_MESSAGE]);
   });
 
   it("reports a shield by its public hash only once a scan has found it", async () => {

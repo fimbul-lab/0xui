@@ -225,9 +225,7 @@ describe("ShieldedAccount", () => {
   it("shows why an import failed and keeps the form", async () => {
     const user = userEvent.setup();
     const engine = createMockShieldedEngine({ account: "none", speed: Infinity });
-    vi.spyOn(engine.account, "import").mockRejectedValue(
-      new Error("That recovery phrase isn't valid."),
-    );
+    engine.simulate.failNextImport("That recovery phrase isn't valid.");
     render(withEngine(<ShieldedAccount />, engine));
 
     await user.click(screen.getByRole("button", { name: "Import a recovery phrase instead" }));
@@ -1064,7 +1062,7 @@ describe("Shield", () => {
 
   it("shows why the engine couldn't build the shield", async () => {
     const { user, engine } = await setup(walletConfig());
-    vi.spyOn(engine, "prepareShield").mockRejectedValue(new Error("This token can't be shielded."));
+    engine.simulate.failNextShield("This token can't be shielded.");
 
     await user.click(await button("Shield TKN"));
     expect(await screen.findByRole("alert")).toHaveTextContent("This token can't be shielded.");

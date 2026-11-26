@@ -127,6 +127,10 @@ export type MockSimulate = {
   failNextProof(message?: string): void;
   /** The next `retryProofs` call rejects. */
   failNextRetry(message?: string): void;
+  /** The next `account.import` rejects, as a real engine does for a phrase that fails its checksum. */
+  failNextImport(message?: string): void;
+  /** The next `prepareShield` rejects before asking for a signature, as for a token the protocol can't shield. */
+  failNextShield(message?: string): void;
   /** While on, `retryProofs` finishes but the funds stay `incomplete`. */
   keepIncomplete(keep?: boolean): void;
 };
@@ -284,6 +288,8 @@ export function createMockShieldedEngine({
   let keepIncomplete = false;
   let nextProofFailure: string | undefined;
   let nextRetryFailure: string | undefined;
+  let nextImportFailure: string | undefined;
+  let nextShieldFailure: string | undefined;
 
   const chainStates = new Map<number, ChainState>();
   function chainOf(chainId: number) {
@@ -467,6 +473,11 @@ export function createMockShieldedEngine({
           throw new Error("A recovery phrase has 12 or 24 words.");
         }
         requirePassword(newPassword);
+        const failure = nextImportFailure;
+        nextImportFailure = undefined;
+        if (failure !== undefined) {
+          throw new Error(failure);
+        }
         await setAccount(words.join(" "), newPassword);
       },
       async unlock(attempt) {
@@ -523,6 +534,11 @@ export function createMockShieldedEngine({
       requireUnlocked();
       if (draft.amount <= 0n) {
         throw new Error("Enter an amount.");
+      }
+      const failure = nextShieldFailure;
+      nextShieldFailure = undefined;
+      if (failure !== undefined) {
+        throw new Error(failure);
       }
       // A real engine turns this signature into a one-off key. The mock only asks for it.
       if (shieldSignature) {
@@ -665,6 +681,12 @@ export function createMockShieldedEngine({
       },
       failNextRetry(message = "Couldn't generate the missing proofs.") {
         nextRetryFailure = message;
+      },
+      failNextImport(message = "That recovery phrase isn't valid.") {
+        nextImportFailure = message;
+      },
+      failNextShield(message = "Couldn't build the shield transaction.") {
+        nextShieldFailure = message;
       },
       keepIncomplete(keep = true) {
         keepIncomplete = keep;

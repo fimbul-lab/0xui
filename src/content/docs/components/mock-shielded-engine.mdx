@@ -86,6 +86,8 @@ Measured against the Railgun SDK on Sepolia, except where marked as a guess.
 | `failNextSync(message?)`                     | The next scan stops a third of the way in with an error.                                                                    |
 | `failNextProof(message?)`                    | The next proof fails while proving.                                                                                         |
 | `failNextRetry(message?)`                    | The next `retryProofs` rejects.                                                                                             |
+| `failNextImport(message?)`                   | The next `account.import` rejects, as for a phrase that fails its checksum.                                                 |
+| `failNextShield(message?)`                   | The next `prepareShield` rejects before asking for a signature, as for a token the protocol can't shield.                   |
 | `keepIncomplete(keep?)`                      | While on, `retryProofs` finishes but changes nothing.                                                                       |
 
 `shield` and `unshield` resolve with `{ fee, received }`. Pass `hash` to `shield` (or to `addFunds`, or a `funds` entry) and `getTransaction` reports on that public transaction. This is how the [Shield](/blocks/shield/) block's demo tells the mock that the shield was sent.
