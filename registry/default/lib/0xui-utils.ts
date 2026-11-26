@@ -69,7 +69,7 @@ export function formatTokenAmount(
  * truncated. Returns `undefined` for empty or invalid input.
  */
 export function parseAmount(input: string, decimals: number) {
-  let text = input.replace(/[\s$€£¥_']/g, "");
+  let text = input.replaceAll(/[\s$€£¥_']/g, "");
   if (!text) return undefined;
 
   const lastComma = text.lastIndexOf(",");

@@ -42,7 +42,7 @@ interface RegistryItemFiles {
 const root = process.cwd();
 
 export function componentName(item: string) {
-  return item.replace(/(^|-)([a-z0-9])/g, (_, _dash, char: string) => char.toUpperCase());
+  return item.replaceAll(/(^|-)([a-z0-9])/g, (_, _dash, char: string) => char.toUpperCase());
 }
 
 let cached: ts.Program | undefined;

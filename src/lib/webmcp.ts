@@ -39,16 +39,16 @@ interface IndexEntry {
 
 const stripTags = (html: string) =>
   html
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replaceAll(/<[^>]+>/g, "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'");
 
 /** The page id in a docs or Markdown URL, like `components/balance`. */
 function pageId(url: string) {
-  return new URL(url, "https://0xui.io").pathname.replace(/^\/|\/$|\.md$/g, "");
+  return new URL(url, "https://0xui.io").pathname.replaceAll(/^\/|\/$|\.md$/g, "");
 }
 
 export function docsTools({
@@ -75,7 +75,7 @@ export function docsTools({
     return (
       all.find((entry) => entry.id === wanted) ??
       all.find((entry) => entry.id.split("/").pop() === wanted) ??
-      all.find((entry) => entry.title.toLowerCase() === wanted.replace(/-/g, " "))
+      all.find((entry) => entry.title.toLowerCase() === wanted.replaceAll("-", " "))
     );
   }
 

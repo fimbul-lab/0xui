@@ -33,7 +33,7 @@ export interface OgPage {
 }
 
 const escape = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
 /** Greedy word wrap to `width`, at most `max` lines. The last line ends in "…" if cut. */
 function wrap(str: string, width: number, max: number, o: TextOptions): Array<string> {

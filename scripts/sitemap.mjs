@@ -51,7 +51,7 @@ function commitDates() {
 
 /** Docs id of a page URL, like `components/balance`. The landing page is `index`. */
 const idOf = (/** @type {string} */ url) =>
-  new URL(url).pathname.replace(/^\/|\/$/g, "") || "index";
+  new URL(url).pathname.replaceAll(/^\/|\/$/g, "") || "index";
 
 export function sitemapOptions() {
   const dates = commitDates();

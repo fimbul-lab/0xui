@@ -62,8 +62,8 @@ export function parseAbiInput(param: AbiParameter, raw: string): ParsedAbiInput 
     if (type === "string") return { value: raw };
     if (!text) return { error: "Required" };
     if (/^u?int\d*$/.test(type)) {
-      if (!/^-?\d+$/.test(text.replace(/_/g, ""))) return { error: "Whole number" };
-      const value = BigInt(text.replace(/_/g, ""));
+      if (!/^-?\d+$/.test(text.replaceAll("_", ""))) return { error: "Whole number" };
+      const value = BigInt(text.replaceAll("_", ""));
       const { min, max } = intBounds(type);
       if (value < min || value > max) return { error: `Out of range for ${type}` };
       return { value };

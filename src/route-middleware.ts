@@ -24,7 +24,7 @@ function jsonLd(head: Head, data: unknown) {
     tag: "script",
     attrs: { type: "application/ld+json" },
     // Written into the page as is, so a "<" must not be able to end the script.
-    content: JSON.stringify(data).replace(/</g, "\\u003c"),
+    content: JSON.stringify(data).replaceAll("<", "\\u003c"),
   });
 }
 

@@ -7,7 +7,7 @@ import { parseAmount } from "@/lib/0xui-utils";
  * point, turns a leading "." into "0.", and refuses digits beyond `decimals`.
  */
 export function sanitizeAmountInput(raw: string, decimals: number) {
-  const text = raw.replace(/,/g, ".").replace(/\s/g, "");
+  const text = raw.replaceAll(",", ".").replaceAll(/\s/g, "");
   if (text === "") return "";
   if (!/^\d*\.?\d*$/.test(text)) return undefined;
   const [, fraction = ""] = text.split(".");

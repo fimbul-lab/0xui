@@ -23,7 +23,7 @@ interface PropsSection {
   acceptsText: string;
 }
 
-const normalize = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
+const normalize = (text: string) => text.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
 const backticked = (text: string) => [...text.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
 // Splits on pipes that aren't escaped, like the one in `"a" \| "b"`.
 const cells = (line: string) =>
@@ -82,7 +82,7 @@ function undocumented(section: PropsSection, props: Array<PropDoc>) {
 
 const literal = /^(["'\d[{-]|true$|false$|null$)/;
 const sameValue = (a: string, b: string) =>
-  a.replace(/'/g, '"').replace(/\s/g, "") === b.replace(/'/g, '"').replace(/\s/g, "");
+  a.replaceAll("'", '"').replaceAll(/\s/g, "") === b.replaceAll("'", '"').replaceAll(/\s/g, "");
 
 /** Rows whose Default cell is a literal, like `"auto"`, that the code's default disagrees with. */
 function defaultMismatches(section: PropsSection, props: Array<PropDoc>) {

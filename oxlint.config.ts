@@ -65,7 +65,6 @@ export default defineConfig({
     "unicorn/prefer-set-has": "off",
     "unicorn/prefer-single-call": "off",
     "unicorn/prefer-string-raw": "off",
-    "unicorn/prefer-string-replace-all": "off",
     "unicorn/prefer-top-level-await": "off",
     // Temporarily off: the test rewrite onto real implementations turns it on.
     "landmines/no-test-doubles": "off",

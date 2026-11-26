@@ -81,7 +81,7 @@ function attribute(tag: string, name: string) {
 
 /** Turns a docs link like `/components/token-amount/#props` into its Markdown URL. */
 function rewriteLinks(line: string) {
-  return line.replace(
+  return line.replaceAll(
     /\]\(\/((?:getting-started|components|blocks)(?:\/[a-z0-9-]+)?)\/?(#[^)]*)?\)/g,
     (_, id: string, hash = "") => `](${markdownUrl(id)}${hash})`,
   );
@@ -148,7 +148,7 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
 
   return out
     .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
+    .replaceAll(/\n{3,}/g, "\n\n")
     .trim();
 }
 

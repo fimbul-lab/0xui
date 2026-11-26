@@ -189,7 +189,7 @@ type ContentBlock = { type: string; id?: string; name?: string; input?: Record<s
 function summarizeTool(b: ContentBlock) {
   const i = b.input ?? {};
   const detail = i.command ?? i.file_path ?? i.skill ?? i.url ?? i.pattern ?? "";
-  return `${b.name} ${String(detail).replace(/\s+/g, " ").slice(0, 120)}`;
+  return `${b.name} ${String(detail).replaceAll(/\s+/g, " ").slice(0, 120)}`;
 }
 
 function parseTranscript(lines: Array<string>): Transcript {
