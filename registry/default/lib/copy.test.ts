@@ -1,32 +1,33 @@
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCopier } from "./copy";
 
 describe("createCopier", () => {
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
   it("copies and resets after the timeout without any framework", async () => {
     vi.useFakeTimers();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    // Gives jsdom an in-memory clipboard.
+    userEvent.setup();
     const copier = createCopier({ timeout: 1000 });
     const seen: Array<boolean> = [];
     const stop = copier.subscribe(() => seen.push(copier.get().copied));
 
     expect(await copier.copy("0xabc")).toBe(true);
-    expect(writeText).toHaveBeenCalledWith("0xabc");
     expect(copier.get().copied).toBe(true);
     vi.advanceTimersByTime(1000);
     expect(seen).toEqual([true, false]);
     stop();
+
+    // jsdom's FileReader, which reading the clipboard uses, needs real timers.
+    vi.useRealTimers();
+    expect(await navigator.clipboard.readText()).toBe("0xabc");
   });
 
-  it("returns false when the clipboard is denied", async () => {
-    vi.stubGlobal("navigator", {
-      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
-    });
+  it("returns false without a clipboard", async () => {
+    expect(navigator.clipboard).toBeUndefined();
     const copier = createCopier();
     expect(await copier.copy("0xabc")).toBe(false);
     expect(copier.get().copied).toBe(false);
@@ -34,7 +35,7 @@ describe("createCopier", () => {
 
   it("stops its timer when the last listener leaves", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    userEvent.setup();
     const copier = createCopier({ timeout: 1000 });
     const stop = copier.subscribe(() => {});
     await copier.copy("0xabc");

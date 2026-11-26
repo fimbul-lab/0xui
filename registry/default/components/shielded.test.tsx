@@ -1,4 +1,5 @@
 import { act, render, renderHook, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import type { ReactElement, ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -76,9 +77,7 @@ afterEach(() => vi.useRealTimers());
 
 describe("ShieldedProvider", () => {
   it("fails loudly without a provider", () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => renderHook(() => useShieldedEngine())).toThrow("inside <ShieldedProvider>");
-    error.mockRestore();
   });
 
   it("follows the account as it unlocks and locks", async () => {
@@ -121,12 +120,12 @@ describe("ShieldedAddress", () => {
   });
 
   it("copies the full address", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    // Gives jsdom an in-memory clipboard.
+    userEvent.setup();
     render(<ShieldedAddress address={address} />);
 
     await click(screen.getByRole("button", { name: "Copy private address" }));
-    expect(writeText).toHaveBeenCalledWith(address);
+    expect(await navigator.clipboard.readText()).toBe(address);
     expect(screen.getByRole("status")).toHaveTextContent("Copied");
   });
 

@@ -1,7 +1,9 @@
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { parseUnits } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { emulateMedia } from "../../../test/media";
 import { createTestConfig, renderWithWagmi } from "../../../test/wagmi";
 import { Address } from "./address";
 import { AddressAvatar, addressGradient } from "./address-avatar";
@@ -19,32 +21,28 @@ import { TokenIcon } from "./token-icon";
 const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 
 afterEach(() => {
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 describe("CopyButton", () => {
   it("copies, confirms, and announces", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    // Gives jsdom an in-memory clipboard.
+    userEvent.setup();
     const onCopy = vi.fn();
     renderWithWagmi(<CopyButton value="0xabc" label="Copy address" onCopy={onCopy} />);
 
-    // Not userEvent: it replaces navigator.clipboard with its own stub.
     await act(async () => {
       screen.getByRole("button", { name: "Copy address" }).click();
     });
 
-    expect(writeText).toHaveBeenCalledWith("0xabc");
+    expect(await navigator.clipboard.readText()).toBe("0xabc");
     expect(onCopy).toHaveBeenCalledWith("0xabc");
     expect(screen.getByRole("status")).toHaveTextContent("Copied");
     expect(screen.getByRole("button")).toHaveAttribute("data-copied");
   });
 
-  it("does not report a copy the clipboard refused", async () => {
-    vi.stubGlobal("navigator", {
-      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
-    });
+  it("does not report a copy without a clipboard", async () => {
+    expect(navigator.clipboard).toBeUndefined();
     const onCopy = vi.fn();
     renderWithWagmi(<CopyButton value="0xabc" onCopy={onCopy} />);
 
@@ -289,15 +287,7 @@ describe("ResponsiveDialog", () => {
   });
 
   it("follows drawerQuery in auto mode", async () => {
-    vi.spyOn(window, "matchMedia").mockImplementation(
-      (query) =>
-        ({
-          matches: query === "(max-width: 767px)",
-          media: query,
-          addEventListener: () => {},
-          removeEventListener: () => {},
-        }) as unknown as MediaQueryList,
-    );
+    emulateMedia({ width: 390 });
     render(dialog({ drawerQuery: "(max-width: 767px)" }));
     expect(await screen.findByRole("dialog")).toHaveAttribute("data-presentation", "sheet");
   });
@@ -331,8 +321,7 @@ describe("agent", () => {
 
   it("tells several addresses' copy buttons apart, and copies one", async () => {
     const other = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    userEvent.setup();
     renderWithWagmi(
       <>
         <Address address={vitalik} ens={false} />
@@ -347,7 +336,7 @@ describe("agent", () => {
       steps: [{ ref: "Copy address 0x71C7…976F", action: "press" }],
     });
     expect(result.ok, result.error?.message).toBe(true);
-    expect(writeText).toHaveBeenCalledWith(other);
+    expect(await navigator.clipboard.readText()).toBe(other);
   });
 
   it("adds no unnamed entries for display components", () => {

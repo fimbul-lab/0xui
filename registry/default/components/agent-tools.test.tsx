@@ -1,7 +1,9 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { parseEther, parseUnits } from "viem";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WagmiProvider } from "wagmi";
+import { provideModelContext } from "../../../test/webmcp";
+import type { RegisteredTool } from "../../../test/webmcp";
 import {
   connectMock,
   createTestConfig,
@@ -191,29 +193,12 @@ describe("agentPermissions", () => {
   });
 });
 
-type Registered = Omit<AgentTool, "execute"> & { execute: (input: object) => Promise<any> };
-
 describe("AgentTools", () => {
-  let tools: Map<string, Registered>;
+  let tools: Map<string, RegisteredTool>;
   let signals: Array<AbortSignal>;
 
   beforeEach(() => {
-    tools = new Map();
-    signals = [];
-    Object.defineProperty(document, "modelContext", {
-      value: {
-        registerTool: async (t: Registered, options: { signal: AbortSignal }) => {
-          tools.set(t.name, t);
-          signals.push(options.signal);
-          options.signal.addEventListener("abort", () => tools.delete(t.name));
-        },
-      },
-      configurable: true,
-    });
-  });
-
-  afterEach(() => {
-    delete (document as { modelContext?: unknown }).modelContext;
+    ({ tools, signals } = provideModelContext());
   });
 
   const send = { to: testAccounts[1], value: parseEther("0.1") };

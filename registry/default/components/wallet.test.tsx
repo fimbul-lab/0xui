@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { encodeErrorResult, encodeFunctionResult, erc20Abi, parseAbi, parseEther } from "viem";
 import { describe, expect, it, vi } from "vitest";
+import { emulateMedia } from "../../../test/media";
 import {
   connectMock,
   createTestConfig,
@@ -72,24 +73,8 @@ describe("ConnectWallet", () => {
 
   it("opens as a sheet on a small touch screen and still connects", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query.includes("pointer: coarse"),
-      media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    }));
-    // jsdom has neither; ui-sdk's sheet uses them to track and animate its snap points.
-    vi.stubGlobal(
-      "IntersectionObserver",
-      class {
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-        takeRecords() {
-          return [];
-        }
-      },
-    );
+    emulateMedia({ width: 390, pointer: "coarse", hover: "none" });
+    // jsdom lacks it; ui-sdk's sheet uses it to animate its snap points.
     Element.prototype.animate = (() => ({
       finished: Promise.resolve(),
       cancel() {},

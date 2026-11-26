@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { detachClipboardStubFromView } from "@testing-library/user-event/dist/esm/utils/dataTransfer/Clipboard.js";
+import { afterAll, afterEach, beforeAll } from "vitest";
+import { installMatchMedia, resetMedia } from "./media";
 import { server } from "./msw";
 
 beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
@@ -9,13 +11,17 @@ afterAll(() => server.close());
 afterEach(() => {
   cleanup();
   server.resetHandlers();
-  vi.unstubAllGlobals();
+  resetMedia();
+  // userEvent.setup() gives navigator.clipboard an in-memory clipboard, which
+  // jsdom lacks. Take it away so each test starts without one.
+  detachClipboardStubFromView(window);
   localStorage.clear();
   // ui-sdk's screen reader announcer lives on <body>, outside what cleanup() unmounts.
   document.querySelectorAll("[data-ui-sdk-announcer]").forEach((el) => el.remove());
 });
 
 // Base UI (floating-ui) and React use these browser APIs that jsdom does not implement.
+// oxlint-disable-next-line landmines/no-test-doubles -- jsdom lacks ResizeObserver
 globalThis.ResizeObserver ??= class {
   observe() {}
   unobserve() {}
@@ -24,17 +30,7 @@ globalThis.ResizeObserver ??= class {
 Element.prototype.scrollIntoView ??= () => {};
 Element.prototype.hasPointerCapture ??= () => false;
 Element.prototype.releasePointerCapture ??= () => {};
-window.matchMedia ??= (query: string) =>
-  ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  }) as MediaQueryList;
+installMatchMedia();
 
 declare global {
   var __UI_SDK_STRICT__: boolean | undefined;
@@ -56,6 +52,8 @@ document.head.append(
     textContent: "[popover] { display: block !important }",
   }),
 );
+// ui-sdk's sheet tracks its snap points with it.
+// oxlint-disable-next-line landmines/no-test-doubles -- jsdom lacks IntersectionObserver
 globalThis.IntersectionObserver ??= class {
   root = null;
   rootMargin = "";
