@@ -128,7 +128,11 @@ export function formatAbiValue(value: unknown): string {
   if (typeof value === "string" || typeof value === "boolean") {
     return String(value);
   }
-  return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2);
+  return JSON.stringify(
+    value,
+    (_key: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v),
+    2,
+  );
 }
 
 /** View and pure functions only read. */
@@ -214,7 +218,9 @@ function formatArgInline(value: unknown) {
   if (typeof value === "bigint" || typeof value === "string" || typeof value === "boolean") {
     return String(value);
   }
-  return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v));
+  return JSON.stringify(value, (_key: string, v: unknown) =>
+    typeof v === "bigint" ? v.toString() : v,
+  );
 }
 
 /**

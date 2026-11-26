@@ -108,7 +108,11 @@ export function SignMessage({
     typeof message === "string"
       ? message
       : typedData
-        ? JSON.stringify(typedData.message, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2)
+        ? JSON.stringify(
+            typedData.message,
+            (_key: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v),
+            2,
+          )
         : undefined;
 
   return (
