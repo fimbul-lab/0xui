@@ -455,7 +455,9 @@ async function runTask(
               }
             }
           }
-        } catch {}
+        } catch {
+          // Not every line is a JSON event: the live log just skips those.
+        }
       },
     },
   );

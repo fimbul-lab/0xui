@@ -30,7 +30,6 @@ export default defineConfig({
     "import/namespace": "off",
     "import/no-namespace": "off",
     "no-console": "off",
-    "no-empty": "off",
     "no-promise-executor-return": "off",
     "no-undef": "off",
     "no-useless-assignment": "off",

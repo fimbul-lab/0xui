@@ -166,13 +166,17 @@ function demoWallet() {
         const result = await wallet.connect(params);
         try {
           localStorage.setItem(CONNECTED_FLAG, "1");
-        } catch {}
+        } catch {
+          // Storage is blocked: the wallet just won't reconnect on the next page.
+        }
         return result;
       },
       async disconnect() {
         try {
           localStorage.removeItem(CONNECTED_FLAG);
-        } catch {}
+        } catch {
+          // Storage is blocked, so there is no flag to clear.
+        }
         return wallet.disconnect();
       },
       async isAuthorized() {
