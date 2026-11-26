@@ -11,8 +11,8 @@ import {
   parseEther,
   parseUnits,
   toHex,
-  type Address,
 } from "viem";
+import type { Address } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -27,12 +27,15 @@ import {
 import { BatchTransaction } from "./batch-transaction";
 import { ContractForm, formatAbiValue, parseAbiInput } from "./contract-form";
 import { EnsProfile } from "./ens-profile";
-import { EventFeed, formatEventArg, type FeedEvent } from "./event-feed";
+import { EventFeed, formatEventArg } from "./event-feed";
+import type { FeedEvent } from "./event-feed";
 import { NftCard, expandTokenUri, resolveUri } from "./nft-card";
 import { Portfolio } from "./portfolio";
 import { Send, sendBlocker, sendRequest } from "./send";
-import { Swap, formatRate, type GetQuote } from "./swap";
-import { NATIVE_TOKEN_ADDRESS, type Token } from "./token-select";
+import { Swap, formatRate } from "./swap";
+import type { GetQuote } from "./swap";
+import { NATIVE_TOKEN_ADDRESS } from "./token-select";
+import type { Token } from "./token-select";
 import {
   TransactionHistory,
   clearTransactionHistory,

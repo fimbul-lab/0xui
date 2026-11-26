@@ -1,16 +1,17 @@
 // Docs: https://0xui.io/components/mock-shielded-engine.md
-import { encodeAbiParameters, type Address, type Hash } from "viem";
+import { encodeAbiParameters } from "viem";
+import type { Address, Hash } from "viem";
 import { encodeBech32m } from "@/lib/0xui-utils";
-import {
-  SHIELDED_BALANCE_STATES,
-  type ShieldedAccountStatus,
-  type ShieldedTokenBalance,
-  type ShieldedBalanceState,
-  type ShieldedEngine,
-  type ShieldedEvent,
-  type ShieldedSync,
-  type ShieldedSyncStage,
-  type ShieldedTransaction,
+import { SHIELDED_BALANCE_STATES } from "@/lib/shielded-engine";
+import type {
+  ShieldedAccountStatus,
+  ShieldedTokenBalance,
+  ShieldedBalanceState,
+  ShieldedEngine,
+  ShieldedEvent,
+  ShieldedSync,
+  ShieldedSyncStage,
+  ShieldedTransaction,
 } from "@/lib/shielded-engine";
 
 /**

@@ -1,4 +1,5 @@
-import { getConnection, switchChain, watchConnection, type Config } from "@wagmi/core";
+import { getConnection, switchChain, watchConnection } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Chain } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";

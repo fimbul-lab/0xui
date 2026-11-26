@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  type HistoryEntry,
   clearTransactionHistory,
   entryStatus,
   filterTransactions,
@@ -9,6 +8,7 @@ import {
   transactionHistory,
   updateTransaction,
 } from "./transaction-history-core";
+import type { HistoryEntry } from "./transaction-history-core";
 
 const hash = `0x${"ab".repeat(32)}` as const;
 const me = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" as const;

@@ -3,14 +3,8 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import registry from "../../registry.json";
 import { isUnlistedItem, unlistedPages } from "../docs-nav.mjs";
-import {
-  docSections,
-  llmsTxt,
-  markdownPath,
-  mdxToMarkdown,
-  pageMarkdown,
-  type DocPage,
-} from "./agent-docs";
+import { docSections, llmsTxt, markdownPath, mdxToMarkdown, pageMarkdown } from "./agent-docs";
+import type { DocPage } from "./agent-docs";
 
 const root = join(process.cwd(), "src/content/docs");
 

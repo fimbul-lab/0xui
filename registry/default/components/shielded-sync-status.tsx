@@ -4,14 +4,10 @@ import { CheckIcon, Loader2Icon, RefreshCwIcon, TriangleAlertIcon } from "lucide
 import { useMemo } from "react";
 import { Button } from "@/components/primitives/button";
 import { useShieldedEngine, useShieldedStore } from "@/components/shielded-provider";
-import { SHIELDED_SYNC_STAGES, type ShieldedSyncStage } from "@/lib/shielded-engine";
-import {
-  advanceSync,
-  createShieldedSync,
-  serverSync,
-  type ShieldedSyncPhase,
-  type ShieldedSyncView,
-} from "@/lib/shielded-sync";
+import { SHIELDED_SYNC_STAGES } from "@/lib/shielded-engine";
+import type { ShieldedSyncStage } from "@/lib/shielded-engine";
+import { advanceSync, createShieldedSync, serverSync } from "@/lib/shielded-sync";
+import type { ShieldedSyncPhase, ShieldedSyncView } from "@/lib/shielded-sync";
 import { cn } from "@/lib/utils";
 
 export { advanceSync, type ShieldedSyncPhase, type ShieldedSyncView };

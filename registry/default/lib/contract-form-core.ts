@@ -1,16 +1,7 @@
-import { readContract, type Config } from "@wagmi/core";
-import {
-  formatEther,
-  getAddress,
-  isAddress,
-  isHex,
-  parseEther,
-  size,
-  type Abi,
-  type AbiFunction,
-  type AbiParameter,
-  type Address,
-} from "viem";
+import { readContract } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
+import { formatEther, getAddress, isAddress, isHex, parseEther, size } from "viem";
+import type { Abi, AbiFunction, AbiParameter, Address } from "viem";
 
 export type ParsedAbiInput =
   | { value: unknown; error?: undefined }

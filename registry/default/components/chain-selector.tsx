@@ -16,11 +16,13 @@ import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/primitives/tabs
 import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
 import { cn } from "@/lib/utils";
 import { CheckIcon, ChevronDownIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
-import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
-import { type Chain } from "viem";
+import type { Chain } from "viem";
 import { useConfig } from "wagmi";
-import { ChainIcon, type ChainIconProps } from "@/components/chain-badge";
+import { ChainIcon } from "@/components/chain-badge";
+import type { ChainIconProps } from "@/components/chain-badge";
 import { MorphText } from "@/components/morph-text";
 import { useMounted } from "@/hooks/use-mounted";
 import { useStore } from "@/hooks/use-store";

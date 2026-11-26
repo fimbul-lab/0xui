@@ -2,7 +2,8 @@
 import { ExternalLinkIcon } from "lucide-react";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
 import { useChainId, useChains } from "wagmi";
-import { getExplorerUrl, type ExplorerTarget } from "@/lib/0xui-utils";
+import { getExplorerUrl } from "@/lib/0xui-utils";
+import type { ExplorerTarget } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type ExplorerLinkProps = Omit<ComponentProps<"a">, "href" | "children"> &

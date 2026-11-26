@@ -1,5 +1,6 @@
 import type { APIRoute, GetStaticPaths } from "astro";
-import { pageMarkdown, type DocPage } from "@/lib/agent-docs";
+import { pageMarkdown } from "@/lib/agent-docs";
+import type { DocPage } from "@/lib/agent-docs";
 import { loadDocs, registryItems, text } from "@/lib/load-docs";
 
 export const getStaticPaths = (async () => {

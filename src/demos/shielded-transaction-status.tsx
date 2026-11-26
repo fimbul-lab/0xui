@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { parseEther, type Hash } from "viem";
+import { parseEther } from "viem";
+import type { Hash } from "viem";
 import { ShieldedTransactionStatus } from "@/components/shielded-transaction-status";
 import { TransactionButton } from "@/components/transaction-button";
 import { MOCK_SHIELD_CONTRACT } from "@/lib/mock-shielded-engine";

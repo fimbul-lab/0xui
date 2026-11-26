@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/shielded-transaction-status.md
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { Hash } from "viem";
 import { useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
@@ -18,8 +19,8 @@ import {
   shieldedTxSteps,
   spendableAt as standbyEnd,
   standbyBlockQueryOptions,
-  type ShieldedTxStatusPhase,
 } from "@/lib/shielded-transaction-status-core";
+import type { ShieldedTxStatusPhase } from "@/lib/shielded-transaction-status-core";
 import { cn } from "@/lib/utils";
 
 export { formatWait, shieldedStatusText, type ShieldedTxStatusPhase };

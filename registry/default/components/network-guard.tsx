@@ -1,12 +1,14 @@
 // Docs: https://0xui.io/components/network-guard.md
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { useConfig } from "wagmi";
 import { Button } from "@/components/primitives/button";
 import { useMounted } from "@/hooks/use-mounted";
 import { useStore } from "@/hooks/use-store";
 import { errorCode } from "@/lib/0xui-utils";
-import { createNetworkGuard, type NetworkGuardPhase } from "@/lib/network-guard-core";
+import { createNetworkGuard } from "@/lib/network-guard-core";
+import type { NetworkGuardPhase } from "@/lib/network-guard-core";
 import { cn } from "@/lib/utils";
 
 export type { NetworkGuardPhase };

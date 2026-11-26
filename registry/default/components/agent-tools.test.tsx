@@ -12,14 +12,8 @@ import {
   renderWithWagmi,
   testAccounts,
 } from "../../../test/wagmi";
-import {
-  AgentTools,
-  agentPermissions,
-  getAgent,
-  walletAgentTools,
-  type AgentConfirm,
-  type AgentTool,
-} from "./agent-tools";
+import { AgentTools, agentPermissions, getAgent, walletAgentTools } from "./agent-tools";
+import type { AgentConfirm, AgentTool } from "./agent-tools";
 import { TransactionButton } from "./transaction-button";
 
 const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";

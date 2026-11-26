@@ -1,5 +1,6 @@
 import { readContract } from "@wagmi/core";
-import { decodeFunctionData, erc20Abi, parseUnits, type Address, type Hash } from "viem";
+import { decodeFunctionData, erc20Abi, parseUnits } from "viem";
+import type { Address, Hash } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -19,8 +20,8 @@ import {
   shieldStepConfirmText,
   shieldStepLabel,
   shieldStepStates,
-  type ShieldFlow,
 } from "./shield-core";
+import type { ShieldFlow } from "./shield-core";
 
 const token: Address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const amount = parseUnits("2", 18);

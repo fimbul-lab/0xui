@@ -1,4 +1,5 @@
-import { getPublicClient, type Config } from "@wagmi/core";
+import { getPublicClient } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import { getTransactionConfirmationsQueryOptions, hashFn } from "@wagmi/core/query";
 import type { Hash, TransactionReceipt } from "viem";
 

@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/account.md
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, LogOutIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useConfig } from "wagmi";
 import { AddressAvatar } from "@/components/address-avatar";
 import { Balance } from "@/components/balance";

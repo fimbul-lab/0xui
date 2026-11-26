@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/proof-progress.md
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/primitives/button";
 import { useShieldedEngine } from "@/components/shielded-provider";
 import { useStore } from "@/hooks/use-store";
@@ -11,11 +12,10 @@ import {
   proofHeadings,
   proofStageMeta,
   proofStepStates,
-  type ProofCallbacks,
-  type ProofPhase,
-  type ProofStepState,
 } from "@/lib/proof-progress-core";
-import { PROOF_STAGES, type ProofStage } from "@/lib/shielded-engine";
+import type { ProofCallbacks, ProofPhase, ProofStepState } from "@/lib/proof-progress-core";
+import { PROOF_STAGES } from "@/lib/shielded-engine";
+import type { ProofStage } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
 
 export { proofStageMeta, proofStepStates, type ProofPhase, type ProofStepState };

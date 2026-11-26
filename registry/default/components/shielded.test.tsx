@@ -4,18 +4,16 @@ import type { ReactElement, ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { parseEther, parseUnits } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  MOCK_TIMINGS,
-  createMockShieldedEngine,
-  type MockShieldedEngine,
-} from "../lib/mock-shielded-engine";
+import { MOCK_TIMINGS, createMockShieldedEngine } from "../lib/mock-shielded-engine";
+import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
 import type { ShieldedSync } from "../lib/shielded-engine";
 import { PrivacyBadge } from "./privacy-badge";
 import { ProofProgress, proofStepStates, useProof } from "./proof-progress";
 import { ShieldedAddress, truncateShieldedAddress } from "./shielded-address";
 import { ShieldedBalance, useShieldedBalance } from "./shielded-balance";
 import { ShieldedProvider, useShieldedAccount, useShieldedEngine } from "./shielded-provider";
-import { ShieldedSyncStatus, advanceSync, type ShieldedSyncView } from "./shielded-sync-status";
+import { ShieldedSyncStatus, advanceSync } from "./shielded-sync-status";
+import type { ShieldedSyncView } from "./shielded-sync-status";
 
 const weth = {
   address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",

@@ -1,11 +1,13 @@
 // Docs: https://0xui.io/components/shielded-balance.md
 import { Loader2Icon } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
 import type { Address } from "viem";
 import { Button } from "@/components/primitives/button";
 import { useShieldedEngine, useShieldedStore } from "@/components/shielded-provider";
-import { TokenAmount, type TokenAmountProps } from "@/components/token-amount";
+import { TokenAmount } from "@/components/token-amount";
+import type { TokenAmountProps } from "@/components/token-amount";
 import type { FormatTokenAmountOptions } from "@/lib/0xui-utils";
 import {
   createShieldedBalances,
@@ -13,10 +15,10 @@ import {
   shieldedBalanceMeta,
   tokenAmounts,
   totalShielded,
-  type ShieldedBalancePhase,
-  type ShieldedRetryPhase,
 } from "@/lib/shielded-balance-core";
-import { SHIELDED_BALANCE_STATES, type ShieldedBalanceState } from "@/lib/shielded-engine";
+import type { ShieldedBalancePhase, ShieldedRetryPhase } from "@/lib/shielded-balance-core";
+import { SHIELDED_BALANCE_STATES } from "@/lib/shielded-engine";
+import type { ShieldedBalanceState } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
 
 export { shieldedBalanceMeta, totalShielded, type ShieldedBalancePhase, type ShieldedRetryPhase };

@@ -6,8 +6,8 @@ import {
   addressInputState,
   ensAddressQueryOptions,
   parseAddressInput,
-  type AddressLookups,
 } from "./address-input-core";
+import type { AddressLookups } from "./address-input-core";
 
 const vitalik = testAccounts[0];
 const idle: AddressLookups = {

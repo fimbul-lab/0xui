@@ -8,9 +8,10 @@ import {
   swapConfirmText,
   swapNeedsApproval,
   swapQuoteQueryOptions,
-  type SwapQuote,
 } from "./swap-core";
-import { NATIVE_TOKEN_ADDRESS, type TokenInfo } from "./token-list";
+import type { SwapQuote } from "./swap-core";
+import { NATIVE_TOKEN_ADDRESS } from "./token-list";
+import type { TokenInfo } from "./token-list";
 
 const eth: TokenInfo = {
   chainId: 1,

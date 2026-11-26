@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { TokenSelect, type Token } from "@/components/token-select";
+import { TokenSelect } from "@/components/token-select";
+import type { Token } from "@/components/token-select";
 import { useTokenList } from "@/hooks/use-token-list";
 import { UNISWAP_DEFAULT_LIST } from "@/lib/token-list";
 

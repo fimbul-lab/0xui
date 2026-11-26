@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/morph-text.md
 import type { ReactNode } from "react";
-import { TextMorph, type TextMorphProps } from "torph/react";
+import { TextMorph } from "torph/react";
+import type { TextMorphProps } from "torph/react";
 
 export type MorphTextProps = Omit<TextMorphProps, "children" | "as"> & {
   /**

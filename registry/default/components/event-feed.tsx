@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/event-feed.md
 import { useQuery } from "@tanstack/react-query";
 import { Timeline, TimelineDescription, TimelineItem, TimelineTitle } from "@ui-sdk/react/timeline";
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import type { Abi, Address } from "viem";
 import { useConfig } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
@@ -13,8 +14,8 @@ import {
   feedEventId,
   formatEventArg,
   mergeFeedEvents,
-  type FeedEvent,
 } from "@/lib/event-feed-core";
+import type { FeedEvent } from "@/lib/event-feed-core";
 import { cn } from "@/lib/utils";
 
 export {

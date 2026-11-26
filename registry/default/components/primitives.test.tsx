@@ -11,7 +11,8 @@ import { CopyButton, copyLabel } from "./copy-button";
 import { ExplorerLink } from "./explorer-link";
 import { GasPrice, formatGasPrice, gasTone } from "./gas-price";
 import { MorphText } from "./morph-text";
-import { ResponsiveDialog, type ResponsiveDialogProps } from "./responsive-dialog";
+import { ResponsiveDialog } from "./responsive-dialog";
+import type { ResponsiveDialogProps } from "./responsive-dialog";
 import { TokenAmount, formatFiat } from "./token-amount";
 import { TokenIcon } from "./token-icon";
 

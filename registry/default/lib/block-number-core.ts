@@ -1,4 +1,5 @@
-import { getChainId, watchBlockNumber, type Config } from "@wagmi/core";
+import { getChainId, watchBlockNumber } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import { getBlockNumberQueryOptions, hashFn } from "@wagmi/core/query";
 
 export type BlockNumberPhase = "loading" | "live" | "error";

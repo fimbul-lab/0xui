@@ -1,5 +1,6 @@
 import { formatUnits } from "viem";
-import { formatTokenAmount, type FormatTokenAmountOptions } from "@/lib/0xui-utils";
+import { formatTokenAmount } from "@/lib/0xui-utils";
+import type { FormatTokenAmountOptions } from "@/lib/0xui-utils";
 
 /** Fiat value of a token amount, formatted as currency. */
 export function formatFiat(

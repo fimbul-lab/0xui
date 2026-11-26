@@ -9,7 +9,8 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { requireAll, tasks, type Task } from "./tasks.ts";
+import { requireAll, tasks } from "./tasks.ts";
+import type { Task } from "./tasks.ts";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 

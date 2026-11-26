@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { parseUnits } from "viem";
-import { AmountInput, type AmountState } from "@/components/amount-input";
+import { AmountInput } from "@/components/amount-input";
+import type { AmountState } from "@/components/amount-input";
 import { demo } from "./demo";
 
 export const Default = demo(function AmountDemo() {

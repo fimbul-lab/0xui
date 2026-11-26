@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { parseEther, type Hash } from "viem";
+import { parseEther } from "viem";
+import type { Hash } from "viem";
 import { useConnection } from "wagmi";
 import { Balance } from "@/components/balance";
 import { BlockNumber } from "@/components/block-number";

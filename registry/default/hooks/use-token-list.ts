@@ -2,13 +2,8 @@
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useChainId, useChains } from "wagmi";
-import {
-  selectTokens,
-  tokenListQueryOptions,
-  type TokenFilters,
-  type TokenInfo,
-  type TokenList,
-} from "@/lib/token-list";
+import { selectTokens, tokenListQueryOptions } from "@/lib/token-list";
+import type { TokenFilters, TokenInfo, TokenList } from "@/lib/token-list";
 
 const NO_TOKENS: ReadonlyArray<TokenInfo> = [];
 

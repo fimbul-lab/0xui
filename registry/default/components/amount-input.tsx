@@ -4,12 +4,8 @@ import type { ClipboardEvent, ComponentProps, ReactNode } from "react";
 import { formatUnits } from "viem";
 import { Button } from "@/components/primitives/button";
 import { Field, FieldDescription } from "@/components/primitives/field";
-import {
-  getAmountState,
-  pastedAmount,
-  sanitizeAmountInput,
-  type AmountState,
-} from "@/lib/amount-input-core";
+import { getAmountState, pastedAmount, sanitizeAmountInput } from "@/lib/amount-input-core";
+import type { AmountState } from "@/lib/amount-input-core";
 import { cn } from "@/lib/utils";
 
 export { getAmountState, sanitizeAmountInput, type AmountState };

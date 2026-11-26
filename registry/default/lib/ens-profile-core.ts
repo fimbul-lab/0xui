@@ -1,4 +1,5 @@
-import { getEnsAddress, getEnsName, getEnsText, type Config } from "@wagmi/core";
+import { getEnsAddress, getEnsName, getEnsText } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";

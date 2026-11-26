@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/blocks/shield.md
 import { useQuery } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { Hash } from "viem";
 import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
@@ -11,7 +12,8 @@ import { PrivacyBadge } from "@/components/privacy-badge";
 import { useShieldedAccount, useShieldedEngine } from "@/components/shielded-provider";
 import { ShieldedTransactionStatus, formatWait } from "@/components/shielded-transaction-status";
 import { TokenAmount } from "@/components/token-amount";
-import { TokenInput, type TokenInputState } from "@/components/token-input";
+import { TokenInput } from "@/components/token-input";
+import type { TokenInputState } from "@/components/token-input";
 import type { Token, TokenPrices } from "@/components/token-select";
 import { StepIcon } from "@/components/transaction-status";
 import { useStore } from "@/hooks/use-store";
@@ -34,10 +36,8 @@ import {
   shieldStepStates,
   shieldSteps,
   walletCapabilitiesQueryOptions,
-  type ShieldPhase,
-  type ShieldStepKind,
-  type ShieldStepPhase,
 } from "@/lib/shield-core";
+import type { ShieldPhase, ShieldStepKind, ShieldStepPhase } from "@/lib/shield-core";
 import type { ShieldDraft, ShieldQuote, ShieldedTransaction } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
 

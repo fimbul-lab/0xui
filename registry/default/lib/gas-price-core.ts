@@ -1,4 +1,5 @@
-import { getChainId, type Config } from "@wagmi/core";
+import { getChainId } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import { getGasPriceQueryOptions, hashFn } from "@wagmi/core/query";
 import { formatGwei } from "viem";
 

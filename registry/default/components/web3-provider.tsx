@@ -1,7 +1,9 @@
 // Docs: https://0xui.io/getting-started/installation.md
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
-import { WagmiProvider, type Config, type State } from "wagmi";
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { WagmiProvider } from "wagmi";
+import type { Config, State } from "wagmi";
 import { config as defaultConfig } from "@/lib/wagmi-config";
 
 export type Web3ProviderProps = {

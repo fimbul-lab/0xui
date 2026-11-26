@@ -1,10 +1,10 @@
 import { createStore } from "@/lib/0xui-store";
-import {
-  PROOF_STAGES,
-  type PrivateDraft,
-  type ProofStage,
-  type ProvedOperation,
-  type ShieldedEngine,
+import { PROOF_STAGES } from "@/lib/shielded-engine";
+import type {
+  PrivateDraft,
+  ProofStage,
+  ProvedOperation,
+  ShieldedEngine,
 } from "@/lib/shielded-engine";
 
 /** While a proof runs, the phase is the stage it is in. */

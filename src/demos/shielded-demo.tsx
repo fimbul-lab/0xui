@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentType } from "react";
 import { ShieldedProvider } from "@/components/shielded-provider";
 import type { ShieldedToken } from "@/components/shielded-balance";
-import {
-  createMockShieldedEngine,
-  type MockShieldedEngine,
-  type MockShieldedEngineOptions,
-} from "@/lib/mock-shielded-engine";
+import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
+import type { MockShieldedEngine, MockShieldedEngineOptions } from "@/lib/mock-shielded-engine";
 import { demo } from "./demo";
 
 export const demoWeth: ShieldedToken = {

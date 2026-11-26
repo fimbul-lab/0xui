@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/chain-badge.md
 import { NetworkIcon } from "@web3icons/react/dynamic";
-import { useEffect, useState, type ComponentProps, type ComponentType } from "react";
+import { useEffect, useState } from "react";
+import type { ComponentProps, ComponentType } from "react";
 import { SkeletonBox } from "skullet/react";
 import { useChains } from "wagmi";
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";

@@ -1,13 +1,9 @@
 import type { Config } from "@wagmi/core";
 import { getBalanceQueryOptions, hashFn, readContractsQueryOptions } from "@wagmi/core/query";
-import { erc20Abi, formatUnits, type Address } from "viem";
-import {
-  NATIVE_TOKEN_ADDRESS,
-  getTokenPrice,
-  isNativeToken,
-  type TokenInfo,
-  type TokenPrices,
-} from "@/lib/token-list";
+import { erc20Abi, formatUnits } from "viem";
+import type { Address } from "viem";
+import { NATIVE_TOKEN_ADDRESS, getTokenPrice, isNativeToken } from "@/lib/token-list";
+import type { TokenInfo, TokenPrices } from "@/lib/token-list";
 
 /** A token's identity in lists, balances and recents: its lowercase address. */
 export const tokenKey = (token: Pick<TokenInfo, "address">) => token.address.toLowerCase();

@@ -1,4 +1,5 @@
-import { connect, getConnectors, watchConnectors, type Config, type Connector } from "@wagmi/core";
+import { connect, getConnectors, watchConnectors } from "@wagmi/core";
+import type { Config, Connector } from "@wagmi/core";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
 

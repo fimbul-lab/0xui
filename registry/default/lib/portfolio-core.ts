@@ -1,11 +1,6 @@
 import { formatUnits } from "viem";
-import {
-  getTokenPrice,
-  isNativeToken,
-  looksLikeSpam,
-  type TokenInfo,
-  type TokenPrices,
-} from "@/lib/token-list";
+import { getTokenPrice, isNativeToken, looksLikeSpam } from "@/lib/token-list";
+import type { TokenInfo, TokenPrices } from "@/lib/token-list";
 
 /** Why a holding is tucked under "Hidden tokens". */
 export type HiddenReason = "spam" | "unlisted" | "unpriced" | "dust";

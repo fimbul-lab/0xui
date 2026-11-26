@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AddressInput, type AddressInputState } from "@/components/address-input";
+import { AddressInput } from "@/components/address-input";
+import type { AddressInputState } from "@/components/address-input";
 import { demo } from "./demo";
 
 export const Default = demo(function AddressInputDemo() {

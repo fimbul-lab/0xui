@@ -1,6 +1,7 @@
 import { parseUnits } from "viem";
 import { mainnet } from "wagmi/chains";
-import { Swap, type GetQuote } from "@/components/swap";
+import { Swap } from "@/components/swap";
+import type { GetQuote } from "@/components/swap";
 import { useTokenList } from "@/hooks/use-token-list";
 import { UNISWAP_DEFAULT_LIST, isNativeToken, nativeToken } from "@/lib/token-list";
 

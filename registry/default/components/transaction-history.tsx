@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/transaction-history.md
 import { Timeline, TimelineItem, TimelineTime, TimelineTitle } from "@ui-sdk/react/timeline";
 import { CheckIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
 import type { Address } from "viem";
 import { useConnection } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
@@ -17,8 +18,8 @@ import {
   recordTransaction,
   transactionHistory,
   updateTransaction,
-  type HistoryEntry,
 } from "@/lib/transaction-history-core";
+import type { HistoryEntry } from "@/lib/transaction-history-core";
 import { cn } from "@/lib/utils";
 
 export {

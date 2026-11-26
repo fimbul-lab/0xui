@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/query-core";
-import { maxUint256, parseUnits, type Address } from "viem";
+import { maxUint256, parseUnits } from "viem";
+import type { Address } from "viem";
 import { describe, expect, it } from "vitest";
 import { createTestConfig, erc20CallRpc, testAccounts } from "../../../test/wagmi";
 import { allowanceQueryOptions, nextApproval } from "./approve-button-core";

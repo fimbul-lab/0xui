@@ -1,19 +1,8 @@
 // Docs: https://0xui.io/components/shielded-engine.md
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
-import {
-  SERVER_ACCOUNT,
-  createShieldedClient,
-  type ReadableStore,
-  type ShieldedAccountSnapshot,
-  type ShieldedClient,
-} from "@/lib/shielded-client";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
+import { SERVER_ACCOUNT, createShieldedClient } from "@/lib/shielded-client";
+import type { ReadableStore, ShieldedAccountSnapshot, ShieldedClient } from "@/lib/shielded-client";
 import type { ShieldedEngine, ShieldedEvent } from "@/lib/shielded-engine";
 
 const ShieldedClientContext = createContext<ShieldedClient | null>(null);

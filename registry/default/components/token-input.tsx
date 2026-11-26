@@ -1,18 +1,15 @@
 // Docs: https://0xui.io/components/token-input.md
-import { useId, type ReactNode } from "react";
+import { useId } from "react";
+import type { ReactNode } from "react";
 import { formatUnits } from "viem";
-import { AmountInput, getAmountState, type AmountState } from "@/components/amount-input";
+import { AmountInput, getAmountState } from "@/components/amount-input";
+import type { AmountState } from "@/components/amount-input";
 import { useTokenBalance } from "@/components/balance";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { TokenAmount, formatFiat } from "@/components/token-amount";
-import {
-  TokenSelect,
-  getTokenPrice,
-  isNativeToken,
-  type Token,
-  type TokenPrices,
-} from "@/components/token-select";
+import { TokenSelect, getTokenPrice, isNativeToken } from "@/components/token-select";
+import type { Token, TokenPrices } from "@/components/token-select";
 import { cn } from "@/lib/utils";
 
 export type TokenInputState = AmountState & {

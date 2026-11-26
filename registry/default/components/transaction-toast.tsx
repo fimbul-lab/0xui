@@ -1,11 +1,10 @@
 // Docs: https://0xui.io/components/transaction-toast.md
-import { useCallback, type ReactNode } from "react";
+import { useCallback } from "react";
+import type { ReactNode } from "react";
 import type { Hash } from "viem";
 import { useConfig } from "wagmi";
-import {
-  toastTransaction,
-  type TransactionToastOptions as ToastOptionsOf,
-} from "@/lib/transaction-toast-core";
+import { toastTransaction } from "@/lib/transaction-toast-core";
+import type { TransactionToastOptions as ToastOptionsOf } from "@/lib/transaction-toast-core";
 
 export type TransactionToastOptions = ToastOptionsOf<ReactNode>;
 

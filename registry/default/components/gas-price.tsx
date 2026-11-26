@@ -5,7 +5,8 @@ import type { ComponentType } from "react";
 import { SkeletonBox } from "skullet/react";
 import { useChainId, useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
-import { formatGasPrice, gasPriceQueryOptions, gasTone, type GasTone } from "@/lib/gas-price-core";
+import { formatGasPrice, gasPriceQueryOptions, gasTone } from "@/lib/gas-price-core";
+import type { GasTone } from "@/lib/gas-price-core";
 import { cn } from "@/lib/utils";
 
 export { formatGasPrice, gasTone, type GasTone };

@@ -5,8 +5,8 @@ import {
   getAddress,
   isAddress,
   parseUnits,
-  type Chain,
 } from "viem";
+import type { Chain } from "viem";
 
 /**
  * Shorten an address for display: `0x1234…abcd`.

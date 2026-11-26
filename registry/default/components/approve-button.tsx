@@ -1,9 +1,11 @@
 // Docs: https://0xui.io/components/approve-button.md
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { erc20Abi, formatUnits, type Address } from "viem";
+import { erc20Abi, formatUnits } from "viem";
+import type { Address } from "viem";
 import { useChainId, useConfig, useConnection } from "wagmi";
-import { TransactionButton, type TransactionButtonProps } from "@/components/transaction-button";
+import { TransactionButton } from "@/components/transaction-button";
+import type { TransactionButtonProps } from "@/components/transaction-button";
 import {
   allowanceQueryOptions,
   nextApproval,

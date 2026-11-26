@@ -3,7 +3,8 @@ import type { APIRoute, GetStaticPaths } from "astro";
 import { getCollection } from "astro:content";
 import sharp from "sharp";
 import { registryItems } from "@/lib/load-docs";
-import { ogCard, type OgPage } from "@/lib/og";
+import { ogCard } from "@/lib/og";
+import type { OgPage } from "@/lib/og";
 
 export const getStaticPaths = (async () => {
   const docs = await getCollection("docs");

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { portfolioPhase, summarizePortfolio, normalizeBalances } from "./portfolio-core";
-import { NATIVE_TOKEN_ADDRESS, type TokenInfo } from "./token-list";
+import { NATIVE_TOKEN_ADDRESS } from "./token-list";
+import type { TokenInfo } from "./token-list";
 
 const token = (n: number, symbol: string, name = symbol): TokenInfo => ({
   chainId: 1,

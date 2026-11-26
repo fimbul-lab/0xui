@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sendBlocker, sendConfirmText, sendRequest } from "./send-core";
-import { NATIVE_TOKEN_ADDRESS, type TokenInfo } from "./token-list";
+import { NATIVE_TOKEN_ADDRESS } from "./token-list";
+import type { TokenInfo } from "./token-list";
 
 const eth: TokenInfo = {
   chainId: 1,

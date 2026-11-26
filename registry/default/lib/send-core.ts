@@ -1,5 +1,7 @@
-import { erc20Abi, formatUnits, type Address } from "viem";
-import { isNativeToken, type TokenInfo } from "@/lib/token-list";
+import { erc20Abi, formatUnits } from "viem";
+import type { Address } from "viem";
+import { isNativeToken } from "@/lib/token-list";
+import type { TokenInfo } from "@/lib/token-list";
 
 export type SendDraft = {
   recipient: Address | undefined;

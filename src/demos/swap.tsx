@@ -1,5 +1,6 @@
 import { parseUnits } from "viem";
-import { Swap, type GetQuote } from "@/components/swap";
+import { Swap } from "@/components/swap";
+import type { GetQuote } from "@/components/swap";
 import { isNativeToken } from "@/components/token-select";
 import { ConnectWallet } from "@/components/connect-wallet";
 import { demoPrices } from "./prices";

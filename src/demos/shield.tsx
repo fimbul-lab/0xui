@@ -1,5 +1,6 @@
 import { ConnectWallet } from "@/components/connect-wallet";
-import { Shield, type ShieldProps } from "@/components/shield";
+import { Shield } from "@/components/shield";
+import type { ShieldProps } from "@/components/shield";
 import { ShieldedAccount } from "@/components/shielded-account";
 import { ShieldedBalance } from "@/components/shielded-balance";
 import type { Token } from "@/components/token-select";

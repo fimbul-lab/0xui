@@ -1,10 +1,10 @@
 import type { Address } from "viem";
 import { createStore } from "@/lib/0xui-store";
-import {
-  SHIELDED_BALANCE_STATES,
-  type ShieldedBalanceState,
-  type ShieldedEngine,
-  type ShieldedTokenBalance,
+import { SHIELDED_BALANCE_STATES } from "@/lib/shielded-engine";
+import type {
+  ShieldedBalanceState,
+  ShieldedEngine,
+  ShieldedTokenBalance,
 } from "@/lib/shielded-engine";
 
 export type ShieldedBalancePhase = "idle" | "loading" | "ready" | "error";

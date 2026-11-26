@@ -2,7 +2,8 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { useState } from "react";
-import { parseEther, parseUnits, type Address } from "viem";
+import { parseEther, parseUnits } from "viem";
+import type { Address } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -12,17 +13,15 @@ import {
   renderWithWagmi,
   testAccounts,
 } from "../../../test/wagmi";
-import { AddressInput, type AddressInputState } from "./address-input";
-import { AmountInput, getAmountState, sanitizeAmountInput, type AmountState } from "./amount-input";
-import { TokenInput, type TokenInputState } from "./token-input";
+import { AddressInput } from "./address-input";
+import type { AddressInputState } from "./address-input";
+import { AmountInput, getAmountState, sanitizeAmountInput } from "./amount-input";
+import type { AmountState } from "./amount-input";
+import { TokenInput } from "./token-input";
+import type { TokenInputState } from "./token-input";
 import { TransactionButton } from "./transaction-button";
-import {
-  NATIVE_TOKEN_ADDRESS,
-  TokenSelect,
-  filterTokens,
-  sortByHoldings,
-  type Token,
-} from "./token-select";
+import { NATIVE_TOKEN_ADDRESS, TokenSelect, filterTokens, sortByHoldings } from "./token-select";
+import type { Token } from "./token-select";
 
 const eth: Token = {
   chainId: 1,

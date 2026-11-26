@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/transaction-status.md
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import type { Hash, TransactionReceipt } from "viem";
 import { useChainId, useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
@@ -12,9 +13,8 @@ import {
   transactionConfirmationsQueryOptions,
   transactionStatus,
   transactionSteps,
-  type StepState,
-  type TxStatusPhase,
 } from "@/lib/transaction-status-core";
+import type { StepState, TxStatusPhase } from "@/lib/transaction-status-core";
 import { cn } from "@/lib/utils";
 
 export type { StepState, TxStatusPhase };

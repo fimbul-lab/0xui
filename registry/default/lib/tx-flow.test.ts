@@ -7,7 +7,8 @@ import {
   fakeTxHash,
   testAccounts,
 } from "../../../test/wagmi";
-import { createTransactionFlow, simulationStatus, type TxPhase } from "./tx-flow";
+import { createTransactionFlow, simulationStatus } from "./tx-flow";
+import type { TxPhase } from "./tx-flow";
 
 const send = { transaction: { to: testAccounts[1], value: parseEther("0.1") } };
 

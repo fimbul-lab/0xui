@@ -4,7 +4,8 @@ import { Field, FieldLabel } from "@ui-sdk/react/field";
 import { Input } from "@ui-sdk/react/input";
 import { Textarea } from "@ui-sdk/react/textarea";
 import { CheckIcon, Loader2Icon, LockIcon } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { PrivacyBadge } from "@/components/privacy-badge";
 import { Button } from "@/components/primitives/button";
@@ -18,8 +19,8 @@ import {
   passwordBlocker,
   phraseBlocker,
   phraseWords,
-  type ShieldedAccountPhase,
 } from "@/lib/shielded-account-core";
+import type { ShieldedAccountPhase } from "@/lib/shielded-account-core";
 import { cn } from "@/lib/utils";
 
 export {

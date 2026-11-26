@@ -7,8 +7,8 @@ import {
   switchChain,
   waitForCallsStatus,
   watchConnection,
-  type Config,
 } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Address, Chain, Hex } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";

@@ -5,8 +5,8 @@ import {
   verifyMessage,
   verifyTypedData,
   watchConnection,
-  type Config,
 } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Address, Hex, SignableMessage, TypedDataDefinition } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";

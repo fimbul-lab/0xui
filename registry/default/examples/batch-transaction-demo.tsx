@@ -1,5 +1,6 @@
 import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
-import { BatchTransaction, type BatchCall } from "@/components/batch-transaction";
+import { BatchTransaction } from "@/components/batch-transaction";
+import type { BatchCall } from "@/components/batch-transaction";
 
 const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 // Uniswap's universal router.

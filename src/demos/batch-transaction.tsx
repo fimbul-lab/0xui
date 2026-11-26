@@ -1,5 +1,6 @@
 import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
-import { BatchTransaction, type BatchCall } from "@/components/batch-transaction";
+import { BatchTransaction } from "@/components/batch-transaction";
+import type { BatchCall } from "@/components/batch-transaction";
 import { demoUsdc } from "./tokens";
 import { demo } from "./demo";
 

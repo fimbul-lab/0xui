@@ -6,7 +6,8 @@ import { ShieldedBalance } from "@/components/shielded-balance";
 import { useShieldedAccount } from "@/components/shielded-provider";
 import { ShieldedSyncStatus } from "@/components/shielded-sync-status";
 import { Button } from "@/components/primitives/button";
-import { demoWeth, shieldedDemo, type ShieldedDemoProps } from "./shielded-demo";
+import { demoWeth, shieldedDemo } from "./shielded-demo";
+import type { ShieldedDemoProps } from "./shielded-demo";
 
 const weth = demoWeth.address;
 

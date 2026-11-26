@@ -1,6 +1,7 @@
 import { mainnet } from "wagmi/chains";
 import { useTokenList } from "@/hooks/use-token-list";
-import { UNISWAP_DEFAULT_LIST, nativeToken, type TokenInfo } from "@/lib/token-list";
+import { UNISWAP_DEFAULT_LIST, nativeToken } from "@/lib/token-list";
+import type { TokenInfo } from "@/lib/token-list";
 
 /** Uniswap Labs' default token list, live, for one chain plus its native currency. */
 export function useDemoTokens(chainId = mainnet.id) {

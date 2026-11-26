@@ -1,13 +1,16 @@
 // Docs: https://0xui.io/blocks/swap.md
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownUpIcon } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { formatUnits, type Hash, type TransactionReceipt } from "viem";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { formatUnits } from "viem";
+import type { Hash, TransactionReceipt } from "viem";
 import { useConfig, useConnection } from "wagmi";
 import { ApproveButton } from "@/components/approve-button";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
-import { TokenInput, type TokenInputState } from "@/components/token-input";
+import { TokenInput } from "@/components/token-input";
+import type { TokenInputState } from "@/components/token-input";
 import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
 import {
@@ -18,8 +21,8 @@ import {
   swapConfirmText,
   swapNeedsApproval,
   swapQuoteQueryOptions,
-  type GetQuote,
 } from "@/lib/swap-core";
+import type { GetQuote } from "@/lib/swap-core";
 import { cn } from "@/lib/utils";
 
 export {

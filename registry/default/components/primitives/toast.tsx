@@ -1,4 +1,5 @@
-import { OverlayHost, type Overlays } from "@ui-sdk/react/overlays";
+import { OverlayHost } from "@ui-sdk/react/overlays";
+import type { Overlays } from "@ui-sdk/react/overlays";
 import {
   Toast,
   ToastAction,
@@ -7,10 +8,8 @@ import {
   ToastTitle,
   createToaster,
   toast,
-  type ToastRegionProps,
-  type ToastType,
-  type Toaster as ToasterQueue,
 } from "@ui-sdk/react/toast";
+import type { ToastRegionProps, ToastType, Toaster as ToasterQueue } from "@ui-sdk/react/toast";
 import {
   CircleCheckIcon,
   InfoIcon,

@@ -11,10 +11,12 @@ import {
   getTransactionReceipt,
   readContracts,
   switchChain,
-  type Config,
 } from "@wagmi/core";
-import { agentTools, registerTools, type AgentAction, type createAgent } from "@ui-sdk/core/agent";
-import { erc20Abi, formatUnits, isAddress, isHash, type Address } from "viem";
+import type { Config } from "@wagmi/core";
+import { agentTools, registerTools } from "@ui-sdk/core/agent";
+import type { AgentAction, createAgent } from "@ui-sdk/core/agent";
+import { erc20Abi, formatUnits, isAddress, isHash } from "viem";
+import type { Address } from "viem";
 import { normalize } from "viem/ens";
 
 export type AgentTool = {

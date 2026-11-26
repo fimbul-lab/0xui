@@ -1,6 +1,7 @@
 import cloudflare from "@cloudflare/oxlint-config";
 import recommended from "@interfere/landmines/configs/recommended.json" with { type: "json" };
-import { defineConfig, type OxlintConfig } from "oxlint";
+import { defineConfig } from "oxlint";
+import type { OxlintConfig } from "oxlint";
 
 // JSON imports widen "error" to string, so restate landmines' recommended
 // config, which sets every rule to "error".
@@ -28,7 +29,6 @@ export default defineConfig({
     "@nkzw/require-use-effect-arguments": "off",
     curly: "off",
     eqeqeq: "off",
-    "import/consistent-type-specifier-style": "off",
     "import/namespace": "off",
     "import/no-namespace": "off",
     "no-console": "off",

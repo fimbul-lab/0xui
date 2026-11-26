@@ -1,10 +1,6 @@
 // Docs: https://0xui.io/components/responsive-dialog.md
-import {
-  useCallback,
-  useSyncExternalStore,
-  type KeyboardEventHandler,
-  type ReactNode,
-} from "react";
+import { useCallback, useSyncExternalStore } from "react";
+import type { KeyboardEventHandler, ReactNode } from "react";
 import {
   Dialog,
   DialogContent,

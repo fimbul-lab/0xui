@@ -1,5 +1,7 @@
-import { formatUnits, type Address, type Hex } from "viem";
-import { isNativeToken, type TokenInfo } from "@/lib/token-list";
+import { formatUnits } from "viem";
+import type { Address, Hex } from "viem";
+import { isNativeToken } from "@/lib/token-list";
+import type { TokenInfo } from "@/lib/token-list";
 
 export type SwapQuote = {
   /** Output amount, in the buy token's smallest unit. */

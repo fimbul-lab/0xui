@@ -1,18 +1,15 @@
 // Docs: https://0xui.io/components/ens-profile.md
 import { useQuery } from "@tanstack/react-query";
-import { AtSignIcon, CodeXmlIcon, GlobeIcon, MailIcon, type LucideIcon } from "lucide-react";
+import { AtSignIcon, CodeXmlIcon, GlobeIcon, MailIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Skeleton } from "skullet/react";
 import type { Address as AddressType } from "viem";
 import { useConfig } from "wagmi";
 import { Address } from "@/components/address";
 import { AddressAvatar } from "@/components/address-avatar";
 import { ensAvatarQueryOptions } from "@/lib/identity";
-import {
-  ensProfileLinks,
-  ensProfilePhase,
-  ensProfileQueryOptions,
-  type EnsLinkKey,
-} from "@/lib/ens-profile-core";
+import { ensProfileLinks, ensProfilePhase, ensProfileQueryOptions } from "@/lib/ens-profile-core";
+import type { EnsLinkKey } from "@/lib/ens-profile-core";
 import { cn } from "@/lib/utils";
 
 export {

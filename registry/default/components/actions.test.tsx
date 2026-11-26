@@ -2,7 +2,8 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { useEffect } from "react";
-import { decodeFunctionData, erc20Abi, parseUnits, type Address, type Hex } from "viem";
+import { decodeFunctionData, erc20Abi, parseUnits } from "viem";
+import type { Address, Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {

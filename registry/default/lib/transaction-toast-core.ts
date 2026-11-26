@@ -1,5 +1,7 @@
-import { toast, type ToastAction, type Toaster, type ToastOptions } from "@ui-sdk/core/toast";
-import { getPublicClient, type Config } from "@wagmi/core";
+import { toast } from "@ui-sdk/core/toast";
+import type { ToastAction, Toaster, ToastOptions } from "@ui-sdk/core/toast";
+import { getPublicClient } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Hash, TransactionReceipt } from "viem";
 import { getExplorerUrl } from "@/lib/0xui-utils";
 

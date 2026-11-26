@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { parseUnits } from "viem";
-import { Portfolio, type PortfolioHolding } from "@/components/portfolio";
+import { Portfolio } from "@/components/portfolio";
+import type { PortfolioHolding } from "@/components/portfolio";
 import type { TokenInfo } from "@/lib/token-list";
 import { demoPrices } from "./prices";
 import { demoEth } from "./tokens";

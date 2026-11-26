@@ -1,6 +1,7 @@
 import type { Config } from "@wagmi/core";
 import { getBalanceQueryOptions, readContractsQueryOptions } from "@wagmi/core/query";
-import { erc20Abi, type Address } from "viem";
+import { erc20Abi } from "viem";
+import type { Address } from "viem";
 
 export type BalancePhase = "idle" | "loading" | "ready" | "error";
 

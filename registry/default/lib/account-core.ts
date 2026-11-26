@@ -5,10 +5,8 @@ import {
   switchConnection,
   watchConnection,
   watchConnections,
-  type Config,
-  type Connector,
-  type GetConnectionReturnType,
 } from "@wagmi/core";
+import type { Config, Connector, GetConnectionReturnType } from "@wagmi/core";
 import type { Address, Chain } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { truncateAddress } from "@/lib/0xui-utils";

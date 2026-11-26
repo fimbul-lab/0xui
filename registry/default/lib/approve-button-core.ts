@@ -1,6 +1,7 @@
 import type { Config } from "@wagmi/core";
 import { readContractQueryOptions } from "@wagmi/core/query";
-import { erc20Abi, maxUint256, type Address } from "viem";
+import { erc20Abi, maxUint256 } from "viem";
+import type { Address } from "viem";
 
 export type AllowanceParameters = {
   /** ERC-20 contract. */

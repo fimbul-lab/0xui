@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/sign-message.md
 import { CheckIcon, Loader2Icon } from "lucide-react";
-import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { Hex } from "viem";
 import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
@@ -9,7 +10,8 @@ import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
 import { agentConfirmText, errorCode, truncateAddress } from "@/lib/0xui-utils";
-import { createMessageSigner, type SignPhase, type SignRequest } from "@/lib/sign-message-core";
+import { createMessageSigner } from "@/lib/sign-message-core";
+import type { SignPhase, SignRequest } from "@/lib/sign-message-core";
 import { cn } from "@/lib/utils";
 
 export type { SignPhase, SignRequest };

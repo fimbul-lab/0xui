@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
-import { useState, type ReactElement } from "react";
+import { useState } from "react";
+import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
-import { decodeFunctionData, erc20Abi, maxUint256, parseUnits, toHex, type Address } from "viem";
+import { decodeFunctionData, erc20Abi, maxUint256, parseUnits, toHex } from "viem";
+import type { Address } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -13,24 +15,25 @@ import {
   fakeTxHash,
   renderWithWagmi,
   testAccounts,
-  type RpcResponses,
 } from "../../../test/wagmi";
+import type { RpcResponses } from "../../../test/wagmi";
 import {
   MOCK_MNEMONIC,
   MOCK_SHIELD_CONTRACT,
   MOCK_TIMINGS,
   createMockShieldedEngine,
-  type MockShieldedEngine,
 } from "../lib/mock-shielded-engine";
-import { AddressInput, type AddressInputState } from "./address-input";
+import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
+import { AddressInput } from "./address-input";
+import type { AddressInputState } from "./address-input";
 import {
   Shield,
   describeShieldSteps,
   formatFeePercent,
   shieldBlocker,
   shieldSteps,
-  type ShieldProps,
 } from "./shield";
+import type { ShieldProps } from "./shield";
 import { ShieldedAccount, passwordBlocker, phraseBlocker } from "./shielded-account";
 import { ShieldedProvider } from "./shielded-provider";
 import {
@@ -38,7 +41,8 @@ import {
   formatWait,
   shieldedStatusText,
 } from "./shielded-transaction-status";
-import { NATIVE_TOKEN_ADDRESS, type Token } from "./token-select";
+import { NATIVE_TOKEN_ADDRESS } from "./token-select";
+import type { Token } from "./token-select";
 
 type MockOptions = Parameters<typeof createMockShieldedEngine>[0];
 

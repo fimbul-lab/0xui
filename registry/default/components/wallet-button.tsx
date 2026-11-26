@@ -2,15 +2,14 @@
 import { useMemo } from "react";
 import { SkeletonBox } from "skullet/react";
 import { useConfig } from "wagmi";
-import { Account, type AccountProps } from "@/components/account";
-import { ConnectWallet, type ConnectWalletProps } from "@/components/connect-wallet";
+import { Account } from "@/components/account";
+import type { AccountProps } from "@/components/account";
+import { ConnectWallet } from "@/components/connect-wallet";
+import type { ConnectWalletProps } from "@/components/connect-wallet";
 import { useMounted } from "@/hooks/use-mounted";
 import { useStore } from "@/hooks/use-store";
-import {
-  createConnectedAccount,
-  walletButtonPhase,
-  type WalletButtonPhase,
-} from "@/lib/account-core";
+import { createConnectedAccount, walletButtonPhase } from "@/lib/account-core";
+import type { WalletButtonPhase } from "@/lib/account-core";
 import { cn } from "@/lib/utils";
 
 export type { WalletButtonPhase };

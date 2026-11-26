@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
-import { docsTools, registerDocsTools, type DocsToolsOptions } from "./webmcp";
+import { docsTools, registerDocsTools } from "./webmcp";
+import type { DocsToolsOptions } from "./webmcp";
 
 const llms = `# 0xui
 

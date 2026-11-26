@@ -8,9 +8,8 @@ import {
   http,
   keccak256,
   toHex,
-  type Chain,
-  type Hex,
 } from "viem";
+import type { Chain, Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createConfig, createConnector } from "wagmi";
 import {

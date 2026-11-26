@@ -1,10 +1,6 @@
 import { createStore } from "@/lib/0xui-store";
-import {
-  SHIELDED_SYNC_STAGES,
-  type ShieldedEngine,
-  type ShieldedSync,
-  type ShieldedSyncStage,
-} from "@/lib/shielded-engine";
+import { SHIELDED_SYNC_STAGES } from "@/lib/shielded-engine";
+import type { ShieldedEngine, ShieldedSync, ShieldedSyncStage } from "@/lib/shielded-engine";
 
 export type ShieldedSyncPhase = "idle" | "syncing" | "synced" | "error";
 

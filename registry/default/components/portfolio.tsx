@@ -2,7 +2,8 @@
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { Timeline, TimelineDescription, TimelineItem, TimelineTitle } from "@ui-sdk/react/timeline";
 import { ChevronDownIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { Skeleton, SkeletonBox } from "skullet/react";
 import type { Address } from "viem";
 import { useChainId, useConnection } from "wagmi";
@@ -10,16 +11,15 @@ import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
-import { useTokenBalances, type Token } from "@/components/token-select";
-import {
-  normalizeBalances,
-  portfolioPhase,
-  summarizePortfolio,
-  type HiddenReason,
-  type PortfolioBalances,
-  type PortfolioFilters,
-  type PortfolioHolding,
-  type PortfolioRow,
+import { useTokenBalances } from "@/components/token-select";
+import type { Token } from "@/components/token-select";
+import { normalizeBalances, portfolioPhase, summarizePortfolio } from "@/lib/portfolio-core";
+import type {
+  HiddenReason,
+  PortfolioBalances,
+  PortfolioFilters,
+  PortfolioHolding,
+  PortfolioRow,
 } from "@/lib/portfolio-core";
 import type { TokenPrices } from "@/lib/token-list";
 import { cn } from "@/lib/utils";

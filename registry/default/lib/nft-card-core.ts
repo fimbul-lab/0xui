@@ -1,6 +1,7 @@
 import type { Config } from "@wagmi/core";
 import { hashFn, readContractsQueryOptions } from "@wagmi/core/query";
-import { parseAbi, type Address } from "viem";
+import { parseAbi } from "viem";
+import type { Address } from "viem";
 import { resolveUri } from "@/lib/0xui-utils";
 
 export const nftAbi = parseAbi([

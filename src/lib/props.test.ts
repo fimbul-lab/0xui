@@ -2,7 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, describe, expect, test } from "vitest";
 import registry from "../../registry.json";
-import { componentName, extractProps, type ComponentDoc, type PropDoc } from "./props";
+import { componentName, extractProps } from "./props";
+import type { ComponentDoc, PropDoc } from "./props";
 
 const docsRoot = join(process.cwd(), "src/content/docs");
 

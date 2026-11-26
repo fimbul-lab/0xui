@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/transaction-button.md
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, Loader2Icon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useChainId, useConfig, useConnection } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
@@ -13,11 +14,13 @@ import {
   revertReason,
   simulationStatus,
   transactionSimulationQueryOptions,
-  type ContractRequest,
-  type SimulationStatus,
-  type TransactionFlowOptions,
-  type TransactionRequest,
-  type TxPhase,
+} from "@/lib/tx-flow";
+import type {
+  ContractRequest,
+  SimulationStatus,
+  TransactionFlowOptions,
+  TransactionRequest,
+  TxPhase,
 } from "@/lib/tx-flow";
 import { cn } from "@/lib/utils";
 

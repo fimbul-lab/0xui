@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/address.md
 import { useQuery } from "@tanstack/react-query";
-import { getAddress, type Address as AddressType } from "viem";
+import { getAddress } from "viem";
+import type { Address as AddressType } from "viem";
 import { useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
 import { ExplorerLink } from "@/components/explorer-link";

@@ -17,7 +17,8 @@ import type { Abi, AbiFunction, Address } from "viem";
 import { useChainId, useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
-import { TransactionButton, type ContractRequest } from "@/components/transaction-button";
+import { TransactionButton } from "@/components/transaction-button";
+import type { ContractRequest } from "@/components/transaction-button";
 import {
   contractFunctions,
   formatAbiValue,

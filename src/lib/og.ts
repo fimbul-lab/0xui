@@ -13,8 +13,8 @@ import {
   runs,
   svg,
   text,
-  type TextOptions,
 } from "../../scripts/readme/lib";
+import type { TextOptions } from "../../scripts/readme/lib";
 import { groupOf, listedComponents, unlistedPages } from "../docs-nav.mjs";
 import { installCommand } from "./agent-docs";
 import { ogSize } from "./seo";

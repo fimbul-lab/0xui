@@ -9,7 +9,8 @@ import {
   CommandStatus,
 } from "@ui-sdk/react/command";
 import { ChevronDownIcon, SearchIcon } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Skeleton } from "skullet/react";
 import type { Address } from "viem";
 import { useChainId, useConfig, useConnection } from "wagmi";
@@ -24,13 +25,8 @@ import {
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
 import { truncateAddress } from "@/lib/0xui-utils";
-import {
-  NATIVE_TOKEN_ADDRESS,
-  getTokenPrice,
-  isNativeToken,
-  type TokenInfo,
-  type TokenPrices,
-} from "@/lib/token-list";
+import { NATIVE_TOKEN_ADDRESS, getTokenPrice, isNativeToken } from "@/lib/token-list";
+import type { TokenInfo, TokenPrices } from "@/lib/token-list";
 import {
   filterTokens,
   mergeTokenBalances,

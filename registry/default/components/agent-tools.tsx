@@ -7,11 +7,13 @@ import {
   pageAgentTools,
   registerAgentTools,
   walletAgentTools,
-  type Agent,
-  type AgentConfirm,
-  type AgentTool,
-  type RegisterAgentToolsOptions,
-  type WalletAgentToolsOptions,
+} from "@/lib/agent-tools-core";
+import type {
+  Agent,
+  AgentConfirm,
+  AgentTool,
+  RegisterAgentToolsOptions,
+  WalletAgentToolsOptions,
 } from "@/lib/agent-tools-core";
 import {
   AlertDialog,

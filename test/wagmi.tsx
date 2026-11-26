@@ -11,15 +11,15 @@ import {
   parseAbi,
   toHex,
   zeroAddress,
-  type Address,
-  type Chain,
-  type Hex,
 } from "viem";
+import type { Address, Chain, Hex } from "viem";
 import { vi } from "vitest";
-import { createConfig, createConnector, type Config } from "wagmi";
+import { createConfig, createConnector } from "wagmi";
+import type { Config } from "wagmi";
 import { connect } from "wagmi/actions";
 import { mainnet, sepolia } from "wagmi/chains";
-import { mock, type MockParameters } from "wagmi/connectors";
+import { mock } from "wagmi/connectors";
+import type { MockParameters } from "wagmi/connectors";
 import { Web3Provider } from "@/components/web3-provider";
 
 export const testAccounts = [

@@ -6,8 +6,8 @@ import {
   createBatchTransaction,
   describeBatchCalls,
   supportsAtomic,
-  type BatchCall,
 } from "./batch-transaction-core";
+import type { BatchCall } from "./batch-transaction-core";
 
 const calls: Array<BatchCall> = [
   { to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", data: "0x095ea7b3", label: "Approve" },

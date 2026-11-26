@@ -5,19 +5,11 @@ import {
   switchChain,
   watchConnection,
   writeContract,
-  type Config,
-  type SendTransactionParameters,
-  type WriteContractParameters,
 } from "@wagmi/core";
+import type { Config, SendTransactionParameters, WriteContractParameters } from "@wagmi/core";
 import { callQueryOptions, hashFn, simulateContractQueryOptions } from "@wagmi/core/query";
-import {
-  BaseError,
-  ContractFunctionRevertedError,
-  type Address,
-  type Chain,
-  type Hash,
-  type TransactionReceipt,
-} from "viem";
+import { BaseError, ContractFunctionRevertedError } from "viem";
+import type { Address, Chain, Hash, TransactionReceipt } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
 import { waitForMinedReceipt } from "@/lib/transaction-status-core";

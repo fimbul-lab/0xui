@@ -1,7 +1,9 @@
 // Docs: https://0xui.io/components/batch-transaction.md
-import { Timeline, TimelineItem, TimelineTitle, type TimelineStatus } from "@ui-sdk/react/timeline";
+import { Timeline, TimelineItem, TimelineTitle } from "@ui-sdk/react/timeline";
+import type { TimelineStatus } from "@ui-sdk/react/timeline";
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
@@ -12,10 +14,8 @@ import {
   batchStepState,
   createBatchTransaction,
   describeBatchCalls,
-  type BatchCall,
-  type BatchMode,
-  type StepState,
 } from "@/lib/batch-transaction-core";
+import type { BatchCall, BatchMode, StepState } from "@/lib/batch-transaction-core";
 import { cn } from "@/lib/utils";
 
 export {

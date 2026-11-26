@@ -7,14 +7,15 @@ import {
   switchChain,
   waitForCallsStatus,
   watchConnection,
-  type Config,
-  type Connector,
 } from "@wagmi/core";
+import type { Config, Connector } from "@wagmi/core";
 import { getCapabilitiesQueryOptions, hashFn, readContractQueryOptions } from "@wagmi/core/query";
-import { encodeFunctionData, erc20Abi, formatUnits, type Address, type Hash } from "viem";
+import { encodeFunctionData, erc20Abi, formatUnits } from "viem";
+import type { Address, Hash } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { requiresAllowanceReset } from "@/lib/approve-button-core";
-import { errorCode, isUserRejection, type ErrorCode } from "@/lib/0xui-utils";
+import { errorCode, isUserRejection } from "@/lib/0xui-utils";
+import type { ErrorCode } from "@/lib/0xui-utils";
 import type {
   PreparedShield,
   PublicCall,

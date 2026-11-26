@@ -1,6 +1,8 @@
-import { getBlockNumber, getContractEvents, watchContractEvent, type Config } from "@wagmi/core";
+import { getBlockNumber, getContractEvents, watchContractEvent } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import { hashFn } from "@wagmi/core/query";
-import { isAddress, type Abi, type Address, type Log } from "viem";
+import { isAddress } from "viem";
+import type { Abi, Address, Log } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { truncateAddress } from "@/lib/0xui-utils";
 

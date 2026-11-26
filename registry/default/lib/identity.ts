@@ -1,6 +1,7 @@
 import type { Config } from "@wagmi/core";
 import { getEnsAvatarQueryOptions, getEnsNameQueryOptions, hashFn } from "@wagmi/core/query";
-import { getAddress, type Address } from "viem";
+import { getAddress } from "viem";
+import type { Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 import { truncateAddress } from "@/lib/0xui-utils";

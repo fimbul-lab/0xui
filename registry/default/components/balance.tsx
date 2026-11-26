@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { SkeletonBox } from "skullet/react";
 import type { Address } from "viem";
 import { useChainId, useConfig, useConnection } from "wagmi";
-import { TokenAmount, type TokenAmountProps } from "@/components/token-amount";
-import { balancePhase, tokenBalanceQueryOptions, type BalancePhase } from "@/lib/balance-core";
+import { TokenAmount } from "@/components/token-amount";
+import type { TokenAmountProps } from "@/components/token-amount";
+import { balancePhase, tokenBalanceQueryOptions } from "@/lib/balance-core";
+import type { BalancePhase } from "@/lib/balance-core";
 import { cn } from "@/lib/utils";
 
 export type { BalancePhase };
