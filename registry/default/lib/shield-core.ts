@@ -433,6 +433,9 @@ export function shieldStepStates({
   }));
 }
 
+/** The form button's label, and what pressing it does, if anything. */
+export type ShieldFormAction = { label: string; action?: "connect" | "switch" | "start" };
+
 /**
  * What the form's button does before a shield starts, and its label. It
  * names the blocker, or offers to connect, switch network or shield.
@@ -457,7 +460,7 @@ export function shieldFormAction({
   quoting: boolean;
   planned: boolean;
   symbol: string | undefined;
-}): { label: string; action?: "connect" | "switch" | "start" } {
+}): ShieldFormAction {
   if (!connected) {
     return { label: "Connect wallet", action: "connect" };
   }

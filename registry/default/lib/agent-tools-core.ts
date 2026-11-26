@@ -112,11 +112,11 @@ async function askPerson(confirm: AgentConfirm | false | undefined, sentence: st
   }
 }
 
-const pageTitles: Record<string, string> = {
+const pageTitles = {
   snapshot: "Read the page's controls",
   act: "Use the page's controls",
   query: "Find controls and their choices",
-};
+} satisfies Record<string, string>;
 
 /**
  * ui-sdk's `snapshot`, `act` and `query` as `AgentTool`s bound to `agent`,
