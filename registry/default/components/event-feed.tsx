@@ -15,7 +15,7 @@ import {
   formatEventArg,
   mergeFeedEvents,
 } from "@/lib/event-feed-core";
-import type { FeedEvent } from "@/lib/event-feed-core";
+import type { EventFeedFilter, FeedEvent } from "@/lib/event-feed-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -33,7 +33,7 @@ export type UseEventFeedParameters = {
   /** Event to follow. Omit for every event in the ABI. */
   eventName?: string;
   /** Indexed-argument filter, e.g. `{ to: myAddress }`. */
-  args?: Record<string, unknown>;
+  args?: EventFeedFilter["args"];
   chainId?: number;
   /** Also load events from this many recent blocks. Keep it small: public RPCs cap log ranges. */
   historyBlocks?: number;

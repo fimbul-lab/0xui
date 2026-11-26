@@ -64,19 +64,24 @@ export function nativeToken(
 }
 
 function isTokenInfo(value: unknown): value is TokenInfo {
-  const t = value as Record<string, unknown>;
   return (
-    typeof t === "object" &&
-    t !== null &&
-    Number.isInteger(t.chainId) &&
-    typeof t.address === "string" &&
+    typeof value === "object" &&
+    value !== null &&
+    "chainId" in value &&
+    Number.isInteger(value.chainId) &&
+    "address" in value &&
+    typeof value.address === "string" &&
     // Lists can include non-EVM chains (e.g. Solana). Keep EVM addresses only.
-    isAddress(t.address, { strict: false }) &&
-    typeof t.symbol === "string" &&
-    typeof t.name === "string" &&
-    Number.isInteger(t.decimals) &&
-    (t.decimals as number) >= 0 &&
-    (t.decimals as number) <= 255
+    isAddress(value.address, { strict: false }) &&
+    "symbol" in value &&
+    typeof value.symbol === "string" &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    "decimals" in value &&
+    typeof value.decimals === "number" &&
+    Number.isInteger(value.decimals) &&
+    value.decimals >= 0 &&
+    value.decimals <= 255
   );
 }
 

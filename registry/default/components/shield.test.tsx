@@ -727,7 +727,7 @@ describe("Shield", () => {
     features?: { signMessageError?: boolean };
     onSend?: (tx: Sent) => void;
     /** EIP-5792 capabilities the wallet reports. Without it, it can't batch. */
-    capabilities?: Record<number, unknown>;
+    capabilities?: NonNullable<Parameters<typeof createTestConfig>[0]>["capabilities"];
     /** How sent transactions are mined. */
     status?: "success" | "reverted";
   } = {}) {

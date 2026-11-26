@@ -33,11 +33,9 @@ function coerce(param: AbiParameter, value: unknown): unknown {
       return components.map((c, i) => coerce(c, value[i]));
     }
     if (value && typeof value === "object") {
+      const fields = new Map<string, unknown>(Object.entries(value));
       return Object.fromEntries(
-        components.map((c, i) => [
-          c.name ?? i,
-          coerce(c, (value as Record<string, unknown>)[c.name ?? i]),
-        ]),
+        components.map((c, i) => [c.name ?? i, coerce(c, fields.get(c.name ?? String(i)))]),
       );
     }
     throw new Error("Expected a JSON object or array");
