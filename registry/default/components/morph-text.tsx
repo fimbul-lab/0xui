@@ -25,7 +25,7 @@ function textOf(node: ReactNode): string | undefined {
   if (typeof node === "number" || typeof node === "bigint") {
     return String(node);
   }
-  if (node == null || typeof node === "boolean") {
+  if (node === null || node === undefined || typeof node === "boolean") {
     return "";
   }
   if (!Array.isArray(node)) {
