@@ -118,17 +118,23 @@ const pageTitles = {
   query: "Find controls and their choices",
 } satisfies Record<string, string>;
 
+/** One of the page tools this file knows how to bind and title. */
+const isPageTool = (name: string): name is keyof typeof pageTitles => name in pageTitles;
+
 /**
  * ui-sdk's `snapshot`, `act` and `query` as `AgentTool`s bound to `agent`,
  * for your own model loop next to `walletAgentTools`. `act` goes through the
  * bridge's `allow`, so marked steps still wait for the person.
  */
 export function pageAgentTools(agent: Agent): Array<AgentTool> {
-  return agentTools.map((tool) => {
-    const name = tool.name as "snapshot" | "act" | "query";
+  return agentTools.flatMap((tool) => {
+    const name = tool.name;
+    if (!isPageTool(name)) {
+      return [];
+    }
     return {
       name,
-      title: pageTitles[name] ?? name,
+      title: pageTitles[name],
       description: tool.description,
       inputSchema: tool.inputSchema,
       annotations:

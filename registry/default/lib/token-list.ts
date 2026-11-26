@@ -111,7 +111,9 @@ export function parseTokenList(json: unknown): TokenList {
       "version" in json && isVersion(json.version)
         ? json.version
         : { major: 0, minor: 0, patch: 0 },
-    tokens: tokens.filter(isTokenInfo).map((t) => ({ ...t, address: getAddress(t.address) })),
+    tokens: tokens.flatMap((t) =>
+      isTokenInfo(t) ? [{ ...t, address: getAddress(t.address) }] : [],
+    ),
     logoURI: "logoURI" in json && typeof json.logoURI === "string" ? json.logoURI : undefined,
     keywords: "keywords" in json && isStringArray(json.keywords) ? json.keywords : undefined,
     tags: "tags" in json && isTags(json.tags) ? json.tags : undefined,
