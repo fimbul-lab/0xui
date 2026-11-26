@@ -36,7 +36,6 @@ export default defineConfig({
     "quality/no-unsafe-dictionary-type": "off",
     "react/button-has-type": "off",
     "react/no-unescaped-entities": "off",
-    "react/no-unknown-property": "off",
     "typescript/no-explicit-any": "off",
     "typescript/no-misused-promises": "off",
     "typescript/no-non-null-assertion": "off",
@@ -61,6 +60,8 @@ export default defineConfig({
       "error",
       { controlComponents: ["Checkbox", "Switch", "Radio"] },
     ],
+    // Skullet reads `skullet-block` to draw an element as one skeleton block.
+    "react/no-unknown-property": ["error", { ignore: ["skullet-block"] }],
     "typescript/no-base-to-string": "warn",
     "typescript/restrict-template-expressions": "warn",
     "react-hooks/exhaustive-deps": "warn",
