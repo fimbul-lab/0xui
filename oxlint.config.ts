@@ -25,7 +25,6 @@ export default defineConfig({
   rules: {
     // Temporarily off while adopting @cloudflare/oxlint-config. Each gets its own
     // commit: fixed and turned on, or kept off with the reason.
-    "no-console": "off",
     "quality/no-array-filter-map": "off",
     "quality/no-chained-type-assertions": "off",
     "quality/no-known-value-widening": "off",
@@ -59,6 +58,8 @@ export default defineConfig({
     ],
     // Skullet reads `skullet-block` to draw an element as one skeleton block.
     "react/no-unknown-property": ["error", { ignore: ["skullet-block"] }],
+    // A stray `console.log` is the slip; demos and tests report problems on purpose.
+    "no-console": ["error", { allow: ["error", "warn"] }],
     "typescript/no-base-to-string": "warn",
     "typescript/restrict-template-expressions": "warn",
     "react-hooks/exhaustive-deps": "warn",
@@ -89,6 +90,13 @@ export default defineConfig({
       // Astro components get `Astro` and `Fragment` as globals.
       files: ["**/*.astro"],
       env: { astro: true },
+    },
+    {
+      // CLIs: the console is their output.
+      files: ["scripts/**"],
+      rules: {
+        "no-console": "off",
+      },
     },
   ],
 });
