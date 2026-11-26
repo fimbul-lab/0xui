@@ -32,7 +32,7 @@ export const testAccounts = [
  * Throw `{ code, message }` from a function to return a JSON-RPC error, e.g.
  * `{ code: 4001 }` for a user rejection.
  */
-export type RpcResponses = Record<string, unknown | ((params: any) => unknown)>;
+export type RpcResponses = Record<string, unknown>;
 
 async function respond(rpc: RpcResponses, method: string, params: unknown) {
   if (!(method in rpc)) {

@@ -9,7 +9,7 @@ import {
   createToaster,
   toast,
 } from "@ui-sdk/react/toast";
-import type { ToastRegionProps, ToastType, Toaster as ToasterQueue } from "@ui-sdk/react/toast";
+import type { ToastRegionProps, ToastType } from "@ui-sdk/react/toast";
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -75,7 +75,7 @@ function renderToast(item: Parameters<NonNullable<ToastRegionProps["children"]>>
 
 export type ToasterProps = Omit<ToastRegionProps, "toaster" | "children"> & {
   /** A queue from `createToaster()`. Without one, it shows the shared `toast()` queue through `OverlayHost`. */
-  toaster?: ToasterQueue<any>;
+  toaster?: ToastRegionProps["toaster"];
   /** The overlay registry `OverlayHost` renders. Defaults to the shared one. */
   overlays?: Overlays;
 };

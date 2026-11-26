@@ -5,6 +5,7 @@
 // fonts) as it does on 0xui.io, and a card renders without installed fonts.
 import { createRequire } from "node:module";
 import * as fontkit from "fontkit";
+import type { Font, Glyph } from "fontkit";
 
 // Resolved like an import rather than by relative path, so this also works
 // from the bundle Astro builds the social card endpoint into.
@@ -15,16 +16,27 @@ const files = {
 };
 
 type Family = keyof typeof files;
-const base: Record<string, any> = {};
-const instances: Record<string, any> = {};
+const base = new Map<Family, Font>();
+const instances = new Map<string, Font>();
 
-function font(family: Family, weight: number) {
+function font(family: Family, weight: number): Font {
   const key = `${family}-${weight}`;
-  if (!instances[key]) {
-    base[family] ??= fontkit.openSync(files[family]);
-    instances[key] = base[family].getVariation({ wght: weight });
+  const known = instances.get(key);
+  if (known) {
+    return known;
   }
-  return instances[key];
+  let variable = base.get(family);
+  if (!variable) {
+    const opened = fontkit.openSync(files[family]);
+    if ("fonts" in opened) {
+      throw new Error(`${files[family]} is a font collection, not a font.`);
+    }
+    variable = opened;
+    base.set(family, variable);
+  }
+  const instance = variable.getVariation({ wght: weight });
+  instances.set(key, instance);
+  return instance;
 }
 
 // ── Colour ────────────────────────────────────────────────────────────────
@@ -101,9 +113,9 @@ function layout(str: string, o: TextOptions) {
   const scale = size / f.unitsPerEm;
   const run = f.layout(str);
   let pen = 0;
-  const glyphs = run.glyphs.map((glyph: any, i: number) => {
+  const glyphs = run.glyphs.map((glyph, i) => {
     const at = pen;
-    pen += run.positions[i].xAdvance * scale + tracking * size;
+    pen += (run.positions[i]?.xAdvance ?? 0) * scale + tracking * size;
     return { glyph, at };
   });
   // Tracking trails every glyph in CSS; drop it after the last for measuring.
@@ -118,7 +130,7 @@ export function measure(str: string, o: TextOptions = {}): number {
 // <use>. A banner repeats the same few dozen glyphs hundreds of times.
 const glyphDefs = new Map<string, { id: string; d: string }>();
 
-function glyphId(family: Family, weight: number, glyph: any): string | undefined {
+function glyphId(family: Family, weight: number, glyph: Glyph): string | undefined {
   const key = `${family}-${weight}-${glyph.id}`;
   const known = glyphDefs.get(key);
   if (known) {
@@ -126,7 +138,7 @@ function glyphId(family: Family, weight: number, glyph: any): string | undefined
   }
   let d = "";
   for (const { command, args } of glyph.path.commands) {
-    const p = args.map((v: number) => Math.round(v));
+    const p = args.map((v) => Math.round(v));
     if (command === "moveTo") {
       d += `M${p}`;
     } else if (command === "lineTo") {
