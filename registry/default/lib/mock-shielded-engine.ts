@@ -223,6 +223,14 @@ function sameBalances(
   );
 }
 
+const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
+
+function requirePassword(value: string) {
+  if (!value) {
+    throw new Error("Choose a password.");
+  }
+}
+
 /**
  * An in-memory ShieldedEngine: no network, no cryptography, no real funds.
  * It behaves the way the Railgun SDK did on Sepolia, awkward parts included:
@@ -405,17 +413,9 @@ export function createMockShieldedEngine({
     });
   }
 
-  const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
-
   function requireUnlocked() {
     if (status !== "unlocked") {
       throw new Error("Unlock the private account first.");
-    }
-  }
-
-  function requirePassword(value: string) {
-    if (!value) {
-      throw new Error("Choose a password.");
     }
   }
 

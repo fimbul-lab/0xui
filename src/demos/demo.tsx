@@ -17,6 +17,7 @@ import { demoConfig } from "./wagmi-config";
  * Steps on `data-agent-confirm` controls wait for "Allow" in its dialog.
  */
 export function demo(Component: ComponentType) {
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- it renders `<Component />`; the rule misses JSX references.
   function Demo() {
     return (
       <Web3Provider config={demoConfig}>

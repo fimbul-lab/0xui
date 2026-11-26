@@ -17,6 +17,8 @@ export type WalletOption = {
   recent: boolean;
 };
 
+const rank = (o: WalletOption) => (o.recent ? 0 : o.installed ? 1 : 2);
+
 /**
  * Connectors as an ordered wallet list: recent first, then installed, then
  * the rest. The generic "injected" connector is dropped when installed
@@ -24,7 +26,6 @@ export type WalletOption = {
  */
 export function walletOptions(connectors: ReadonlyArray<Connector>, recentId?: string) {
   const announced = connectors.some((c) => c.rdns);
-  const rank = (o: WalletOption) => (o.recent ? 0 : o.installed ? 1 : 2);
   return connectors
     .filter((c) => !(announced && c.id === "injected"))
     .map((connector): WalletOption => ({

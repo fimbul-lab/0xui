@@ -41,7 +41,6 @@ export default defineConfig({
     "typescript/no-unsafe-return": "off",
     "typescript/no-unsafe-type-assertion": "off",
     "typescript/use-unknown-in-catch-callback-variable": "off",
-    "unicorn/consistent-function-scoping": "off",
     // Temporarily off: the test rewrite onto real implementations turns it on.
     "landmines/no-test-doubles": "off",
     // Stores and cores are closures that never use `this`.
@@ -85,6 +84,8 @@ export default defineConfig({
         "vitest/expect-expect": "off",
         "vitest/require-mock-type-parameters": "off",
         "vitest/require-to-throw-message": "off",
+        // A helper sits in the test or describe that uses it, next to its only callers.
+        "unicorn/consistent-function-scoping": "off",
       },
     },
     {

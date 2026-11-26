@@ -11,6 +11,16 @@ import type { ShieldedDemoProps } from "./shielded-demo";
 
 const weth = demoWeth.address;
 
+const act = (label: string, run: () => unknown) => (
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => void Promise.resolve(run()).catch(console.error)}
+  >
+    {label}
+  </Button>
+);
+
 function Playground({ engine }: ShieldedDemoProps) {
   const { status, address } = useShieldedAccount();
   const [unlocking, setUnlocking] = useState(false);
@@ -29,16 +39,6 @@ function Playground({ engine }: ShieldedDemoProps) {
       </Button>
     );
   }
-
-  const act = (label: string, run: () => unknown) => (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => void Promise.resolve(run()).catch(console.error)}
-    >
-      {label}
-    </Button>
-  );
 
   return (
     <div className="flex w-full max-w-sm flex-col gap-4">

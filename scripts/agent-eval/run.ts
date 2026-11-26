@@ -396,6 +396,8 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
   };
 }
 
+const mark = (c: Check) => (c.pass ? "pass" : "FAIL");
+
 async function runTask(
   task: Task,
   template: string,
@@ -501,7 +503,6 @@ async function runTask(
     appDir: o.keep ? app : undefined,
   };
   await writeFile(join(logDir, "result.json"), JSON.stringify(result, null, 2) + "\n");
-  const mark = (c: Check) => (c.pass ? "pass" : "FAIL");
   console.log(
     `  [${task.id}] ${result.pass ? "PASS" : "FAIL"}: build ${mark(graded.checks.build)}, items ${mark(graded.checks.items)}, forbidden ${mark(graded.checks.forbid)}, provider ${mark(graded.checks.required)}`,
   );
@@ -513,10 +514,11 @@ async function runTask(
 
 type Result = Awaited<ReturnType<typeof runTask>>;
 
+const yn = (b: boolean) => (b ? "✅" : "❌");
+const money = (n?: number) => (n === undefined ? "–" : `$${n.toFixed(2)}`);
+const mins = (ms?: number) => (ms === undefined ? "–" : `${(ms / 60_000).toFixed(1)}m`);
+
 function summary(results: Array<Result>, o: Options) {
-  const yn = (b: boolean) => (b ? "✅" : "❌");
-  const money = (n?: number) => (n === undefined ? "–" : `$${n.toFixed(2)}`);
-  const mins = (ms?: number) => (ms === undefined ? "–" : `${(ms / 60_000).toFixed(1)}m`);
   const rows = results.map((r) => {
     const c = r.checks;
     return `| ${r.task} | ${yn(r.pass)} | ${yn(c.build.pass)} | ${yn(c.items.pass)} | ${yn(c.forbid.pass)} | ${yn(c.required.pass)} | ${r.agent.skillUsed ? "yes" : "no"} | ${r.agent.toolCalls} | ${r.agent.turns ?? "–"} | ${money(r.agent.costUsd)} | ${mins(r.agent.wallMs)} |`;

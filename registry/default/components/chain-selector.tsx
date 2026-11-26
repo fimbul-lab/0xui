@@ -323,6 +323,10 @@ function ChainsGrid({
   );
 }
 
+const noChains = (label: string) => (
+  <p className="text-sm text-muted-foreground text-center py-4">No {label} chains available</p>
+);
+
 function ChainListContent({
   mounted,
   chains,
@@ -363,10 +367,6 @@ function ChainListContent({
     ? groupChainsByNetwork(chains)
     : { mainnet: chains, testnet: [] as Array<Chain> };
 
-  const empty = (label: string) => (
-    <p className="text-sm text-muted-foreground text-center py-4">No {label} chains available</p>
-  );
-
   return (
     <>
       {error && (
@@ -395,10 +395,18 @@ function ChainListContent({
             </TabsTab>
           </TabsList>
           <TabsPanel value="mainnet" className="mt-2">
-            {mainnet.length > 0 ? <ChainsGrid chains={mainnet} {...gridProps} /> : empty("mainnet")}
+            {mainnet.length > 0 ? (
+              <ChainsGrid chains={mainnet} {...gridProps} />
+            ) : (
+              noChains("mainnet")
+            )}
           </TabsPanel>
           <TabsPanel value="testnet" className="mt-2">
-            {testnet.length > 0 ? <ChainsGrid chains={testnet} {...gridProps} /> : empty("testnet")}
+            {testnet.length > 0 ? (
+              <ChainsGrid chains={testnet} {...gridProps} />
+            ) : (
+              noChains("testnet")
+            )}
           </TabsPanel>
         </Tabs>
       ) : (

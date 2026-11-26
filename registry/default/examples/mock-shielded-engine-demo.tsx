@@ -12,6 +12,8 @@ const weth = {
   decimals: 18,
 } as const;
 
+const run = (action: () => Promise<unknown>) => () => void action().catch(console.error);
+
 export default function MockShieldedEngineDemo() {
   const [engine] = useState(() =>
     createMockShieldedEngine({
@@ -24,8 +26,6 @@ export default function MockShieldedEngineDemo() {
     void engine.account.unlock("password");
     return () => engine.account.lock();
   }, [engine]);
-
-  const run = (action: () => Promise<unknown>) => () => void action().catch(console.error);
 
   return (
     <ShieldedProvider engine={engine}>
