@@ -9,7 +9,7 @@ const root = process.cwd();
 const examples = import.meta.glob<{ default: ComponentType }>("./*-demo.tsx", { eager: true });
 
 /** Docs pages that document an API rather than a component, so they have no example. */
-const withoutExample = ["shielded-engine"];
+const withoutExample = new Set(["shielded-engine"]);
 
 type RegistryItem = {
   name: string;
@@ -26,7 +26,7 @@ function docsPages(section: "components" | "blocks") {
   return readdirSync(join(root, "src/content/docs", section))
     .filter((file) => file.endsWith(".mdx") && file !== "index.mdx")
     .map((file) => ({ section, name: basename(file, ".mdx") }))
-    .filter(({ name }) => !withoutExample.includes(name));
+    .filter(({ name }) => !withoutExample.has(name));
 }
 
 /** Answer JSON-RPC from a fake chain, and refuse other requests (token lists, NFT metadata). */
