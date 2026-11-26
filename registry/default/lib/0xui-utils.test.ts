@@ -53,7 +53,7 @@ describe("formatTokenAmount", () => {
   });
 
   it("keeps precision beyond Number.MAX_SAFE_INTEGER", () => {
-    expect(formatTokenAmount(123456789012345678901234n, 0, { locale: "en-US" })).toBe(
+    expect(formatTokenAmount(123_456_789_012_345_678_901_234n, 0, { locale: "en-US" })).toBe(
       "123,456,789,012,345,678,901,234",
     );
   });

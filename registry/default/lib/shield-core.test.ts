@@ -49,7 +49,7 @@ function walletConfig({ sent, reject }: { sent: Array<Sent>; reject?: boolean })
 
 /** Wait until the flow is waiting for a click again. */
 const ready = (flow: ShieldFlow) =>
-  vi.waitFor(() => expect(flow.get()).toMatchObject({ stepPhase: "ready" }), { timeout: 5_000 });
+  vi.waitFor(() => expect(flow.get()).toMatchObject({ stepPhase: "ready" }), { timeout: 5000 });
 
 describe("createShieldFlow", () => {
   it("signs, approves and shields, one call each, without any framework", async () => {

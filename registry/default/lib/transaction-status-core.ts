@@ -49,7 +49,7 @@ export function transactionConfirmationsQueryOptions(
     ...getTransactionConfirmationsQueryOptions(config, {
       hash,
       chainId,
-      query: { enabled, refetchInterval: 4_000 },
+      query: { enabled, refetchInterval: 4000 },
     }),
     queryKeyHashFn: hashFn,
   };

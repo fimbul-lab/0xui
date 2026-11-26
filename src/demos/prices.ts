@@ -7,7 +7,7 @@ export const demoPrices: TokenPrices = {
   USDC: 1,
   USDT: 1,
   DAI: 1,
-  WBTC: 98000,
+  WBTC: 98_000,
   UNI: 9.4,
   LINK: 18.2,
   AAVE: 265,

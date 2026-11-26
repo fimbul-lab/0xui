@@ -12,9 +12,9 @@ describe("createChainSwitcher", () => {
     const stop = switcher.subscribe(() => seen.push(switcher.get().pendingChainId));
 
     expect(switcher.get().currentChain?.name).toBe("Ethereum");
-    expect(await switcher.switchTo(11155111)).toBe(true);
+    expect(await switcher.switchTo(11_155_111)).toBe(true);
     expect(switcher.get().currentChain?.name).toBe("Sepolia");
-    expect(seen[0]).toBe(11155111);
+    expect(seen[0]).toBe(11_155_111);
     expect(switcher.get().pendingChainId).toBeUndefined();
     stop();
   });
@@ -24,7 +24,7 @@ describe("createChainSwitcher", () => {
     await connect(config, { connector: config.connectors[0]! });
     const switcher = createChainSwitcher(config);
 
-    expect(await switcher.switchTo(11155111)).toBe(false);
+    expect(await switcher.switchTo(11_155_111)).toBe(false);
     expect(switcher.get()).toMatchObject({ cancelled: true, error: null });
     switcher.reset();
     expect(switcher.get().cancelled).toBe(false);

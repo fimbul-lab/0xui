@@ -15,7 +15,7 @@ const usdc = {
 } as const;
 // Uniswap's universal router.
 const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af";
-const prices: Record<string, number> = { ETH: 3150, USDC: 1, USDT: 1, DAI: 1, WBTC: 98000 };
+const prices: Record<string, number> = { ETH: 3150, USDC: 1, USDT: 1, DAI: 1, WBTC: 98_000 };
 
 // Quotes from fixed prices. Call your DEX or aggregator's API here instead.
 const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount }) => {

@@ -31,10 +31,10 @@ function useSecondsUntil(target: number | undefined) {
   useEffect(() => {
     if (target === undefined) return;
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [target]);
-  return target === undefined ? undefined : Math.max(0, Math.ceil((target - now) / 1_000));
+  return target === undefined ? undefined : Math.max(0, Math.ceil((target - now) / 1000));
 }
 
 export type UseShieldedTransactionStatusParameters = {

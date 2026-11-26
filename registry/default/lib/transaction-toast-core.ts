@@ -49,7 +49,7 @@ export function toastTransaction<Content>(
   };
 
   if (!client) {
-    settle({ type: "error", title: titles.error ?? "Couldn't track transaction", duration: 8_000 });
+    settle({ type: "error", title: titles.error ?? "Couldn't track transaction", duration: 8000 });
     return id;
   }
 
@@ -60,7 +60,7 @@ export function toastTransaction<Content>(
         settle({
           type: "success",
           title: titles.success ?? "Transaction confirmed",
-          duration: 6_000,
+          duration: 6000,
         });
         onConfirmed?.(receipt);
       } else {

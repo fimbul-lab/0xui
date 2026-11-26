@@ -83,5 +83,5 @@ export const Default = shieldedDemo(Playground, {
   unlock: false,
   funds: [{ token: weth, amount: parseEther("1.25") }],
   // First scan in 8 s instead of 40, standby in 15 s instead of 60.
-  timings: { firstScan: 8_000, standby: 15_000, settle: 8_000 },
+  timings: { firstScan: 8000, standby: 15_000, settle: 8000 },
 });

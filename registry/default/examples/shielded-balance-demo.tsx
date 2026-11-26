@@ -23,7 +23,7 @@ export default function ShieldedBalanceDemo() {
         { token: weth.address, amount: parseEther("0.4975"), state: "pending" },
         { token: usdc.address, amount: parseUnits("2400", 6) },
       ],
-      timings: { firstScan: 3_000 },
+      timings: { firstScan: 3000 },
     }),
   );
   useEffect(() => {

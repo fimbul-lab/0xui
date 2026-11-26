@@ -5,8 +5,8 @@ export const Default = demo(() => (
   <div className="flex flex-wrap justify-center gap-2">
     <ChainBadge chainId={1} />
     <ChainBadge chainId={8453} />
-    <ChainBadge chainId={11155111} />
-    <ChainBadge chainId={424242} />
+    <ChainBadge chainId={11_155_111} />
+    <ChainBadge chainId={424_242} />
   </div>
 ));
 

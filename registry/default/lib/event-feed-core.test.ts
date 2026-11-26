@@ -88,7 +88,7 @@ describe("event-feed", () => {
     });
     const stop = watcher.subscribe(() => {});
 
-    await vi.waitFor(() => expect(watcher.get().events).toHaveLength(1), { timeout: 3_000 });
+    await vi.waitFor(() => expect(watcher.get().events).toHaveLength(1), { timeout: 3000 });
     expect(watcher.get().events[0]).toMatchObject({
       eventName: "Transfer",
       args: { to: testAccounts[1] },

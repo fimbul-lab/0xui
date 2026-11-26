@@ -55,7 +55,7 @@ function stubWalletRpc(rpc: RpcResponses) {
       const result = await respond(rpc, method, params);
       return Response.json({ jsonrpc: "2.0", id, result });
     } catch (error) {
-      const { code = -32603, message = String(error) } = error as {
+      const { code = -32_603, message = String(error) } = error as {
         code?: number;
         message?: string;
       };

@@ -40,7 +40,7 @@ beforeAll(async () => {
     toast("Warm-up");
     toast.dismiss();
   });
-  await act(() => vi.advanceTimersByTimeAsync(1_100));
+  await act(() => vi.advanceTimersByTimeAsync(1100));
   unmount();
   vi.useRealTimers();
 });
@@ -83,7 +83,7 @@ describe("ApproveButton", () => {
     await user.click(approve);
 
     expect(
-      await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Swap" }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
 
@@ -135,11 +135,11 @@ describe("ApproveButton", () => {
 
     await user.click(await screen.findByRole("button", { name: "Reset USDT approval" }));
     await user.click(
-      await screen.findByRole("button", { name: "Approve USDT" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Approve USDT" }, { timeout: 5000 }),
     );
 
     expect(
-      await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Swap" }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(approved).toEqual([0n, parseUnits("50", 6)]);
   });
@@ -147,7 +147,7 @@ describe("ApproveButton", () => {
 
 describe("NetworkGuard", () => {
   it("renders children when no wallet is connected", () => {
-    renderWithWagmi(<NetworkGuard chainId={11155111}>Content</NetworkGuard>);
+    renderWithWagmi(<NetworkGuard chainId={11_155_111}>Content</NetworkGuard>);
     expect(screen.getByText("Content")).toBeInTheDocument();
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
@@ -156,7 +156,7 @@ describe("NetworkGuard", () => {
     const user = userEvent.setup();
     const config = createTestConfig();
     renderWithWagmi(
-      <NetworkGuard chainId={11155111} mode="replace">
+      <NetworkGuard chainId={11_155_111} mode="replace">
         Content
       </NetworkGuard>,
       { config },
@@ -174,7 +174,7 @@ describe("NetworkGuard", () => {
   it("treats a declined switch as cancelled", async () => {
     const user = userEvent.setup();
     const config = createTestConfig({ features: { switchChainError: true } });
-    renderWithWagmi(<NetworkGuard chainId={11155111}>Content</NetworkGuard>, { config });
+    renderWithWagmi(<NetworkGuard chainId={11_155_111}>Content</NetworkGuard>, { config });
     await act(() => connectMock(config));
 
     await user.click(await screen.findByRole("button", { name: "Switch to Sepolia" }));
@@ -289,7 +289,7 @@ describe("useTransactionToast", () => {
     (chain.eth_sendTransaction as (p: unknown) => unknown)([
       { from: testAccounts[0], to: testAccounts[1] },
     ]);
-    const settled = await screen.findByText(heading, {}, { timeout: 5_000 });
+    const settled = await screen.findByText(heading, {}, { timeout: 5000 });
     // The shared toast queue is global, so earlier tests' toasts may still be showing.
     const toastEl = settled.closest("[data-slot=toast]") as HTMLElement;
     expect(within(toastEl).getByRole("link", { name: "View" })).toHaveAttribute(
@@ -336,7 +336,7 @@ describe("agent", () => {
   it("asks the person before NetworkGuard switches network", async () => {
     approve = false;
     const config = createTestConfig();
-    renderWithWagmi(<NetworkGuard chainId={11155111}>Content</NetworkGuard>, { config });
+    renderWithWagmi(<NetworkGuard chainId={11_155_111}>Content</NetworkGuard>, { config });
     await act(() => connectMock(config));
 
     await screen.findByRole("button", { name: "Switch to Sepolia" });
@@ -348,7 +348,7 @@ describe("agent", () => {
     expect(config.state.chainId).toBe(1);
     approve = true;
     expect((await agent.act(step)).ok).toBe(true);
-    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+    await waitFor(() => expect(config.state.chainId).toBe(11_155_111));
   });
 
   it("asks the person before adding a token to the wallet", async () => {
@@ -476,10 +476,10 @@ describe("agent", () => {
     (chain.eth_sendTransaction as (p: unknown) => unknown)([
       { from: testAccounts[0], to: testAccounts[1] },
     ]);
-    const settled = await screen.findByText("Agent test send", {}, { timeout: 5_000 });
+    const settled = await screen.findByText("Agent test send", {}, { timeout: 5000 });
     await waitFor(
       () => expect(settled.closest("[data-slot=toast]")).toHaveTextContent("Transaction confirmed"),
-      { timeout: 5_000 },
+      { timeout: 5000 },
     );
   });
 });

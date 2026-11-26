@@ -184,10 +184,10 @@ describe("scan", () => {
 
   it("only scans the configured chains on its own", async () => {
     const engine = await unlocked({ chains: [1] });
-    expect(engine.getSync(11155111).status).toBe("idle");
-    await engine.sync(11155111);
-    expect(engine.getSync(11155111).status).toBe("synced");
-    expect(engine.getBalances(11155111)).toEqual([]);
+    expect(engine.getSync(11_155_111).status).toBe("idle");
+    await engine.sync(11_155_111);
+    expect(engine.getSync(11_155_111).status).toBe("synced");
+    expect(engine.getBalances(11_155_111)).toEqual([]);
   });
 
   it("does nothing while locked", async () => {
@@ -223,7 +223,7 @@ describe("shield and unshield", () => {
     const engine = await unlocked();
     await engine.simulate.shield({ token: weth, amount: 10_000n, outcome: "restricted" });
     await settle();
-    expect(amountsOf(engine)).toMatchObject({ restricted: 9_975n, spendable: 0n });
+    expect(amountsOf(engine)).toMatchObject({ restricted: 9975n, spendable: 0n });
   });
 
   it("takes 25 bps on the way out and returns the rest of the note as change", async () => {

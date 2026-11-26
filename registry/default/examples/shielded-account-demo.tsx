@@ -16,7 +16,7 @@ export default function ShieldedAccountDemo() {
   const [engine] = useState(() =>
     createMockShieldedEngine({
       funds: [{ token: weth.address, amount: parseEther("1.25") }],
-      timings: { firstScan: 3_000 },
+      timings: { firstScan: 3000 },
     }),
   );
   return (

@@ -201,14 +201,16 @@ export function resolveUri(uri: string, gateway = "https://ipfs.io/ipfs/") {
 }
 
 const BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-const BECH32M_CONSTANT = 0x2bc830a3;
-const BECH32_GENERATORS = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+const BECH32M_CONSTANT = 0x2b_c8_30_a3;
+const BECH32_GENERATORS = [
+  0x3b_6a_57_b2, 0x26_50_8e_6d, 0x1e_a1_19_fa, 0x3d_42_33_dd, 0x2a_14_62_b3,
+];
 
 function bech32Polymod(values: ReadonlyArray<number>) {
   let checksum = 1;
   for (const value of values) {
     const top = checksum >>> 25;
-    checksum = ((checksum & 0x1ffffff) << 5) ^ value;
+    checksum = ((checksum & 0x1_ff_ff_ff) << 5) ^ value;
     for (let i = 0; i < 5; i++) {
       if ((top >>> i) & 1) checksum ^= BECH32_GENERATORS[i]!;
     }

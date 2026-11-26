@@ -68,7 +68,7 @@ describe("ExplorerLink", () => {
 
   it("uses chainId when given", () => {
     renderWithWagmi(
-      <ExplorerLink address={vitalik} chainId={11155111}>
+      <ExplorerLink address={vitalik} chainId={11_155_111}>
         Sepolia
       </ExplorerLink>,
     );
@@ -139,12 +139,12 @@ describe("AddressAvatar", () => {
 
 describe("ChainBadge", () => {
   it("names the chain from the wagmi config", () => {
-    renderWithWagmi(<ChainBadge chainId={11155111} />);
+    renderWithWagmi(<ChainBadge chainId={11_155_111} />);
     expect(screen.getByText("Sepolia")).toBeInTheDocument();
   });
 
   it("falls back for unknown chains and keeps the label accessible when icon-only", () => {
-    renderWithWagmi(<ChainBadge chainId={424242} iconOnly />);
+    renderWithWagmi(<ChainBadge chainId={424_242} iconOnly />);
     expect(screen.getByText("Chain 424242")).toHaveClass("sr-only");
   });
 });
@@ -355,7 +355,7 @@ describe("agent", () => {
       <>
         <AddressAvatar address={vitalik} ens={false} />
         <ChainBadge chainId={1} />
-        <ChainBadge chainId={424242} chainIcon={false} />
+        <ChainBadge chainId={424_242} chainIcon={false} />
         <TokenIcon symbol="ZZZ" chainId={1} />
         <TokenIcon symbol="ZZZ" decorative />
         <TokenAmount value={parseUnits("1.5", 6)} decimals={6} symbol="USDC" />

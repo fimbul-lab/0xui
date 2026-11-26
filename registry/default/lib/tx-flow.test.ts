@@ -77,7 +77,7 @@ describe("createTransactionFlow", () => {
   it("switches to the target chain when the wallet is on another", async () => {
     const config = createTestConfig({ rpc: fakeChainRpc() });
     await connectMock(config);
-    const flow = createTransactionFlow(config, { chainId: 11155111 });
+    const flow = createTransactionFlow(config, { chainId: 11_155_111 });
     const { phases, stop } = track(flow);
 
     expect(flow.get()).toMatchObject({ wrongChain: true, targetChain: { name: "Sepolia" } });

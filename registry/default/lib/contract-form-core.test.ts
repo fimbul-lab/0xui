@@ -51,7 +51,7 @@ describe("contract-form", () => {
   });
 
   it("parses the ETH value of payable calls", () => {
-    expect(functionCallDraft(deposit!, [], "0.5").value).toBe(500000000000000000n);
+    expect(functionCallDraft(deposit!, [], "0.5").value).toBe(500_000_000_000_000_000n);
     expect(functionCallDraft(deposit!, [], "").value).toBeUndefined();
     expect(functionCallDraft(deposit!, [], "abc")).toMatchObject({
       value: null,

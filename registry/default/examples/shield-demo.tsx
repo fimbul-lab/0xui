@@ -6,7 +6,7 @@ import { ShieldedProvider } from "@/components/shielded-provider";
 import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
 
 // Sepolia: the mock engine's shield contract is not a real one, so keep it off mainnet.
-const chainId = 11155111;
+const chainId = 11_155_111;
 const weth = {
   chainId,
   address: "0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9",
@@ -24,7 +24,7 @@ const usdc = {
 
 export default function ShieldDemo() {
   const [engine] = useState(() =>
-    createMockShieldedEngine({ chains: [chainId], timings: { firstScan: 3_000 } }),
+    createMockShieldedEngine({ chains: [chainId], timings: { firstScan: 3000 } }),
   );
   return (
     <ShieldedProvider engine={engine}>

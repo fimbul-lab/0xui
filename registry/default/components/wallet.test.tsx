@@ -287,7 +287,7 @@ describe("TransactionButton", () => {
     const user = userEvent.setup();
     const config = createTestConfig({ rpc: fakeChainRpc() });
     renderWithWagmi(
-      <TransactionButton transaction={send} chainId={11155111}>
+      <TransactionButton transaction={send} chainId={11_155_111}>
         Send
       </TransactionButton>,
       { config },
@@ -297,7 +297,7 @@ describe("TransactionButton", () => {
     await user.click(await screen.findByRole("button", { name: "Switch to Sepolia" }));
 
     expect(await screen.findByRole("button", { name: "Send" })).toBeEnabled();
-    expect(config.state.chainId).toBe(11155111);
+    expect(config.state.chainId).toBe(11_155_111);
   });
 });
 
@@ -387,7 +387,7 @@ describe("TransactionStatus", () => {
     mined = true;
     // viem backs off between receipt lookups (200ms, 400ms, …).
     expect(
-      await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 }),
+      await screen.findByText("Transaction confirmed", {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(screen.getByText("Included in block 100")).toBeInTheDocument();
     expect(onConfirmed).toHaveBeenCalledOnce();
@@ -495,7 +495,7 @@ describe("agent", () => {
     expect(config.state.chainId).toBe(1);
     approve = true;
     expect((await agent.act(toSepolia)).ok).toBe(true);
-    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+    await waitFor(() => expect(config.state.chainId).toBe(11_155_111));
     await waitFor(() => expect(byLabel("Network: Sepolia")).toBeDefined());
 
     // Opening the account panel is free; disconnecting asks.
@@ -550,7 +550,7 @@ describe("agent", () => {
     renderWithWagmi(
       <>
         <TransactionButton transaction={send}>Send</TransactionButton>
-        <TransactionButton transaction={send} chainId={11155111}>
+        <TransactionButton transaction={send} chainId={11_155_111}>
           Mint
         </TransactionButton>
       </>,
@@ -587,7 +587,7 @@ describe("agent", () => {
       config,
     });
     expect(
-      await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 }),
+      await screen.findByText("Transaction confirmed", {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(components().map((entry) => entry.label)).toEqual(["Copy transaction hash"]);
   });

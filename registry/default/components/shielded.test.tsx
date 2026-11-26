@@ -185,7 +185,7 @@ describe("ShieldedBalance", () => {
     const { container } = renderShielded(<ShieldedBalance token={weth} chainId={1} />, engine);
 
     void engine.account.unlock("password");
-    await advance(MOCK_TIMINGS.unlock + 1_000);
+    await advance(MOCK_TIMINGS.unlock + 1000);
     const root = container.querySelector("[data-slot=shielded-balance]")!;
     expect(root).toHaveAttribute("data-phase", "loading");
     expect(screen.getByText("Loading private balance")).toBeInTheDocument();
@@ -439,7 +439,7 @@ describe("ShieldedSyncStatus", () => {
     const engine = createMockShieldedEngine();
     renderShielded(<ShieldedSyncStatus chainId={1} />, engine);
     void engine.account.unlock("password");
-    await advance(MOCK_TIMINGS.unlock + 2_000);
+    await advance(MOCK_TIMINGS.unlock + 2000);
     expect(screen.getByText(/Step 1 of 2/)).toBeInTheDocument();
     await advance(MOCK_TIMINGS.firstScan * 0.85);
     expect(screen.getByText(/Step 2 of 2/)).toBeInTheDocument();
@@ -489,7 +489,7 @@ describe("ShieldedSyncStatus", () => {
     const engine = createMockShieldedEngine();
     renderShielded(<ShieldedSyncStatus chainId={1} variant="inline" />, engine);
     void engine.account.unlock("password");
-    await advance(MOCK_TIMINGS.unlock + 5_000);
+    await advance(MOCK_TIMINGS.unlock + 5000);
     expect(screen.getByRole("status")).toHaveTextContent(/^Finding your funds \d+%$/);
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
@@ -662,7 +662,7 @@ describe("ProofProgress", () => {
       renderShielded(<Prover onProved={onProved} />, engine);
 
       await click(screen.getByRole("button", { name: "Prove" }));
-      await advance(1_000);
+      await advance(1000);
       await click(screen.getByRole("button", { name: "Reset" }));
       expect(phase()).toBe("idle");
 

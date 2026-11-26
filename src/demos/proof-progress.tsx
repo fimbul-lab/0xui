@@ -56,7 +56,7 @@ export const Default = shieldedDemo(Prover, options);
 export const Failed = shieldedDemo(Prover, {
   ...options,
   circuitsCached: true,
-  timings: { ...quickStart, prove: 3_000 },
+  timings: { ...quickStart, prove: 3000 },
   setup: (engine) => engine.simulate.failNextProof("The prover ran out of memory."),
 });
 

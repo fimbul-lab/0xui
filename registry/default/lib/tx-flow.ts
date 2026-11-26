@@ -130,7 +130,7 @@ export function createTransactionFlow(
       } catch {
         // A failed poll isn't a failed transaction: try again next round.
       }
-      await sleep(4_000);
+      await sleep(4000);
     }
   };
 

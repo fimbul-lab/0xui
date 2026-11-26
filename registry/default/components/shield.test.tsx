@@ -491,7 +491,7 @@ function minedRpc(status: "success" | "reverted" = "success"): RpcResponses {
     ...chain,
     eth_getBlockByNumber: {
       ...(chain.eth_getBlockByNumber as object),
-      timestamp: toHex(Math.floor(Date.now() / 1_000)),
+      timestamp: toHex(Math.floor(Date.now() / 1000)),
     },
   };
 }
@@ -513,8 +513,8 @@ describe("ShieldedTransactionStatus", () => {
     expect(formatWait(45)).toBe("45 s");
     expect(formatWait(90)).toBe("about 2 min");
     expect(formatWait(600)).toBe("about 10 min");
-    expect(formatWait(3_600)).toBe("about 1 hour");
-    expect(formatWait(7_200)).toBe("about 2 hours");
+    expect(formatWait(3600)).toBe("about 1 hour");
+    expect(formatWait(7200)).toBe("about 2 hours");
   });
 
   it("does not call a mined shield done until the private account has found it", async () => {
@@ -754,7 +754,7 @@ describe("Shield", () => {
   const root = () => document.querySelector("[data-slot=shield]")!;
   const phase = () => root().getAttribute("data-phase");
   const input = () => screen.getByRole("textbox", { name: /^Amount to shield in / });
-  const button = (name: string | RegExp, timeout = 5_000) =>
+  const button = (name: string | RegExp, timeout = 5000) =>
     screen.findByRole("button", { name }, { timeout });
   const card = () => document.querySelector("[data-slot=shielded-transaction-status]");
 
@@ -799,11 +799,14 @@ describe("Shield", () => {
 
   it("offers to switch when the wallet is on another network", async () => {
     const user = userEvent.setup();
-    const engine = await unlockedEngine({ chains: [11155111] });
-    await engine.sync(11155111);
+    const engine = await unlockedEngine({ chains: [11_155_111] });
+    await engine.sync(11_155_111);
     const config = walletConfig();
     renderWithWagmi(
-      withEngine(<Shield tokens={[{ ...tkn, chainId: 11155111 }]} chainId={11155111} />, engine),
+      withEngine(
+        <Shield tokens={[{ ...tkn, chainId: 11_155_111 }]} chainId={11_155_111} />,
+        engine,
+      ),
       { config },
     );
     await act(() => connectMock(config));
@@ -916,7 +919,7 @@ describe("Shield", () => {
       expect(sent).toHaveLength(0);
 
       await user.click(both);
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       // One click sent the approval for exactly the amount, then the shield.
       expect(sent.map((tx) => tx.to.toLowerCase())).toEqual([tkn.address.toLowerCase(), spender]);
@@ -940,7 +943,7 @@ describe("Shield", () => {
 
       await user.click(await button("Shield TKN"));
       await user.click(await button("Approve and shield TKN"));
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       expect(sent).toHaveLength(3);
       expect(approveArgs(sent[0]!)).toEqual([spender, 0n]);
@@ -998,7 +1001,7 @@ describe("Shield", () => {
 
       await user.click(await button("Shield TKN"));
       await user.click(await button("Approve and shield TKN"));
-      expect(await screen.findByRole("alert", {}, { timeout: 5_000 })).toHaveTextContent(
+      expect(await screen.findByRole("alert", {}, { timeout: 5000 })).toHaveTextContent(
         "The batch reverted. Nothing was approved or shielded.",
       );
       expect(phase()).toBe("error");
@@ -1021,7 +1024,7 @@ describe("Shield", () => {
 
       expect(await screen.findByText("One wallet prompt.")).toBeInTheDocument();
       await user.click(await button("Shield TKN"));
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       expect(sent).toHaveLength(2);
       expect(prepare).toHaveBeenCalledTimes(1);
@@ -1061,7 +1064,7 @@ describe("Shield", () => {
 
     await user.click(await button("Shield TKN"));
     await user.click(await button("Approve TKN"));
-    expect(await screen.findByRole("alert", {}, { timeout: 5_000 })).toHaveTextContent(
+    expect(await screen.findByRole("alert", {}, { timeout: 5000 })).toHaveTextContent(
       "The approval reverted.",
     );
     expect(screen.getByRole("button", { name: "Approve TKN" })).toBeEnabled();
@@ -1145,7 +1148,7 @@ describe("Shield", () => {
       expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Approve and shield TKN" }));
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       // The status card takes the form's place, with the summary above it.
       expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
@@ -1197,7 +1200,7 @@ describe("Shield", () => {
       const sentence =
         "Shields 2 TKN from your wallet into your private balance on Ethereum: " +
         "1.995 TKN arrives after a 0.005 TKN fee. Three wallet prompts: sign, approve, shield.";
-      await waitFor(() => expect(entry("Shield TKN")?.confirm).toBe(sentence), { timeout: 3_000 });
+      await waitFor(() => expect(entry("Shield TKN")?.confirm).toBe(sentence), { timeout: 3000 });
 
       result = await run([{ ref: "Shield TKN", action: "press" }]);
       expect(result.ok).toBe(false);
@@ -1229,11 +1232,14 @@ describe("Shield", () => {
     });
 
     it("asks a person before switching the wallet's network", async () => {
-      const engine = await unlockedEngine({ chains: [11155111] });
-      await engine.sync(11155111);
+      const engine = await unlockedEngine({ chains: [11_155_111] });
+      await engine.sync(11_155_111);
       const config = walletConfig();
       renderWithWagmi(
-        withEngine(<Shield tokens={[{ ...tkn, chainId: 11155111 }]} chainId={11155111} />, engine),
+        withEngine(
+          <Shield tokens={[{ ...tkn, chainId: 11_155_111 }]} chainId={11_155_111} />,
+          engine,
+        ),
         { config },
       );
       await act(() => connectMock(config));
@@ -1254,7 +1260,7 @@ describe("Shield", () => {
       await act(() => connectMock(config));
       await run([{ ref: "Amount to shield", action: "setValue", args: ["2"] }]);
       await waitFor(() => expect(entry("Shield TKN")?.confirm).toMatch(/^Shields 2 TKN/), {
-        timeout: 3_000,
+        timeout: 3000,
       });
 
       approve = true;

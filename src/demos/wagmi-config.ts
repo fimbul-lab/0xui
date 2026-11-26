@@ -36,7 +36,7 @@ export const demoRevertAddress = "0x000000000000000000000000000000000000dEaD";
 const CONNECTED_FLAG = "0xui:demo-wallet-connected";
 
 /** How long a demo transaction stays pending. */
-const MINE_AFTER_MS = 3_000;
+const MINE_AFTER_MS = 3000;
 
 /**
  * Signs for the demo wallet. It's a throwaway key, not the demo account's,

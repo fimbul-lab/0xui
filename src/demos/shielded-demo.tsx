@@ -19,7 +19,7 @@ export const demoShieldedUsdc: ShieldedToken = {
 };
 
 /** Skip most of the 40 s first scan, for demos that are about something else. */
-export const quickStart = { unlock: 300, firstScan: 3_000 };
+export const quickStart = { unlock: 300, firstScan: 3000 };
 
 export type ShieldedDemoProps = {
   /** This demo's own mock engine. */

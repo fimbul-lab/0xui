@@ -30,7 +30,7 @@ const usdc = {
 };
 const baseUsdc = { ...usdc, chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" };
 const solana = {
-  chainId: 501000101,
+  chainId: 501_000_101,
   address: "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp",
   name: "michi",
   symbol: "$MICHI",
@@ -171,7 +171,7 @@ describe("useTokenList", () => {
   it("reports a broken list", async () => {
     const { result } = renderHook(() => useTokenList(dataUrl({ hello: "world" })), { wrapper });
     // One retry before giving up.
-    await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 4_000 });
+    await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 4000 });
     expect(result.current.tokens).toEqual([expect.objectContaining({ symbol: "ETH" })]);
   });
 });

@@ -88,7 +88,7 @@ describe("createBatchTransaction", () => {
   it("notices the wrong chain and switches", async () => {
     const config = createTestConfig({ rpc: fakeChainRpc() });
     await connect(config, { connector: config.connectors[0]! });
-    const batch = createBatchTransaction(config, { chainId: 11155111 });
+    const batch = createBatchTransaction(config, { chainId: 11_155_111 });
     const stop = batch.subscribe(() => {});
 
     expect(batch.get()).toMatchObject({ wrongChain: true, targetChain: { name: "Sepolia" } });

@@ -18,8 +18,8 @@ export type ShieldedTxStatusPhase =
 /** "about 2 min", "45 s", or undefined once there is nothing left to wait for. */
 export function formatWait(seconds: number) {
   if (seconds <= 0) return undefined;
-  if (seconds >= 5_400) return `about ${Math.round(seconds / 3_600)} hours`;
-  if (seconds >= 3_000) return "about 1 hour";
+  if (seconds >= 5400) return `about ${Math.round(seconds / 3600)} hours`;
+  if (seconds >= 3000) return "about 1 hour";
   if (seconds >= 90) return `about ${Math.ceil(seconds / 60)} min`;
   return `${seconds} s`;
 }
@@ -77,7 +77,7 @@ export function standbyBlockQueryOptions(
 /** Unix ms when the standby period ends, from the block's timestamp (seconds). */
 export function spendableAt(blockTimestamp: bigint | undefined, standby: number | undefined) {
   return blockTimestamp !== undefined && standby !== undefined
-    ? (Number(blockTimestamp) + standby) * 1_000
+    ? (Number(blockTimestamp) + standby) * 1000
     : undefined;
 }
 

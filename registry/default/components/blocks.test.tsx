@@ -132,7 +132,7 @@ describe("Send", () => {
     await user.click(await screen.findByRole("button", { name: "Send ETH" }));
 
     expect(
-      await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 }),
+      await screen.findByText("Transaction confirmed", {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(sent).toHaveBeenCalledWith(
       expect.objectContaining({ to: recipient, value: toHex(parseEther("0.25")) }),
@@ -175,7 +175,7 @@ describe("Swap", () => {
     await user.click(screen.getByRole("button", { name: "Swap" }));
     // "Done" shows even though the input clears on success.
     expect(
-      await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: /^You pay in / })).toHaveValue("");
   });
@@ -203,7 +203,7 @@ describe("Swap", () => {
 
     await user.type(screen.getByRole("textbox", { name: /^You pay in / }), "100");
     expect(
-      await screen.findByRole("button", { name: "Approve USDC" }, { timeout: 3_000 }),
+      await screen.findByRole("button", { name: "Approve USDC" }, { timeout: 3000 }),
     ).toBeEnabled();
   });
 
@@ -259,7 +259,7 @@ describe("BatchTransaction", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(
-      await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(sent).toHaveBeenCalledTimes(2);
     expect(
@@ -281,7 +281,7 @@ describe("BatchTransaction", () => {
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(
-      await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(container.querySelector("[data-atomic]")).not.toBeNull();
   });
@@ -551,7 +551,7 @@ describe("TransactionHistory", () => {
     act(() => recordTransaction({ hash: fakeTxHash, chainId: 1, description: "Send 1 ETH" }));
 
     expect(await screen.findByText("Send 1 ETH")).toBeInTheDocument();
-    expect(await screen.findByText("Confirmed ·", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(await screen.findByText("Confirmed ·", {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it("shows only the connected account's transactions", async () => {
@@ -717,7 +717,7 @@ describe("NftCard", () => {
     const { container } = renderWithWagmi(<NftCard contract={nft} tokenId={1n} />, { config });
     // The metadata fetch retries once before giving up.
     expect(
-      await screen.findByText("Metadata unavailable", {}, { timeout: 5_000 }),
+      await screen.findByText("Metadata unavailable", {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(container.querySelector('[data-slot="nft-card"]')).toHaveAttribute(
       "data-phase",
@@ -740,7 +740,7 @@ describe("NftCard", () => {
 
 describe("EventFeed", () => {
   it("formats event arguments", () => {
-    expect(formatEventArg(1234567n)).toBe("1,234,567");
+    expect(formatEventArg(1_234_567n)).toBe("1,234,567");
     expect(formatEventArg(recipient)).toBe("0x71C7…976F");
     expect(formatEventArg(true)).toBe("true");
   });
@@ -814,7 +814,7 @@ describe("EventFeed", () => {
 
     expect(screen.getByText("Waiting for events…")).toBeInTheDocument();
     const feed = screen.getByRole("log");
-    expect(await within(feed).findByText("Transfer", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(await within(feed).findByText("Transfer", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(within(feed).getByText("5,000,000")).toBeInTheDocument();
     expect(within(feed).getByText("0x71C7…976F")).toBeInTheDocument();
     expect(within(feed).getByRole("link", { name: /#101/ })).toHaveAttribute(
@@ -947,7 +947,7 @@ describe("Agents", () => {
 
     const sentence =
       "Swaps 2 ETH from your wallet for about 6300 USDC on Ethereum (price impact 0.12%)";
-    await waitFor(() => expect(entry("Swap")?.confirm).toBe(sentence), { timeout: 3_000 });
+    await waitFor(() => expect(entry("Swap")?.confirm).toBe(sentence), { timeout: 3000 });
     expect(entry("You receive in USDC")?.value).toBe("6300");
 
     // The rate is a button too, free to press.
@@ -965,7 +965,7 @@ describe("Agents", () => {
     result = await run([{ ref: "Swap", action: "press" }]);
     expect(result.ok, result.error?.message).toBe(true);
     expect(
-      await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
 
@@ -1096,7 +1096,7 @@ describe("Agents", () => {
     result = await run([{ ref: "Confirm", action: "press" }]);
     expect(result.ok, result.error?.message).toBe(true);
     expect(
-      await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
 

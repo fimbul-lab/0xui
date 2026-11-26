@@ -56,7 +56,7 @@ describe("walletAgentTools", () => {
     });
     expect(await tool(tools, "list_chains").execute({})).toEqual([
       expect.objectContaining({ id: 1, current: true }),
-      expect.objectContaining({ id: 11155111, current: false, testnet: true }),
+      expect.objectContaining({ id: 11_155_111, current: false, testnet: true }),
     ]);
     expect(await tool(tools, "get_balance").execute({})).toMatchObject({
       formatted: "1.5",
@@ -145,9 +145,9 @@ describe("walletAgentTools", () => {
     const yes = vi.fn<AgentConfirm>(async () => true);
     expect(
       await tool(walletAgentTools(wagmi, { confirm: yes }), "switch_chain").execute({
-        chain: 11155111,
+        chain: 11_155_111,
       }),
-    ).toEqual({ id: 11155111, name: "Sepolia" });
+    ).toEqual({ id: 11_155_111, name: "Sepolia" });
     expect(yes).toHaveBeenCalledWith("Asks your wallet to switch to Sepolia", {
       signal: expect.any(AbortSignal),
     });

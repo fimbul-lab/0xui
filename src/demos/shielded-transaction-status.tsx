@@ -42,7 +42,7 @@ export const Default = shieldedDemo(
       </div>
     );
   },
-  { timings: { ...quickStart, standby: standby * 1_000 } },
+  { timings: { ...quickStart, standby: standby * 1000 } },
 );
 
 /** A shield the engine already knows about. This hash is not on any chain. */

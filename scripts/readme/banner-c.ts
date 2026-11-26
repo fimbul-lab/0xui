@@ -50,7 +50,7 @@ function hexStream(seed: number) {
   return () => {
     let ch = last;
     while (ch === last) {
-      state = (state * 1664525 + 1013904223) >>> 0;
+      state = (state * 1_664_525 + 1_013_904_223) >>> 0;
       ch = "0123456789abcdef"[state >>> 28];
     }
     last = ch;

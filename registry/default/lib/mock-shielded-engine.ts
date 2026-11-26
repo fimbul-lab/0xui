@@ -20,25 +20,25 @@ import type {
  */
 export const MOCK_TIMINGS = {
   /** Creating or importing an account. */
-  createAccount: 6_000,
+  createAccount: 6000,
   /** Unlocking an existing account. A guess: not measured. */
   unlock: 800,
   /** The first scan of a chain. */
   firstScan: 40_000,
   /** Every scan after the first. Also the delay before a change shows up in the balances. */
-  repeatScan: 3_500,
+  repeatScan: 3500,
   /** Downloading the circuit files (about 9 MB). First proof only; later proofs take a twentieth of this. */
-  loadCircuits: 4_000,
+  loadCircuits: 4000,
   /** Generating the proof. */
-  prove: 8_000,
+  prove: 8000,
   /** Verifying the proof. */
-  verify: 1_000,
+  verify: 1000,
   /** How long shielded funds stay `pending`. 60 s on testnets; set 3_600_000 to imitate mainnet. */
   standby: 60_000,
   /** How long change from a spend stays `proving`. A guess: not measured. */
   settle: 15_000,
   /** One attempt at the missing proofs. A guess: not measured. */
-  retryProofs: 5_000,
+  retryProofs: 5000,
 };
 
 export type MockTimings = typeof MOCK_TIMINGS;
@@ -176,12 +176,12 @@ const IDLE: ShieldedSync = Object.freeze({ stage: "notes", status: "idle", progr
  * holds no keys.
  */
 function mockAddress(seed: string) {
-  let state = 2166136261;
-  for (let i = 0; i < seed.length; i++) state = Math.imul(state ^ seed.charCodeAt(i), 16777619);
+  let state = 2_166_136_261;
+  for (let i = 0; i < seed.length; i++) state = Math.imul(state ^ seed.charCodeAt(i), 16_777_619);
   // 117 five-bit words. The first is 0, as in a real address (version byte 01).
   const words = [0];
   while (words.length < 117) {
-    state = (Math.imul(state, 1664525) + 1013904223) | 0;
+    state = (Math.imul(state, 1_664_525) + 1_013_904_223) | 0;
     words.push((state >>> 27) & 31);
   }
   return encodeBech32m("0zk", words);
@@ -471,7 +471,7 @@ export function createMockShieldedEngine({
       return {
         fee,
         received: draft.amount - fee,
-        standby: Math.round(timings.standby / speed / 1_000),
+        standby: Math.round(timings.standby / speed / 1000),
         spender: MOCK_SHIELD_CONTRACT,
         needsSignature: shieldSignature,
       };

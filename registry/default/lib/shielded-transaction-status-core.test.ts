@@ -70,7 +70,7 @@ describe("shieldedTxSteps", () => {
   });
 
   it("counts the standby from the block's timestamp", () => {
-    expect(spendableAt(1_000n, 60)).toBe(1_060_000);
+    expect(spendableAt(1000n, 60)).toBe(1_060_000);
     expect(spendableAt(undefined, 60)).toBeUndefined();
   });
 });

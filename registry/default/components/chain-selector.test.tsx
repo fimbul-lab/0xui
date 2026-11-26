@@ -145,7 +145,7 @@ describe("agent", () => {
 
     approve = true;
     expect((await agent.act(toSepolia)).ok).toBe(true);
-    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+    await waitFor(() => expect(config.state.chainId).toBe(11_155_111));
 
     approve = false;
     expect(

@@ -6,7 +6,7 @@ import { useTokenList } from "@/hooks/use-token-list";
 import { UNISWAP_DEFAULT_LIST, nativeToken } from "@/lib/token-list";
 
 // Fixed for the example. Fetch real prices in your app.
-const prices = { ETH: 3150, USDC: 1, WBTC: 98000 };
+const prices = { ETH: 3150, USDC: 1, WBTC: 98_000 };
 
 export default function TokenInputDemo() {
   const { tokens } = useTokenList(UNISWAP_DEFAULT_LIST, { chainId: mainnet.id });

@@ -38,7 +38,7 @@ export const Default = shieldedDemo(
   {
     funds: [{ token: weth, amount: parseEther("1.25") }],
     // Shorter than the real 60 s standby, so the demo doesn't drag.
-    timings: { ...quickStart, standby: 12_000, settle: 8_000 },
+    timings: { ...quickStart, standby: 12_000, settle: 8000 },
   },
 );
 
