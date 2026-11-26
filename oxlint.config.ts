@@ -34,7 +34,6 @@ export default defineConfig({
     "quality/no-object-parameters": "off",
     "quality/no-unknown-returns": "off",
     "quality/no-unsafe-dictionary-type": "off",
-    "react/button-has-type": "off",
     "react/no-unescaped-entities": "off",
     "typescript/no-explicit-any": "off",
     "typescript/no-misused-promises": "off",

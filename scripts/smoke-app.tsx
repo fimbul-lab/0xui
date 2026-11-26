@@ -111,7 +111,9 @@ function Shielded() {
   const proof = useProof();
   return (
     <>
-      <button onClick={() => shieldedEngine.account.unlock("password")}>Unlock</button>
+      <button type="button" onClick={() => shieldedEngine.account.unlock("password")}>
+        Unlock
+      </button>
       {account.address && <ShieldedAddress address={account.address} variant="pill" />}
       <PrivacyBadge privacy="private" />
       <PrivacyBadge privacy="public" variant="inline" iconOnly />
@@ -128,6 +130,7 @@ function Shielded() {
       <ShieldedSyncStatus chainId={1} />
       <ShieldedSyncStatus chainId={1} variant="inline" />
       <button
+        type="button"
         onClick={() =>
           proof.prove({ kind: "unshield", chainId: 1, token: usdc, amount: 1n, recipient: address })
         }
@@ -198,7 +201,10 @@ export default function App() {
       <ContractForm address={usdc} abi={erc20Abi} show="read" />
       <Portfolio tokens={tokens} prices={{ ETH: 3000 }} />
       <TransactionHistory />
-      <button onClick={() => recordTransaction({ hash: `0x${"ab".repeat(32)}`, chainId: 1 })}>
+      <button
+        type="button"
+        onClick={() => recordTransaction({ hash: `0x${"ab".repeat(32)}`, chainId: 1 })}
+      >
         Record
       </button>
       <EnsProfile name="vitalik.eth" />

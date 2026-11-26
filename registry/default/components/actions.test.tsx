@@ -69,7 +69,7 @@ describe("ApproveButton", () => {
     });
     renderWithWagmi(
       <ApproveButton token={usdc} spender={router} amount={parseUnits("50", 6)} chainId={1}>
-        <button>Swap</button>
+        <button type="button">Swap</button>
       </ApproveButton>,
       { config },
     );
@@ -93,7 +93,7 @@ describe("ApproveButton", () => {
     });
     renderWithWagmi(
       <ApproveButton token={usdc} spender={router} amount={parseUnits("50", 6)} chainId={1}>
-        <button>Swap</button>
+        <button type="button">Swap</button>
       </ApproveButton>,
       { config },
     );
@@ -127,7 +127,7 @@ describe("ApproveButton", () => {
     });
     renderWithWagmi(
       <ApproveButton token={usdt} spender={router} amount={parseUnits("50", 6)} chainId={1}>
-        <button>Swap</button>
+        <button type="button">Swap</button>
       </ApproveButton>,
       { config },
     );
@@ -263,7 +263,10 @@ function ToastTrigger({ status }: { status: string }) {
   return (
     <>
       <Toaster />
-      <button onClick={() => toastTransaction(fakeTxHash, { description: `Send (${status})` })}>
+      <button
+        type="button"
+        onClick={() => toastTransaction(fakeTxHash, { description: `Send (${status})` })}
+      >
         Track
       </button>
     </>

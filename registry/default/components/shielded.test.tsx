@@ -583,8 +583,12 @@ describe("ProofProgress", () => {
       const proof = useProof({ onProved, onError });
       return (
         <>
-          <button onClick={() => void proof.prove(draft)}>Prove</button>
-          <button onClick={proof.reset}>Reset</button>
+          <button type="button" onClick={() => void proof.prove(draft)}>
+            Prove
+          </button>
+          <button type="button" onClick={proof.reset}>
+            Reset
+          </button>
           <ProofProgress
             phase={proof.phase}
             stage={proof.stage}
