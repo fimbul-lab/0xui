@@ -1,3 +1,4 @@
+import cloudflare from "@cloudflare/oxlint-config";
 import recommended from "@interfere/landmines/configs/recommended.json" with { type: "json" };
 import { defineConfig, type OxlintConfig } from "oxlint";
 
@@ -11,10 +12,9 @@ const landmines: OxlintConfig = {
 const tests = ["**/*.test.ts", "**/*.test.tsx", "test/**"];
 
 export default defineConfig({
-  extends: [landmines],
-  plugins: ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "vitest"],
-  env: { builtin: true, browser: true },
-  ignorePatterns: [".agents/**", "public/r/**"],
+  extends: [cloudflare, landmines],
+  env: cloudflare.env,
+  ignorePatterns: [...cloudflare.ignorePatterns, ".agents/**", "public/r/**"],
   categories: {
     correctness: "error",
   },
@@ -22,6 +22,53 @@ export default defineConfig({
     typeAware: true,
   },
   rules: {
+    // Temporarily off while adopting @cloudflare/oxlint-config. Each gets its own
+    // commit: fixed and turned on, or kept off with the reason.
+    "@nkzw/no-instanceof": "off",
+    "@nkzw/require-use-effect-arguments": "off",
+    curly: "off",
+    eqeqeq: "off",
+    "import/consistent-type-specifier-style": "off",
+    "import/namespace": "off",
+    "import/no-namespace": "off",
+    "no-console": "off",
+    "no-empty": "off",
+    "no-promise-executor-return": "off",
+    "no-undef": "off",
+    "no-useless-assignment": "off",
+    "quality/no-array-filter-map": "off",
+    "quality/no-chained-type-assertions": "off",
+    "quality/no-known-value-widening": "off",
+    "quality/no-object-parameters": "off",
+    "quality/no-unknown-returns": "off",
+    "quality/no-unsafe-dictionary-type": "off",
+    "react/button-has-type": "off",
+    "react/no-unescaped-entities": "off",
+    "react/no-unknown-property": "off",
+    "typescript/array-type": "off",
+    "typescript/no-explicit-any": "off",
+    "typescript/no-import-type-side-effects": "off",
+    "typescript/no-misused-promises": "off",
+    "typescript/no-non-null-assertion": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/no-unsafe-argument": "off",
+    "typescript/no-unsafe-assignment": "off",
+    "typescript/no-unsafe-call": "off",
+    "typescript/no-unsafe-member-access": "off",
+    "typescript/no-unsafe-return": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/use-unknown-in-catch-callback-variable": "off",
+    "unicorn/catch-error-name": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/numeric-separators-style": "off",
+    "unicorn/prefer-at": "off",
+    "unicorn/prefer-import-meta-properties": "off",
+    "unicorn/prefer-number-properties": "off",
+    "unicorn/prefer-set-has": "off",
+    "unicorn/prefer-single-call": "off",
+    "unicorn/prefer-string-raw": "off",
+    "unicorn/prefer-string-replace-all": "off",
+    "unicorn/prefer-top-level-await": "off",
     // Temporarily off: the test rewrite onto real implementations turns it on.
     "landmines/no-test-doubles": "off",
     // Stores and cores are closures that never use `this`.
