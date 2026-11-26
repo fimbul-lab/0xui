@@ -639,7 +639,7 @@ async function main() {
   process.exitCode = results.every((r) => r.pass) ? 0 : 1;
 }
 
-main().catch((error) => {
+main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 2;
 });
