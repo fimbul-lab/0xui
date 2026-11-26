@@ -9,7 +9,7 @@ import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { agentConfirmText, errorCode } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, errorMessage } from "@/lib/0xui-utils";
 import {
   batchStepState,
   createBatchTransaction,
@@ -190,7 +190,7 @@ export function BatchTransaction({
       )}
       {batch.phase === "error" && batch.error && (
         <p role="alert" className="text-sm text-destructive">
-          {(batch.error as { shortMessage?: string }).shortMessage ?? batch.error.message}
+          {errorMessage(batch.error)}
         </p>
       )}
       <ConnectWalletDialog open={connectOpen} onOpenChange={setConnectOpen} />

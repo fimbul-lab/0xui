@@ -119,7 +119,11 @@ describe("ApproveButton", () => {
         eth_call: erc20CallRpc({ allowance: () => allowance, decimals: 6 }),
         eth_sendTransaction: (params: [{ data: Hex }]) => {
           const { args } = decodeFunctionData({ abi: erc20Abi, data: params[0].data });
-          allowance = args[1] as bigint;
+          const amount = args[1];
+          if (typeof amount !== "bigint") {
+            throw new Error("Expected an approve call.");
+          }
+          allowance = amount;
           approved.push(allowance);
           return send(params);
         },
@@ -291,7 +295,10 @@ describe("useTransactionToast", () => {
     ]);
     const settled = await screen.findByText(heading, {}, { timeout: 5000 });
     // The shared toast queue is global, so earlier tests' toasts may still be showing.
-    const toastEl = settled.closest("[data-slot=toast]") as HTMLElement;
+    const toastEl = settled.closest("[data-slot=toast]");
+    if (!(toastEl instanceof HTMLElement)) {
+      throw new Error("The heading isn't in a toast.");
+    }
     expect(within(toastEl).getByRole("link", { name: "View" })).toHaveAttribute(
       "href",
       `https://etherscan.io/tx/${fakeTxHash}`,

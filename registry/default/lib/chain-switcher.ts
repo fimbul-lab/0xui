@@ -75,7 +75,7 @@ export function createChainSwitcher(config: Config): ChainSwitcher {
         store.set({
           pendingChainId: undefined,
           cancelled,
-          error: cancelled ? null : (error as Error),
+          error: cancelled ? null : error instanceof Error ? error : new Error(String(error)),
         });
         return false;
       }

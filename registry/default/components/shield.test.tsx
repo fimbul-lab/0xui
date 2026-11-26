@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
 import { decodeFunctionData, erc20Abi, maxUint256, parseUnits, toHex } from "viem";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -639,7 +639,11 @@ describe("ShieldedTransactionStatus", () => {
     await act(() => engine.simulate.shield({ token: tkn.address, amount, hash: fakeTxHash }));
     await settle();
     expect(line()).toHaveTextContent("Shield 1 TKN: spendable");
-    expect(within(line() as HTMLElement).getByText("0.9975")).toBeInTheDocument();
+    const status = line();
+    if (!(status instanceof HTMLElement)) {
+      throw new Error("The status line isn't an element.");
+    }
+    expect(within(status).getByText("0.9975")).toBeInTheDocument();
   });
 
   it("reports a reverted shield and stops there", async () => {
@@ -713,7 +717,7 @@ describe("Shield", () => {
     );
   });
 
-  type Sent = { to: Address; data?: string };
+  type Sent = { to: Address; data?: Hex };
 
   /** A wallet holding 10 TKN, with `allowance` for the shield contract. */
   function walletConfig({
@@ -752,7 +756,10 @@ describe("Shield", () => {
   const spender = MOCK_SHIELD_CONTRACT.toLowerCase();
   /** Spender (lower case) and amount of an `approve` call. */
   const approveArgs = (tx: Sent) => {
-    const { args } = decodeFunctionData({ abi: erc20Abi, data: tx.data as `0x${string}` });
+    if (!tx.data) {
+      throw new Error("The transaction has no calldata.");
+    }
+    const { args } = decodeFunctionData({ abi: erc20Abi, data: tx.data });
     return [String(args[0]).toLowerCase(), args[1]];
   };
 

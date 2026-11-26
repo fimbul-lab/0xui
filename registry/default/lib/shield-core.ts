@@ -14,7 +14,7 @@ import { encodeFunctionData, erc20Abi, formatUnits } from "viem";
 import type { Address, Hash } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { requiresAllowanceReset } from "@/lib/approve-button-core";
-import { errorCode, isUserRejection } from "@/lib/0xui-utils";
+import { errorCode, errorMessage, isUserRejection } from "@/lib/0xui-utils";
 import type { ErrorCode } from "@/lib/0xui-utils";
 import type {
   PreparedShield,
@@ -301,15 +301,24 @@ export function walletCapabilitiesQueryOptions(
   };
 }
 
+/** The `atomic.status` an EIP-5792 wallet reports for a chain, if any. */
+function atomicStatus(capabilities: unknown) {
+  if (typeof capabilities !== "object" || capabilities === null || !("atomic" in capabilities)) {
+    return undefined;
+  }
+  const { atomic } = capabilities;
+  return typeof atomic === "object" && atomic !== null && "status" in atomic
+    ? atomic.status
+    : undefined;
+}
+
 /**
  * Whether the wallet sends a batch as one atomic transaction. "ready" means
  * it would first ask to upgrade the account, and a wallet that batches
  * without atomicity could approve and then fail to shield. Neither counts.
  */
 export function isAtomic(capabilities: unknown) {
-  return (
-    (capabilities as { atomic?: { status?: string } } | undefined)?.atomic?.status === "supported"
-  );
+  return atomicStatus(capabilities) === "supported";
 }
 
 /** The wallet steps of a shield, frozen when it starts. */
@@ -618,7 +627,7 @@ export function createShieldFlow(
           ? { kind: "cancelled" }
           : {
               kind: "error",
-              message: (error as { shortMessage?: string }).shortMessage ?? error.message,
+              message: errorMessage(error),
               code: errorCode("error", error),
             },
       });

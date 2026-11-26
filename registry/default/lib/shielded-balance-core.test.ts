@@ -22,7 +22,7 @@ describe("createShieldedBalances", () => {
     await engine.sync(1);
     const { phase, balances: snapshot } = balances.get();
     expect(phase).toBe("ready");
-    const amounts = tokenAmounts(snapshot!, weth.toLowerCase() as `0x${string}`);
+    const amounts = tokenAmounts(snapshot!, `0x${weth.slice(2).toLowerCase()}`);
     expect(amounts.incomplete).toBe(parseEther("0.5"));
     expect(totalShielded(amounts)).toBe(parseEther("1.5"));
 

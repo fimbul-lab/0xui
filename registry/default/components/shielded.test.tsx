@@ -334,7 +334,7 @@ describe("ShieldedBalance", () => {
     function Probe() {
       const { phase, spendable, total, amounts } = useShieldedBalance({
         // Any casing matches.
-        token: weth.address.toLowerCase() as `0x${string}`,
+        token: `0x${weth.address.slice(2).toLowerCase()}`,
         chainId: 1,
       });
       return <>{`${phase} ${typeof spendable} ${spendable} ${total} ${amounts?.pending}`}</>;

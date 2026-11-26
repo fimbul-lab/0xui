@@ -18,6 +18,7 @@ import { useChainId, useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { TransactionButton } from "@/components/transaction-button";
+import { errorMessage } from "@/lib/0xui-utils";
 import {
   contractFunctions,
   formatAbiValue,
@@ -214,7 +215,7 @@ export function ContractFunction({
                 {read.isSuccess && <ReadResult name={fn.name} value={formatAbiValue(read.data)} />}
                 {read.isError && (
                   <p role="alert" className="text-sm text-destructive">
-                    {(read.error as { shortMessage?: string }).shortMessage ?? read.error.message}
+                    {errorMessage(read.error)}
                   </p>
                 )}
               </>

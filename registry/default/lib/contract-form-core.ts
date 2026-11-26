@@ -28,7 +28,7 @@ function coerce(param: AbiParameter, value: unknown): unknown {
     return value.map((item) => coerce({ ...param, type: itemType }, item));
   }
   if (param.type === "tuple") {
-    const components = (param as { components: ReadonlyArray<AbiParameter> }).components;
+    const components = "components" in param ? param.components : [];
     if (Array.isArray(value)) {
       return components.map((c, i) => coerce(c, value[i]));
     }

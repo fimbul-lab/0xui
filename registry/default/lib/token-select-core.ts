@@ -130,8 +130,8 @@ export function mergeTokenBalances(
   const contracts = tokens.filter((t) => !isNativeToken(t));
   erc20?.forEach((result, i) => {
     const token = contracts[i];
-    if (token && result.status === "success") {
-      map.set(tokenKey(token), result.result as bigint);
+    if (token && result.status === "success" && typeof result.result === "bigint") {
+      map.set(tokenKey(token), result.result);
     }
   });
   return map;

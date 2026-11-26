@@ -91,19 +91,63 @@ function isTokenInfo(value: unknown): value is TokenInfo {
  * Throws when `json` isn't a token list at all.
  */
 export function parseTokenList(json: unknown): TokenList {
-  const list = json as Partial<TokenList> | null;
   if (
-    !list ||
-    typeof list !== "object" ||
-    !Array.isArray(list.tokens) ||
-    typeof list.name !== "string"
+    typeof json !== "object" ||
+    json === null ||
+    !("tokens" in json) ||
+    !Array.isArray(json.tokens) ||
+    !("name" in json) ||
+    typeof json.name !== "string"
   ) {
     throw new Error("Not a token list: expected an object with `name` and `tokens`.");
   }
+  const tokens: Array<unknown> = json.tokens;
+  // Fields the type promises are checked; ones a list gets wrong are left out.
   return {
-    ...(list as TokenList),
-    tokens: list.tokens.filter(isTokenInfo).map((t) => ({ ...t, address: getAddress(t.address) })),
+    ...json,
+    name: json.name,
+    timestamp: "timestamp" in json && typeof json.timestamp === "string" ? json.timestamp : "",
+    version:
+      "version" in json && isVersion(json.version)
+        ? json.version
+        : { major: 0, minor: 0, patch: 0 },
+    tokens: tokens.filter(isTokenInfo).map((t) => ({ ...t, address: getAddress(t.address) })),
+    logoURI: "logoURI" in json && typeof json.logoURI === "string" ? json.logoURI : undefined,
+    keywords: "keywords" in json && isStringArray(json.keywords) ? json.keywords : undefined,
+    tags: "tags" in json && isTags(json.tags) ? json.tags : undefined,
   };
+}
+
+function isVersion(value: unknown): value is TokenList["version"] {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "major" in value &&
+    typeof value.major === "number" &&
+    "minor" in value &&
+    typeof value.minor === "number" &&
+    "patch" in value &&
+    typeof value.patch === "number"
+  );
+}
+
+const isStringArray = (value: unknown): value is Array<string> =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+function isTags(value: unknown): value is NonNullable<TokenList["tags"]> {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const tags: Array<unknown> = Object.values(value);
+  return tags.every(
+    (tag) =>
+      typeof tag === "object" &&
+      tag !== null &&
+      "name" in tag &&
+      typeof tag.name === "string" &&
+      "description" in tag &&
+      typeof tag.description === "string",
+  );
 }
 
 /** Download and parse a token list. `ipfs://` and `ar://` URLs go through a gateway. */

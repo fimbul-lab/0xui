@@ -91,7 +91,7 @@ describe("ExplorerLink", () => {
 
 describe("Address", () => {
   it("shows the checksummed, truncated address with the full one for screen readers", () => {
-    const lowercase = vitalik.toLowerCase() as `0x${string}`;
+    const lowercase: `0x${string}` = `0x${vitalik.slice(2).toLowerCase()}`;
     renderWithWagmi(<Address address={lowercase} ens={false} />);
     expect(screen.getByText("0xd8dA…6045")).toBeInTheDocument();
     expect(screen.getByText(vitalik)).toHaveClass("sr-only");

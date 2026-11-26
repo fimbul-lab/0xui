@@ -12,7 +12,7 @@ import {
   parseUnits,
   toHex,
 } from "viem";
-import type { Address } from "viem";
+import type { AbiParameter, Address } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -307,7 +307,11 @@ describe("BatchTransaction", () => {
 });
 
 describe("parseAbiInput", () => {
-  const p = (type: string, extra = {}) => ({ type, name: "x", ...extra }) as never;
+  const p = (type: string, extra: Partial<AbiParameter> = {}): AbiParameter => ({
+    type,
+    name: "x",
+    ...extra,
+  });
 
   it("parses integers with range checks", () => {
     expect(parseAbiInput(p("uint256"), "1_000")).toEqual({ value: 1000n });

@@ -47,7 +47,7 @@ describe("transactionHistory", () => {
       },
       { hash, chainId: 1, submittedAt: 0, status: "pending" },
     ];
-    expect(filterTransactions(entries, me.toLowerCase() as never)).toHaveLength(2);
+    expect(filterTransactions(entries, `0x${me.slice(2).toLowerCase()}`)).toHaveLength(2);
     expect(filterTransactions(entries, undefined)).toHaveLength(3);
   });
 

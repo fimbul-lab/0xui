@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { encodeFunctionResult } from "viem";
 import { describe, expect, it } from "vitest";
 import { createTestConfig } from "../../../test/wagmi";
@@ -13,7 +14,12 @@ const contract = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
 
 async function readToken(config: ReturnType<typeof createTestConfig>, tokenId: bigint) {
   const options = nftTokenQueryOptions(config, { contract, tokenId, chainId: 1 });
-  const results = await options.queryFn({ queryKey: options.queryKey } as never);
+  const results = await options.queryFn({
+    client: new QueryClient(),
+    queryKey: options.queryKey,
+    signal: new AbortController().signal,
+    meta: undefined,
+  });
   return options.select(results);
 }
 

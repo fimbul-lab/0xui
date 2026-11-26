@@ -361,9 +361,7 @@ describe("shielding through the interface", () => {
       state: "pending",
     });
     // Any casing of the hash, and the same object until something changes.
-    expect(engine.getTransaction(1, hash.toUpperCase().replace("0X", "0x") as typeof hash)).toBe(
-      found,
-    );
+    expect(engine.getTransaction(1, `0x${hash.slice(2).toUpperCase()}`)).toBe(found);
     void engine.sync(1);
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.repeatScan + 100);
     expect(engine.getTransaction(1, hash)).toBe(found);

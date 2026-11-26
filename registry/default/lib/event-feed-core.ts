@@ -136,7 +136,7 @@ export function createEventWatcher(
       chainId: filter.chainId,
       onLogs: (logs: ReadonlyArray<Log>) =>
         store.set(({ events }) => ({
-          events: [...(logs as Array<FeedEvent>), ...events].slice(0, keep),
+          events: [...logs, ...events].slice(0, keep),
         })),
     }),
   );

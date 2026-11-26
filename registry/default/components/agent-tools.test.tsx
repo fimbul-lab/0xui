@@ -215,7 +215,7 @@ describe("AgentTools", () => {
   });
 
   afterEach(() => {
-    delete (document as { modelContext?: unknown }).modelContext;
+    Reflect.deleteProperty(document, "modelContext");
   });
 
   const send = { to: testAccounts[1], value: parseEther("0.1") };

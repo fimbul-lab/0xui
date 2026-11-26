@@ -8,7 +8,7 @@ import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { agentConfirmText, errorCode } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, errorMessage } from "@/lib/0xui-utils";
 import {
   createTransactionFlow,
   revertReason,
@@ -270,9 +270,9 @@ export function TransactionButton({
     phase === "reverted"
       ? "Transaction reverted. Nothing changed except the gas fee."
       : phase === "error"
-        ? ((flow.error as { shortMessage?: string } | undefined)?.shortMessage ??
-          flow.error?.message ??
-          "Something went wrong.")
+        ? flow.error
+          ? errorMessage(flow.error)
+          : "Something went wrong."
         : simulation.status === "failed"
           ? `This transaction would fail: ${simulation.reason}`
           : undefined;

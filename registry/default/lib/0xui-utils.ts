@@ -37,6 +37,10 @@ export type FormatTokenAmountOptions = {
  * Rounds toward zero, so a balance is never shown larger than it is.
  * Non-zero amounts too small to show render as `<0.0001`.
  */
+/** `formatUnits` output is a decimal string, which `Intl.NumberFormat` formats exactly. */
+const isNumericString = (text: string): text is `${number}` =>
+  text.trim() !== "" && !Number.isNaN(Number(text));
+
 export function formatTokenAmount(
   value: bigint,
   decimals: number,
@@ -47,15 +51,14 @@ export function formatTokenAmount(
     notation: compact ? "compact" : "standard",
     roundingMode: "trunc",
   });
-  const decimal = formatUnits(value, decimals) as Intl.StringNumericLiteral;
-  const formatted = formatter.format(decimal);
+  const decimal = formatUnits(value, decimals);
+  const formatted = isNumericString(decimal) ? formatter.format(decimal) : decimal;
 
   const isZero = /^-?[0.]+$/.test(decimal);
   const roundsToZero = !/[1-9]/.test(formatted);
   if (!isZero && roundsToZero) {
-    const smallest = formatter.format(
-      `${value < 0n ? "-" : ""}${10 ** -maxDecimals}` as Intl.StringNumericLiteral,
-    );
+    // A string, so Intl formats the decimal itself rather than the nearest double.
+    const smallest = formatter.format(`${(value < 0n ? -1 : 1) * 10 ** -maxDecimals}`);
     return value < 0n ? `>${smallest}` : `<${smallest}`;
   }
   return formatted;
@@ -123,6 +126,13 @@ export function getExplorerUrl(
  * True when the user dismissed the wallet prompt. Treat this as a cancelled
  * action, not a failure.
  */
+/** A viem error's `shortMessage`, the line meant for people, or the error's own message. */
+export function errorMessage(error: Error): string {
+  return "shortMessage" in error && typeof error.shortMessage === "string"
+    ? error.shortMessage
+    : error.message;
+}
+
 export function isUserRejection(error: unknown) {
   if (!error) {
     return false;
@@ -132,7 +142,10 @@ export function isUserRejection(error: unknown) {
       error.walk(
         (e) =>
           e instanceof UserRejectedRequestError ||
-          (e as { code?: unknown }).code === UserRejectedRequestError.code,
+          (typeof e === "object" &&
+            e !== null &&
+            "code" in e &&
+            e.code === UserRejectedRequestError.code),
       ),
     );
   }
