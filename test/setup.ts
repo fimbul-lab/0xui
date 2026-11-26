@@ -44,7 +44,7 @@ HTMLElement.prototype.hidePopover = function () {};
 Element.prototype.getAnimations = () => [];
 Element.prototype.scrollIntoView = function () {};
 Element.prototype.checkVisibility = () => true;
-Element.prototype.getClientRects = () => [] as unknown as DOMRectList;
+Element.prototype.getClientRects = () => Object.assign([], { item: () => null });
 document.elementFromPoint = () => null;
 document.elementsFromPoint = () => [];
 document.head.append(
@@ -54,14 +54,15 @@ document.head.append(
 );
 // ui-sdk's sheet tracks its snap points with it.
 // oxlint-disable-next-line landmines/no-test-doubles -- jsdom lacks IntersectionObserver
-globalThis.IntersectionObserver ??= class {
-  root = null;
-  rootMargin = "";
-  thresholds = [];
+globalThis.IntersectionObserver ??= class implements IntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly scrollMargin = "";
+  readonly thresholds: ReadonlyArray<number> = [];
   observe() {}
   unobserve() {}
   disconnect() {}
   takeRecords() {
     return [];
   }
-} as unknown as typeof IntersectionObserver;
+};

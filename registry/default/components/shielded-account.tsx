@@ -474,7 +474,9 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
       {phase === "unlocked" ? (
         address && <ShieldedAccountSummary address={address} onLock={account.lock} />
       ) : phase === "backup" ? (
-        <RecoveryPhrase mnemonic={account.mnemonic!} onConfirm={account.confirmBackup} />
+        account.mnemonic && (
+          <RecoveryPhrase mnemonic={account.mnemonic} onConfirm={account.confirmBackup} />
+        )
       ) : phase === "locked" || phase === "unlocking" ? (
         <>
           <Heading title="Unlock your private account">

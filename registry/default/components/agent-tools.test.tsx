@@ -315,7 +315,7 @@ describe("AgentTools", () => {
 
     result = press();
     fireEvent.click(await screen.findByRole("button", { name: "Allow" }));
-    expect((await result).ok).toBe(true);
+    expect(await result).toMatchObject({ ok: true });
     expect(sent).toHaveLength(1);
   });
 
@@ -326,7 +326,7 @@ describe("AgentTools", () => {
       return true;
     };
     const { sent, press } = await setup({ confirm }, false);
-    expect((await press()).ok).toBe(true);
+    expect(await press()).toMatchObject({ ok: true });
     expect(asked).toEqual([]);
     expect(sent).toHaveLength(1);
   });
@@ -339,7 +339,7 @@ describe("AgentTools", () => {
     };
     const { sent, press } = await setup({ confirm });
 
-    expect((await press()).ok).toBe(true);
+    expect(await press()).toMatchObject({ ok: true });
     expect(asked).toEqual([[sentence, { signal: expect.any(AbortSignal) }]]);
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(sent).toHaveLength(1);
@@ -348,7 +348,7 @@ describe("AgentTools", () => {
   it("refuses every marked step with confirm={false}", async () => {
     const { sent, press } = await setup({ confirm: false });
 
-    expect((await press()).ok).toBe(false);
+    expect(await press()).toMatchObject({ ok: false });
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(sent).toEqual([]);
   });

@@ -52,7 +52,8 @@ function evaluate(query: string) {
         return true;
       }
       const feature = /^\(\s*([a-z-]+)\s*(?::\s*(.+?))?\s*\)$/i.exec(condition);
-      return feature ? matchesFeature(feature[1]!.toLowerCase(), feature[2]) : false;
+      const name = feature?.[1];
+      return name ? matchesFeature(name.toLowerCase(), feature[2]) : false;
     });
     return /^not/i.test(not ?? "") ? !matched : matched;
   });
@@ -116,6 +117,6 @@ export function installMatchMedia() {
   window.matchMedia = (query: string) => {
     const list = new EmulatedMediaQueryList(query);
     lists.add(list);
-    return list as unknown as MediaQueryList;
+    return list;
   };
 }

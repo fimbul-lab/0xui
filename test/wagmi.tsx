@@ -203,7 +203,11 @@ export function renderWithWagmi(
 
 /** Connect a mock wallet (the first by default), as if the user approved the connection. */
 export function connectMock(config: Config, wallet = 0) {
-  return connect(config, { connector: config.connectors[wallet]! });
+  const connector = config.connectors[wallet];
+  if (!connector) {
+    throw new Error(`No mock wallet at index ${wallet}.`);
+  }
+  return connect(config, { connector });
 }
 
 type EthCall = [{ to: Address; data: Hex }];
@@ -239,7 +243,7 @@ export function erc20CallRpc({
     if (result === undefined) {
       throw new Error(`erc20 ${functionName} not mocked`);
     }
-    return encodeFunctionResult({ abi: erc20Abi, functionName, result } as never);
+    return encodeFunctionResult({ abi: erc20Abi, functionName, result });
   };
 }
 
@@ -251,8 +255,12 @@ const universalResolverAbi = parseAbi([
 function decodeDnsName(data: Hex) {
   const bytes = hexToBytes(data);
   const labels: Array<string> = [];
-  for (let i = 0; bytes[i]; i += bytes[i]! + 1) {
-    labels.push(new TextDecoder().decode(bytes.slice(i + 1, i + 1 + bytes[i]!)));
+  let i = 0;
+  let length = bytes[i];
+  while (length) {
+    labels.push(new TextDecoder().decode(bytes.slice(i + 1, i + 1 + length)));
+    i += length + 1;
+    length = bytes[i];
   }
   return labels.join(".");
 }

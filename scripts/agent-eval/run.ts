@@ -13,6 +13,9 @@ import type { Task } from "./tasks.ts";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 type Options = {
   tasks: Array<string>;
   model: string;
@@ -161,7 +164,10 @@ async function scaffold(work: string, registryUrl: string) {
   );
   const app = join(work, "app");
   const configPath = join(app, "components.json");
-  const config = JSON.parse(await readFile(configPath, "utf8"));
+  const config: unknown = JSON.parse(await readFile(configPath, "utf8"));
+  if (!isRecord(config)) {
+    throw new Error(`${configPath} is not a JSON object.`);
+  }
   config.registries = { "@0xui": registryUrl };
   await writeFile(configPath, JSON.stringify(config, null, 2) + "\n");
   await mkdir(join(app, ".claude/skills/0xui"), { recursive: true });
@@ -208,18 +214,46 @@ function summarizeTool(b: ContentBlock) {
   return `${b.name} ${String(detail).replaceAll(/\s+/g, " ").slice(0, 120)}`;
 }
 
+/** One line of `claude -p --output-format stream-json`, or undefined when it isn't an object. */
+function parseEvent(line: string): Record<string, unknown> | undefined {
+  try {
+    const value: unknown = JSON.parse(line);
+    return isRecord(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The content blocks of an assistant event's message. */
+function contentBlocks(ev: Record<string, unknown>): Array<ContentBlock> {
+  const message = ev.message;
+  if (!isRecord(message) || !Array.isArray(message.content)) {
+    return [];
+  }
+  return message.content.flatMap((block: unknown) =>
+    isRecord(block) && typeof block.type === "string"
+      ? [
+          {
+            type: block.type,
+            id: typeof block.id === "string" ? block.id : undefined,
+            name: typeof block.name === "string" ? block.name : undefined,
+            input: isRecord(block.input) ? block.input : undefined,
+          },
+        ]
+      : [],
+  );
+}
+
 function parseTranscript(lines: Array<string>): Transcript {
   const t: Transcript = { toolCalls: 0, tools: {}, skillUsed: false, shadcnAdds: [] };
   const seen = new Set<string>();
   for (const line of lines) {
-    let ev: { type?: string; message?: { content?: Array<ContentBlock> }; [k: string]: unknown };
-    try {
-      ev = JSON.parse(line);
-    } catch {
+    const ev = parseEvent(line);
+    if (!ev) {
       continue;
     }
     if (ev.type === "assistant") {
-      for (const b of ev.message?.content ?? []) {
+      for (const b of contentBlocks(ev)) {
         if (b.type !== "tool_use" || !b.name || (b.id && seen.has(b.id))) {
           continue;
         }
@@ -241,11 +275,11 @@ function parseTranscript(lines: Array<string>): Transcript {
         }
       }
     } else if (ev.type === "result") {
-      t.costUsd = ev.total_cost_usd as number | undefined;
-      t.durationMs = ev.duration_ms as number | undefined;
-      t.turns = ev.num_turns as number | undefined;
-      t.resultSubtype = ev.subtype as string | undefined;
-      t.isError = ev.is_error as boolean | undefined;
+      t.costUsd = typeof ev.total_cost_usd === "number" ? ev.total_cost_usd : undefined;
+      t.durationMs = typeof ev.duration_ms === "number" ? ev.duration_ms : undefined;
+      t.turns = typeof ev.num_turns === "number" ? ev.num_turns : undefined;
+      t.resultSubtype = typeof ev.subtype === "string" ? ev.subtype : undefined;
+      t.isError = typeof ev.is_error === "boolean" ? ev.is_error : undefined;
       t.finalMessage = typeof ev.result === "string" ? ev.result.slice(0, 2000) : undefined;
     }
   }
@@ -272,12 +306,22 @@ type Registry = Map<string, Array<string>>; // item name -> file paths relative 
 
 async function loadRegistry(): Promise<Registry> {
   // The source manifest: the built index leaves out the unlisted items.
-  const index = JSON.parse(await readFile(join(ROOT, "registry.json"), "utf8"));
+  const index: unknown = JSON.parse(await readFile(join(ROOT, "registry.json"), "utf8"));
+  if (!isRecord(index) || !Array.isArray(index.items)) {
+    throw new Error("registry.json has no items.");
+  }
+  const items: Array<unknown> = index.items;
   const reg: Registry = new Map();
-  for (const item of index.items as Array<{ name: string; files?: Array<{ path: string }> }>) {
+  for (const item of items) {
+    if (!isRecord(item) || typeof item.name !== "string") {
+      continue;
+    }
+    const files: Array<unknown> = Array.isArray(item.files) ? item.files : [];
     reg.set(
       item.name,
-      (item.files ?? []).map((f) => f.path.replace(/^registry\/[^/]+\//, "")),
+      files.flatMap((f) =>
+        isRecord(f) && typeof f.path === "string" ? [f.path.replace(/^registry\/[^/]+\//, "")] : [],
+      ),
     );
   }
   return reg;
@@ -319,6 +363,9 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
   for (const [f, src] of sources) {
     for (const m of src.matchAll(IMPORT_RE)) {
       const spec = m[1];
+      if (spec === undefined) {
+        continue;
+      }
       let target: string | undefined;
       if (spec.startsWith("@/")) {
         target = "src/" + spec.slice(2);
@@ -358,7 +405,11 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
     detail: passedGroup
       ? passedGroup.items.join(" + ")
       : groups
-          .map((g) => g.items.map((n) => `${n}: ${g.status[n].note}`).join(", "))
+          .map((g) =>
+            Object.entries(g.status)
+              .map(([n, s]) => `${n}: ${s.note}`)
+              .join(", "),
+          )
           .join(" | or | "),
   };
 
@@ -447,17 +498,13 @@ async function runTask(
       timeoutMs: o.timeoutMin * 60_000,
       onLine: (line) => {
         lines.push(line);
-        try {
-          const ev = JSON.parse(line);
-          if (ev.type === "assistant") {
-            for (const b of ev.message?.content ?? []) {
-              if (b.type === "tool_use") {
-                console.log(`  [${task.id}] ${summarizeTool(b)}`);
-              }
+        const ev = parseEvent(line);
+        if (ev?.type === "assistant") {
+          for (const b of contentBlocks(ev)) {
+            if (b.type === "tool_use") {
+              console.log(`  [${task.id}] ${summarizeTool(b)}`);
             }
           }
-        } catch {
-          // Not every line is a JSON event: the live log just skips those.
         }
       },
     },

@@ -21,6 +21,27 @@ const EMPTY: ReadonlyArray<HistoryEntry> = [];
 const listeners = new Set<() => void>();
 let cache: Array<HistoryEntry> | undefined;
 
+/** Whether a stored value has the shape of an entry. Storage can hold anything. */
+function isHistoryEntry(value: unknown): value is HistoryEntry {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "hash" in value &&
+    typeof value.hash === "string" &&
+    value.hash.startsWith("0x") &&
+    "chainId" in value &&
+    typeof value.chainId === "number" &&
+    "submittedAt" in value &&
+    typeof value.submittedAt === "number" &&
+    "status" in value &&
+    (value.status === "pending" || value.status === "confirmed" || value.status === "reverted") &&
+    (!("from" in value) || value.from === undefined || typeof value.from === "string") &&
+    (!("description" in value) ||
+      value.description === undefined ||
+      typeof value.description === "string")
+  );
+}
+
 function load(): ReadonlyArray<HistoryEntry> {
   if (cache) {
     return cache;
@@ -28,12 +49,15 @@ function load(): ReadonlyArray<HistoryEntry> {
   if (typeof localStorage === "undefined") {
     return EMPTY;
   }
+  let entries: Array<HistoryEntry>;
   try {
-    cache = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    const stored: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    entries = Array.isArray(stored) ? stored.filter(isHistoryEntry) : [];
   } catch {
-    cache = [];
+    entries = [];
   }
-  return cache!;
+  cache = entries;
+  return entries;
 }
 
 function save(entries: ReadonlyArray<HistoryEntry>) {

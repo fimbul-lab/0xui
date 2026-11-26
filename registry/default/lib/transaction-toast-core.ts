@@ -1,5 +1,5 @@
 import { toast } from "@ui-sdk/core/toast";
-import type { ToastAction, Toaster, ToastOptions } from "@ui-sdk/core/toast";
+import type { ToastAction, ToastOptions, ToastRegionOptions } from "@ui-sdk/core/toast";
 import { getPublicClient } from "@wagmi/core";
 import type { Config } from "@wagmi/core";
 import type { Hash, TransactionReceipt } from "viem";
@@ -14,7 +14,7 @@ export type TransactionToastOptions<Content = unknown> = {
   titles?: { pending?: string; success?: string; reverted?: string; error?: string };
   onConfirmed?: (receipt: TransactionReceipt) => void;
   /** Queue to show it in. Defaults to the shared `toast()` queue that `OverlayHost` renders. */
-  toaster?: Toaster<any>;
+  toaster?: ToastRegionOptions["toaster"];
 };
 
 /**
@@ -28,7 +28,7 @@ export function toastTransaction<Content>(
   options: TransactionToastOptions<Content> = {},
 ): string {
   const { chainId, description, titles = {}, onConfirmed } = options;
-  const toaster: Toaster<any> = options.toaster ?? toast;
+  const toaster: NonNullable<ToastRegionOptions["toaster"]> = options.toaster ?? toast;
   const client = getPublicClient(config, { chainId });
   const url = getExplorerUrl(client?.chain, { tx: hash });
   // Stays open on press, so the toast keeps tracking while the explorer opens.

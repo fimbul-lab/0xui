@@ -41,6 +41,7 @@ import {
   clearTransactionHistory,
   recordTransaction,
 } from "./transaction-history";
+import type { HistoryEntry } from "./transaction-history";
 
 const eth: Token = {
   chainId: 1,
@@ -586,12 +587,12 @@ describe("TransactionHistory", () => {
 
   it("renders transactions from your own source and pages them", async () => {
     const user = userEvent.setup();
-    const indexed = Array.from({ length: 4 }, (_, i) => ({
-      hash: `0x${String(i + 1).repeat(64)}` as `0x${string}`,
+    const indexed = Array.from({ length: 4 }, (_, i): HistoryEntry => ({
+      hash: `0x${String(i + 1).repeat(64)}`,
       chainId: 1,
       description: `Indexed ${i}`,
       submittedAt: Date.now() - i * 60_000,
-      status: "confirmed" as const,
+      status: "confirmed",
     }));
     renderWithWagmi(<TransactionHistory from={null} transactions={indexed} pageSize={3} />);
 

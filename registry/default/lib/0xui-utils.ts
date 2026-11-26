@@ -241,9 +241,9 @@ function bech32Polymod(values: ReadonlyArray<number>) {
   for (const value of values) {
     const top = checksum >>> 25;
     checksum = ((checksum & 0x1_ff_ff_ff) << 5) ^ value;
-    for (let i = 0; i < 5; i++) {
+    for (const [i, generator] of BECH32_GENERATORS.entries()) {
       if ((top >>> i) & 1) {
-        checksum ^= BECH32_GENERATORS[i]!;
+        checksum ^= generator;
       }
     }
   }

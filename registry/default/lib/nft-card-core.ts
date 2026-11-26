@@ -23,6 +23,36 @@ export function expandTokenUri(uri: string, tokenId: bigint) {
   return uri.replace("{id}", tokenId.toString(16).padStart(64, "0"));
 }
 
+const optionalString = (value: unknown) => (typeof value === "string" ? value : undefined);
+
+/** Metadata is anyone's JSON: keep only the fields that have the types `NftMetadata` promises. */
+function toNftMetadata(json: unknown): NftMetadata {
+  if (typeof json !== "object" || json === null) {
+    throw new Error("Metadata isn't a JSON object");
+  }
+  const fields: Partial<Record<keyof NftMetadata, unknown>> = json;
+  const attributes: Array<unknown> | undefined = Array.isArray(fields.attributes)
+    ? fields.attributes
+    : undefined;
+  return {
+    name: optionalString(fields.name),
+    description: optionalString(fields.description),
+    image: optionalString(fields.image),
+    image_url: optionalString(fields.image_url),
+    attributes: attributes?.flatMap((attribute) =>
+      typeof attribute === "object" && attribute !== null
+        ? [
+            {
+              trait_type:
+                "trait_type" in attribute ? optionalString(attribute.trait_type) : undefined,
+              value: "value" in attribute ? attribute.value : undefined,
+            },
+          ]
+        : [],
+    ),
+  };
+}
+
 /**
  * Read token metadata from an HTTP, IPFS, Arweave or inline `data:` URI.
  * `fetch` decodes `data:` URIs (base64 or not) on its own.
@@ -32,7 +62,7 @@ export async function fetchNftMetadata(uri: string, gateway?: string): Promise<N
   if (!response.ok) {
     throw new Error(`Metadata request failed (${response.status})`);
   }
-  return response.json();
+  return toNftMetadata(await response.json());
 }
 
 export type NftToken = {
@@ -87,7 +117,8 @@ export function nftMetadataQueryOptions({
 }) {
   return {
     queryKey: ["0xui", "nft-metadata", uri, gateway] as const,
-    queryFn: () => fetchNftMetadata(uri!, gateway),
+    queryFn: () =>
+      uri ? fetchNftMetadata(uri, gateway) : Promise.reject(new Error("No token URI to fetch.")),
     enabled: Boolean(uri),
     staleTime: Number.POSITIVE_INFINITY,
     retry: 1,

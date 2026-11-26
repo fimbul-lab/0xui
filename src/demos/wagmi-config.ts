@@ -9,7 +9,7 @@ import {
   keccak256,
   toHex,
 } from "viem";
-import type { Chain, Hex } from "viem";
+import type { Chain, Hex, TypedDataDefinition } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createConfig, createConnector } from "wagmi";
 import {
@@ -43,6 +43,19 @@ const MINE_AFTER_MS = 3000;
  * so demo signatures don't verify against the connected address.
  */
 const demoSigner = privateKeyToAccount(keccak256(toHex("0xui demo signer")));
+
+/** The shape of EIP-712 typed data: types, a primary type and a message. */
+const isTypedData = (value: unknown): value is TypedDataDefinition =>
+  typeof value === "object" &&
+  value !== null &&
+  "types" in value &&
+  typeof value.types === "object" &&
+  value.types !== null &&
+  "primaryType" in value &&
+  typeof value.primaryType === "string" &&
+  "message" in value &&
+  typeof value.message === "object" &&
+  value.message !== null;
 
 type DemoTx = {
   hash: Hex;
@@ -113,9 +126,7 @@ async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
   return encodeFunctionResult({
     abi: multicall3Abi,
     functionName: "aggregate3",
-    result: results.map((r, i) =>
-      overrides[i] ? { success: true, returnData: overrides[i]! } : r,
-    ),
+    result: results.map((r, i) => (overrides[i] ? { success: true, returnData: overrides[i] } : r)),
   });
 }
 
@@ -215,7 +226,7 @@ function demoWallet() {
             }
             if (args.method === "wallet_getCallsStatus") {
               const [id] = args.params as [Hex];
-              const txs = (demoBatches.get(id) ?? []).map((hash) => demoTxs.get(hash)!);
+              const txs = (demoBatches.get(id) ?? []).flatMap((hash) => demoTxs.get(hash) ?? []);
               const mined = txs.length > 0 && txs.every(isMined);
               return {
                 version: "2.0.0",
@@ -241,7 +252,11 @@ function demoWallet() {
             }
             if (args.method === "eth_signTypedData_v4") {
               const [, typedData] = args.params as [Hex, string];
-              return demoSigner.signTypedData(JSON.parse(typedData));
+              const parsed: unknown = JSON.parse(typedData);
+              if (!isTypedData(parsed)) {
+                throw new Error("eth_signTypedData_v4 needs EIP-712 typed data.");
+              }
+              return demoSigner.signTypedData(parsed);
             }
             return provider.request(args as never);
           },
@@ -258,7 +273,7 @@ function demoWallet() {
 function demoTransport(chain: Chain) {
   const rpc = http()({ chain, retryCount: 1 });
   return custom({
-    async request({ method, params }) {
+    async request({ method, params }: { method: string; params?: unknown }) {
       const hash = (params as [Hex] | undefined)?.[0];
       const tx = typeof hash === "string" ? demoTxs.get(hash) : undefined;
 

@@ -17,6 +17,8 @@ export type MorphTextProps = Omit<TextMorphProps, "children" | "as"> & {
 const noWebAnimations =
   typeof Element !== "undefined" && typeof Element.prototype.animate !== "function";
 
+const isNodeArray = (node: ReactNode): node is ReadonlyArray<ReactNode> => Array.isArray(node);
+
 /** The text of plain children, or undefined when they hold an element. */
 function textOf(node: ReactNode): string | undefined {
   if (typeof node === "string") {
@@ -28,7 +30,7 @@ function textOf(node: ReactNode): string | undefined {
   if (node === null || node === undefined || typeof node === "boolean") {
     return "";
   }
-  if (!Array.isArray(node)) {
+  if (!isNodeArray(node)) {
     return undefined;
   }
   let text = "";

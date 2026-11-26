@@ -35,7 +35,10 @@ export function waitForMinedReceipt(
 export function minedReceiptQueryOptions(config: Config, { hash, chainId }: TxTarget) {
   return {
     queryKey: ["0xui", "mined-receipt", chainId, hash] as const,
-    queryFn: () => waitForMinedReceipt(config, { hash: hash!, chainId }),
+    queryFn: () =>
+      hash
+        ? waitForMinedReceipt(config, { hash, chainId })
+        : Promise.reject(new Error("No transaction hash to wait for.")),
     enabled: Boolean(hash && getPublicClient(config, { chainId })),
     staleTime: Infinity,
     retry: false,

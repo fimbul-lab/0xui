@@ -99,6 +99,9 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    if (line === undefined) {
+      break;
+    }
     const marker = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
 
     if (fence) {
@@ -125,20 +128,23 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
 
     // The opening tag can span lines, like `<Install name={[ … ]} />`.
     let open = line;
-    while (!/>\s*$/.test(open) && i + 1 < lines.length) {
-      open += `\n${lines[++i]}`;
+    let next = lines[i + 1];
+    while (!/>\s*$/.test(open) && next !== undefined) {
+      open += `\n${next}`;
+      next = lines[++i + 1];
     }
     const selfClosing = /\/>\s*$/.test(open);
     const children: Array<string> = [];
     if (!selfClosing && !open.includes(`</${name}>`)) {
-      while (i + 1 < lines.length && !lines[i + 1].includes(`</${name}>`)) {
-        children.push(lines[++i]);
+      while (next !== undefined && !next.includes(`</${name}>`)) {
+        children.push(next);
+        next = lines[++i + 1];
       }
       i++;
     }
 
     if (name === "Install") {
-      const names = [...open.matchAll(/"([a-z0-9-]+)"/g)].map((match) => match[1]);
+      const names = [...open.matchAll(/"([a-z0-9-]+)"/g)].flatMap((match) => match[1] ?? []);
       out.push("```bash", installCommand(names), "```");
     } else if (name === "Aside") {
       const type = attribute(open, "type") ?? "note";

@@ -2,7 +2,7 @@ import { onTestFinished } from "vitest";
 
 export type RegisteredTool = {
   name: string;
-  execute: (input: object) => Promise<any>;
+  execute: (input: object) => Promise<unknown>;
 };
 
 /**

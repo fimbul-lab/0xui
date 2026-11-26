@@ -166,13 +166,13 @@ export function ShieldedBalance({
         <SkeletonBox width="6em" height="1em" style={inlineBox} />
         <span className="sr-only">Loading private balance</span>
       </span>
-    ) : phase === "error" ? (
+    ) : phase === "error" || !amounts ? (
       <span title="Couldn't load private balance" className="text-muted-foreground">
         —<span className="sr-only">Couldn't load private balance</span>
       </span>
     ) : (
       <TokenAmount
-        value={amounts!.spendable}
+        value={amounts.spendable}
         decimals={token.decimals}
         symbol={token.symbol}
         animate={animate}
@@ -219,13 +219,13 @@ export function ShieldedBalance({
         <div className="text-2xl font-medium">{headline}</div>
       </div>
 
-      {others.length > 0 && (
+      {amounts && others.length > 0 && (
         <ul className="flex flex-col gap-3 border-t pt-3">
           {others.map((state) => (
             <ShieldedBalanceRow
               key={state}
               state={state}
-              amount={amounts![state]}
+              amount={amounts[state]}
               token={token}
               {...format}
             >

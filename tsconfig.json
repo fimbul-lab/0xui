@@ -1,8 +1,9 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
+  "include": [".astro/types.d.ts", "src/pages/.well-known/**/*", "**/*"],
   "exclude": ["dist", "node_modules"],
   "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
     "paths": {
       // Docs-only code (shadcn primitives, `cn`) and registry files never
       // share a path, so the order only decides where `shadcn add` writes:

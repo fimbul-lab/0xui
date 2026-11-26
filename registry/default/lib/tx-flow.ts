@@ -154,11 +154,11 @@ export function createTransactionFlow(
             ? await writeContract(config, {
                 chainId: target,
                 ...request.contract,
-              } as ContractRequest)
+              })
             : await sendTransaction(config, {
                 chainId: target,
                 ...request.transaction,
-              } as TransactionRequest);
+              });
       } catch (error) {
         if (id === run) {
           fail(error);

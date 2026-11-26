@@ -66,8 +66,9 @@ export function docsTools({
   let index: Promise<Array<IndexEntry>> | undefined;
   const pages = () =>
     (index ??= read("/llms.txt").then((text) =>
-      [...text.matchAll(/^- \[([^\]]+)\]\(([^)]+\.md)\): ?(.*)$/gm)].map(
-        ([, title, url, description]) => ({ title, id: pageId(url), description }),
+      [...text.matchAll(/^- \[([^\]]+)\]\(([^)]+\.md)\): ?(.*)$/gm)].flatMap(
+        ([, title, url, description = ""]) =>
+          title === undefined || url === undefined ? [] : [{ title, id: pageId(url), description }],
       ),
     ));
 
@@ -182,7 +183,10 @@ export function docsTools({
         if (!/^[a-z0-9-]+$/.test(name)) {
           throw new Error(`"${name}" isn't a registry item name.`);
         }
-        const item = JSON.parse(await read(`/r/${name}.json`));
+        const item: unknown = JSON.parse(await read(`/r/${name}.json`));
+        if (typeof item !== "object" || item === null) {
+          throw new Error(`/r/${name}.json isn't a registry item.`);
+        }
         return { install: `npx shadcn@latest add @0xui/${name}`, ...item };
       },
     },

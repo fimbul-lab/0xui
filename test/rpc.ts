@@ -5,14 +5,35 @@ import { http, HttpResponse } from "msw";
  * Throw `{ code, message }` from a function to return a JSON-RPC error, e.g.
  * `{ code: 4001 }` for a user rejection.
  */
-export type RpcResponses = Record<string, unknown | ((params: any) => unknown)>;
+export type RpcResponses = Record<string, unknown>;
+
+/** A canned response that is a function: it's called with the request's params. */
+const isHandler = (response: unknown): response is (params: unknown) => unknown =>
+  typeof response === "function";
 
 async function respond(rpc: RpcResponses, method: string, params: unknown) {
   if (!(method in rpc)) {
     throw new Error(`RPC method not mocked: ${method}`);
   }
   const response = rpc[method];
-  return typeof response === "function" ? response(params) : response;
+  return isHandler(response) ? response(params) : response;
+}
+
+/** The id, method and params of a JSON-RPC request body. */
+function parseRpcRequest(request: unknown) {
+  if (
+    typeof request !== "object" ||
+    request === null ||
+    !("method" in request) ||
+    typeof request.method !== "string"
+  ) {
+    throw new Error(`Not a JSON-RPC request: ${JSON.stringify(request)}`);
+  }
+  return {
+    id: "id" in request ? request.id : undefined,
+    method: request.method,
+    params: "params" in request ? request.params : undefined,
+  };
 }
 
 const nodes: Array<RpcResponses> = [];
@@ -29,11 +50,7 @@ export const rpcNodes = http.post<{ node: string }>(
     if (!rpc) {
       return HttpResponse.json({ error: `No node ${node}` }, { status: 404 });
     }
-    const { id, method, params } = (await request.json()) as {
-      id: number;
-      method: string;
-      params: unknown;
-    };
+    const { id, method, params } = parseRpcRequest(await request.json());
     try {
       const result = await respond(rpc, method, params);
       return HttpResponse.json({ jsonrpc: "2.0", id, result });

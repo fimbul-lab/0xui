@@ -392,7 +392,7 @@ export function Portfolio({
                         row={row}
                         money={money}
                         locale={locale}
-                        note={notes[row.hidden!]}
+                        note={row.hidden && notes[row.hidden]}
                       />
                     ))}
                   </Timeline>

@@ -102,7 +102,7 @@ export function tokenBalancesQueryOptions(
           address: token.address,
           abi: erc20Abi,
           functionName: "balanceOf" as const,
-          args: [address!] as const,
+          args: [address] as const,
           chainId,
         })),
         query: { enabled: enabled && Boolean(address) && erc20.length > 0 },
@@ -158,7 +158,10 @@ const recentKey = (chainId: number) => `0xui:recent-tokens:${chainId}`;
 /** Addresses of the tokens last picked on a chain, newest first. */
 export function readRecentTokens(chainId: number): Array<string> {
   try {
-    return JSON.parse(localStorage.getItem(recentKey(chainId)) ?? "[]");
+    const stored: unknown = JSON.parse(localStorage.getItem(recentKey(chainId)) ?? "[]");
+    return Array.isArray(stored)
+      ? stored.filter((item: unknown): item is string => typeof item === "string")
+      : [];
   } catch {
     return [];
   }
