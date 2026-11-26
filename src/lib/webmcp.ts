@@ -3,13 +3,17 @@
 
 type Fetch = (url: string) => Promise<Response>;
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject;
+type JsonObject = { [key: string]: JsonValue };
+
 interface Tool {
   name: string;
   title: string;
   description: string;
   inputSchema: object;
   annotations: { readOnlyHint: boolean };
-  execute: (input: Record<string, unknown>) => Promise<unknown>;
+  execute: (input: JsonObject) => Promise<unknown>;
 }
 
 interface ModelContext {
