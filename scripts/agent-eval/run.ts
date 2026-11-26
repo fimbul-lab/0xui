@@ -8,11 +8,10 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { requireAll, tasks } from "./tasks.ts";
 import type { Task } from "./tasks.ts";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const ROOT = resolve(import.meta.dirname, "../..");
 
 type Options = {
   tasks: Array<string>;
