@@ -230,7 +230,10 @@ export class Timeline {
     const name = `${this.prefix}${(this.n++).toString(36)}`;
     const sorted = [...stops].sort((a, b) => a[0] - b[0]);
     const first = sorted[0];
-    const last = sorted[sorted.length - 1];
+    const last = sorted.at(-1);
+    if (!last) {
+      throw new Error("A track needs at least one stop.");
+    }
     if (first[0] > 0) {
       sorted.unshift([0, first[1], undefined]);
     }
@@ -289,7 +292,10 @@ export class Timeline {
     }
     if (to < this.duration) {
       if (dOut <= cut) {
-        stops[stops.length - 1][2] = hold;
+        const shown = stops.at(-1);
+        if (shown) {
+          shown[2] = hold;
+        }
         stops.push([to, gone]);
       } else {
         stops.push([to, on, "ease-in"], [Math.min(to + dOut, this.duration), gone]);
