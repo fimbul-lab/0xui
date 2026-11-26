@@ -59,7 +59,13 @@ const wrapperFor = (engine: MockShieldedEngine) =>
 const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
 
 /** Let work the engine scheduled for "later" run, and React catch up. */
-const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve)));
+const settle = () =>
+  act(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve);
+      }),
+  );
 
 const click = (element: HTMLElement) =>
   act(async () => {

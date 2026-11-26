@@ -83,7 +83,13 @@ const withEngine = (ui: ReactElement, engine: MockShieldedEngine) => (
   <ShieldedProvider engine={engine}>{ui}</ShieldedProvider>
 );
 
-const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve)));
+const settle = () =>
+  act(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve);
+      }),
+  );
 
 afterEach(() => vi.useRealTimers());
 

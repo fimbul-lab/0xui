@@ -12,7 +12,9 @@ const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af";
 
 /** A fake quote from fixed prices, with a 0.3% fee and a small delay. */
 const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount }) => {
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 600);
+  });
   const sellPrice = demoPrices[sellToken.symbol];
   const buyPrice = demoPrices[buyToken.symbol];
   if (!sellPrice || !buyPrice) {

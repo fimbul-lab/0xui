@@ -26,7 +26,6 @@ export default defineConfig({
     // Temporarily off while adopting @cloudflare/oxlint-config. Each gets its own
     // commit: fixed and turned on, or kept off with the reason.
     "no-console": "off",
-    "no-promise-executor-return": "off",
     "no-undef": "off",
     "quality/no-array-filter-map": "off",
     "quality/no-chained-type-assertions": "off",

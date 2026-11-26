@@ -130,12 +130,12 @@ function serveRegistry(): Promise<{ url: string; close: () => void }> {
     res.writeHead(200, { "content-type": "application/json" });
     createReadStream(path).pipe(res);
   });
-  return new Promise((ok) =>
+  return new Promise((ok) => {
     server.listen(0, "127.0.0.1", () => {
       const { port } = server.address() as AddressInfo;
       ok({ url: `http://localhost:${port}/r/{name}.json`, close: () => server.close() });
-    }),
-  );
+    });
+  });
 }
 
 async function scaffold(work: string, registryUrl: string) {

@@ -72,7 +72,10 @@ export type TransactionFlow = {
 };
 
 const toError = (e: unknown) => (e instanceof Error ? e : new Error(String(e)));
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 function readTarget(config: Config, chainId: number | undefined) {
   const connection = getConnection(config);

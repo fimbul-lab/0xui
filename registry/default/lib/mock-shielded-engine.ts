@@ -301,12 +301,14 @@ export function createMockShieldedEngine({
     const delay = ms / speed;
     return new Promise<void>((resolve, reject) => {
       if (signal?.aborted) {
-        return reject(signal.reason);
+        reject(signal.reason);
+        return;
       }
       // Nothing to wait for: stay on the microtask queue, so at
       // `speed: Infinity` a whole flow finishes without a single timer.
       if (!(delay >= 1)) {
-        return resolve();
+        resolve();
+        return;
       }
       const onAbort = () => {
         clearTimeout(timer);

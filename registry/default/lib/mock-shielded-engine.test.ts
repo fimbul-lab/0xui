@@ -27,7 +27,10 @@ async function unlocked(options: Parameters<typeof createMockShieldedEngine>[0] 
 }
 
 /** Let work the engine scheduled for "later" (standby, settling) run. */
-const settle = () => new Promise((resolve) => setTimeout(resolve));
+const settle = () =>
+  new Promise((resolve) => {
+    setTimeout(resolve);
+  });
 
 const amountsOf = (engine: MockShieldedEngine, token: string = weth) =>
   engine.getBalances(1)?.find((balance) => balance.token === token)?.amounts;
