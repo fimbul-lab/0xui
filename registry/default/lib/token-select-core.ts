@@ -37,8 +37,10 @@ export function filterTokens(tokens: ReadonlyArray<TokenInfo>, query: string) {
     return -1;
   };
   return tokens
-    .map((token) => ({ token, rank: rank(token) }))
-    .filter((t) => t.rank >= 0)
+    .flatMap((token) => {
+      const tokenRank = rank(token);
+      return tokenRank >= 0 ? [{ token, rank: tokenRank }] : [];
+    })
     .sort((a, b) => a.rank - b.rank)
     .map((t) => t.token);
 }

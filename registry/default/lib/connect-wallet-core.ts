@@ -26,15 +26,20 @@ export function walletOptions(connectors: ReadonlyArray<Connector>, recentId?: s
   const announced = connectors.some((c) => c.rdns);
   const rank = (o: WalletOption) => (o.recent ? 0 : o.installed ? 1 : 2);
   return connectors
-    .filter((c) => !(announced && c.id === "injected"))
-    .map((connector): WalletOption => ({
-      connector,
-      id: connector.id,
-      name: connector.id === "injected" ? "Browser wallet" : connector.name,
-      icon: connector.icon,
-      installed: Boolean(connector.rdns),
-      recent: connector.id === recentId,
-    }))
+    .flatMap((connector): Array<WalletOption> =>
+      announced && connector.id === "injected"
+        ? []
+        : [
+            {
+              connector,
+              id: connector.id,
+              name: connector.id === "injected" ? "Browser wallet" : connector.name,
+              icon: connector.icon,
+              installed: Boolean(connector.rdns),
+              recent: connector.id === recentId,
+            },
+          ],
+    )
     .map((o, index) => ({ o, index }))
     .sort((a, b) => rank(a.o) - rank(b.o) || a.index - b.index)
     .map(({ o }) => o);
