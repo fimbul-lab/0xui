@@ -9,7 +9,7 @@ import {
   keccak256,
   toHex,
 } from "viem";
-import type { Chain, Hex } from "viem";
+import type { Chain, Hex, TypedDataDefinition } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createConfig, createConnector } from "wagmi";
 import {
@@ -43,6 +43,19 @@ const MINE_AFTER_MS = 3000;
  * so demo signatures don't verify against the connected address.
  */
 const demoSigner = privateKeyToAccount(keccak256(toHex("0xui demo signer")));
+
+/** The shape of EIP-712 typed data: types, a primary type and a message. */
+const isTypedData = (value: unknown): value is TypedDataDefinition =>
+  typeof value === "object" &&
+  value !== null &&
+  "types" in value &&
+  typeof value.types === "object" &&
+  value.types !== null &&
+  "primaryType" in value &&
+  typeof value.primaryType === "string" &&
+  "message" in value &&
+  typeof value.message === "object" &&
+  value.message !== null;
 
 type DemoTx = {
   hash: Hex;
@@ -235,7 +248,11 @@ function demoWallet() {
             }
             if (args.method === "eth_signTypedData_v4") {
               const [, typedData] = args.params as [Hex, string];
-              return demoSigner.signTypedData(JSON.parse(typedData));
+              const parsed: unknown = JSON.parse(typedData);
+              if (!isTypedData(parsed)) {
+                throw new Error("eth_signTypedData_v4 needs EIP-712 typed data.");
+              }
+              return demoSigner.signTypedData(parsed);
             }
             return provider.request(args as never);
           },

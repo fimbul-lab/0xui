@@ -146,7 +146,10 @@ export function createTestConfig({
 } = {}) {
   stubWalletRpc(rpc);
   const transport = custom(
-    { request: ({ method, params }) => respond(rpc, method, params) },
+    {
+      request: ({ method, params }: { method: string; params?: unknown }) =>
+        respond(rpc, method, params),
+    },
     { retryCount: 0 },
   );
   return createConfig({
