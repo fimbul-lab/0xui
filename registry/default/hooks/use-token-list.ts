@@ -3,7 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useChainId, useChains } from "wagmi";
 import { selectTokens, tokenListQueryOptions } from "@/lib/token-list";
-import type { TokenFilters, TokenInfo, TokenList } from "@/lib/token-list";
+import type { TokenFilters, TokenInfo } from "@/lib/token-list";
 
 const NO_TOKENS: ReadonlyArray<TokenInfo> = [];
 
@@ -46,7 +46,7 @@ export function useTokenList(
     queries: list.map((url) => tokenListQueryOptions(url, { gateway })),
   });
 
-  const lists = queries.map((q) => q.data).filter(Boolean) as Array<TokenList>;
+  const lists = queries.flatMap((q) => q.data ?? []);
   const dataKey = queries.map((q) => q.dataUpdatedAt).join();
 
   const tokens = useMemo(

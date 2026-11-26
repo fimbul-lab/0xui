@@ -13,6 +13,7 @@ import { TokenInput } from "@/components/token-input";
 import type { TokenInputState } from "@/components/token-input";
 import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
+import { errorMessage } from "@/lib/0xui-utils";
 import {
   formatRate,
   isSameToken,
@@ -249,7 +250,7 @@ export function Swap({
       >
         {error ? (
           <span role="alert" className="text-destructive">
-            {(error as { shortMessage?: string }).shortMessage ?? error.message}
+            {errorMessage(error)}
           </span>
         ) : rate ? (
           <Button

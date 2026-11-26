@@ -69,7 +69,7 @@ describe("helpers", () => {
       decimals: 18,
       logoURI: undefined,
     });
-    expect(isNativeToken({ address: NATIVE_TOKEN_ADDRESS.toLowerCase() as `0x${string}` })).toBe(
+    expect(isNativeToken({ address: `0x${NATIVE_TOKEN_ADDRESS.slice(2).toLowerCase()}` })).toBe(
       true,
     );
   });

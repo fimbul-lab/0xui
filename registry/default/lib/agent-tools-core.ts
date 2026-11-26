@@ -112,11 +112,11 @@ async function askPerson(confirm: AgentConfirm | false | undefined, sentence: st
   }
 }
 
-const pageTitles: Record<string, string> = {
+const pageTitles = {
   snapshot: "Read the page's controls",
   act: "Use the page's controls",
   query: "Find controls and their choices",
-};
+} satisfies Record<string, string>;
 
 /**
  * ui-sdk's `snapshot`, `act` and `query` as `AgentTool`s bound to `agent`,
@@ -163,11 +163,11 @@ function tokenOf(value: unknown): Address {
 }
 
 function accountOf(config: Config, value: unknown, what = "address"): Address {
-  const address = (value ?? getConnection(config).address) as string | undefined;
+  const address = value ?? getConnection(config).address;
   if (!address) {
     throw new Error(`No wallet is connected. Pass ${what}, or ask the person to connect.`);
   }
-  if (!isAddress(address)) {
+  if (typeof address !== "string" || !isAddress(address)) {
     throw new Error(`"${address}" isn't an address.`);
   }
   return address;
@@ -500,6 +500,18 @@ export type RegisterAgentToolsOptions = {
  * Registers `tools` with the browser through WebMCP, and with `agent`, ui-sdk's
  * page tools too. Returns the cleanup. Does nothing without WebMCP.
  */
+/** WebMCP's `document.modelContext`, where the browser has it. */
+function modelContextOf(doc: Document): ModelContext | undefined {
+  const context: unknown = "modelContext" in doc ? doc.modelContext : undefined;
+  return isModelContext(context) ? context : undefined;
+}
+
+const isModelContext = (value: unknown): value is ModelContext =>
+  typeof value === "object" &&
+  value !== null &&
+  "registerTool" in value &&
+  typeof value.registerTool === "function";
+
 export function registerAgentTools(
   tools: Array<AgentTool>,
   { agent, allow }: RegisterAgentToolsOptions = {},
@@ -507,8 +519,7 @@ export function registerAgentTools(
   if (agent && !allow) {
     throw new Error("registerAgentTools needs an allow with an agent.");
   }
-  const context = (globalThis.document as { modelContext?: ModelContext } | undefined)
-    ?.modelContext;
+  const context = typeof document === "undefined" ? undefined : modelContextOf(document);
   if (!context) {
     return () => {};
   }

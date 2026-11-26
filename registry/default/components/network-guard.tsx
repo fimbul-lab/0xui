@@ -6,7 +6,7 @@ import { useConfig } from "wagmi";
 import { Button } from "@/components/primitives/button";
 import { useMounted } from "@/hooks/use-mounted";
 import { useStore } from "@/hooks/use-store";
-import { errorCode } from "@/lib/0xui-utils";
+import { errorCode, errorMessage } from "@/lib/0xui-utils";
 import { createNetworkGuard } from "@/lib/network-guard-core";
 import type { NetworkGuardPhase } from "@/lib/network-guard-core";
 import { cn } from "@/lib/utils";
@@ -96,7 +96,7 @@ export function NetworkGuard({ chainId, mode = "banner", children, className }: 
         </p>
         {guard.error && (
           <p role="alert" className="text-destructive">
-            {(guard.error as { shortMessage?: string }).shortMessage ?? guard.error.message}
+            {errorMessage(guard.error)}
           </p>
         )}
       </div>

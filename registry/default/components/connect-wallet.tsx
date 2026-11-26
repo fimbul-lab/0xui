@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/primitives/dialog";
 import { useStore } from "@/hooks/use-store";
-import { errorCode } from "@/lib/0xui-utils";
+import { errorCode, errorMessage } from "@/lib/0xui-utils";
 import { createConnectWallet } from "@/lib/connect-wallet-core";
 import type { ConnectPhase, WalletOption } from "@/lib/connect-wallet-core";
 import { cn } from "@/lib/utils";
@@ -170,7 +170,7 @@ export function ConnectWalletDialog({
         </div>
         {phase === "error" && error && (
           <p role="alert" className="text-sm text-destructive">
-            {(error as { shortMessage?: string }).shortMessage ?? error.message}
+            {errorMessage(error)}
           </p>
         )}
 

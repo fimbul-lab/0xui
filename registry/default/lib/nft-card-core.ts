@@ -30,15 +30,13 @@ function toNftMetadata(json: unknown): NftMetadata {
   if (typeof json !== "object" || json === null) {
     throw new Error("Metadata isn't a JSON object");
   }
-  const fields: Partial<Record<keyof NftMetadata, unknown>> = json;
-  const attributes: Array<unknown> | undefined = Array.isArray(fields.attributes)
-    ? fields.attributes
-    : undefined;
+  const attributes: Array<unknown> | undefined =
+    "attributes" in json && Array.isArray(json.attributes) ? json.attributes : undefined;
   return {
-    name: optionalString(fields.name),
-    description: optionalString(fields.description),
-    image: optionalString(fields.image),
-    image_url: optionalString(fields.image_url),
+    name: "name" in json ? optionalString(json.name) : undefined,
+    description: "description" in json ? optionalString(json.description) : undefined,
+    image: "image" in json ? optionalString(json.image) : undefined,
+    image_url: "image_url" in json ? optionalString(json.image_url) : undefined,
     attributes: attributes?.flatMap((attribute) =>
       typeof attribute === "object" && attribute !== null
         ? [

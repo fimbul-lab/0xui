@@ -74,7 +74,10 @@ export function createNetworkGuard(
         return true;
       } catch (error) {
         const cancelled = isUserRejection(error);
-        store.set({ cancelled, error: cancelled ? null : (error as Error) });
+        store.set({
+          cancelled,
+          error: cancelled ? null : error instanceof Error ? error : new Error(String(error)),
+        });
         return false;
       } finally {
         switching = false;

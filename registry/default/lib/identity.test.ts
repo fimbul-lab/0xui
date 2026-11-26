@@ -6,7 +6,7 @@ const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 
 describe("identity", () => {
   it("shows a name, or the checksummed address truncated", () => {
-    expect(addressDisplay(vitalik.toLowerCase() as `0x${string}`)).toEqual({
+    expect(addressDisplay(`0x${vitalik.slice(2).toLowerCase()}`)).toEqual({
       checksummed: vitalik,
       text: "0xd8dA…6045",
       label: vitalik,

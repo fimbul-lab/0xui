@@ -9,7 +9,7 @@ import { CopyButton } from "@/components/copy-button";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { agentConfirmText, errorCode, truncateAddress } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, errorMessage, truncateAddress } from "@/lib/0xui-utils";
 import { createMessageSigner } from "@/lib/sign-message-core";
 import type { SignPhase, SignRequest } from "@/lib/sign-message-core";
 import { cn } from "@/lib/utils";
@@ -158,7 +158,7 @@ export function SignMessage({
       )}
       {flow.phase === "error" && flow.error && (
         <p role="alert" className="text-sm text-destructive">
-          {(flow.error as { shortMessage?: string }).shortMessage ?? flow.error.message}
+          {errorMessage(flow.error)}
         </p>
       )}
       {showSignature && flow.signature && (

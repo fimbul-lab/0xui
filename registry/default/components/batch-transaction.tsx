@@ -9,7 +9,7 @@ import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { agentConfirmText, errorCode } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, errorMessage } from "@/lib/0xui-utils";
 import {
   batchStepState,
   createBatchTransaction,
@@ -104,7 +104,7 @@ export function BatchTransaction({
 
   const chainName = batch.targetChain?.name ?? "the selected network";
   let label: ReactNode = children;
-  let action: (() => unknown) | undefined = batch.execute;
+  let action: (() => void) | undefined = () => void batch.execute();
   // What a person confirms before an agent's press reaches the wallet.
   let confirm: string | undefined =
     agentConfirm === false
@@ -133,7 +133,7 @@ export function BatchTransaction({
     action = undefined;
   } else if (batch.wrongChain) {
     label = `Switch to ${batch.targetChain?.name ?? "the right network"}`;
-    action = batch.switchToTarget;
+    action = () => void batch.switchToTarget();
     if (agentConfirm !== false) {
       confirm = `Asks your wallet to switch to ${chainName}`;
     }
@@ -190,7 +190,7 @@ export function BatchTransaction({
       )}
       {batch.phase === "error" && batch.error && (
         <p role="alert" className="text-sm text-destructive">
-          {(batch.error as { shortMessage?: string }).shortMessage ?? batch.error.message}
+          {errorMessage(batch.error)}
         </p>
       )}
       <ConnectWalletDialog open={connectOpen} onOpenChange={setConnectOpen} />

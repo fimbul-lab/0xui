@@ -8,7 +8,7 @@ import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { agentConfirmText, errorCode } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, errorMessage } from "@/lib/0xui-utils";
 import {
   createTransactionFlow,
   revertReason,
@@ -224,7 +224,7 @@ export function TransactionButton({
   }, [simulate, phase, resimulate]);
 
   let label: ReactNode = children;
-  let action: (() => unknown) | undefined;
+  let action: (() => void) | undefined;
   // What an agent must ask the person before pressing: the transaction by
   // default, the network switch while that's what the button does, and
   // nothing while it only opens the wallet picker (connecting asks there).
@@ -254,25 +254,25 @@ export function TransactionButton({
     label = disabledReason;
   } else if (flow.wrongChain) {
     label = `Switch to ${flow.targetChain?.name ?? "the right network"}`;
-    action = flow.switchToTarget;
+    action = () => void flow.switchToTarget();
     confirm = `Asks your wallet to switch to ${flow.targetChain?.name ?? "the right network"}`;
   } else if (simulation.status === "checking") {
     label = "Checking…";
   } else if (simulation.status === "failed") {
     label = "Transaction will fail";
   } else if (contract) {
-    action = () => flow.execute({ contract });
+    action = () => void flow.execute({ contract });
   } else if (transaction) {
-    action = () => flow.execute({ transaction });
+    action = () => void flow.execute({ transaction });
   }
 
   const message =
     phase === "reverted"
       ? "Transaction reverted. Nothing changed except the gas fee."
       : phase === "error"
-        ? ((flow.error as { shortMessage?: string } | undefined)?.shortMessage ??
-          flow.error?.message ??
-          "Something went wrong.")
+        ? flow.error
+          ? errorMessage(flow.error)
+          : "Something went wrong."
         : simulation.status === "failed"
           ? `This transaction would fail: ${simulation.reason}`
           : undefined;

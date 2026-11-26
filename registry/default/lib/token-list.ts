@@ -64,19 +64,24 @@ export function nativeToken(
 }
 
 function isTokenInfo(value: unknown): value is TokenInfo {
-  const t = value as Record<string, unknown>;
   return (
-    typeof t === "object" &&
-    t !== null &&
-    Number.isInteger(t.chainId) &&
-    typeof t.address === "string" &&
+    typeof value === "object" &&
+    value !== null &&
+    "chainId" in value &&
+    Number.isInteger(value.chainId) &&
+    "address" in value &&
+    typeof value.address === "string" &&
     // Lists can include non-EVM chains (e.g. Solana). Keep EVM addresses only.
-    isAddress(t.address, { strict: false }) &&
-    typeof t.symbol === "string" &&
-    typeof t.name === "string" &&
-    Number.isInteger(t.decimals) &&
-    (t.decimals as number) >= 0 &&
-    (t.decimals as number) <= 255
+    isAddress(value.address, { strict: false }) &&
+    "symbol" in value &&
+    typeof value.symbol === "string" &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    "decimals" in value &&
+    typeof value.decimals === "number" &&
+    Number.isInteger(value.decimals) &&
+    value.decimals >= 0 &&
+    value.decimals <= 255
   );
 }
 
@@ -86,19 +91,63 @@ function isTokenInfo(value: unknown): value is TokenInfo {
  * Throws when `json` isn't a token list at all.
  */
 export function parseTokenList(json: unknown): TokenList {
-  const list = json as Partial<TokenList> | null;
   if (
-    !list ||
-    typeof list !== "object" ||
-    !Array.isArray(list.tokens) ||
-    typeof list.name !== "string"
+    typeof json !== "object" ||
+    json === null ||
+    !("tokens" in json) ||
+    !Array.isArray(json.tokens) ||
+    !("name" in json) ||
+    typeof json.name !== "string"
   ) {
     throw new Error("Not a token list: expected an object with `name` and `tokens`.");
   }
+  const tokens: Array<unknown> = json.tokens;
+  // Fields the type promises are checked; ones a list gets wrong are left out.
   return {
-    ...(list as TokenList),
-    tokens: list.tokens.filter(isTokenInfo).map((t) => ({ ...t, address: getAddress(t.address) })),
+    ...json,
+    name: json.name,
+    timestamp: "timestamp" in json && typeof json.timestamp === "string" ? json.timestamp : "",
+    version:
+      "version" in json && isVersion(json.version)
+        ? json.version
+        : { major: 0, minor: 0, patch: 0 },
+    tokens: tokens.filter(isTokenInfo).map((t) => ({ ...t, address: getAddress(t.address) })),
+    logoURI: "logoURI" in json && typeof json.logoURI === "string" ? json.logoURI : undefined,
+    keywords: "keywords" in json && isStringArray(json.keywords) ? json.keywords : undefined,
+    tags: "tags" in json && isTags(json.tags) ? json.tags : undefined,
   };
+}
+
+function isVersion(value: unknown): value is TokenList["version"] {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "major" in value &&
+    typeof value.major === "number" &&
+    "minor" in value &&
+    typeof value.minor === "number" &&
+    "patch" in value &&
+    typeof value.patch === "number"
+  );
+}
+
+const isStringArray = (value: unknown): value is Array<string> =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+function isTags(value: unknown): value is NonNullable<TokenList["tags"]> {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const tags: Array<unknown> = Object.values(value);
+  return tags.every(
+    (tag) =>
+      typeof tag === "object" &&
+      tag !== null &&
+      "name" in tag &&
+      typeof tag.name === "string" &&
+      "description" in tag &&
+      typeof tag.description === "string",
+  );
 }
 
 /** Download and parse a token list. `ipfs://` and `ar://` URLs go through a gateway. */

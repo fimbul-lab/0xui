@@ -692,6 +692,7 @@
         "@0xui/transaction-button",
         "@0xui/morph-text",
         "@0xui/token-list",
+        "@0xui/0xui-utils",
         "@0xui/primitive-button"
       ]
     },
@@ -758,6 +759,7 @@
       "registryDependencies": [
         "@0xui/transaction-button",
         "@0xui/morph-text",
+        "@0xui/0xui-utils",
         "@0xui/primitive-button"
       ]
     },

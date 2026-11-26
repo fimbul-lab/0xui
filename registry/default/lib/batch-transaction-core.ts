@@ -71,9 +71,20 @@ export function describeBatchCalls(calls: ReadonlyArray<Pick<BatchCall, "label">
   return calls.map((call, i) => call.label ?? `Step ${i + 1}`).join(", then ");
 }
 
+/** The `atomic.status` an EIP-5792 wallet reports for a chain, if any. */
+function atomicStatus(capabilities: unknown) {
+  if (typeof capabilities !== "object" || capabilities === null || !("atomic" in capabilities)) {
+    return undefined;
+  }
+  const { atomic } = capabilities;
+  return typeof atomic === "object" && atomic !== null && "status" in atomic
+    ? atomic.status
+    : undefined;
+}
+
 /** Whether a wallet's EIP-5792 capabilities for a chain allow atomic batches. */
 export function supportsAtomic(capabilities: unknown) {
-  const status = (capabilities as { atomic?: { status?: string } } | undefined)?.atomic?.status;
+  const status = atomicStatus(capabilities);
   return status === "supported" || status === "ready";
 }
 

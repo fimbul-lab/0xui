@@ -118,9 +118,11 @@ const linkFormats: Record<
   email: { label: "Email", href: (v) => `mailto:${v}` },
 };
 
+const linkKeys: ReadonlyArray<EnsLinkKey> = ["url", "com.twitter", "com.github", "email"];
+
 /** The records that render as links (url, com.twitter, com.github, email), in that order. */
 export function ensProfileLinks(records: Record<string, string | undefined>): Array<EnsLink> {
-  return (Object.keys(linkFormats) as Array<EnsLinkKey>).flatMap((key) => {
+  return linkKeys.flatMap((key) => {
     const value = records[key];
     if (!value) {
       return [];

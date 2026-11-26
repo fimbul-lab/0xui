@@ -143,16 +143,19 @@ export function proofStepStates(
 ): Record<ProofStage, ProofStepState> {
   const reached = isProofStage(phase) ? phase : stage;
   const reachedIndex = reached ? PROOF_STAGES.indexOf(reached) : -1;
-  const states = {} as Record<ProofStage, ProofStepState>;
-  PROOF_STAGES.forEach((name, index) => {
-    states[name] =
-      phase === "done" || index < reachedIndex
-        ? "done"
-        : index > reachedIndex || phase === "idle" || phase === "cancelled"
-          ? "todo"
-          : phase === "error"
-            ? "failed"
-            : "active";
-  });
-  return states;
+  const stateOf = (name: ProofStage): ProofStepState => {
+    const index = PROOF_STAGES.indexOf(name);
+    return phase === "done" || index < reachedIndex
+      ? "done"
+      : index > reachedIndex || phase === "idle" || phase === "cancelled"
+        ? "todo"
+        : phase === "error"
+          ? "failed"
+          : "active";
+  };
+  return {
+    "loading-circuits": stateOf("loading-circuits"),
+    proving: stateOf("proving"),
+    verifying: stateOf("verifying"),
+  };
 }
