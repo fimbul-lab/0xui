@@ -202,7 +202,7 @@ export function bannerB(): string {
   );
   beats.forEach((beat, i) => {
     // The same label twice in a row stays put instead of morphing.
-    if (i > 0 && beats[i - 1].label === beat.label) {
+    if (beats[i - 1]?.label === beat.label) {
       return;
     }
     let end = i;

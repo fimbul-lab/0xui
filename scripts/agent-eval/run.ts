@@ -320,6 +320,9 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
   for (const [f, src] of sources) {
     for (const m of src.matchAll(IMPORT_RE)) {
       const spec = m[1];
+      if (spec === undefined) {
+        continue;
+      }
       let target: string | undefined;
       if (spec.startsWith("@/")) {
         target = "src/" + spec.slice(2);
@@ -359,7 +362,11 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
     detail: passedGroup
       ? passedGroup.items.join(" + ")
       : groups
-          .map((g) => g.items.map((n) => `${n}: ${g.status[n].note}`).join(", "))
+          .map((g) =>
+            Object.entries(g.status)
+              .map(([n, s]) => `${n}: ${s.note}`)
+              .join(", "),
+          )
           .join(" | or | "),
   };
 

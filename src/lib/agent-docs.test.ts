@@ -15,9 +15,13 @@ function loadDocs(): Array<DocPage> {
       .map((file) => {
         const body = readFileSync(join(root, section, file), "utf8");
         const name = file.replace(/\.mdx$/, "");
+        const title = body.match(/^title: (.*)$/m)?.[1];
+        if (title === undefined) {
+          throw new Error(`${section}/${file} has no title.`);
+        }
         return {
           id: name === "index" ? section : `${section}/${name}`,
-          title: body.match(/^title: (.*)$/m)![1],
+          title,
           description: body.match(/^description: (.*)$/m)?.[1] ?? "",
           body,
         };
@@ -133,14 +137,18 @@ test("every unlisted page exists", () => {
 test("the skill names every listed component and block, and no unlisted one", () => {
   const skill = readFileSync(join(process.cwd(), "skills/0xui/SKILL.md"), "utf8");
   const names = (pages: Array<DocPage>) =>
-    pages.filter((doc) => /^(components|blocks)\//.test(doc.id)).map((doc) => doc.id.split("/")[1]);
+    pages
+      .filter((doc) => /^(components|blocks)\//.test(doc.id))
+      .flatMap((doc) => doc.id.split("/")[1] ?? []);
   expect(names(listed).filter((name) => !skill.includes(`\`${name}\``))).toEqual([]);
   expect(names(unlisted).filter((name) => skill.includes(`\`${name}\``))).toEqual([]);
 });
 
 test("the registry index leaves out the unlisted items and their examples, and nothing else", () => {
   const names = (pages: Array<DocPage>) =>
-    pages.filter((doc) => /^(components|blocks)\//.test(doc.id)).map((doc) => doc.id.split("/")[1]);
+    pages
+      .filter((doc) => /^(components|blocks)\//.test(doc.id))
+      .flatMap((doc) => doc.id.split("/")[1] ?? []);
   const hidden = new Set(names(unlisted).flatMap((name) => [name, `${name}-demo`]));
   const items = registry.items.map((item) => item.name);
   expect(items.filter(isUnlistedItem)).toEqual(items.filter((name) => hidden.has(name)));

@@ -6,7 +6,7 @@ export const agentLinks = [
 
 function quality(accept: string, type: string) {
   for (const part of accept.toLowerCase().split(",")) {
-    const [range, ...params] = part.trim().split(";");
+    const [range = "", ...params] = part.trim().split(";");
     if (range.trim() !== type) {
       continue;
     }

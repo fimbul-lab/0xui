@@ -55,7 +55,7 @@ function wrap(str: string, width: number, max: number, o: TextOptions): Array<st
     return lines;
   }
 
-  let last = lines[max - 1];
+  let last = lines[max - 1] ?? "";
   while (last && measure(`${last}…`, o) > width) {
     last = last.replace(/\s*\S+$/, "");
   }

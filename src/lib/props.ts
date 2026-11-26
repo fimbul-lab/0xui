@@ -122,9 +122,9 @@ const elementNames: Record<string, string> = {
 
 function domElement(types: Array<string>) {
   for (const text of types) {
-    const match = text.match(/\bHTML(\w*)Element\b/);
-    if (match) {
-      return elementNames[match[1]] ?? match[1].toLowerCase();
+    const tag = text.match(/\bHTML(\w*)Element\b/)?.[1];
+    if (tag !== undefined) {
+      return elementNames[tag] ?? tag.toLowerCase();
     }
   }
   return "HTML";
@@ -176,12 +176,16 @@ export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined 
     // A prop that only some union members declare is optional overall.
     const inAll = variants.every((t) => t.getProperty(name));
     const symbols = variants.flatMap((t) => t.getProperty(name) ?? []);
+    const first = symbols[0];
+    if (!first) {
+      continue;
+    }
     const declarations = symbols.flatMap((s) => s.declarations ?? []);
     const best = declarations
       .map((d) => ({ d, o: origin(d.getSourceFile().fileName, mainFile) }))
       .sort((a, b) => rank[a.o.kind] - rank[b.o.kind])[0];
     const type = checker.typeToString(
-      checker.getTypeOfSymbolAtLocation(symbols[0], declaration),
+      checker.getTypeOfSymbolAtLocation(first, declaration),
       undefined,
       ts.TypeFormatFlags.NoTruncation,
     );

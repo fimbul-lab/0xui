@@ -3,6 +3,7 @@
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist", "node_modules"],
   "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
     "paths": {
       // Docs-only code (shadcn primitives, `cn`) and registry files never
       // share a path, so the order only decides where `shadcn add` writes:

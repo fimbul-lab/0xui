@@ -24,7 +24,7 @@ interface PropsSection {
 }
 
 const normalize = (text: string) => text.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
-const backticked = (text: string) => [...text.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+const backticked = (text: string) => [...text.matchAll(/`([^`]+)`/g)].flatMap((m) => m[1] ?? []);
 // Splits on pipes that aren't escaped, like the one in `"a" \| "b"`.
 const cells = (line: string) =>
   line
@@ -39,11 +39,14 @@ function propsSection(page: string, body: string): PropsSection | undefined {
   }
   const lines = section.split("\n");
   const [header, , ...table] = lines.filter((line) => line.startsWith("|"));
+  if (header === undefined) {
+    return undefined;
+  }
   const defaultColumn = cells(header).indexOf("Default");
   const rows = table.map((line) => {
     const row = cells(line);
     return {
-      names: backticked(row[0]),
+      names: row[0] === undefined ? [] : backticked(row[0]),
       default: defaultColumn === -1 ? undefined : row[defaultColumn],
     };
   });
@@ -53,7 +56,7 @@ function propsSection(page: string, body: string): PropsSection | undefined {
     .split(/(?<=\.)\s+/)
     .filter((sentence) => /\baccepts\b/i.test(sentence))
     // "Also accepts all `<a>` props except `href`": the names after "except" are not props.
-    .map((sentence) => sentence.split(/\bexcept\b/)[0]);
+    .map((sentence) => sentence.split(/\bexcept\b/)[0] ?? "");
   const accepts = sentences.flatMap(backticked).filter((name) => /^[a-z][A-Za-z0-9]*$/.test(name));
   return { page, rows, accepts, acceptsText: normalize(sentences.join(" ")) };
 }

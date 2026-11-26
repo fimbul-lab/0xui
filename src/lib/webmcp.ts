@@ -66,8 +66,9 @@ export function docsTools({
   let index: Promise<Array<IndexEntry>> | undefined;
   const pages = () =>
     (index ??= read("/llms.txt").then((text) =>
-      [...text.matchAll(/^- \[([^\]]+)\]\(([^)]+\.md)\): ?(.*)$/gm)].map(
-        ([, title, url, description]) => ({ title, id: pageId(url), description }),
+      [...text.matchAll(/^- \[([^\]]+)\]\(([^)]+\.md)\): ?(.*)$/gm)].flatMap(
+        ([, title, url, description = ""]) =>
+          title === undefined || url === undefined ? [] : [{ title, id: pageId(url), description }],
       ),
     ));
 

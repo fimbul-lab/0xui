@@ -11,7 +11,7 @@ const sections: Record<string, string> = {
   blocks: "Blocks",
 };
 const [section, name] = id.split("/");
-const eyebrow = name ? sections[section] : undefined;
+const eyebrow = section && name ? sections[section] : undefined;
 
 // Component and block pages link to what `shadcn add` actually installs.
 const item =

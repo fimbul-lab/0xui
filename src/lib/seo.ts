@@ -95,7 +95,7 @@ export function siteJsonLd(description: string): JsonLd {
 export function breadcrumbJsonLd(id: string, title: string): JsonLd {
   const [section, name] = id.split("/");
   const steps: Array<{ name: string; url: string }> = [{ name: siteName, url: `${site}/` }];
-  if (name && section in overviews) {
+  if (section && name && section in overviews) {
     steps.push({
       name: section === "components" ? "Components" : "Blocks",
       url: `${site}/${section}/`,
