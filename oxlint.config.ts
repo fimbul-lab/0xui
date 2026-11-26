@@ -25,7 +25,6 @@ export default defineConfig({
   rules: {
     // Temporarily off while adopting @cloudflare/oxlint-config. Each gets its own
     // commit: fixed and turned on, or kept off with the reason.
-    "@nkzw/require-use-effect-arguments": "off",
     "no-console": "off",
     "no-promise-executor-return": "off",
     "no-undef": "off",

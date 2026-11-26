@@ -49,7 +49,7 @@ export function useTransactionFlow({
   const callbacks = useRef({ onSubmitted, onSuccess, onError });
   useEffect(() => {
     callbacks.current = { onSubmitted, onSuccess, onError };
-  });
+  }, [onSubmitted, onSuccess, onError]);
   const flow = useMemo(
     () =>
       createTransactionFlow(config, {

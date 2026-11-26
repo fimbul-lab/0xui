@@ -109,7 +109,7 @@ export function useAgentTools({
   const confirmRef = useRef(confirm);
   useEffect(() => {
     confirmRef.current = confirm;
-  });
+  }, [confirm]);
   const [instance] = useState<Instance>(() => ({ confirm: () => confirmRef.current }));
   const owner = useSyncExternalStore(
     subscribe,
