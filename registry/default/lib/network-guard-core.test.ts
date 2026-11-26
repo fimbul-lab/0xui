@@ -20,7 +20,11 @@ describe("createNetworkGuard", () => {
     const switching = guard.switchToTarget();
     expect(guard.get().phase).toBe("switching");
     expect(await switching).toBe(true);
-    expect(guard.get()).toMatchObject({ phase: "ok", wrongNetwork: false, currentChainId: 11155111 });
+    expect(guard.get()).toMatchObject({
+      phase: "ok",
+      wrongNetwork: false,
+      currentChainId: 11155111,
+    });
     stop();
   });
 

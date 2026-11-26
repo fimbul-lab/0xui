@@ -55,7 +55,12 @@ export function formatEventArg(value: unknown): string {
 }
 
 /** A string that changes only when the filter does, for memo keys. Arguments may be bigints. */
-export function eventFilterKey({ address, eventName, args, chainId }: Omit<EventFeedFilter, "abi">) {
+export function eventFilterKey({
+  address,
+  eventName,
+  args,
+  chainId,
+}: Omit<EventFeedFilter, "abi">) {
   return hashFn([address, eventName, args, chainId]);
 }
 

@@ -100,11 +100,17 @@ async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
   }
   const overrides = calls.map((c) => demoAllowanceResult(c.target, c.callData));
   if (!overrides.some(Boolean)) return result;
-  const results = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: result });
+  const results = decodeFunctionResult({
+    abi: multicall3Abi,
+    functionName: "aggregate3",
+    data: result,
+  });
   return encodeFunctionResult({
     abi: multicall3Abi,
     functionName: "aggregate3",
-    result: results.map((r, i) => (overrides[i] ? { success: true, returnData: overrides[i]! } : r)),
+    result: results.map((r, i) =>
+      overrides[i] ? { success: true, returnData: overrides[i]! } : r,
+    ),
   });
 }
 
@@ -179,7 +185,10 @@ function demoWallet() {
             if (args.method === "wallet_getCapabilities") {
               // Atomic batching everywhere, like a smart account would offer.
               return Object.fromEntries(
-                config.chains.map((chain) => [toHex(chain.id), { atomic: { status: "supported" } }])
+                config.chains.map((chain) => [
+                  toHex(chain.id),
+                  { atomic: { status: "supported" } },
+                ]),
               );
             }
             if (args.method === "wallet_sendCalls") {
@@ -285,10 +294,7 @@ function demoTransport(chain: Chain) {
           contractAddress: null,
           logs: [],
           logsBloom: `0x${"00".repeat(256)}`,
-          status:
-            tx.to.toLowerCase() === demoRevertAddress.toLowerCase()
-              ? "0x0"
-              : "0x1",
+          status: tx.to.toLowerCase() === demoRevertAddress.toLowerCase() ? "0x0" : "0x1",
           type: "0x2",
         };
       }
@@ -297,22 +303,14 @@ function demoTransport(chain: Chain) {
   });
 }
 
-const chains = [
-  mainnet,
-  sepolia,
-  base,
-  unichain,
-  sonic,
-  berachain,
-  pulsechain,
-  monad,
-] as const;
+const chains = [mainnet, sepolia, base, unichain, sonic, berachain, pulsechain, monad] as const;
 
 export const demoConfig = createConfig({
   chains,
   connectors: [demoWallet(), injected()],
-  transports: Object.fromEntries(
-    chains.map((chain) => [chain.id, demoTransport(chain)])
-  ) as Record<(typeof chains)[number]["id"], ReturnType<typeof demoTransport>>,
+  transports: Object.fromEntries(chains.map((chain) => [chain.id, demoTransport(chain)])) as Record<
+    (typeof chains)[number]["id"],
+    ReturnType<typeof demoTransport>
+  >,
   ssr: true,
 });

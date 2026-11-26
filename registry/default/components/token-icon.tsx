@@ -59,11 +59,7 @@ export function TokenIcon({
       className={cn("relative inline-flex shrink-0", className)}
       style={{ width: size, height: size }}
     >
-      {src ? (
-        <ListLogo key={src} src={resolveUri(src, gateway)} fallback={builtIn} />
-      ) : (
-        builtIn
-      )}
+      {src ? <ListLogo key={src} src={resolveUri(src, gateway)} fallback={builtIn} /> : builtIn}
       {chainId !== undefined && (
         <span
           className="absolute -right-0.5 -bottom-0.5 rounded-full bg-background p-px"
@@ -91,7 +87,9 @@ function Letters({ symbol }: { symbol: string }) {
   return (
     <Avatar aria-hidden className="size-full">
       {settled ? (
-        <AvatarFallback className="text-[0.6em] font-medium uppercase">{symbol.slice(0, 2)}</AvatarFallback>
+        <AvatarFallback className="text-[0.6em] font-medium uppercase">
+          {symbol.slice(0, 2)}
+        </AvatarFallback>
       ) : (
         <SkeletonBox width="100%" height="100%" radius="9999px" />
       )}

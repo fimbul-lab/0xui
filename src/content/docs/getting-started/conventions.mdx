@@ -23,21 +23,23 @@ Each component has three layers, and all of them are exported:
 Async components export their state as a union type, such as `type TxPhase = "idle" | "confirming" | "pending" | "success" | "error"`, and set it as `data-phase` on the root element. Style or test each state without reaching into internals:
 
 ```css
-[data-phase="pending"] { opacity: 0.8; }
+[data-phase="pending"] {
+  opacity: 0.8;
+}
 ```
 
 When an action fails, `data-error` says why, as one stable word next to `data-phase`:
 
-| `data-error` | Meaning |
-| --- | --- |
-| `user-rejected` | The person dismissed the wallet prompt. Not an error. |
-| `reverted` | The transaction or call reverted. |
-| `insufficient-funds` | Not enough native currency for the value and gas. |
-| `wrong-chain` | The wallet is on, or can't switch to, the wrong chain. |
-| `no-wallet` | No wallet or connector is available. |
-| `unsupported` | The wallet doesn't support the request, like batching. |
-| `network` | The RPC failed or timed out. |
-| `unknown` | Anything else. Read the message. |
+| `data-error`         | Meaning                                                |
+| -------------------- | ------------------------------------------------------ |
+| `user-rejected`      | The person dismissed the wallet prompt. Not an error.  |
+| `reverted`           | The transaction or call reverted.                      |
+| `insufficient-funds` | Not enough native currency for the value and gas.      |
+| `wrong-chain`        | The wallet is on, or can't switch to, the wrong chain. |
+| `no-wallet`          | No wallet or connector is available.                   |
+| `unsupported`        | The wallet doesn't support the request, like batching. |
+| `network`            | The RPC failed or timed out.                           |
+| `unknown`            | Anything else. Read the message.                       |
 
 `errorCode(phase, error)` in `0xui-utils` produces it, for your own components too.
 
@@ -45,12 +47,12 @@ When an action fails, `data-error` says why, as one stable word next to `data-ph
 
 Every 0xui control is a ui-sdk component with a name, so an AI agent can read and use it through ui-sdk's [agent bridge](https://ui-sdk.dev/docs/agents). Render [Agent Tools](/components/agent-tools/) once to connect it. The rule is simple: reading and filling are free, anything that touches the wallet needs a person, and secrets stay hidden.
 
-| Mark | What the agent gets | Where 0xui puts it |
-| --- | --- | --- |
-| none | Reads and changes it freely. | Inputs, token and chain pickers, tabs, popovers, dialogs, copy buttons. |
+| Mark                              | What the agent gets                                  | Where 0xui puts it                                                                                                                                                                    |
+| --------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| none                              | Reads and changes it freely.                         | Inputs, token and chain pickers, tabs, popovers, dialogs, copy buttons.                                                                                                               |
 | `data-agent-confirm="<sentence>"` | Its step waits until the person allows the sentence. | Send, sign, approve, batch and shield; connect a wallet; switch networks; disconnect or switch account; add a token to the wallet; create, unlock, import or lock a shielded account. |
-| `data-agent-secret` | Can type into it, but reads `"[redacted]"`. | Password and recovery-phrase import fields. |
-| `data-agent-hidden` | Nothing at all. | Recovery phrases and private or viewing keys. |
+| `data-agent-secret`               | Can type into it, but reads `"[redacted]"`.          | Password and recovery-phrase import fields.                                                                                                                                           |
+| `data-agent-hidden`               | Nothing at all.                                      | Recovery phrases and private or viewing keys.                                                                                                                                         |
 
 The sentence is written for the person, from what the control will do, like "Send 0.1 ETH: sends a transaction on Ethereum from your wallet". Override it with `agentConfirm`, or pass `agentConfirm={false}` to drop it. Only an agent's steps are asked about: a person pressing the same button sees nothing new.
 

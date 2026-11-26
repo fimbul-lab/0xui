@@ -22,7 +22,9 @@ describe("createBatchTransaction", () => {
     const sent = vi.fn();
     const chain = fakeChainRpc();
     const send = chain.eth_sendTransaction as (p: unknown) => unknown;
-    const config = createTestConfig({ rpc: { ...chain, eth_sendTransaction: (p: unknown) => (sent(), send(p)) } });
+    const config = createTestConfig({
+      rpc: { ...chain, eth_sendTransaction: (p: unknown) => (sent(), send(p)) },
+    });
     await connect(config, { connector: config.connectors[0]! });
     const batch = createBatchTransaction(config, { chainId: 1 });
     const phases: string[] = [];
@@ -39,7 +41,10 @@ describe("createBatchTransaction", () => {
   });
 
   it("goes atomic when the wallet supports it", async () => {
-    const config = createTestConfig({ rpc: fakeChainRpc(), capabilities: { 1: { atomic: { status: "supported" } } } });
+    const config = createTestConfig({
+      rpc: fakeChainRpc(),
+      capabilities: { 1: { atomic: { status: "supported" } } },
+    });
     await connect(config, { connector: config.connectors[0]! });
     const batch = createBatchTransaction(config, { chainId: 1 });
     const stop = batch.subscribe(() => {});

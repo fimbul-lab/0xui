@@ -20,7 +20,8 @@ Connect the **Demo Wallet** and shield some WETH. The demo's private account is 
 </Preview>
 
 <Aside type="caution" title="Preview">
-  This runs on the [mock engine](/components/mock-shielded-engine/). A Railgun engine is planned. Until then the block can't move real funds.
+  This runs on the [mock engine](/components/mock-shielded-engine/). A Railgun engine is planned.
+  Until then the block can't move real funds.
 </Aside>
 
 It is built from [Token Input](/components/token-input/) and [Shielded Transaction Status](/components/shielded-transaction-status/), on a [shielded engine](/components/shielded-engine/).
@@ -50,12 +51,12 @@ Before anything is signed, the form shows the protocol fee, what arrives private
 
 Then the wallet steps. Each takes one click, and the click that starts the shield is the click for the first step.
 
-| Step | When | What it is |
-| --- | --- | --- |
-| Sign | The engine needs it | A free signature some protocols derive a one-off key from. It sends nothing. |
+| Step           | When                                        | What it is                                                                    |
+| -------------- | ------------------------------------------- | ----------------------------------------------------------------------------- |
+| Sign           | The engine needs it                         | A free signature some protocols derive a one-off key from. It sends nothing.  |
 | Reset approval | Tokens like USDT, with a leftover allowance | Sets the old allowance to zero, which those tokens require before raising it. |
-| Approve | The allowance is too low | Approves exactly the amount being shielded. |
-| Shield | Always | The shield transaction. |
+| Approve        | The allowance is too low                    | Approves exactly the amount being shielded.                                   |
+| Shield         | Always                                      | The shield transaction.                                                       |
 
 With a wallet that batches, approve and shield are one step. See below.
 
@@ -67,12 +68,12 @@ A dismissed wallet prompt is a cancel, not an error. The step stays where it is,
 
 When the wallet can send several calls as one atomic transaction ([EIP-5792](https://eips.ethereum.org/EIPS/eip-5792)), the approval and the shield go out together as "Approve and shield". A shield is then two wallet prompts: the signature and the batch. Otherwise it is three.
 
-| Wallet reports | Prompts | Steps |
-| --- | --- | --- |
-| `atomic: supported` | 2 | Sign, approve and shield together |
-| `atomic: ready` | 3 | Sign, approve, shield. The wallet would first ask to upgrade the account, which the user didn't ask for. |
-| nothing, or `unsupported` | 3 | Sign, approve, shield |
-| any, with enough allowance | 2 | Sign, shield |
+| Wallet reports             | Prompts | Steps                                                                                                    |
+| -------------------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `atomic: supported`        | 2       | Sign, approve and shield together                                                                        |
+| `atomic: ready`            | 3       | Sign, approve, shield. The wallet would first ask to upgrade the account, which the user didn't ask for. |
+| nothing, or `unsupported`  | 3       | Sign, approve, shield                                                                                    |
+| any, with enough allowance | 2       | Sign, shield                                                                                             |
 
 Details that matter:
 
@@ -134,29 +135,29 @@ A real engine finds a shield by scanning the chain. The mock has no chain, so te
 
 The form's button always names the blocker:
 
-| Situation | Button |
-| --- | --- |
-| Wallet not connected | Connect wallet |
-| No private account | Create a private account first |
-| Account locked | Unlock your private account |
-| Native token selected | Wrap ETH to shield it |
-| No amount | Enter an amount |
-| Amount above the wallet balance | Insufficient WETH balance |
-| Wallet on another network | Switch to Ethereum |
-| Quote or allowance loading | Fetching quote… |
-| Quote failed | Can't shield this amount, plus the reason |
-| Ready | Shield WETH |
+| Situation                       | Button                                    |
+| ------------------------------- | ----------------------------------------- |
+| Wallet not connected            | Connect wallet                            |
+| No private account              | Create a private account first            |
+| Account locked                  | Unlock your private account               |
+| Native token selected           | Wrap ETH to shield it                     |
+| No amount                       | Enter an amount                           |
+| Amount above the wallet balance | Insufficient WETH balance                 |
+| Wallet on another network       | Switch to Ethereum                        |
+| Quote or allowance loading      | Fetching quote…                           |
+| Quote failed                    | Can't shield this amount, plus the reason |
+| Ready                           | Shield WETH                               |
 
 `data-phase` on the root follows the wallet step in progress. `data-variant` holds the variant.
 
-| `data-phase` | Meaning |
-| --- | --- |
-| `idle` | On the form. |
-| `signing` | The signature step. |
-| `approving` | The approval step, or the reset before it. |
-| `shielding` | The step that sends the shield, alone or batched. |
-| `cancelled` | The last prompt was dismissed. The step is ready to retry. |
-| `error` | The last step failed, with the reason shown. |
+| `data-phase` | Meaning                                                    |
+| ------------ | ---------------------------------------------------------- |
+| `idle`       | On the form.                                               |
+| `signing`    | The signature step.                                        |
+| `approving`  | The approval step, or the reset before it.                 |
+| `shielding`  | The step that sends the shield, alone or batched.          |
+| `cancelled`  | The last prompt was dismissed. The step is ready to retry. |
+| `error`      | The last step failed, with the reason shown.               |
 
 After sending, [Shielded Transaction Status](/components/shielded-transaction-status/) carries its own `data-phase`, from `pending` to `spendable`.
 
@@ -189,14 +190,14 @@ flow.leave(); // back to the form
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `tokens` | `Token[]` | — | ERC-20 tokens to offer. |
-| `chainId` | `number` | — | Chain to shield on. Required. |
-| `variant` | `"in-place" \| "collapse"` | `"in-place"` | What happens to the form once the shield starts. |
-| `defaultToken` | `Token` | first on `chainId` | Initial token. |
-| `popular` | `string[]` | — | Quick picks. |
-| `prices` | `Record<symbol, number>` | — | Fiat values. |
-| `onSubmitted` | `(hash, draft) => void` | — | Called with the shield transaction's hash. |
-| `onSpendable` | `(transaction) => void` | — | Called when the shielded funds become spendable. |
-| `title` | `ReactNode` | `"Shield"` | Heading. `null` hides it. |
+| Prop           | Type                       | Default            | Description                                      |
+| -------------- | -------------------------- | ------------------ | ------------------------------------------------ |
+| `tokens`       | `Token[]`                  | —                  | ERC-20 tokens to offer.                          |
+| `chainId`      | `number`                   | —                  | Chain to shield on. Required.                    |
+| `variant`      | `"in-place" \| "collapse"` | `"in-place"`       | What happens to the form once the shield starts. |
+| `defaultToken` | `Token`                    | first on `chainId` | Initial token.                                   |
+| `popular`      | `string[]`                 | —                  | Quick picks.                                     |
+| `prices`       | `Record<symbol, number>`   | —                  | Fiat values.                                     |
+| `onSubmitted`  | `(hash, draft) => void`    | —                  | Called with the shield transaction's hash.       |
+| `onSpendable`  | `(transaction) => void`    | —                  | Called when the shielded funds become spendable. |
+| `title`        | `ReactNode`                | `"Shield"`         | Heading. `null` hides it.                        |

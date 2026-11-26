@@ -62,7 +62,7 @@ export function useShieldedTransactionStatus({
   const transaction = useShieldedState(
     "balances",
     (e) => e.getTransaction(chainId, hash),
-    undefined
+    undefined,
   );
 
   // The engine only learns about a public transaction by scanning. Ask for a
@@ -76,7 +76,7 @@ export function useShieldedTransactionStatus({
 
   // The standby period runs from the block the transaction was mined in.
   const block = useQuery(
-    standbyBlockQueryOptions(config, { chainId, blockNumber: mined?.blockNumber, standby })
+    standbyBlockQueryOptions(config, { chainId, blockNumber: mined?.blockNumber, standby }),
   );
   const spendableAt = standbyEnd(block.data?.timestamp, standby);
 
@@ -189,7 +189,7 @@ export function ShieldedTransactionStatus({
             "font-medium",
             phase === "spendable" && "text-emerald-600 dark:text-emerald-400",
             (phase === "reverted" || phase === "error" || phase === "restricted") &&
-              "text-destructive"
+              "text-destructive",
           )}
         >
           {title ?? shieldedTxHeadings[phase]}
@@ -221,8 +221,7 @@ export function ShieldedTransactionStatus({
 
       {phase === "restricted" && (
         <p role="alert" className="text-destructive">
-          These funds can't be spent privately. They can only go back to the address they came
-          from.
+          These funds can't be spent privately. They can only go back to the address they came from.
         </p>
       )}
       {phase === "reverted" && (

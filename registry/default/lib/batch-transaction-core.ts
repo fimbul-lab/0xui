@@ -168,7 +168,10 @@ export function createBatchTransaction(
           });
           store.set({ phase: "pending" });
           const result = await waitForCallsStatus(config, { id });
-          store.set({ step: calls.length, phase: result.status === "success" ? "success" : "reverted" });
+          store.set({
+            step: calls.length,
+            phase: result.status === "success" ? "success" : "reverted",
+          });
           return;
         }
         const client = getPublicClient(config, { chainId });

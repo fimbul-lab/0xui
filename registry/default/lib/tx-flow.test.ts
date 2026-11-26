@@ -34,7 +34,9 @@ describe("createTransactionFlow", () => {
     expect(phases).toEqual(["confirming", "pending", "success"]);
     expect(flow.get()).toMatchObject({ hash: fakeTxHash, receipt: { status: "success" } });
     expect(onSubmitted).toHaveBeenCalledWith(fakeTxHash);
-    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ transactionHash: fakeTxHash }));
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ transactionHash: fakeTxHash }),
+    );
     stop();
   });
 

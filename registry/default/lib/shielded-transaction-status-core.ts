@@ -58,7 +58,11 @@ export function shieldedTxPhase({
  */
 export function standbyBlockQueryOptions(
   config: Config,
-  { chainId, blockNumber, standby }: { chainId: number; blockNumber: bigint | undefined; standby: number | undefined }
+  {
+    chainId,
+    blockNumber,
+    standby,
+  }: { chainId: number; blockNumber: bigint | undefined; standby: number | undefined },
 ) {
   return {
     ...getBlockQueryOptions(config, {
@@ -173,7 +177,7 @@ export function shieldedTxSteps({
             : phase === "standby"
               ? "active"
               : "todo",
-    }
+    },
   );
   return steps;
 }

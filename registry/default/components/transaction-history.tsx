@@ -1,10 +1,5 @@
 // Docs: https://0xui.io/components/transaction-history.md
-import {
-  Timeline,
-  TimelineItem,
-  TimelineTime,
-  TimelineTitle,
-} from "@ui-sdk/react/timeline";
+import { Timeline, TimelineItem, TimelineTime, TimelineTitle } from "@ui-sdk/react/timeline";
 import { CheckIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Address } from "viem";
@@ -93,7 +88,11 @@ function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string })
           {status === "reverted" && " · Reverted"}
         </span>
       </div>{" "}
-      <ExplorerLink tx={entry.hash} chainId={entry.chainId} className="shrink-0 text-xs text-muted-foreground">
+      <ExplorerLink
+        tx={entry.hash}
+        chainId={entry.chainId}
+        className="shrink-0 text-xs text-muted-foreground"
+      >
         View
       </ExplorerLink>
     </TimelineItem>
@@ -174,7 +173,8 @@ export function TransactionHistory({
         >
           {/* One run of text, so the button lays out as "Show more (5)". */}
           <span>
-            Show more <span className="sr-only">transactions</span> ({transactions.length - visible})
+            Show more <span className="sr-only">transactions</span> ({transactions.length - visible}
+            )
           </span>
         </Button>
       )}

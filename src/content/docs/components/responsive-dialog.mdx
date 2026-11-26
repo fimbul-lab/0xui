@@ -71,22 +71,22 @@ By default `auto` asks ui-sdk, which picks the sheet on small touch screens. Pas
 
 ## Behavior
 
-| Case | What happens |
-| --- | --- |
-| Server render | Dialog. `auto` is decided each time it opens, in the browser. |
-| The screen crosses the breakpoint while open | It keeps its presentation until it closes, and the content keeps its state. |
-| Long content in the sheet | The panel scrolls. The sheet stops at 85% of the screen height. |
-| `className` | Applies to the panel in both presentations. Target one with `data-[presentation=dialog]:` or `data-[presentation=sheet]:`. The sheet is full width. |
+| Case                                         | What happens                                                                                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server render                                | Dialog. `auto` is decided each time it opens, in the browser.                                                                                       |
+| The screen crosses the breakpoint while open | It keeps its presentation until it closes, and the content keeps its state.                                                                         |
+| Long content in the sheet                    | The panel scrolls. The sheet stops at 85% of the screen height.                                                                                     |
+| `className`                                  | Applies to the panel in both presentations. Target one with `data-[presentation=dialog]:` or `data-[presentation=sheet]:`. The sheet is full width. |
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `open` / `onOpenChange` | — | — | Control it. |
-| `title` | `ReactNode` | — | Shown at the top. |
-| `description` | `ReactNode` | — | For screen readers. Not shown. |
-| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Pick by screen, or force one. `drawer` is the bottom sheet. |
-| `drawerQuery` | `string` | — | Media query that picks the sheet in `auto` mode, in place of the small touch screen check. |
-| `closeLabel` | `string` | `"Close"` | Accessible name of the close button. Name it after the dialog, e.g. `"Close send form"`, so it stays unique for screen readers and browser agents. |
-| `className` | `string` | — | Class for the panel. |
-| `children` | `ReactNode` | — | Dialog content. |
+| Prop                    | Type                             | Default   | Description                                                                                                                                        |
+| ----------------------- | -------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open` / `onOpenChange` | —                                | —         | Control it.                                                                                                                                        |
+| `title`                 | `ReactNode`                      | —         | Shown at the top.                                                                                                                                  |
+| `description`           | `ReactNode`                      | —         | For screen readers. Not shown.                                                                                                                     |
+| `mode`                  | `"auto" \| "dialog" \| "drawer"` | `"auto"`  | Pick by screen, or force one. `drawer` is the bottom sheet.                                                                                        |
+| `drawerQuery`           | `string`                         | —         | Media query that picks the sheet in `auto` mode, in place of the small touch screen check.                                                         |
+| `closeLabel`            | `string`                         | `"Close"` | Accessible name of the close button. Name it after the dialog, e.g. `"Close send form"`, so it stays unique for screen readers and browser agents. |
+| `className`             | `string`                         | —         | Class for the panel.                                                                                                                               |
+| `children`              | `ReactNode`                      | —         | Dialog content.                                                                                                                                    |

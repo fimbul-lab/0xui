@@ -163,7 +163,7 @@ export function Swap({
       ? formatRate(
           { token: sellToken, amount: sellAmount },
           { token: buyToken, amount: quote.buyAmount },
-          { invert: invertRate }
+          { invert: invertRate },
         )
       : undefined;
   const impact = quote?.priceImpact;
@@ -238,7 +238,10 @@ export function Swap({
         />
       </div>
 
-      <div className="flex min-h-5 items-center justify-between gap-2 text-sm text-muted-foreground" aria-live="polite">
+      <div
+        className="flex min-h-5 items-center justify-between gap-2 text-sm text-muted-foreground"
+        aria-live="polite"
+      >
         {error ? (
           <span role="alert" className="text-destructive">
             {(error as { shortMessage?: string }).shortMessage ?? error.message}

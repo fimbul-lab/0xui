@@ -38,7 +38,9 @@ import { useShieldedAccount } from "@/components/shielded-provider";
 
 const { address } = useShieldedAccount();
 
-{address && <ShieldedAddress address={address} variant="pill" />}
+{
+  address && <ShieldedAddress address={address} variant="pill" />;
+}
 ```
 
 ## Examples
@@ -81,9 +83,9 @@ truncateShieldedAddress(address); // "0zk1qyk9n…e0s4jt"
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `address` | `string` | — | The private address. |
-| `variant` | `"inline" \| "pill"` | `"inline"` | Inline text or a bordered chip. |
-| `copyable` | `boolean` | `true` | Show a copy button. It copies the full address. |
+| Prop       | Type                                        | Default                | Description                                       |
+| ---------- | ------------------------------------------- | ---------------------- | ------------------------------------------------- |
+| `address`  | `string`                                    | —                      | The private address.                              |
+| `variant`  | `"inline" \| "pill"`                        | `"inline"`             | Inline text or a bordered chip.                   |
+| `copyable` | `boolean`                                   | `true`                 | Show a copy button. It copies the full address.   |
 | `truncate` | `{ start?: number; end?: number } \| false` | `{ start: 9, end: 6 }` | Characters kept. `false` shows the whole address. |

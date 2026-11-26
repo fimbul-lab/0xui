@@ -22,7 +22,7 @@ export const Create = shieldedDemo(
       </>
     );
   },
-  { unlock: false, account: "none" }
+  { unlock: false, account: "none" },
 );
 
 export const Gate = shieldedDemo(
@@ -42,5 +42,5 @@ export const Gate = shieldedDemo(
     unlock: false,
     funds: [{ token: demoWeth.address, amount: parseEther("1.25") }],
     timings: quickStart,
-  }
+  },
 );

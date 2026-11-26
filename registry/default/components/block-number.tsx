@@ -57,8 +57,7 @@ export function BlockNumber({
   className,
 }: BlockNumberProps) {
   const { blockNumber, phase } = useLiveBlockNumber({ chainId, watch });
-  const formatted =
-    blockNumber === undefined ? undefined : formatBlockNumber(blockNumber);
+  const formatted = blockNumber === undefined ? undefined : formatBlockNumber(blockNumber);
 
   return (
     <span
@@ -66,7 +65,7 @@ export function BlockNumber({
       data-phase={phase}
       className={cn(
         "inline-flex items-center gap-1.5 text-sm text-muted-foreground tabular-nums",
-        className
+        className,
       )}
     >
       <span
@@ -76,7 +75,7 @@ export function BlockNumber({
           phase === "live" && "bg-emerald-500",
           phase === "live" && watch && "animate-pulse motion-reduce:animate-none",
           phase === "loading" && "bg-muted-foreground/40",
-          phase === "error" && "bg-destructive"
+          phase === "error" && "bg-destructive",
         )}
       />
       {phase === "error" ? (

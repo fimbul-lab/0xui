@@ -1,8 +1,8 @@
 {
   "name": "0xui",
-  "type": "module",
   "version": "0.0.1",
   "author": "Fimbul Labs (https://fimbul.io)",
+  "type": "module",
   "scripts": {
     "dev": "shadcn build && node scripts/unlist-registry.mjs && astro dev",
     "start": "astro dev",

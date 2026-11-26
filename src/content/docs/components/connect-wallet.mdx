@@ -78,22 +78,22 @@ const { wallets, connect, phase, pendingId } = useConnectWallet();
 
 `data-phase` on the dialog holds the current state.
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `idle` | Wallet list. |
+| `data-phase` | What the user sees                                                                             |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| `idle`       | Wallet list.                                                                                   |
 | `connecting` | Spinner on the chosen wallet, other rows disabled, "Confirm the connection in &lt;wallet&gt;". |
-| `cancelled` | The user closed the wallet prompt. Muted "Request cancelled" note. Not an error. |
-| `error` | The wallet's message, with `role="alert"`. |
+| `cancelled`  | The user closed the wallet prompt. Muted "Request cancelled" note. Not an error.               |
+| `error`      | The wallet's message, with `role="alert"`.                                                     |
 
 ## Props
 
 `ConnectWallet` also accepts all `Button` props.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `open` / `defaultOpen` / `onOpenChange` | — | — | Control the dialog. |
-| `onConnect` | `(connector: Connector) => void` | — | Called after a wallet connects. |
-| `title` | `ReactNode` | `"Connect a wallet"` | Dialog title. |
-| `maxVisible` | `number` | `4` | Wallets shown before "Other wallets". |
-| `footer` | `ReactNode` | privacy note | Small print under the list. `null` hides it. |
-| `mode` | `"auto" \| "dialog" \| "drawer"` | `"auto"` | Bottom sheet on small touch screens, dialog otherwise. Or force one. |
+| Prop                                    | Type                             | Default              | Description                                                          |
+| --------------------------------------- | -------------------------------- | -------------------- | -------------------------------------------------------------------- |
+| `open` / `defaultOpen` / `onOpenChange` | —                                | —                    | Control the dialog.                                                  |
+| `onConnect`                             | `(connector: Connector) => void` | —                    | Called after a wallet connects.                                      |
+| `title`                                 | `ReactNode`                      | `"Connect a wallet"` | Dialog title.                                                        |
+| `maxVisible`                            | `number`                         | `4`                  | Wallets shown before "Other wallets".                                |
+| `footer`                                | `ReactNode`                      | privacy note         | Small print under the list. `null` hides it.                         |
+| `mode`                                  | `"auto" \| "dialog" \| "drawer"` | `"auto"`             | Bottom sheet on small touch screens, dialog otherwise. Or force one. |

@@ -33,7 +33,7 @@ const cells = (line: string) =>
 
 function propsSection(page: string, body: string): PropsSection | undefined {
   const section = body.match(/^## Props\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1];
-  if (!section?.includes("| Prop |")) return undefined;
+  if (!section || !/^\| Prop +\|/m.test(section)) return undefined;
   const lines = section.split("\n");
   const [header, , ...table] = lines.filter((line) => line.startsWith("|"));
   const defaultColumn = cells(header).indexOf("Default");

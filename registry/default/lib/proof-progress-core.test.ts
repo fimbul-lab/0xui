@@ -32,7 +32,7 @@ describe("createProver", () => {
 
     const proved = prover.prove(draft);
     await vi.advanceTimersByTimeAsync(
-      MOCK_TIMINGS.loadCircuits + MOCK_TIMINGS.prove + MOCK_TIMINGS.verify + 100
+      MOCK_TIMINGS.loadCircuits + MOCK_TIMINGS.prove + MOCK_TIMINGS.verify + 100,
     );
     expect(await proved).toMatchObject({ draft });
     expect(phases).toEqual(["loading-circuits", "proving", "verifying", "done"]);

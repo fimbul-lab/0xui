@@ -85,25 +85,25 @@ const { phase, receipt, transaction, secondsLeft } = useShieldedTransactionStatu
 
 ## States
 
-| `data-phase` | Heading | Meaning |
-| --- | --- | --- |
-| `pending` | Shield pending | Sent, not mined yet. |
-| `confirmed` | Confirmed, updating private balance | Mined. The private account has not found the funds yet. |
-| `standby` | Shielded, not spendable yet | In the private balance, waiting out the standby period. |
-| `spendable` | Shielded and spendable | Done. |
-| `restricted` | Shielded, but restricted | The funds can only go back to the address they came from. |
-| `reverted` | Shield reverted | Nothing was shielded. |
-| `error` | Couldn't track shield | The transaction wasn't found or the RPC failed. |
+| `data-phase` | Heading                             | Meaning                                                   |
+| ------------ | ----------------------------------- | --------------------------------------------------------- |
+| `pending`    | Shield pending                      | Sent, not mined yet.                                      |
+| `confirmed`  | Confirmed, updating private balance | Mined. The private account has not found the funds yet.   |
+| `standby`    | Shielded, not spendable yet         | In the private balance, waiting out the standby period.   |
+| `spendable`  | Shielded and spendable              | Done.                                                     |
+| `restricted` | Shielded, but restricted            | The funds can only go back to the address they came from. |
+| `reverted`   | Shield reverted                     | Nothing was shielded.                                     |
+| `error`      | Couldn't track shield               | The transaction wasn't found or the RPC failed.           |
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `hash` | `Hash` | — | The shield transaction. |
-| `chainId` | `number` | — | Chain it was sent on. Required. |
-| `standby` | `number` | — | Seconds funds stay pending, from the shield quote. Enables the countdown. |
-| `token` | `{ symbol, decimals }` | — | To show the amount that arrived. |
-| `title` | `ReactNode` | per phase | Heading override. |
-| `children` | `ReactNode` | — | What the transaction does. |
-| `onSpendable` | `(transaction) => void` | — | Called once when the funds become spendable. |
-| `variant` | `"card" \| "line"` | `"card"` | Every step, or one line of status. |
+| Prop          | Type                    | Default   | Description                                                               |
+| ------------- | ----------------------- | --------- | ------------------------------------------------------------------------- |
+| `hash`        | `Hash`                  | —         | The shield transaction.                                                   |
+| `chainId`     | `number`                | —         | Chain it was sent on. Required.                                           |
+| `standby`     | `number`                | —         | Seconds funds stay pending, from the shield quote. Enables the countdown. |
+| `token`       | `{ symbol, decimals }`  | —         | To show the amount that arrived.                                          |
+| `title`       | `ReactNode`             | per phase | Heading override.                                                         |
+| `children`    | `ReactNode`             | —         | What the transaction does.                                                |
+| `onSpendable` | `(transaction) => void` | —         | Called once when the funds become spendable.                              |
+| `variant`     | `"card" \| "line"`      | `"card"`  | Every step, or one line of status.                                        |

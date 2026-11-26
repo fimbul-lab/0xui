@@ -1,7 +1,4 @@
-import {
-  ChainSelector,
-  ChainSelectorDialog,
-} from "@/components/chain-selector";
+import { ChainSelector, ChainSelectorDialog } from "@/components/chain-selector";
 import { demo } from "./demo";
 
 export const Default = demo(() => <ChainSelector />);

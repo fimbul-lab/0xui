@@ -29,7 +29,10 @@ const idleView: ShieldedSyncView = { phase: "idle", stage: "notes", progress: 0 
  * since the scan started. A scan that starts after one finished or failed
  * begins again from 0.
  */
-export function advanceSync(previous: ShieldedSyncView | undefined, next: ShieldedSync): ShieldedSyncView {
+export function advanceSync(
+  previous: ShieldedSyncView | undefined,
+  next: ShieldedSync,
+): ShieldedSyncView {
   if (next.status === "idle") return { ...idleView, stage: next.stage };
   if (next.status === "synced") return { phase: "synced", stage: next.stage, progress: 1 };
 
@@ -78,19 +81,22 @@ export function createShieldedSync(engine: ShieldedEngine, chainId: number): Shi
     isUpdate: engine.getBalances(chainId) !== undefined && view.phase !== "synced",
   });
 
-  const store = createStore(withUpdate(advanceSync(undefined, engine.getSync(chainId))), (store) => {
-    store.set(withUpdate(advanceSync(undefined, engine.getSync(chainId))));
-    const stopSync = engine.subscribe("sync", () =>
-      store.set((previous) => withUpdate(advanceSync(previous, engine.getSync(chainId))))
-    );
-    const stopBalances = engine.subscribe("balances", () =>
-      store.set((current) => withUpdate(current))
-    );
-    return () => {
-      stopSync();
-      stopBalances();
-    };
-  });
+  const store = createStore(
+    withUpdate(advanceSync(undefined, engine.getSync(chainId))),
+    (store) => {
+      store.set(withUpdate(advanceSync(undefined, engine.getSync(chainId))));
+      const stopSync = engine.subscribe("sync", () =>
+        store.set((previous) => withUpdate(advanceSync(previous, engine.getSync(chainId)))),
+      );
+      const stopBalances = engine.subscribe("balances", () =>
+        store.set((current) => withUpdate(current)),
+      );
+      return () => {
+        stopSync();
+        stopBalances();
+      };
+    },
+  );
 
   return {
     get: store.get,

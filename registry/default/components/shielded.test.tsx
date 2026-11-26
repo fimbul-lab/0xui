@@ -17,8 +17,16 @@ import { ShieldedBalance, useShieldedBalance } from "./shielded-balance";
 import { ShieldedProvider, useShieldedAccount, useShieldedEngine } from "./shielded-provider";
 import { ShieldedSyncStatus, advanceSync, type ShieldedSyncView } from "./shielded-sync-status";
 
-const weth = { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", decimals: 18 } as const;
-const usdc = { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", decimals: 6 } as const;
+const weth = {
+  address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  symbol: "WETH",
+  decimals: 18,
+} as const;
+const usdc = {
+  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  symbol: "USDC",
+  decimals: 6,
+} as const;
 const recipient = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 
 type MockOptions = Parameters<typeof createMockShieldedEngine>[0];
@@ -91,7 +99,7 @@ describe("ShieldedProvider", () => {
     const html = renderToString(
       <ShieldedProvider engine={engine}>
         <Probe />
-      </ShieldedProvider>
+      </ShieldedProvider>,
     );
     expect(html).toBe("none:null");
   });
@@ -126,7 +134,7 @@ describe("ShieldedAddress", () => {
 
   it("truncates to the requested lengths and leaves short strings alone", () => {
     expect(truncateShieldedAddress(address, { start: 5, end: 4 })).toBe(
-      `${address.slice(0, 5)}…${address.slice(-4)}`
+      `${address.slice(0, 5)}…${address.slice(-4)}`,
     );
     expect(truncateShieldedAddress("0zk1short")).toBe("0zk1short");
   });
@@ -138,7 +146,7 @@ describe("PrivacyBadge", () => {
       <>
         <PrivacyBadge privacy="private" />
         <PrivacyBadge privacy="public" />
-      </>
+      </>,
     );
     const priv = screen.getByText("Private").closest("[data-slot=privacy-badge]")!;
     const pub = screen.getByText("Public").closest("[data-slot=privacy-badge]")!;
@@ -157,7 +165,7 @@ describe("PrivacyBadge", () => {
     const { container } = render(
       <PrivacyBadge privacy="public" icon={false}>
         Public exit
-      </PrivacyBadge>
+      </PrivacyBadge>,
     );
     expect(screen.getByText("Public exit")).toBeInTheDocument();
     expect(container.querySelector("svg")).not.toBeInTheDocument();
@@ -215,7 +223,9 @@ describe("ShieldedBalance", () => {
     ]);
     expect(within(rows[0]!).getByText("0.5")).toBeInTheDocument();
     expect(within(rows[2]!).getByText("0.125")).toBeInTheDocument();
-    expect(within(rows[3]!).getByText(/only go back to the address they came from/)).toBeInTheDocument();
+    expect(
+      within(rows[3]!).getByText(/only go back to the address they came from/),
+    ).toBeInTheDocument();
     // Only the incomplete row has an action.
     expect(screen.getAllByRole("button")).toHaveLength(1);
     // Protocol vocabulary stays in the engine.
@@ -296,7 +306,10 @@ describe("ShieldedBalance", () => {
     await engine.account.unlock("password");
     await engine.sync(1);
     const { container } = renderShielded(<ShieldedBalance token={weth} chainId={1} />, engine);
-    expect(container.querySelector("[data-slot=shielded-balance]")).toHaveAttribute("data-phase", "error");
+    expect(container.querySelector("[data-slot=shielded-balance]")).toHaveAttribute(
+      "data-phase",
+      "error",
+    );
     expect(screen.getByText("Couldn't load private balance")).toBeInTheDocument();
   });
 
@@ -507,13 +520,24 @@ describe("ProofProgress", () => {
       proving: "active",
       verifying: "todo",
     });
-    expect(proofStepStates("error", "proving")).toMatchObject({ proving: "failed", verifying: "todo" });
-    expect(proofStepStates("cancelled", "verifying")).toMatchObject({ proving: "done", verifying: "todo" });
-    expect(proofStepStates("done")).toMatchObject({ "loading-circuits": "done", verifying: "done" });
+    expect(proofStepStates("error", "proving")).toMatchObject({
+      proving: "failed",
+      verifying: "todo",
+    });
+    expect(proofStepStates("cancelled", "verifying")).toMatchObject({
+      proving: "done",
+      verifying: "todo",
+    });
+    expect(proofStepStates("done")).toMatchObject({
+      "loading-circuits": "done",
+      verifying: "done",
+    });
   });
 
   it("shows stages and a hint for the running one, never a percentage", () => {
-    const { container } = render(<ProofProgress phase="loading-circuits">Unshield 0.5 WETH</ProofProgress>);
+    const { container } = render(
+      <ProofProgress phase="loading-circuits">Unshield 0.5 WETH</ProofProgress>,
+    );
     expect(container.firstChild).toHaveAttribute("data-phase", "loading-circuits");
     expect(screen.getByRole("status")).toHaveTextContent("Generating proof");
     expect(screen.getByText("Unshield 0.5 WETH")).toBeInTheDocument();
@@ -525,7 +549,14 @@ describe("ProofProgress", () => {
 
   it("shows the error and offers another try", async () => {
     const onRetry = vi.fn();
-    render(<ProofProgress phase="error" stage="proving" error={new Error("Out of memory")} onRetry={onRetry} />);
+    render(
+      <ProofProgress
+        phase="error"
+        stage="proving"
+        error={new Error("Out of memory")}
+        onRetry={onRetry}
+      />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("Couldn't generate proof");
     expect(screen.getByRole("alert")).toHaveTextContent("Out of memory");
     expect(stepStates()).toEqual(["done", "failed", "todo"]);
@@ -658,8 +689,10 @@ describe("ProofProgress", () => {
 
 describe("Agents", () => {
   const agent = createAgent();
-  const onPage = () => agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
-  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) => act(() => agent.act({ steps }));
+  const onPage = () =>
+    agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) =>
+    act(() => agent.act({ steps }));
 
   it("names every control apart on one page, and runs the free ones", async () => {
     const engine = await unlockedEngine({
@@ -677,13 +710,19 @@ describe("Agents", () => {
         <ProofProgress phase="error" stage="proving" error="Out of memory" onRetry={onRetry} />
         <ProofProgress phase="proving" onCancel={onCancel} />
       </>,
-      engine
+      engine,
     );
 
     const components = onPage();
     for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
     const labels = components.map((e) => e.label!);
-    for (const label of ["Retry sync", "Retry proofs", "Copy private address", "Cancel proof", "Try again to generate the proof"]) {
+    for (const label of [
+      "Retry sync",
+      "Retry proofs",
+      "Copy private address",
+      "Cancel proof",
+      "Try again to generate the proof",
+    ]) {
       expect(labels, `${label} is missing from the snapshot`).toContain(label);
     }
     expect(collisions(labels)).toEqual([]);
@@ -710,7 +749,7 @@ function collisions(labels: readonly string[]) {
     labels.forEach((b, j) => {
       const wb = words(b);
       if (i !== j && [...words(a)].every((w) => wb.has(w))) found.push(`${a} / ${b}`);
-    })
+    }),
   );
   return found;
 }

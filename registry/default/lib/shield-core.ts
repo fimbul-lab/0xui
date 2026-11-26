@@ -128,7 +128,11 @@ export function shieldStepCopy(kind: ShieldStepKind, symbol: string) {
 /** The label of a running step's button: its call to action, or what the wallet is doing. */
 export function shieldStepLabel(kind: ShieldStepKind, phase: ShieldStepPhase, symbol: string) {
   const copy = shieldStepCopy(kind, symbol);
-  return phase === "wallet" ? copy.wallet : phase === "pending" ? (copy.pending ?? "Pending…") : copy.cta;
+  return phase === "wallet"
+    ? copy.wallet
+    : phase === "pending"
+      ? (copy.pending ?? "Pending…")
+      : copy.cta;
 }
 
 const stepWords: Record<ShieldStepKind, string> = {
@@ -176,7 +180,10 @@ export function shieldConfirmText({
 }
 
 /** What a person confirms before an agent opens the wallet for one step of a running shield. */
-export function shieldStepConfirmText(kind: ShieldStepKind, { amount, token }: { amount: bigint; token: ShieldTokenLabel }) {
+export function shieldStepConfirmText(
+  kind: ShieldStepKind,
+  { amount, token }: { amount: bigint; token: ShieldTokenLabel },
+) {
   const copy = shieldStepCopy(kind, token.symbol);
   return `${copy.title} in your wallet, to shield ${formatUnits(amount, token.decimals)} ${token.symbol}. ${copy.hint}`;
 }
@@ -215,10 +222,17 @@ export function formatFeePercent(fee: bigint, amount: bigint) {
 export function shieldQuoteQueryOptions(
   engine: ShieldedEngine,
   draft: ShieldDraft | undefined,
-  { enabled = true }: { enabled?: boolean } = {}
+  { enabled = true }: { enabled?: boolean } = {},
 ) {
   return {
-    queryKey: ["0xui", "shield-quote", engine.id, draft?.chainId, draft?.token, draft?.amount.toString()],
+    queryKey: [
+      "0xui",
+      "shield-quote",
+      engine.id,
+      draft?.chainId,
+      draft?.token,
+      draft?.amount.toString(),
+    ],
     queryFn: () => engine.quoteShield(draft!),
     enabled: Boolean(enabled && draft && draft.amount > 0n),
     staleTime: 30_000,
@@ -229,7 +243,11 @@ export function shieldQuoteQueryOptions(
 /** How much `spender` may move of the draft's token. Disabled until all three are known. */
 export function shieldAllowanceQueryOptions(
   config: Config,
-  { draft, owner, spender }: { draft: ShieldDraft | undefined; owner: Address | undefined; spender: Address | undefined }
+  {
+    draft,
+    owner,
+    spender,
+  }: { draft: ShieldDraft | undefined; owner: Address | undefined; spender: Address | undefined },
 ) {
   return {
     ...readContractQueryOptions(config, {
@@ -252,7 +270,12 @@ export function walletCapabilitiesQueryOptions(
     account,
     connector,
     enabled = true,
-  }: { chainId: number | undefined; account: Address | undefined; connector: Connector | undefined; enabled?: boolean }
+  }: {
+    chainId: number | undefined;
+    account: Address | undefined;
+    connector: Connector | undefined;
+    enabled?: boolean;
+  },
 ) {
   return {
     ...getCapabilitiesQueryOptions(config, { chainId, account, connector, query: { enabled } }),
@@ -266,7 +289,9 @@ export function walletCapabilitiesQueryOptions(
  * without atomicity could approve and then fail to shield. Neither counts.
  */
 export function isAtomic(capabilities: unknown) {
-  return (capabilities as { atomic?: { status?: string } } | undefined)?.atomic?.status === "supported";
+  return (
+    (capabilities as { atomic?: { status?: string } } | undefined)?.atomic?.status === "supported"
+  );
 }
 
 /** The wallet steps of a shield, frozen when it starts. */
@@ -359,7 +384,11 @@ const phaseOf: Record<ShieldStepKind, ShieldPhase> = {
 };
 
 /** The form's phase: the running step's, or why the last step stopped. */
-export function shieldPhase({ problem, active, index }: Pick<ShieldFlowState, "problem" | "active" | "index">): ShieldPhase {
+export function shieldPhase({
+  problem,
+  active,
+  index,
+}: Pick<ShieldFlowState, "problem" | "active" | "index">): ShieldPhase {
   if (problem) return problem.kind;
   const step = active?.steps[index];
   return step ? phaseOf[step] : "idle";
@@ -442,7 +471,7 @@ function readWallet(config: Config) {
 export function createShieldFlow(
   config: Config,
   engine: ShieldedEngine,
-  { onSubmitted }: ShieldFlowOptions = {}
+  { onSubmitted }: ShieldFlowOptions = {},
 ): ShieldFlow {
   const store = createStore<ShieldFlowState>(
     {
@@ -456,7 +485,7 @@ export function createShieldFlow(
     (store) => {
       store.set(readWallet(config));
       return watchConnection(config, { onChange: () => store.set(readWallet(config)) });
-    }
+    },
   );
 
   let prepared: PreparedShield | undefined;
@@ -478,7 +507,11 @@ export function createShieldFlow(
       }));
     const approval = (value: bigint): PublicCall => ({
       to: token,
-      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [quote.spender!, value] }),
+      data: encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [quote.spender!, value],
+      }),
     });
 
     store.set({ problem: undefined, stepPhase: "wallet" });

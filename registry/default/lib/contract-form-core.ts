@@ -12,7 +12,9 @@ import {
   type Address,
 } from "viem";
 
-export type ParsedAbiInput = { value: unknown; error?: undefined } | { value?: undefined; error: string };
+export type ParsedAbiInput =
+  | { value: unknown; error?: undefined }
+  | { value?: undefined; error: string };
 
 function intBounds(type: string) {
   const signed = type.startsWith("int");
@@ -27,7 +29,8 @@ function coerce(param: AbiParameter, value: unknown): unknown {
   const array = param.type.match(/^(.*)\[(\d*)\]$/);
   if (array) {
     if (!Array.isArray(value)) throw new Error("Expected a JSON array");
-    if (array[2] && value.length !== Number(array[2])) throw new Error(`Expected ${array[2]} items`);
+    if (array[2] && value.length !== Number(array[2]))
+      throw new Error(`Expected ${array[2]} items`);
     return value.map((item) => coerce({ ...param, type: array[1]! }, item));
   }
   if (param.type === "tuple") {
@@ -121,10 +124,15 @@ export function functionKind(fn: AbiFunction): "read" | "payable" | "write" {
 /** The ABI's functions, optionally only `functions` (in that order) and only reads or writes. */
 export function contractFunctions(
   abi: Abi,
-  { functions, show = "all" }: { functions?: readonly string[]; show?: "all" | "read" | "write" } = {},
+  {
+    functions,
+    show = "all",
+  }: { functions?: readonly string[]; show?: "all" | "read" | "write" } = {},
 ) {
   const all = abi.filter((item): item is AbiFunction => item.type === "function");
-  const picked = functions ? functions.flatMap((name) => all.filter((fn) => fn.name === name)) : all;
+  const picked = functions
+    ? functions.flatMap((name) => all.filter((fn) => fn.name === name))
+    : all;
   return picked.filter((fn) =>
     show === "read" ? isReadFunction(fn) : show === "write" ? !isReadFunction(fn) : true,
   );
@@ -178,7 +186,8 @@ export function inputName(input: AbiParameter, index: number) {
 
 /** One argument on one line, for a confirmation: bigints as digits, nested values as compact JSON. */
 function formatArgInline(value: unknown) {
-  if (typeof value === "bigint" || typeof value === "string" || typeof value === "boolean") return String(value);
+  if (typeof value === "bigint" || typeof value === "string" || typeof value === "boolean")
+    return String(value);
   return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v));
 }
 
@@ -190,9 +199,15 @@ function formatArgInline(value: unknown) {
 export function functionConfirmText(
   fn: AbiFunction,
   draft: Pick<FunctionCallDraft, "args" | "value">,
-  { address, chainName, nativeSymbol = "ETH" }: { address: Address; chainName?: string; nativeSymbol?: string },
+  {
+    address,
+    chainName,
+    nativeSymbol = "ETH",
+  }: { address: Address; chainName?: string; nativeSymbol?: string },
 ) {
-  const args = fn.inputs.map((input, i) => `${inputName(input, i)}: ${formatArgInline(draft.args[i])}`).join(", ");
+  const args = fn.inputs
+    .map((input, i) => `${inputName(input, i)}: ${formatArgInline(draft.args[i])}`)
+    .join(", ");
   const value = draft.value ? ` and sends ${formatEther(draft.value)} ${nativeSymbol}` : "";
   const on = chainName ? ` on ${chainName}` : "";
   return `Calls ${fn.name}(${args}) on contract ${address}${on}${value}, from your wallet`;

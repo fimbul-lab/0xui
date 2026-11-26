@@ -73,9 +73,13 @@ export function useShieldQuote(draft: ShieldDraft | undefined, { debounce = 300 
   const amount = useDebounced(draft?.amount, debounce);
   const settled = amount === draft?.amount;
   const query = useQuery(
-    shieldQuoteQueryOptions(engine, draft && amount !== undefined ? { ...draft, amount } : undefined, {
-      enabled: settled,
-    })
+    shieldQuoteQueryOptions(
+      engine,
+      draft && amount !== undefined ? { ...draft, amount } : undefined,
+      {
+        enabled: settled,
+      },
+    ),
   );
   return {
     quote: draft && settled ? query.data : undefined,
@@ -119,12 +123,12 @@ export function useShieldFlow({
           latest.current.onSubmitted?.(hash, shield);
         },
       }),
-    [config, engine]
+    [config, engine],
   );
   const state = useStore(controller);
 
   const allowance = useQuery(
-    shieldAllowanceQueryOptions(config, { draft, owner: state.account, spender: quote?.spender })
+    shieldAllowanceQueryOptions(config, { draft, owner: state.account, spender: quote?.spender }),
   );
   latest.current.refetchAllowance = () => void allowance.refetch();
   const capabilities = useQuery(
@@ -133,7 +137,7 @@ export function useShieldFlow({
       account: state.account,
       connector: state.connector,
       enabled: Boolean(draft) && state.connected,
-    })
+    }),
   );
 
   const planned = planShield({

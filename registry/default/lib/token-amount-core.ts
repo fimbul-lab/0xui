@@ -6,12 +6,10 @@ export function formatFiat(
   value: bigint,
   decimals: number,
   price: number,
-  { currency = "USD", locale }: { currency?: string; locale?: string } = {}
+  { currency = "USD", locale }: { currency?: string; locale?: string } = {},
 ) {
   const amount = Number(formatUnits(value, decimals)) * price;
-  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(
-    amount
-  );
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
 }
 
 /**
@@ -26,7 +24,7 @@ export function tokenAmountDisplay(
     price,
     currency,
     ...options
-  }: FormatTokenAmountOptions & { symbol?: string; price?: number; currency?: string } = {}
+  }: FormatTokenAmountOptions & { symbol?: string; price?: number; currency?: string } = {},
 ) {
   return {
     formatted: formatTokenAmount(value, decimals, options),

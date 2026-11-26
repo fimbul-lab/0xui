@@ -9,9 +9,7 @@
       "title": "Chain Selector",
       "description": "Network switcher for wagmi apps, as a popover (ChainSelector) or dialog (ChainSelectorDialog). Shows the current chain with its icon, lists every chain in the wagmi config (optionally grouped into mainnet/testnet tabs), marks the active chain, shows a per-row spinner while switching, and surfaces wallet errors inline; a rejected request shows as cancelled, not as an error. Wraps useSwitchChain, useChains and useChainId. Flags a wallet on an unsupported chain as 'Wrong network', and takes a chainMeta slot for per-chain detail. Icon slots are swappable or can be hidden; iconOnly mode keeps an accessible label. Before hydration the trigger is a skeleton (skullet) in its own shape, so server HTML never shows wallet state and nothing moves when the chain appears.",
       "docs": "Docs: https://0xui.io/components/chain-selector.md",
-      "categories": [
-        "network"
-      ],
+      "categories": ["network"],
       "files": [
         {
           "path": "registry/default/components/chain-selector.tsx",
@@ -49,18 +47,14 @@
       "title": "Copy Button",
       "description": "Icon button that copies a value to the clipboard, swaps to a checkmark for a moment, and announces 'Copied' to screen readers. Hit area extends past the small visual size. onCopy only fires when the clipboard write succeeds. Icons are swappable. Built on the 0xui Button primitive and the useCopy hook.",
       "docs": "Docs: https://0xui.io/components/copy-button.md",
-      "categories": [
-        "utilities"
-      ],
+      "categories": ["utilities"],
       "files": [
         {
           "path": "registry/default/components/copy-button.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "lucide-react"
-      ],
+      "dependencies": ["lucide-react"],
       "registryDependencies": [
         "@0xui/use-copy",
         "@0xui/primitive-button",
@@ -73,18 +67,14 @@
       "title": "Morph Text",
       "description": "Text that morphs when it changes: shared characters slide to their new place and digits roll by place value. Used across 0xui for phase labels ('Confirm in wallet…' to 'Pending…') and live numbers such as block height, gas and balances. Strings and numbers animate; any other child renders as-is. Screen readers get the plain text, prefers-reduced-motion is respected, and it renders plain text where the Web Animations API is missing (jsdom tests). Wraps TextMorph from torph.",
       "docs": "Docs: https://0xui.io/components/morph-text.md",
-      "categories": [
-        "utilities"
-      ],
+      "categories": ["utilities"],
       "files": [
         {
           "path": "registry/default/components/morph-text.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "torph"
-      ]
+      "dependencies": ["torph"]
     },
     {
       "name": "responsive-dialog",
@@ -92,18 +82,14 @@
       "title": "Responsive Dialog",
       "description": "A dialog that becomes a bottom sheet on small touch screens, where a centered panel is out of thumb reach. Same title, description and content in both; the sheet can be swiped down to close. mode forces 'dialog' or 'drawer' (the sheet); 'auto' picks the sheet on small touch screens, or on drawerQuery when set. Used by the wallet picker and the token picker. Built on the 0xui Dialog primitive (ui-sdk Dialog, presentation 'sheet'). Exports useMediaQuery, which is false on the server and where matchMedia is missing.",
       "docs": "Docs: https://0xui.io/components/responsive-dialog.md",
-      "categories": [
-        "utilities"
-      ],
+      "categories": ["utilities"],
       "files": [
         {
           "path": "registry/default/components/responsive-dialog.tsx",
           "type": "registry:component"
         }
       ],
-      "registryDependencies": [
-        "@0xui/primitive-dialog"
-      ]
+      "registryDependencies": ["@0xui/primitive-dialog"]
     },
     {
       "name": "explorer-link",
@@ -111,22 +97,15 @@
       "title": "Explorer Link",
       "description": "Link to an address, transaction or block on a chain's block explorer, taken from chain.blockExplorers in the wagmi config (current chain by default, or chainId). Opens in a new tab with rel=noopener and a screen-reader note. Default text is 'View on <explorer>'. Renders plain text when the chain has no explorer. Exports useExplorerLink.",
       "docs": "Docs: https://0xui.io/components/explorer-link.md",
-      "categories": [
-        "identity"
-      ],
+      "categories": ["identity"],
       "files": [
         {
           "path": "registry/default/components/explorer-link.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["wagmi", "lucide-react"],
+      "registryDependencies": ["@0xui/0xui-utils"]
     },
     {
       "name": "address",
@@ -134,20 +113,14 @@
       "title": "Address",
       "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234…abcd, with a copy button and an optional block-explorer link. Inline or pill variant. The text morphs from the address to the ENS name when it resolves (MorphText). Full address on hover and for screen readers. Exports useAddressName.",
       "docs": "Docs: https://0xui.io/components/address.md",
-      "categories": [
-        "identity"
-      ],
+      "categories": ["identity"],
       "files": [
         {
           "path": "registry/default/components/address.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@tanstack/react-query"
-      ],
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query"],
       "registryDependencies": [
         "@0xui/copy-button",
         "@0xui/explorer-link",
@@ -161,24 +134,15 @@
       "title": "Address Avatar",
       "description": "Round avatar for an address: the ENS avatar (useEnsName + useEnsAvatar on mainnet), or a deterministic gradient derived from the address as a fallback. Accepts a custom image src and a pixel size. Exports useAddressAvatar and addressGradient.",
       "docs": "Docs: https://0xui.io/components/address-avatar.md",
-      "categories": [
-        "identity"
-      ],
+      "categories": ["identity"],
       "files": [
         {
           "path": "registry/default/components/address-avatar.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@tanstack/react-query"
-      ],
-      "registryDependencies": [
-        "@0xui/identity",
-        "@0xui/primitive-avatar"
-      ]
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query"],
+      "registryDependencies": ["@0xui/identity", "@0xui/primitive-avatar"]
     },
     {
       "name": "chain-badge",
@@ -186,23 +150,15 @@
       "title": "Chain Badge",
       "description": "Static chain chip: chain icon plus name for a chainId, with the name read from the wagmi config ('Chain <id>' for unknown chains). Icon-only mode keeps an accessible label. Also exports ChainIcon, the web3icons network logo, a skeleton (skullet) while it loads and a '?' for unknown chains, which other 0xui components reuse.",
       "docs": "Docs: https://0xui.io/components/chain-badge.md",
-      "categories": [
-        "network"
-      ],
+      "categories": ["network"],
       "files": [
         {
           "path": "registry/default/components/chain-badge.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "@web3icons/react",
-        "skullet"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-avatar"
-      ]
+      "dependencies": ["wagmi", "@web3icons/react", "skullet"],
+      "registryDependencies": ["@0xui/primitive-avatar"]
     },
     {
       "name": "token-icon",
@@ -210,24 +166,15 @@
       "title": "Token Icon",
       "description": "Token logo with fallbacks: the token list's logoURI (ipfs:// is resolved through a gateway), then the built-in web3icons icon for the symbol, then the symbol's first letters. A skeleton (skullet) stands in while a logo or icon loads. Optional chain badge in the corner via chainId. Labelled by the symbol for screen readers. Size in px.",
       "docs": "Docs: https://0xui.io/components/token-icon.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/token-icon.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@web3icons/react",
-        "skullet"
-      ],
-      "registryDependencies": [
-        "@0xui/0xui-utils",
-        "@0xui/chain-badge",
-        "@0xui/primitive-avatar"
-      ]
+      "dependencies": ["@web3icons/react", "skullet"],
+      "registryDependencies": ["@0xui/0xui-utils", "@0xui/chain-badge", "@0xui/primitive-avatar"]
     },
     {
       "name": "token-amount",
@@ -235,9 +182,7 @@
       "title": "Token Amount",
       "description": "Formats a bigint token amount with its decimals, e.g. '1,234.5678 USDC', without float precision loss. Rounds toward zero so balances never look larger than they are, shows '<0.0001' for dust, supports compact notation (1.2M) and an optional fiat value from a price prop. The exact amount shows on hover. Exports formatFiat.",
       "docs": "Docs: https://0xui.io/components/token-amount.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/token-amount.tsx",
@@ -248,13 +193,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem"
-      ],
-      "registryDependencies": [
-        "@0xui/morph-text",
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["viem"],
+      "registryDependencies": ["@0xui/morph-text", "@0xui/0xui-utils"]
     },
     {
       "name": "block-number",
@@ -262,9 +202,7 @@
       "title": "Block Number",
       "description": "Live block indicator: status dot plus the latest block number, updated as blocks arrive (useBlockNumber with watch). Doubles as an RPC health check. A skeleton (skullet) stands in for the number while loading. data-phase is loading, live or error, and the dot turns red with 'RPC unavailable' when the RPC fails. Optional explorer link. Exports useLiveBlockNumber.",
       "docs": "Docs: https://0xui.io/components/block-number.md",
-      "categories": [
-        "network"
-      ],
+      "categories": ["network"],
       "files": [
         {
           "path": "registry/default/components/block-number.tsx",
@@ -275,16 +213,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "skullet",
-        "@tanstack/react-query",
-        "@wagmi/core"
-      ],
-      "registryDependencies": [
-        "@0xui/explorer-link",
-        "@0xui/morph-text"
-      ]
+      "dependencies": ["wagmi", "skullet", "@tanstack/react-query", "@wagmi/core"],
+      "registryDependencies": ["@0xui/explorer-link", "@0xui/morph-text"]
     },
     {
       "name": "gas-price",
@@ -292,9 +222,7 @@
       "title": "Gas Price",
       "description": "Current gas price in gwei with three significant digits (useGasPrice, refreshed on an interval). Optional low/medium/high tone from per-chain gwei thresholds, exposed as data-tone. Skeleton (skullet) while loading and an error state. Exports useGasPriceInfo, formatGasPrice and gasTone.",
       "docs": "Docs: https://0xui.io/components/gas-price.md",
-      "categories": [
-        "network"
-      ],
+      "categories": ["network"],
       "files": [
         {
           "path": "registry/default/components/gas-price.tsx",
@@ -313,9 +241,7 @@
         "@tanstack/react-query",
         "@wagmi/core"
       ],
-      "registryDependencies": [
-        "@0xui/morph-text"
-      ]
+      "registryDependencies": ["@0xui/morph-text"]
     },
     {
       "name": "connect-wallet",
@@ -323,9 +249,7 @@
       "title": "Connect Wallet",
       "description": "Wallet picker for wagmi: 'Connect wallet' button plus dialog listing the config's connectors and EIP-6963 browser extensions with their icons. Recent wallet first, then installed (badged), max N shown with an 'Other wallets' overflow, generic injected hidden when extensions announce themselves. Per-wallet spinner while connecting, a rejected request shows as cancelled (not an error), other errors inline. Exports ConnectWalletDialog (bring your own trigger), useConnectWallet and useWalletOptions. data-phase: idle | connecting | cancelled | error. On small touch screens the picker opens as a bottom sheet (mode: auto, dialog or drawer).",
       "docs": "Docs: https://0xui.io/components/connect-wallet.md",
-      "categories": [
-        "wallet"
-      ],
+      "categories": ["wallet"],
       "files": [
         {
           "path": "registry/default/components/connect-wallet.tsx",
@@ -359,9 +283,7 @@
       "title": "Balance",
       "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton (skullet), '—' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
       "docs": "Docs: https://0xui.io/components/balance.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/balance.tsx",
@@ -372,16 +294,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "skullet",
-        "@tanstack/react-query",
-        "@wagmi/core"
-      ],
-      "registryDependencies": [
-        "@0xui/token-amount"
-      ]
+      "dependencies": ["wagmi", "viem", "skullet", "@tanstack/react-query", "@wagmi/core"],
+      "registryDependencies": ["@0xui/token-amount"]
     },
     {
       "name": "account",
@@ -389,9 +303,7 @@
       "title": "Account",
       "description": "Connected-account button: avatar plus ENS name or truncated address (morphing from one to the other when the name resolves), optional balance. Opens a popover panel with the balance, current chain, copy address, explorer link, connector name and disconnect, plus a children slot for app links. Renders nothing when disconnected. Exports useConnectedAccount. When more than one wallet is connected, the panel lists the others under 'Switch account' (useConnections, useSwitchConnection).",
       "docs": "Docs: https://0xui.io/components/account.md",
-      "categories": [
-        "wallet"
-      ],
+      "categories": ["wallet"],
       "files": [
         {
           "path": "registry/default/components/account.tsx",
@@ -426,19 +338,14 @@
       "title": "Wallet Button",
       "description": "The one wallet button for an app header: ConnectWallet when disconnected, Account when connected, and a skeleton placeholder (skullet) during SSR and while wagmi restores a previous connection, so returning users never see a flash of 'Connect wallet'. Exports useWalletButtonPhase (restoring | disconnected | connected).",
       "docs": "Docs: https://0xui.io/components/wallet-button.md",
-      "categories": [
-        "wallet"
-      ],
+      "categories": ["wallet"],
       "files": [
         {
           "path": "registry/default/components/wallet-button.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "skullet"
-      ],
+      "dependencies": ["wagmi", "skullet"],
       "registryDependencies": [
         "@0xui/connect-wallet",
         "@0xui/account",
@@ -453,9 +360,7 @@
       "title": "Transaction Status",
       "description": "Inline card for one transaction hash: what it does (children), steps from submitted to included in block N to N of M confirmations, the hash with copy, and an explorer link. Reverted transactions are shown with their receipt instead of throwing like wagmi's useWaitForTransactionReceipt. Exports useTransactionStatus, useMinedReceipt and StepIcon. data-phase: pending | confirming | confirmed | reverted | error.",
       "docs": "Docs: https://0xui.io/components/transaction-status.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/transaction-status.tsx",
@@ -466,18 +371,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@tanstack/react-query",
-        "lucide-react",
-        "@wagmi/core"
-      ],
-      "registryDependencies": [
-        "@0xui/copy-button",
-        "@0xui/explorer-link",
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query", "lucide-react", "@wagmi/core"],
+      "registryDependencies": ["@0xui/copy-button", "@0xui/explorer-link", "@0xui/0xui-utils"]
     },
     {
       "name": "transaction-button",
@@ -485,9 +380,7 @@
       "title": "Transaction Button",
       "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet…', 'Pending…', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error. With simulate it dry-runs the call (useSimulateContract, useCall) and shows the revert reason on a disabled button before the wallet opens. Exports useTransactionSimulation and revertReason.",
       "docs": "Docs: https://0xui.io/components/transaction-button.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/transaction-button.tsx",
@@ -498,13 +391,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "lucide-react",
-        "@tanstack/react-query",
-        "@wagmi/core"
-      ],
+      "dependencies": ["wagmi", "viem", "lucide-react", "@tanstack/react-query", "@wagmi/core"],
       "registryDependencies": [
         "@0xui/connect-wallet",
         "@0xui/transaction-status",
@@ -521,9 +408,7 @@
       "title": "Amount Input",
       "description": "Large borderless decimal input for token amounts that keeps a string value (no float precision loss). type=text with inputMode=decimal; refuses invalid keystrokes and digits past the token's decimals; accepts ',' as the decimal point; cleans up pasted amounts like '$1,000.50'. Optional max with a Max button and an over-max state (aria-invalid). onValueChange returns the string plus the parsed bigint. Exports sanitizeAmountInput and getAmountState.",
       "docs": "Docs: https://0xui.io/components/amount-input.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/amount-input.tsx",
@@ -534,11 +419,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem",
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
+      "dependencies": ["viem", "@ui-sdk/core", "@ui-sdk/react"],
       "registryDependencies": [
         "@0xui/0xui-utils",
         "@0xui/primitive-button",
@@ -551,9 +432,7 @@
       "title": "Token Select",
       "description": "Searchable token picker (pill trigger plus dialog) for tokens in the token list standard (tokenlists.org, the format of Uniswap's lists), on one chain. Search by symbol, name or pasted address; quick picks from recent tokens (localStorage) and a popular list; the connected account's balances read in one batch, with held tokens sorted first; arrow-key navigation; a loading skeleton measured from the real rows (skullet) while the list downloads; and pagination (50 rows per page, infinite scroll plus a Show more button) so 400-token lists stay fast. Accepts balances from an indexer via the balances prop, which skips RPC reads. Pair it with useTokenList. Exports TokenSelectDialog, filterTokens, useTokenBalances and the Token type. On small touch screens the picker opens as a bottom sheet (mode: auto, dialog or drawer).",
       "docs": "Docs: https://0xui.io/components/token-select.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/token-select.tsx",
@@ -589,18 +468,14 @@
       "title": "Token Input",
       "description": "Swap/send panel: label, AmountInput, TokenSelect pill, fiat value from a price prop, the connected account's balance of the chosen token with Max, and an 'Insufficient <symbol> balance' state. onValueChange returns the amount as a bigint plus insufficient. readOnly and checkBalance=false for 'you receive' panels.",
       "docs": "Docs: https://0xui.io/components/token-input.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/token-input.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "viem"
-      ],
+      "dependencies": ["viem"],
       "registryDependencies": [
         "@0xui/amount-input",
         "@0xui/token-select",
@@ -616,9 +491,7 @@
       "title": "Address Input",
       "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, a hint line that morphs between 'Looking up…', the name and the address (MorphText), strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found. With the shielded prop it also accepts private 0zk addresses (Railgun format), validated by length and bech32m checksum and reported as state.shieldedAddress; they are never sent to a resolver.",
       "docs": "Docs: https://0xui.io/components/address-input.md",
-      "categories": [
-        "identity"
-      ],
+      "categories": ["identity"],
       "files": [
         {
           "path": "registry/default/components/address-input.tsx",
@@ -653,9 +526,7 @@
       "title": "Approve Button",
       "description": "ERC-20 approval gate: reads the allowance (useReadContract allowance) and shows an 'Approve <symbol>' TransactionButton until it covers the amount, then renders children (your action); skips straight to children when already approved. Exact amount by default, unlimited (maxUint256) opt-in. Refetches the allowance after approval. Exports useAllowance. For tokens that reject a non-zero to non-zero allowance change (mainnet USDT, or any token with resetFirst) it first sends 'Reset <token> approval' to set the allowance to 0.",
       "docs": "Docs: https://0xui.io/components/approve-button.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/approve-button.tsx",
@@ -666,15 +537,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@tanstack/react-query",
-        "@wagmi/core"
-      ],
-      "registryDependencies": [
-        "@0xui/transaction-button"
-      ]
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query", "@wagmi/core"],
+      "registryDependencies": ["@0xui/transaction-button"]
     },
     {
       "name": "network-guard",
@@ -682,9 +546,7 @@
       "title": "Network Guard",
       "description": "Wrapper that shows a 'This works on <chain>. Switch to <chain>' notice when the connected wallet is on an unsupported network, as a banner above the content or replacing it. Renders children unchanged when disconnected or on a supported chain. A declined switch shows as cancelled. Exports useNetworkGuard.",
       "docs": "Docs: https://0xui.io/components/network-guard.md",
-      "categories": [
-        "network"
-      ],
+      "categories": ["network"],
       "files": [
         {
           "path": "registry/default/components/network-guard.tsx",
@@ -695,12 +557,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "lucide-react",
-        "@wagmi/core",
-        "viem"
-      ],
+      "dependencies": ["wagmi", "lucide-react", "@wagmi/core", "viem"],
       "registryDependencies": [
         "@0xui/use-mounted",
         "@0xui/0xui-utils",
@@ -715,9 +572,7 @@
       "title": "Sign Message",
       "description": "Button that signs a message (EIP-191, useSignMessage) or typed data (EIP-712, useSignTypedData), opening the wallet picker when disconnected. Labeled steps, optional verification through the RPC (works for ERC-1271/6492 smart wallets), message preview, signature with copy. A rejected request shows as cancelled. Exports useSignFlow and SignPhase.",
       "docs": "Docs: https://0xui.io/components/sign-message.md",
-      "categories": [
-        "wallet"
-      ],
+      "categories": ["wallet"],
       "files": [
         {
           "path": "registry/default/components/sign-message.tsx",
@@ -728,12 +583,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "lucide-react",
-        "@wagmi/core"
-      ],
+      "dependencies": ["wagmi", "viem", "lucide-react", "@wagmi/core"],
       "registryDependencies": [
         "@0xui/connect-wallet",
         "@0xui/copy-button",
@@ -750,9 +600,7 @@
       "title": "Transaction Toast",
       "description": "useTransactionToast() returns toastTransaction(hash, options): one toast that goes from 'Transaction pending' to 'Transaction confirmed' or 'Transaction reverted' (or 'Couldn't track transaction'), with a View-on-explorer action and your description in every state. Waits with viem directly so reverted receipts are handled. Needs the Toaster from @/components/primitives/toast mounted once.",
       "docs": "Docs: https://0xui.io/components/transaction-toast.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/transaction-toast.tsx",
@@ -763,15 +611,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@ui-sdk/core",
-        "@wagmi/core"
-      ],
-      "registryDependencies": [
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["wagmi", "viem", "@ui-sdk/core", "@wagmi/core"],
+      "registryDependencies": ["@0xui/0xui-utils"]
     },
     {
       "name": "add-token",
@@ -779,9 +620,7 @@
       "title": "Add Token",
       "description": "'Add USDC to wallet' button (EIP-747 wallet_watchAsset via useWatchAsset) with adding, added, cancelled and error states. Renders nothing when no wallet is connected.",
       "docs": "Docs: https://0xui.io/components/add-token.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/add-token.tsx",
@@ -792,12 +631,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "lucide-react",
-        "@wagmi/core"
-      ],
+      "dependencies": ["wagmi", "viem", "lucide-react", "@wagmi/core"],
       "registryDependencies": [
         "@0xui/morph-text",
         "@0xui/0xui-utils",
@@ -812,9 +646,7 @@
       "title": "Send",
       "description": "Send block for ETH and ERC-20s: AddressInput (address or ENS) + TokenInput (token, amount, balance, Max) + TransactionButton + TransactionStatus. The button names the next missing thing (Enter a recipient / Enter an amount / Insufficient <symbol> balance) before 'Send <symbol>'. Native currency is sent as value, ERC-20s via transfer(). Exports the sendBlocker and sendRequest helpers.",
       "docs": "Docs: https://0xui.io/blocks/send.md",
-      "categories": [
-        "blocks"
-      ],
+      "categories": ["blocks"],
       "files": [
         {
           "path": "registry/default/components/send.tsx",
@@ -825,10 +657,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem",
-        "wagmi"
-      ],
+      "dependencies": ["viem", "wagmi"],
       "registryDependencies": [
         "@0xui/address-input",
         "@0xui/token-input",
@@ -844,9 +673,7 @@
       "title": "Swap",
       "description": "Swap block with bring-your-own quotes: two TokenInput panels with a flip button, debounced auto-refreshing quotes from a getQuote(sellToken, buyToken, sellAmount, taker) prop (any aggregator or router), rate row (click to invert), price-impact warning, an ApproveButton step when the sell token needs an allowance, and a swap button naming the blocker (Select a token / Enter an amount / Insufficient balance / Fetching quote / No route found). Exports useSwapQuote, formatRate and the GetQuote/SwapQuote types.",
       "docs": "Docs: https://0xui.io/blocks/swap.md",
-      "categories": [
-        "blocks"
-      ],
+      "categories": ["blocks"],
       "files": [
         {
           "path": "registry/default/components/swap.tsx",
@@ -857,12 +684,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem",
-        "wagmi",
-        "@tanstack/react-query",
-        "lucide-react"
-      ],
+      "dependencies": ["viem", "wagmi", "@tanstack/react-query", "lucide-react"],
       "registryDependencies": [
         "@0xui/token-input",
         "@0xui/token-select",
@@ -879,9 +701,7 @@
       "title": "Batch Transaction",
       "description": "Runs several calls (e.g. approve + swap) as one action: a single wallet prompt via EIP-5792 wallet_sendCalls when the wallet reports atomic support (useCapabilities), else one transaction per call, waiting for each. Step list with per-step status, step-counting labels ('Confirm 2 of 3 in wallet…'), network switch, rejection shown as cancelled. mode: auto | atomic | sequential. Exports useBatchTransaction.",
       "docs": "Docs: https://0xui.io/components/batch-transaction.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/batch-transaction.tsx",
@@ -915,9 +735,7 @@
       "title": "Contract Form",
       "description": "Read/write forms for any contract generated from its ABI: one collapsible card per function with typed inputs (range-checked ints, checksummed addresses, sized bytes, bool select, JSON arrays/tuples), Read with formatted results for view functions, TransactionButton for writes (plus an ETH value field when payable) naming the first invalid field. Filter with functions=[...] or show=read|write. Exports ContractFunction, parseAbiInput and formatAbiValue.",
       "docs": "Docs: https://0xui.io/components/contract-form.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/contract-form.tsx",
@@ -949,9 +767,7 @@
       "title": "Portfolio",
       "description": "Token holdings block: total fiat value on top, then rows (icon, name, amount, value) sorted by value, for the connected account or any address. Balances for the whole token list are read in one batch; prices are a prop, keyed by chainId:address, address or symbol. Spam filtering: likely spam (looksLikeSpam or your own isSpam, e.g. scanner verdicts), tokens without a price and dust under minValue are collapsed under a Hidden tokens disclosure with the reason, and left out of the total. Pagination (pageSize with Show more). Accepts balances from an indexer (balances prop) instead of RPC reads. Loading skeleton measured from the real layout (skullet): from sample rows over RPC, or from your own data's exact shape when isLoading is set, so nothing moves on reveal. Empty, error and disconnected states. locale prop for server rendering. Exports usePortfolio and hiddenReason. Takes holdings from an indexer with their own token metadata; tokens off the list are hidden as 'Not on the token list' unless showUnlisted is set.",
       "docs": "Docs: https://0xui.io/blocks/portfolio.md",
-      "categories": [
-        "blocks"
-      ],
+      "categories": ["blocks"],
       "files": [
         {
           "path": "registry/default/components/portfolio.tsx",
@@ -962,14 +778,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "lucide-react",
-        "skullet",
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
+      "dependencies": ["wagmi", "viem", "lucide-react", "skullet", "@ui-sdk/core", "@ui-sdk/react"],
       "registryDependencies": [
         "@0xui/token-select",
         "@0xui/token-icon",
@@ -985,9 +794,7 @@
       "title": "Transaction History",
       "description": "Transactions sent from this app with live status, persisted in localStorage (synced across tabs, 50 max). Call recordTransaction({ hash, chainId, from, description }) from anywhere (e.g. TransactionButton onSubmitted); pending rows poll for receipts and keep their final status. Filters to the connected account by default. Pass transactions from an indexer (transactions prop) for cross-device history. Paginated with Show more. Exports useTransactionHistory, recordTransaction, updateTransaction and clearTransactionHistory.",
       "docs": "Docs: https://0xui.io/components/transaction-history.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/transaction-history.tsx",
@@ -998,13 +805,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "lucide-react",
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
+      "dependencies": ["wagmi", "viem", "lucide-react", "@ui-sdk/core", "@ui-sdk/react"],
       "registryDependencies": [
         "@0xui/explorer-link",
         "@0xui/transaction-status",
@@ -1018,9 +819,7 @@
       "title": "ENS Profile",
       "description": "Profile card for an ENS name (forward) or address (primary name): avatar, name, address with copy, description, and website / X / GitHub / email links from text records, read on mainnet. Loading skeleton measured from the real layout (skullet) and a not-found state. Exports useEnsProfile, which can read arbitrary text records.",
       "docs": "Docs: https://0xui.io/components/ens-profile.md",
-      "categories": [
-        "identity"
-      ],
+      "categories": ["identity"],
       "files": [
         {
           "path": "registry/default/components/ens-profile.tsx",
@@ -1039,11 +838,7 @@
         "skullet",
         "@wagmi/core"
       ],
-      "registryDependencies": [
-        "@0xui/address",
-        "@0xui/address-avatar",
-        "@0xui/identity"
-      ]
+      "registryDependencies": ["@0xui/address", "@0xui/address-avatar", "@0xui/identity"]
     },
     {
       "name": "nft-card",
@@ -1051,9 +846,7 @@
       "title": "NFT Card",
       "description": "Card for an ERC-721 or ERC-1155 token: reads tokenURI or uri (with {id} substitution) and the collection name in one batch, fetches metadata from HTTP, IPFS (configurable gateway), Arweave or inline data: URIs, and shows the image, name, collection, token id and optional traits. Skeleton measured from the real layout (skullet) while loading and a placeholder for missing images or tokens. Exports useNft, fetchNftMetadata, resolveUri and expandTokenUri.",
       "docs": "Docs: https://0xui.io/components/nft-card.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/components/nft-card.tsx",
@@ -1072,9 +865,7 @@
         "skullet",
         "@wagmi/core"
       ],
-      "registryDependencies": [
-        "@0xui/0xui-utils"
-      ]
+      "registryDependencies": ["@0xui/0xui-utils"]
     },
     {
       "name": "event-feed",
@@ -1082,9 +873,7 @@
       "title": "Event Feed",
       "description": "Live feed of a contract's events (useWatchContractEvent), newest first, deduplicated, with an optional recent-history backfill (getContractEvents over N blocks), indexed-argument filters, default rows showing the event name and formatted args, and a transaction link per event. role=log for polite announcements. renderEvent for custom rows. initialEvents takes past events from an indexer instead of RPC history. Exports useEventFeed and formatEventArg.",
       "docs": "Docs: https://0xui.io/components/event-feed.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "files": [
         {
           "path": "registry/default/components/event-feed.tsx",
@@ -1116,18 +905,14 @@
       "title": "Shielded Address",
       "description": "Private (shielded) address display, e.g. a 127-character Railgun 0zk address: truncated as 0zk1qyk9n…x8w3ld with the full address on hover, for screen readers and on copy. Inline or pill variant, configurable truncation, or truncate={false} to show the whole address wrapped. Exports truncateShieldedAddress. Needs no engine or provider.",
       "docs": "Docs: https://0xui.io/components/shielded-address.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/components/shielded-address.tsx",
           "type": "registry:component"
         }
       ],
-      "registryDependencies": [
-        "@0xui/copy-button"
-      ]
+      "registryDependencies": ["@0xui/copy-button"]
     },
     {
       "name": "privacy-badge",
@@ -1135,18 +920,14 @@
       "title": "Privacy Badge",
       "description": "Marks a value or an action as public or private: a filled chip with a crossed-out eye for private, an outlined chip with an eye for public, so the two differ by more than color. Badge or inline variant, icon-only mode with a screen reader label, custom label and icon, tooltip explaining what each means. Exports the Privacy type and privacyMeta. Sets data-privacy. Needs no engine or provider.",
       "docs": "Docs: https://0xui.io/components/privacy-badge.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/components/privacy-badge.tsx",
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "lucide-react"
-      ]
+      "dependencies": ["lucide-react"]
     },
     {
       "name": "shielded-balance",
@@ -1154,9 +935,7 @@
       "title": "Shielded Balance",
       "description": "Private (shielded) balance of one token from a ShieldedEngine, split by five protocol-neutral states: spendable, pending (standby after shielding), proving, incomplete (a proof is missing) and restricted. The headline is the spendable amount; every other state that holds funds gets a row saying what it means, and incomplete funds get a 'Retry proofs' button. Card or inline variant, loading skeleton, 'updating' indicator while a scan runs, bigint amounts formatted with TokenAmount. Token symbol and decimals are props, so nothing about private holdings is asked of the RPC. Exports useShieldedBalance, useShieldedBalances, ShieldedBalanceRow, totalShielded and shieldedBalanceMeta. data-phase: idle | loading | ready | error.",
       "docs": "Docs: https://0xui.io/components/shielded-balance.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/components/shielded-balance.tsx",
@@ -1167,11 +946,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem",
-        "lucide-react",
-        "skullet"
-      ],
+      "dependencies": ["viem", "lucide-react", "skullet"],
       "registryDependencies": [
         "@0xui/shielded-engine",
         "@0xui/token-amount",
@@ -1186,9 +961,7 @@
       "title": "Shielded Sync Status",
       "description": "Scan progress for a private (shielded) balance from a ShieldedEngine: names the pass that is running (finding your funds, checking transaction history), shows step N of 2 and a progress bar that never moves backwards even though protocol SDKs report progress that restarts per stage and jumps back. Error state with the reason and a Retry button, 'up to date' state with a sync-again button, quieter 'updating' label for repeat scans. Bar or inline variant. Exports useShieldedSync, advanceSync (the pure monotonic reducer), ShieldedSyncBar and shieldedSyncStageLabels. data-phase: idle | syncing | synced | error.",
       "docs": "Docs: https://0xui.io/components/shielded-sync-status.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/components/shielded-sync-status.tsx",
@@ -1199,11 +972,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "lucide-react",
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
+      "dependencies": ["lucide-react", "@ui-sdk/core", "@ui-sdk/react"],
       "registryDependencies": [
         "@0xui/shielded-engine",
         "@0xui/0xui-store",
@@ -1216,9 +985,7 @@
       "title": "Proof Progress",
       "description": "Zero-knowledge proof generation shown as stages, not a fake percentage: loading circuits (the first proof downloads them), computing proof, verifying proof. Step list with done, active and failed icons, a hint under the running step, Cancel while it runs (AbortSignal), error with 'Try again', and a 'Proof ready' state. Controlled by props, so it works with the exported useProof hook (wraps ShieldedEngine.prove) or your own flow. Exports useProof, ProofStep, proofStepStates and proofStageMeta. data-phase: idle | loading-circuits | proving | verifying | done | cancelled | error.",
       "docs": "Docs: https://0xui.io/components/proof-progress.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/components/proof-progress.tsx",
@@ -1229,9 +996,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "lucide-react"
-      ],
+      "dependencies": ["lucide-react"],
       "registryDependencies": [
         "@0xui/shielded-engine",
         "@0xui/0xui-utils",
@@ -1246,9 +1011,7 @@
       "title": "Shielded Account",
       "description": "The private (shielded) account in every state, on a ShieldedEngine: create one with a password (creation takes seconds and says so), show the recovery phrase once, hidden until revealed, and keep the way forward closed until the user confirms they saved it; import a 12 or 24 word recovery phrase; unlock with a password (wrong password shown inline); lock again. Buttons name what is missing (Enter a password, Use at least 8 characters, Passwords don't match). The phrase field is closed to spell checkers, autocomplete and password managers. Renders children once unlocked, so it can gate the private part of an app. SSR-safe. Exports useShieldedAccountFlow, ShieldedAccountCreateForm, ShieldedAccountImportForm, ShieldedAccountUnlockForm, RecoveryPhrase, ShieldedAccountSummary, passwordBlocker and phraseBlocker. data-phase: none | creating | backup | importing | locked | unlocking | unlocked.",
       "docs": "Docs: https://0xui.io/components/shielded-account.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/components/shielded-account.tsx",
@@ -1259,11 +1022,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "lucide-react",
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
+      "dependencies": ["lucide-react", "@ui-sdk/core", "@ui-sdk/react"],
       "registryDependencies": [
         "@0xui/shielded-engine",
         "@0xui/shielded-address",
@@ -1280,9 +1039,7 @@
       "title": "Shielded Transaction Status",
       "description": "Inline card that follows one shield from the public chain into the private balance: submitted, included in block N, found by the private account, then the standby period with a countdown until the funds are spendable. A mined transaction alone is never shown as done: success comes from the ShieldedEngine seeing the funds, not from the receipt. Asks the engine to scan as soon as the transaction is mined. Handles restricted funds, reverted transactions and RPC errors. Shows the amount that arrived after the fee, the hash with copy and an explorer link. Card variant with every step, or a one-line variant for under a form. Exports useShieldedTransactionStatus, shieldedStatusText and formatWait. data-phase: pending | confirmed | standby | spendable | restricted | reverted | error.",
       "docs": "Docs: https://0xui.io/components/shielded-transaction-status.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/components/shielded-transaction-status.tsx",
@@ -1293,12 +1050,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@tanstack/react-query",
-        "@wagmi/core"
-      ],
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query", "@wagmi/core"],
       "registryDependencies": [
         "@0xui/shielded-engine",
         "@0xui/transaction-status",
@@ -1314,9 +1066,7 @@
       "title": "Shield",
       "description": "Shield block: move an ERC-20 from the connected wallet into a private (shielded) balance through a ShieldedEngine. TokenInput with wallet balance, a quote showing the protocol fee, the amount received privately and how long until it is spendable, and a line saying how many wallet prompts to expect. Then the wallet steps, one click each: the signature the protocol needs (free, a dismissed prompt is a cancel), the approval, the shield. With a wallet that reports EIP-5792 atomic batching as supported, approval and shield are one prompt (exact approval, leftover allowance cleared first, every receipt checked); other wallets get separate prompts, with a reset first for tokens like USDT. What is sent is frozen when the user starts, so it always matches what was on screen. Two variants over the same flow: 'in-place' locks the form and steps through the prompts on one button, then follows the shield in one line; 'collapse' folds the form into a summary with a step list, then shows the status card until the user asks to shield more. The button names the blocker (Unlock your private account / Enter an amount / Insufficient balance / Wrap ETH to shield it / Switch network / Fetching quote). Exports useShieldFlow, useShieldQuote, shieldSteps, shieldStepCopy, describeShieldSteps, shieldBlocker, formatFeePercent, ShieldSummary, ShieldStepList and ShieldQuoteRows. data-phase: idle | signing | approving | shielding | cancelled | error.",
       "docs": "Docs: https://0xui.io/blocks/shield.md",
-      "categories": [
-        "blocks"
-      ],
+      "categories": ["blocks"],
       "files": [
         {
           "path": "registry/default/components/shield.tsx",
@@ -1327,13 +1077,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@tanstack/react-query",
-        "lucide-react",
-        "@wagmi/core"
-      ],
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query", "lucide-react", "@wagmi/core"],
       "registryDependencies": [
         "@0xui/shielded-engine",
         "@0xui/shielded-transaction-status",
@@ -1358,9 +1102,7 @@
       "title": "wagmi config + provider",
       "description": "Starter wagmi setup: lib/wagmi-config.ts (mainnet + sepolia, injected connector, SSR on) and a Web3Provider component that wraps WagmiProvider and a TanStack QueryClientProvider. Install once, wrap your app in <Web3Provider>, then add any 0xui component.",
       "docs": "Docs: https://0xui.io/getting-started/installation.md",
-      "categories": [
-        "setup"
-      ],
+      "categories": ["setup"],
       "files": [
         {
           "path": "registry/default/lib/wagmi-config.ts",
@@ -1371,29 +1113,21 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@tanstack/react-query"
-      ]
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query"]
     },
     {
       "name": "0xui-utils",
       "type": "registry:lib",
       "title": "0xui utils",
       "description": "Shared web3 formatting helpers used by 0xui components: truncateAddress (checksummed 0x1234…abcd), formatTokenAmount (bigint + decimals to a locale string without float precision loss, rounds toward zero, compact notation, '<0.0001' for dust), parseAmount (lenient user input to bigint: '.5', '1,000.5', '1.000,5', clamps to token decimals), getExplorerUrl (address/tx/block links from chain.blockExplorers) isUserRejection (detects a dismissed wallet prompt), resolveUri (ipfs:// and ar:// to HTTP), isShieldedAddress (private 0zk address check: length, alphabet and bech32m checksum) and encodeBech32m.",
-      "categories": [
-        "utilities"
-      ],
+      "categories": ["utilities"],
       "files": [
         {
           "path": "registry/default/lib/0xui-utils.ts",
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem"
-      ]
+      "dependencies": ["viem"]
     },
     {
       "name": "token-list",
@@ -1401,21 +1135,15 @@
       "title": "Token list",
       "description": "Token list standard (tokenlists.org, as used by Uniswap) for 0xui: TokenInfo and TokenList types (including tags and extensions such as Uniswap's bridgeInfo), parseTokenList (validates, drops non-EVM entries such as Solana tokens, checksums addresses), fetchTokenList (http, ipfs, ar), mergeTokenLists, nativeToken(chain) (lists don't include ETH), applyTokenFilters (allowlist/whitelist and blocklist by address or chainId:address), TokenPrices and getTokenPrice (prices keyed by chainId:address, address or symbol; address keys win), looksLikeSpam (cheap scam-token heuristic: claim/airdrop text, links, domain symbols, invisible characters, lookalike letters), NATIVE_TOKEN_ADDRESS and UNISWAP_DEFAULT_LIST.",
       "docs": "Docs: https://0xui.io/getting-started/token-lists.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/lib/token-list.ts",
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem"
-      ],
-      "registryDependencies": [
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["viem"],
+      "registryDependencies": ["@0xui/0xui-utils"]
     },
     {
       "name": "use-token-list",
@@ -1423,31 +1151,22 @@
       "title": "useTokenList",
       "description": "Load one or more token lists by URL (e.g. https://tokens.uniswap.org) with TanStack Query (cached for the session, one retry), merge and de-duplicate them, filter to the current or a given chain, apply an allowlist (whitelist) or blocklist, and put the native currency first. Returns { tokens, lists, isLoading, error }, ready for TokenSelect, TokenInput, Swap, Send and Portfolio.",
       "docs": "Docs: https://0xui.io/getting-started/token-lists.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "files": [
         {
           "path": "registry/default/hooks/use-token-list.ts",
           "type": "registry:hook"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "@tanstack/react-query"
-      ],
-      "registryDependencies": [
-        "@0xui/token-list"
-      ]
+      "dependencies": ["wagmi", "@tanstack/react-query"],
+      "registryDependencies": ["@0xui/token-list"]
     },
     {
       "name": "use-mounted",
       "type": "registry:hook",
       "title": "useMounted",
       "description": "SSR guard hook: false during server render and hydration, true afterwards. Keeps browser-only wallet state out of server HTML to avoid hydration mismatches. Built on useSyncExternalStore, so there is no extra render on client-only apps.",
-      "categories": [
-        "utilities"
-      ],
+      "categories": ["utilities"],
       "files": [
         {
           "path": "registry/default/hooks/use-mounted.ts",
@@ -1460,9 +1179,7 @@
       "type": "registry:hook",
       "title": "useCopy",
       "description": "Clipboard hook: copy(text) writes to the clipboard and sets copied=true for a configurable timeout. Resolves false when clipboard access is unavailable or denied.",
-      "categories": [
-        "utilities"
-      ],
+      "categories": ["utilities"],
       "files": [
         {
           "path": "registry/default/hooks/use-copy.ts",
@@ -1473,10 +1190,7 @@
           "type": "registry:lib"
         }
       ],
-      "registryDependencies": [
-        "@0xui/0xui-store",
-        "@0xui/use-store"
-      ]
+      "registryDependencies": ["@0xui/0xui-store", "@0xui/use-store"]
     },
     {
       "name": "shielded-engine",
@@ -1484,9 +1198,7 @@
       "title": "Shielded engine",
       "description": "The contract between 0xui's shielded (private transaction) components and a privacy protocol such as Railgun: lib/shielded-engine.ts holds the ShieldedEngine interface and its types (five neutral balance states, staged sync state, proof stages, account status, shield draft, quote and prepared call, shielded transaction, unshield draft, proved operation), and ShieldedProvider puts an engine in context. Hooks: useShieldedEngine, useShieldedAccount (status and private address) and useShieldedState (subscribe to one engine event, SSR-safe). Protocol names stay inside the engine. Pair with @0xui/mock-shielded-engine until a real engine is wired up.",
       "docs": "Docs: https://0xui.io/components/shielded-engine.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/lib/shielded-engine.ts",
@@ -1501,9 +1213,7 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem"
-      ]
+      "dependencies": ["viem"]
     },
     {
       "name": "mock-shielded-engine",
@@ -1511,22 +1221,15 @@
       "title": "Mock shielded engine",
       "description": "In-memory ShieldedEngine for demos, tests and building UI before a real privacy engine exists: no network, no cryptography, no funds. Behaves like the Railgun SDK did on Sepolia: two-pass scans whose progress goes backwards, balances that only change when a scan finishes, a 60 s standby for shielded funds, change that can get stuck as incomplete, staged proofs with a slow first circuit download, and a 25 bps fee each way on bigint amounts. Realistic delays (6 s account creation, 40 s first scan, 13 s proof) with a speed option (Infinity for tests). simulate.* produces every state on demand: shield, unshield, addFunds, failNextSync, failNextProof, failNextRetry, keepIncomplete. Also implements quoteShield (fee, amount received, standby, spender to approve, whether a signature is needed), prepareShield (asks the wallet for a signature, returns the call) and getTransaction, and its 0zk address carries a valid checksum.",
       "docs": "Docs: https://0xui.io/components/mock-shielded-engine.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "files": [
         {
           "path": "registry/default/lib/mock-shielded-engine.ts",
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "viem"
-      ],
-      "registryDependencies": [
-        "@0xui/shielded-engine",
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["viem"],
+      "registryDependencies": ["@0xui/shielded-engine", "@0xui/0xui-utils"]
     },
     {
       "name": "agent-tools",
@@ -1534,9 +1237,7 @@
       "title": "Agent Tools",
       "description": "Connects browser agents to your dapp. Render it once: it starts ui-sdk's agent bridge and registers WebMCP tools (document.modelContext) for reading and operating the page (snapshot, act, query) plus wallet reads from your wagmi config: get_wallet, list_chains, get_balance, get_token, get_allowance, get_gas_price, get_block_number, get_transaction, resolve_ens, and switch_chain. Agents can read and fill forms freely; anything that opens the wallet (send, sign, approve, connect, switch network, disconnect) is marked data-agent-confirm and waits for the person in an Allow / Don't allow dialog. Recovery phrases are hidden from agents. Replace the dialog with the confirm prop, or pass confirm={false} to refuse those steps. Exports AgentTools, useAgentTools, getAgent and pageAgentTools (for your own model loop). Does nothing in browsers without WebMCP unless you call getAgent().",
       "docs": "Docs: https://0xui.io/components/agent-tools.md",
-      "categories": [
-        "utilities"
-      ],
+      "categories": ["utilities"],
       "files": [
         {
           "path": "registry/default/components/agent-tools.tsx",
@@ -1547,17 +1248,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "wagmi",
-        "viem",
-        "@wagmi/core",
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-alert-dialog",
-        "@0xui/primitive-button"
-      ]
+      "dependencies": ["wagmi", "viem", "@wagmi/core", "@ui-sdk/core", "@ui-sdk/react"],
+      "registryDependencies": ["@0xui/primitive-alert-dialog", "@0xui/primitive-button"]
     },
     {
       "name": "account-demo",
@@ -1565,16 +1257,9 @@
       "title": "Account demo",
       "description": "Account with and without the balance, behind a Connect Wallet button while disconnected.",
       "docs": "Docs: https://0xui.io/components/account.md",
-      "categories": [
-        "wallet"
-      ],
-      "registryDependencies": [
-        "@0xui/account",
-        "@0xui/connect-wallet"
-      ],
-      "dependencies": [
-        "wagmi"
-      ],
+      "categories": ["wallet"],
+      "registryDependencies": ["@0xui/account", "@0xui/connect-wallet"],
+      "dependencies": ["wagmi"],
       "files": [
         {
           "path": "registry/default/examples/account-demo.tsx",
@@ -1588,16 +1273,9 @@
       "title": "Add Token demo",
       "description": "Button that asks the wallet to track USDC, with its logo, behind a Connect Wallet button while disconnected.",
       "docs": "Docs: https://0xui.io/components/add-token.md",
-      "categories": [
-        "tokens"
-      ],
-      "registryDependencies": [
-        "@0xui/add-token",
-        "@0xui/connect-wallet"
-      ],
-      "dependencies": [
-        "wagmi"
-      ],
+      "categories": ["tokens"],
+      "registryDependencies": ["@0xui/add-token", "@0xui/connect-wallet"],
+      "dependencies": ["wagmi"],
       "files": [
         {
           "path": "registry/default/examples/add-token-demo.tsx",
@@ -1611,12 +1289,8 @@
       "title": "Address Avatar demo",
       "description": "Avatars for three mainnet addresses: ENS avatar where set, gradient otherwise.",
       "docs": "Docs: https://0xui.io/components/address-avatar.md",
-      "categories": [
-        "identity"
-      ],
-      "registryDependencies": [
-        "@0xui/address-avatar"
-      ],
+      "categories": ["identity"],
+      "registryDependencies": ["@0xui/address-avatar"],
       "files": [
         {
           "path": "registry/default/examples/address-avatar-demo.tsx",
@@ -1630,12 +1304,8 @@
       "title": "Address demo",
       "description": "Address with its ENS name, without ENS plus an explorer link, and as a pill.",
       "docs": "Docs: https://0xui.io/components/address.md",
-      "categories": [
-        "identity"
-      ],
-      "registryDependencies": [
-        "@0xui/address"
-      ],
+      "categories": ["identity"],
+      "registryDependencies": ["@0xui/address"],
       "files": [
         {
           "path": "registry/default/examples/address-demo.tsx",
@@ -1649,15 +1319,9 @@
       "title": "Address Input demo",
       "description": "Recipient field that accepts an address or ENS name and keeps the resolved address in state.",
       "docs": "Docs: https://0xui.io/components/address-input.md",
-      "categories": [
-        "identity"
-      ],
-      "registryDependencies": [
-        "@0xui/address-input"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["identity"],
+      "registryDependencies": ["@0xui/address-input"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/address-input-demo.tsx",
@@ -1671,15 +1335,9 @@
       "title": "Amount Input demo",
       "description": "Controlled USDC amount field with a balance cap and a hint that flags amounts above it.",
       "docs": "Docs: https://0xui.io/components/amount-input.md",
-      "categories": [
-        "tokens"
-      ],
-      "registryDependencies": [
-        "@0xui/amount-input"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["tokens"],
+      "registryDependencies": ["@0xui/amount-input"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/amount-input-demo.tsx",
@@ -1693,16 +1351,9 @@
       "title": "Approve Button demo",
       "description": "Approve 100 USDC for Uniswap's router before the swap button unlocks.",
       "docs": "Docs: https://0xui.io/components/approve-button.md",
-      "categories": [
-        "transactions"
-      ],
-      "registryDependencies": [
-        "@0xui/approve-button",
-        "@0xui/transaction-button"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["transactions"],
+      "registryDependencies": ["@0xui/approve-button", "@0xui/transaction-button"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/approve-button-demo.tsx",
@@ -1716,12 +1367,8 @@
       "title": "Balance demo",
       "description": "Connected account's balance, vitalik.eth's ETH, and its USDC with a fiat value.",
       "docs": "Docs: https://0xui.io/components/balance.md",
-      "categories": [
-        "tokens"
-      ],
-      "registryDependencies": [
-        "@0xui/balance"
-      ],
+      "categories": ["tokens"],
+      "registryDependencies": ["@0xui/balance"],
       "files": [
         {
           "path": "registry/default/examples/balance-demo.tsx",
@@ -1735,15 +1382,9 @@
       "title": "Batch Transaction demo",
       "description": "Approve and swap as one atomic batch (EIP-5792), with a fallback to sequential sends.",
       "docs": "Docs: https://0xui.io/components/batch-transaction.md",
-      "categories": [
-        "transactions"
-      ],
-      "registryDependencies": [
-        "@0xui/batch-transaction"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["transactions"],
+      "registryDependencies": ["@0xui/batch-transaction"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/batch-transaction-demo.tsx",
@@ -1757,12 +1398,8 @@
       "title": "Block Number demo",
       "description": "Live block number on the current chain and on mainnet with an explorer link.",
       "docs": "Docs: https://0xui.io/components/block-number.md",
-      "categories": [
-        "network"
-      ],
-      "registryDependencies": [
-        "@0xui/block-number"
-      ],
+      "categories": ["network"],
+      "registryDependencies": ["@0xui/block-number"],
       "files": [
         {
           "path": "registry/default/examples/block-number-demo.tsx",
@@ -1776,12 +1413,8 @@
       "title": "Chain Badge demo",
       "description": "Badges for mainnet, Sepolia and a chain outside the config, plus an icon-only badge.",
       "docs": "Docs: https://0xui.io/components/chain-badge.md",
-      "categories": [
-        "network"
-      ],
-      "registryDependencies": [
-        "@0xui/chain-badge"
-      ],
+      "categories": ["network"],
+      "registryDependencies": ["@0xui/chain-badge"],
       "files": [
         {
           "path": "registry/default/examples/chain-badge-demo.tsx",
@@ -1795,12 +1428,8 @@
       "title": "Chain Selector demo",
       "description": "Network switcher as a popover, icon-only, and as a dialog grouped into mainnets and testnets.",
       "docs": "Docs: https://0xui.io/components/chain-selector.md",
-      "categories": [
-        "network"
-      ],
-      "registryDependencies": [
-        "@0xui/chain-selector"
-      ],
+      "categories": ["network"],
+      "registryDependencies": ["@0xui/chain-selector"],
       "files": [
         {
           "path": "registry/default/examples/chain-selector-demo.tsx",
@@ -1814,12 +1443,8 @@
       "title": "Connect Wallet demo",
       "description": "Default Connect Wallet button and one with a custom label and dialog title.",
       "docs": "Docs: https://0xui.io/components/connect-wallet.md",
-      "categories": [
-        "wallet"
-      ],
-      "registryDependencies": [
-        "@0xui/connect-wallet"
-      ],
+      "categories": ["wallet"],
+      "registryDependencies": ["@0xui/connect-wallet"],
       "files": [
         {
           "path": "registry/default/examples/connect-wallet-demo.tsx",
@@ -1833,15 +1458,9 @@
       "title": "Contract Form demo",
       "description": "Read and write forms for chosen USDC functions, generated from the ERC-20 ABI.",
       "docs": "Docs: https://0xui.io/components/contract-form.md",
-      "categories": [
-        "transactions"
-      ],
-      "registryDependencies": [
-        "@0xui/contract-form"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["transactions"],
+      "registryDependencies": ["@0xui/contract-form"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/contract-form-demo.tsx",
@@ -1855,12 +1474,8 @@
       "title": "Copy Button demo",
       "description": "Copy an address, as a ghost button and as an outline icon button.",
       "docs": "Docs: https://0xui.io/components/copy-button.md",
-      "categories": [
-        "utilities"
-      ],
-      "registryDependencies": [
-        "@0xui/copy-button"
-      ],
+      "categories": ["utilities"],
+      "registryDependencies": ["@0xui/copy-button"],
       "files": [
         {
           "path": "registry/default/examples/copy-button-demo.tsx",
@@ -1874,12 +1489,8 @@
       "title": "ENS Profile demo",
       "description": "ENS profile card by name (vitalik.eth) and by address.",
       "docs": "Docs: https://0xui.io/components/ens-profile.md",
-      "categories": [
-        "identity"
-      ],
-      "registryDependencies": [
-        "@0xui/ens-profile"
-      ],
+      "categories": ["identity"],
+      "registryDependencies": ["@0xui/ens-profile"],
       "files": [
         {
           "path": "registry/default/examples/ens-profile-demo.tsx",
@@ -1893,15 +1504,9 @@
       "title": "Event Feed demo",
       "description": "Live feed of USDC Transfer events on mainnet, starting from the latest block.",
       "docs": "Docs: https://0xui.io/components/event-feed.md",
-      "categories": [
-        "transactions"
-      ],
-      "registryDependencies": [
-        "@0xui/event-feed"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["transactions"],
+      "registryDependencies": ["@0xui/event-feed"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/event-feed-demo.tsx",
@@ -1915,12 +1520,8 @@
       "title": "Explorer Link demo",
       "description": "Explorer links to an address and to a block, with custom text.",
       "docs": "Docs: https://0xui.io/components/explorer-link.md",
-      "categories": [
-        "identity"
-      ],
-      "registryDependencies": [
-        "@0xui/explorer-link"
-      ],
+      "categories": ["identity"],
+      "registryDependencies": ["@0xui/explorer-link"],
       "files": [
         {
           "path": "registry/default/examples/explorer-link-demo.tsx",
@@ -1934,12 +1535,8 @@
       "title": "Gas Price demo",
       "description": "Current gas price, and one colored by low and high thresholds.",
       "docs": "Docs: https://0xui.io/components/gas-price.md",
-      "categories": [
-        "network"
-      ],
-      "registryDependencies": [
-        "@0xui/gas-price"
-      ],
+      "categories": ["network"],
+      "registryDependencies": ["@0xui/gas-price"],
       "files": [
         {
           "path": "registry/default/examples/gas-price-demo.tsx",
@@ -1953,9 +1550,7 @@
       "title": "Mock shielded engine demo",
       "description": "Playground for the mock engine: a private WETH balance, sync status and buttons that shield, unshield and fail a scan.",
       "docs": "Docs: https://0xui.io/components/mock-shielded-engine.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "registryDependencies": [
         "@0xui/mock-shielded-engine",
         "@0xui/shielded-balance",
@@ -1963,9 +1558,7 @@
         "@0xui/shielded-sync-status",
         "@0xui/primitive-button"
       ],
-      "dependencies": [
-        "viem"
-      ],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/mock-shielded-engine-demo.tsx",
@@ -1979,13 +1572,8 @@
       "title": "Morph Text demo",
       "description": "Button label that morphs between transaction steps, and a ticking block number.",
       "docs": "Docs: https://0xui.io/components/morph-text.md",
-      "categories": [
-        "utilities"
-      ],
-      "registryDependencies": [
-        "@0xui/morph-text",
-        "@0xui/primitive-button"
-      ],
+      "categories": ["utilities"],
+      "registryDependencies": ["@0xui/morph-text", "@0xui/primitive-button"],
       "files": [
         {
           "path": "registry/default/examples/morph-text-demo.tsx",
@@ -1999,13 +1587,8 @@
       "title": "Network Guard demo",
       "description": "Mainnet-only content behind a guard that offers a network switch, next to a Chain Selector.",
       "docs": "Docs: https://0xui.io/components/network-guard.md",
-      "categories": [
-        "network"
-      ],
-      "registryDependencies": [
-        "@0xui/network-guard",
-        "@0xui/chain-selector"
-      ],
+      "categories": ["network"],
+      "registryDependencies": ["@0xui/network-guard", "@0xui/chain-selector"],
       "files": [
         {
           "path": "registry/default/examples/network-guard-demo.tsx",
@@ -2019,12 +1602,8 @@
       "title": "NFT Card demo",
       "description": "Two BAYC NFT cards, one showing its traits.",
       "docs": "Docs: https://0xui.io/components/nft-card.md",
-      "categories": [
-        "tokens"
-      ],
-      "registryDependencies": [
-        "@0xui/nft-card"
-      ],
+      "categories": ["tokens"],
+      "registryDependencies": ["@0xui/nft-card"],
       "files": [
         {
           "path": "registry/default/examples/nft-card-demo.tsx",
@@ -2038,14 +1617,8 @@
       "title": "Portfolio demo",
       "description": "vitalik.eth's mainnet holdings from Uniswap's token list, with prices and a total.",
       "docs": "Docs: https://0xui.io/blocks/portfolio.md",
-      "categories": [
-        "blocks"
-      ],
-      "registryDependencies": [
-        "@0xui/portfolio",
-        "@0xui/use-token-list",
-        "@0xui/token-list"
-      ],
+      "categories": ["blocks"],
+      "registryDependencies": ["@0xui/portfolio", "@0xui/use-token-list", "@0xui/token-list"],
       "files": [
         {
           "path": "registry/default/examples/portfolio-demo.tsx",
@@ -2059,12 +1632,8 @@
       "title": "Privacy Badge demo",
       "description": "Private and public badges, icon-only, and inline in a sentence.",
       "docs": "Docs: https://0xui.io/components/privacy-badge.md",
-      "categories": [
-        "shielded"
-      ],
-      "registryDependencies": [
-        "@0xui/privacy-badge"
-      ],
+      "categories": ["shielded"],
+      "registryDependencies": ["@0xui/privacy-badge"],
       "files": [
         {
           "path": "registry/default/examples/privacy-badge-demo.tsx",
@@ -2078,18 +1647,14 @@
       "title": "Proof Progress demo",
       "description": "Generate an unshield proof with useProof and follow its stages, on a mock shielded engine.",
       "docs": "Docs: https://0xui.io/components/proof-progress.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "registryDependencies": [
         "@0xui/proof-progress",
         "@0xui/shielded-engine",
         "@0xui/mock-shielded-engine",
         "@0xui/primitive-button"
       ],
-      "dependencies": [
-        "viem"
-      ],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/proof-progress-demo.tsx",
@@ -2103,13 +1668,8 @@
       "title": "Responsive Dialog demo",
       "description": "Slippage picker that opens as a dialog on desktop and a bottom sheet on small touch screens.",
       "docs": "Docs: https://0xui.io/components/responsive-dialog.md",
-      "categories": [
-        "utilities"
-      ],
-      "registryDependencies": [
-        "@0xui/responsive-dialog",
-        "@0xui/primitive-button"
-      ],
+      "categories": ["utilities"],
+      "registryDependencies": ["@0xui/responsive-dialog", "@0xui/primitive-button"],
       "files": [
         {
           "path": "registry/default/examples/responsive-dialog-demo.tsx",
@@ -2123,17 +1683,9 @@
       "title": "Send demo",
       "description": "Send block over Uniswap's token list, ETH selected, with quick picks and prices.",
       "docs": "Docs: https://0xui.io/blocks/send.md",
-      "categories": [
-        "blocks"
-      ],
-      "registryDependencies": [
-        "@0xui/send",
-        "@0xui/use-token-list",
-        "@0xui/token-list"
-      ],
-      "dependencies": [
-        "wagmi"
-      ],
+      "categories": ["blocks"],
+      "registryDependencies": ["@0xui/send", "@0xui/use-token-list", "@0xui/token-list"],
+      "dependencies": ["wagmi"],
       "files": [
         {
           "path": "registry/default/examples/send-demo.tsx",
@@ -2147,9 +1699,7 @@
       "title": "Shield demo",
       "description": "Shield block on Sepolia behind a private account unlock, with private balances below, on a mock engine.",
       "docs": "Docs: https://0xui.io/blocks/shield.md",
-      "categories": [
-        "blocks"
-      ],
+      "categories": ["blocks"],
       "registryDependencies": [
         "@0xui/shield",
         "@0xui/shielded-account",
@@ -2170,18 +1720,14 @@
       "title": "Shielded Account demo",
       "description": "Unlock form for a private account (mock engine, password \"password\") gating a private balance.",
       "docs": "Docs: https://0xui.io/components/shielded-account.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "registryDependencies": [
         "@0xui/shielded-account",
         "@0xui/shielded-balance",
         "@0xui/shielded-engine",
         "@0xui/mock-shielded-engine"
       ],
-      "dependencies": [
-        "viem"
-      ],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/shielded-account-demo.tsx",
@@ -2195,12 +1741,8 @@
       "title": "Shielded Address demo",
       "description": "A 0zk private address, truncated and as a pill.",
       "docs": "Docs: https://0xui.io/components/shielded-address.md",
-      "categories": [
-        "shielded"
-      ],
-      "registryDependencies": [
-        "@0xui/shielded-address"
-      ],
+      "categories": ["shielded"],
+      "registryDependencies": ["@0xui/shielded-address"],
       "files": [
         {
           "path": "registry/default/examples/shielded-address-demo.tsx",
@@ -2214,17 +1756,13 @@
       "title": "Shielded Balance demo",
       "description": "Private WETH balance with a pending shield and fiat value, and an inline USDC balance, on a mock engine.",
       "docs": "Docs: https://0xui.io/components/shielded-balance.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "registryDependencies": [
         "@0xui/shielded-balance",
         "@0xui/shielded-engine",
         "@0xui/mock-shielded-engine"
       ],
-      "dependencies": [
-        "viem"
-      ],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/shielded-balance-demo.tsx",
@@ -2238,9 +1776,7 @@
       "title": "Shielded Sync Status demo",
       "description": "Card and inline status of a private account's first scan, on a mock engine.",
       "docs": "Docs: https://0xui.io/components/shielded-sync-status.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "registryDependencies": [
         "@0xui/shielded-sync-status",
         "@0xui/shielded-engine",
@@ -2259,17 +1795,13 @@
       "title": "Shielded Transaction Status demo",
       "description": "A pending shield followed into the private balance, as a card and as a line, on a mock engine.",
       "docs": "Docs: https://0xui.io/components/shielded-transaction-status.md",
-      "categories": [
-        "shielded"
-      ],
+      "categories": ["shielded"],
       "registryDependencies": [
         "@0xui/shielded-transaction-status",
         "@0xui/shielded-engine",
         "@0xui/mock-shielded-engine"
       ],
-      "dependencies": [
-        "viem"
-      ],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/shielded-transaction-status-demo.tsx",
@@ -2283,12 +1815,8 @@
       "title": "Sign Message demo",
       "description": "Sign-in message with verification, and EIP-712 typed data.",
       "docs": "Docs: https://0xui.io/components/sign-message.md",
-      "categories": [
-        "wallet"
-      ],
-      "registryDependencies": [
-        "@0xui/sign-message"
-      ],
+      "categories": ["wallet"],
+      "registryDependencies": ["@0xui/sign-message"],
       "files": [
         {
           "path": "registry/default/examples/sign-message-demo.tsx",
@@ -2302,18 +1830,9 @@
       "title": "Swap demo",
       "description": "Swap block over Uniswap's token list with a fixed-price getQuote to replace with your aggregator.",
       "docs": "Docs: https://0xui.io/blocks/swap.md",
-      "categories": [
-        "blocks"
-      ],
-      "registryDependencies": [
-        "@0xui/swap",
-        "@0xui/use-token-list",
-        "@0xui/token-list"
-      ],
-      "dependencies": [
-        "viem",
-        "wagmi"
-      ],
+      "categories": ["blocks"],
+      "registryDependencies": ["@0xui/swap", "@0xui/use-token-list", "@0xui/token-list"],
+      "dependencies": ["viem", "wagmi"],
       "files": [
         {
           "path": "registry/default/examples/swap-demo.tsx",
@@ -2327,15 +1846,9 @@
       "title": "Token Amount demo",
       "description": "USDC amount, ETH with its fiat value, and a compact large amount.",
       "docs": "Docs: https://0xui.io/components/token-amount.md",
-      "categories": [
-        "tokens"
-      ],
-      "registryDependencies": [
-        "@0xui/token-amount"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["tokens"],
+      "registryDependencies": ["@0xui/token-amount"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/token-amount-demo.tsx",
@@ -2349,12 +1862,8 @@
       "title": "Token Icon demo",
       "description": "Token icons by symbol, and one with its chain badge.",
       "docs": "Docs: https://0xui.io/components/token-icon.md",
-      "categories": [
-        "tokens"
-      ],
-      "registryDependencies": [
-        "@0xui/token-icon"
-      ],
+      "categories": ["tokens"],
+      "registryDependencies": ["@0xui/token-icon"],
       "files": [
         {
           "path": "registry/default/examples/token-icon-demo.tsx",
@@ -2368,18 +1877,14 @@
       "title": "Token Input demo",
       "description": "\"You pay\" panel: amount, token picker from Uniswap's token list, balance and fiat value.",
       "docs": "Docs: https://0xui.io/components/token-input.md",
-      "categories": [
-        "tokens"
-      ],
+      "categories": ["tokens"],
       "registryDependencies": [
         "@0xui/token-input",
         "@0xui/token-select",
         "@0xui/use-token-list",
         "@0xui/token-list"
       ],
-      "dependencies": [
-        "wagmi"
-      ],
+      "dependencies": ["wagmi"],
       "files": [
         {
           "path": "registry/default/examples/token-input-demo.tsx",
@@ -2393,14 +1898,8 @@
       "title": "Token Select demo",
       "description": "Token picker over Uniswap's default token list, with balances and quick picks.",
       "docs": "Docs: https://0xui.io/components/token-select.md",
-      "categories": [
-        "tokens"
-      ],
-      "registryDependencies": [
-        "@0xui/token-select",
-        "@0xui/use-token-list",
-        "@0xui/token-list"
-      ],
+      "categories": ["tokens"],
+      "registryDependencies": ["@0xui/token-select", "@0xui/use-token-list", "@0xui/token-list"],
       "files": [
         {
           "path": "registry/default/examples/token-select-demo.tsx",
@@ -2414,15 +1913,9 @@
       "title": "Transaction Button demo",
       "description": "Send ETH, approve USDC with simulation, and a button blocked with a reason.",
       "docs": "Docs: https://0xui.io/components/transaction-button.md",
-      "categories": [
-        "transactions"
-      ],
-      "registryDependencies": [
-        "@0xui/transaction-button"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["transactions"],
+      "registryDependencies": ["@0xui/transaction-button"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/transaction-button-demo.tsx",
@@ -2436,17 +1929,9 @@
       "title": "Transaction History demo",
       "description": "Send ETH, record the transaction and list the account's recent transactions.",
       "docs": "Docs: https://0xui.io/components/transaction-history.md",
-      "categories": [
-        "transactions"
-      ],
-      "registryDependencies": [
-        "@0xui/transaction-history",
-        "@0xui/transaction-button"
-      ],
-      "dependencies": [
-        "viem",
-        "wagmi"
-      ],
+      "categories": ["transactions"],
+      "registryDependencies": ["@0xui/transaction-history", "@0xui/transaction-button"],
+      "dependencies": ["viem", "wagmi"],
       "files": [
         {
           "path": "registry/default/examples/transaction-history-demo.tsx",
@@ -2460,16 +1945,9 @@
       "title": "Transaction Status demo",
       "description": "Send ETH and follow the transaction with a status card.",
       "docs": "Docs: https://0xui.io/components/transaction-status.md",
-      "categories": [
-        "transactions"
-      ],
-      "registryDependencies": [
-        "@0xui/transaction-status",
-        "@0xui/transaction-button"
-      ],
-      "dependencies": [
-        "viem"
-      ],
+      "categories": ["transactions"],
+      "registryDependencies": ["@0xui/transaction-status", "@0xui/transaction-button"],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/transaction-status-demo.tsx",
@@ -2483,17 +1961,13 @@
       "title": "Transaction Toast demo",
       "description": "Send ETH and follow the transaction in a toast.",
       "docs": "Docs: https://0xui.io/components/transaction-toast.md",
-      "categories": [
-        "transactions"
-      ],
+      "categories": ["transactions"],
       "registryDependencies": [
         "@0xui/transaction-toast",
         "@0xui/transaction-button",
         "@0xui/primitive-toast"
       ],
-      "dependencies": [
-        "viem"
-      ],
+      "dependencies": ["viem"],
       "files": [
         {
           "path": "registry/default/examples/transaction-toast-demo.tsx",
@@ -2507,12 +1981,8 @@
       "title": "Wallet Button demo",
       "description": "Wallet Button with a custom connect title and the balance in the account button.",
       "docs": "Docs: https://0xui.io/components/wallet-button.md",
-      "categories": [
-        "wallet"
-      ],
-      "registryDependencies": [
-        "@0xui/wallet-button"
-      ],
+      "categories": ["wallet"],
+      "registryDependencies": ["@0xui/wallet-button"],
       "files": [
         {
           "path": "registry/default/examples/wallet-button-demo.tsx",
@@ -2526,13 +1996,8 @@
       "title": "Agent Tools demo",
       "description": "Registers the wallet tools for browser agents next to a wallet button.",
       "docs": "Docs: https://0xui.io/components/agent-tools.md",
-      "categories": [
-        "utilities"
-      ],
-      "registryDependencies": [
-        "@0xui/agent-tools",
-        "@0xui/wallet-button"
-      ],
+      "categories": ["utilities"],
+      "registryDependencies": ["@0xui/agent-tools", "@0xui/wallet-button"],
       "files": [
         {
           "path": "registry/default/examples/agent-tools-demo.tsx",
@@ -2563,13 +2028,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
     },
     {
       "name": "primitive-button",
@@ -2582,14 +2042,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react",
-        "class-variance-authority"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react", "class-variance-authority"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
     },
     {
       "name": "primitive-dialog",
@@ -2602,15 +2056,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-button",
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react", "lucide-react"],
+      "registryDependencies": ["@0xui/primitive-button", "@0xui/primitive-class-name"]
     },
     {
       "name": "primitive-field",
@@ -2623,13 +2070,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
     },
     {
       "name": "primitive-popover",
@@ -2642,13 +2084,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
     },
     {
       "name": "primitive-tabs",
@@ -2661,13 +2098,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
     },
     {
       "name": "primitive-toast",
@@ -2680,14 +2112,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react", "lucide-react"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
     },
     {
       "name": "0xui-store",
@@ -2712,9 +2138,7 @@
           "type": "registry:hook"
         }
       ],
-      "registryDependencies": [
-        "@0xui/0xui-store"
-      ]
+      "registryDependencies": ["@0xui/0xui-store"]
     },
     {
       "name": "account-core",
@@ -2727,14 +2151,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "@wagmi/core",
-        "viem"
-      ],
-      "registryDependencies": [
-        "@0xui/0xui-store",
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["@wagmi/core", "viem"],
+      "registryDependencies": ["@0xui/0xui-store", "@0xui/0xui-utils"]
     },
     {
       "name": "identity",
@@ -2747,13 +2165,8 @@
           "type": "registry:lib"
         }
       ],
-      "dependencies": [
-        "@wagmi/core",
-        "viem"
-      ],
-      "registryDependencies": [
-        "@0xui/0xui-utils"
-      ]
+      "dependencies": ["@wagmi/core", "viem"],
+      "registryDependencies": ["@0xui/0xui-utils"]
     },
     {
       "name": "primitive-alert-dialog",
@@ -2766,13 +2179,8 @@
           "type": "registry:component"
         }
       ],
-      "dependencies": [
-        "@ui-sdk/core",
-        "@ui-sdk/react"
-      ],
-      "registryDependencies": [
-        "@0xui/primitive-class-name"
-      ]
+      "dependencies": ["@ui-sdk/core", "@ui-sdk/react"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
     }
   ]
 }

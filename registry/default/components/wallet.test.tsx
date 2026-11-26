@@ -41,9 +41,7 @@ describe("ConnectWallet", () => {
 
     await waitFor(() => expect(config.state.status).toBe("connected"));
     expect(onConnect).toHaveBeenCalledOnce();
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("treats a rejected connection as cancelled", async () => {
@@ -90,7 +88,7 @@ describe("ConnectWallet", () => {
         takeRecords() {
           return [];
         }
-      }
+      },
     );
     Element.prototype.animate = (() => ({
       finished: Promise.resolve(),
@@ -116,15 +114,11 @@ describe("WalletButton", () => {
     const config = createTestConfig({ rpc: fakeChainRpc() });
     renderWithWagmi(<WalletButton />, { config });
 
-    expect(
-      await screen.findByRole("button", { name: "Connect wallet" })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
 
     await act(() => connectMock(config));
 
-    expect(
-      await screen.findByRole("button", { name: /0xd8dA…6045/ })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /0xd8dA…6045/ })).toBeInTheDocument();
   });
 });
 
@@ -165,7 +159,9 @@ describe("Account", () => {
     await user.click(await screen.findByRole("button", { name: /0x71C7…976F/ }));
     await user.click(await screen.findByRole("button", { name: /0xd8dA…6045/ }));
 
-    expect(await screen.findByRole("button", { name: /0xd8dA…6045/, expanded: true })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /0xd8dA…6045/, expanded: true }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /0x71C7…976F/ })).toBeInTheDocument();
   });
 });
@@ -198,9 +194,7 @@ describe("TransactionButton", () => {
     renderWithWagmi(<TransactionButton transaction={send}>Send</TransactionButton>);
 
     await user.click(screen.getByRole("button", { name: "Connect wallet" }));
-    expect(
-      await screen.findByRole("dialog", { name: "Connect a wallet" })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Connect a wallet" })).toBeInTheDocument();
   });
 
   it("names the blocker when disabled", async () => {
@@ -209,7 +203,7 @@ describe("TransactionButton", () => {
       <TransactionButton transaction={send} disabledReason="Enter an amount">
         Send
       </TransactionButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
     expect(await screen.findByRole("button", { name: "Enter an amount" })).toBeDisabled();
@@ -229,7 +223,7 @@ describe("TransactionButton", () => {
       >
         Send
       </TransactionButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -238,7 +232,7 @@ describe("TransactionButton", () => {
     expect(await screen.findByRole("button", { name: "Done" })).toBeInTheDocument();
     expect(onSubmitted).toHaveBeenCalledWith(fakeTxHash);
     expect(onSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "success", transactionHash: fakeTxHash })
+      expect.objectContaining({ status: "success", transactionHash: fakeTxHash }),
     );
     expect(screen.getByRole("status")).toHaveTextContent("Transaction confirmed.");
   });
@@ -251,7 +245,7 @@ describe("TransactionButton", () => {
       <TransactionButton transaction={send} onError={onError}>
         Send
       </TransactionButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -278,7 +272,7 @@ describe("TransactionButton", () => {
       <TransactionButton transaction={send} onError={onError}>
         Send
       </TransactionButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -296,13 +290,11 @@ describe("TransactionButton", () => {
       <TransactionButton transaction={send} chainId={11155111}>
         Send
       </TransactionButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
-    await user.click(
-      await screen.findByRole("button", { name: "Switch to Sepolia" })
-    );
+    await user.click(await screen.findByRole("button", { name: "Switch to Sepolia" }));
 
     expect(await screen.findByRole("button", { name: "Send" })).toBeEnabled();
     expect(config.state.chainId).toBe(11155111);
@@ -337,7 +329,7 @@ describe("TransactionButton simulate", () => {
       <TransactionButton contract={transfer} simulate>
         Send
       </TransactionButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -357,7 +349,7 @@ describe("TransactionButton simulate", () => {
       <TransactionButton contract={transfer} simulate>
         Send
       </TransactionButton>,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -382,19 +374,20 @@ describe("TransactionStatus", () => {
       <TransactionStatus hash={fakeTxHash} onConfirmed={onConfirmed}>
         Send 0.1 ETH
       </TransactionStatus>,
-      { config }
+      { config },
     );
 
     expect(await screen.findByText("Transaction pending")).toBeInTheDocument();
     expect(screen.getByText("Send 0.1 ETH")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /view on etherscan/i })
-    ).toHaveAttribute("href", `https://etherscan.io/tx/${fakeTxHash}`);
+    expect(screen.getByRole("link", { name: /view on etherscan/i })).toHaveAttribute(
+      "href",
+      `https://etherscan.io/tx/${fakeTxHash}`,
+    );
 
     mined = true;
     // viem backs off between receipt lookups (200ms, 400ms, …).
     expect(
-      await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 })
+      await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 }),
     ).toBeInTheDocument();
     expect(screen.getByText("Included in block 100")).toBeInTheDocument();
     expect(onConfirmed).toHaveBeenCalledOnce();
@@ -403,15 +396,13 @@ describe("TransactionStatus", () => {
   it("shows a reverted transaction", async () => {
     const chain = sentTransaction(fakeChainRpc({ status: "reverted" }));
     const config = createTestConfig({ rpc: chain });
-    const { container } = renderWithWagmi(
-      <TransactionStatus hash={fakeTxHash} />,
-      { config }
-    );
+    const { container } = renderWithWagmi(<TransactionStatus hash={fakeTxHash} />, { config });
 
     expect(await screen.findByText("Transaction reverted")).toBeInTheDocument();
-    expect(
-      container.querySelector('[data-slot="transaction-status"]')
-    ).toHaveAttribute("data-phase", "reverted");
+    expect(container.querySelector('[data-slot="transaction-status"]')).toHaveAttribute(
+      "data-phase",
+      "reverted",
+    );
   });
 });
 
@@ -422,7 +413,9 @@ describe("agent", () => {
 
   /** The bridge's entries on the page, after asserting each has a name. */
   function components() {
-    const entries = agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+    const entries = agent
+      .snapshot()
+      .filter((entry) => !entry.offPage && entry.component !== "more");
     for (const entry of entries) {
       expect(entry.label, `${entry.component} ${entry.ref} has no name`).toBeTruthy();
     }
@@ -431,7 +424,11 @@ describe("agent", () => {
 
   /** No label's words all appear in another's, so a step by label finds one control. */
   function expectDistinctLabels(entries: ReturnType<typeof components>) {
-    const words = (label: string) => label.toLowerCase().split(/[^\p{L}\p{N}…]+/u).filter(Boolean);
+    const words = (label: string) =>
+      label
+        .toLowerCase()
+        .split(/[^\p{L}\p{N}…]+/u)
+        .filter(Boolean);
     for (const a of entries) {
       for (const b of entries) {
         if (a === b) continue;
@@ -461,7 +458,9 @@ describe("agent", () => {
     expectDistinctLabels(entries);
     // Opening the picker is free.
     expect(byLabel("Connect wallet")?.confirm).toBeUndefined();
-    expect((await agent.act({ steps: [{ ref: "Connect wallet", action: "press" }] })).ok).toBe(true);
+    expect((await agent.act({ steps: [{ ref: "Connect wallet", action: "press" }] })).ok).toBe(
+      true,
+    );
 
     const wallet = await waitFor(() => {
       const row = byLabel("Mock Connector");
@@ -469,7 +468,9 @@ describe("agent", () => {
       return row!;
     });
     expect(wallet.confirm).toBe("Connects Mock Connector and shares your address with this site");
-    const connect = { steps: [{ ref: "Connect a wallet", action: "press", args: ["Mock Connector"] }] };
+    const connect = {
+      steps: [{ ref: "Connect a wallet", action: "press", args: ["Mock Connector"] }],
+    };
     const refused = await agent.act(connect);
     expect(refused.ok).toBe(false);
     expect(refused.error?.message).toContain("Connects Mock Connector and shares your address");
@@ -499,7 +500,9 @@ describe("agent", () => {
 
     // Opening the account panel is free; disconnecting asks.
     approve = false;
-    expect((await agent.act({ steps: [{ ref: "Account", action: "setOpen", args: [true] }] })).ok).toBe(true);
+    expect(
+      (await agent.act({ steps: [{ ref: "Account", action: "setOpen", args: [true] }] })).ok,
+    ).toBe(true);
     const disconnect = await waitFor(() => {
       const button = byLabel("Disconnect");
       expect(button).toBeDefined();
@@ -557,7 +560,9 @@ describe("agent", () => {
     // Disconnected, each opens the wallet picker, which asks per wallet.
     const disconnected = components();
     expect(disconnected).toHaveLength(2);
-    expect(disconnected.every((entry) => entry.label === "Connect wallet" && !entry.confirm)).toBe(true);
+    expect(disconnected.every((entry) => entry.label === "Connect wallet" && !entry.confirm)).toBe(
+      true,
+    );
 
     await act(() => connectMock(config));
     await waitFor(() => expect(byLabel("Send")).toBeDefined());
@@ -565,10 +570,12 @@ describe("agent", () => {
     expect(byLabel("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia");
     expectDistinctLabels(components());
 
-    expect((await agent.act({ steps: [{ ref: "Send", action: "press" }] })).error?.message).toContain(
-      "sends a transaction on Ethereum",
-    );
-    expect(screen.getByRole("button", { name: "Send" }).closest("[data-slot=transaction-button]")).toHaveAttribute("data-phase", "idle");
+    expect(
+      (await agent.act({ steps: [{ ref: "Send", action: "press" }] })).error?.message,
+    ).toContain("sends a transaction on Ethereum");
+    expect(
+      screen.getByRole("button", { name: "Send" }).closest("[data-slot=transaction-button]"),
+    ).toHaveAttribute("data-phase", "idle");
     approve = true;
     expect((await agent.act({ steps: [{ ref: "Send", action: "press" }] })).ok).toBe(true);
     expect(await screen.findByRole("button", { name: "Done" })).toBeInTheDocument();
@@ -576,8 +583,12 @@ describe("agent", () => {
 
   it("reads a transaction's status card", async () => {
     const config = createTestConfig({ rpc: sentTransaction(fakeChainRpc()) });
-    renderWithWagmi(<TransactionStatus hash={fakeTxHash}>Send 0.1 ETH</TransactionStatus>, { config });
-    expect(await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 })).toBeInTheDocument();
+    renderWithWagmi(<TransactionStatus hash={fakeTxHash}>Send 0.1 ETH</TransactionStatus>, {
+      config,
+    });
+    expect(
+      await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 }),
+    ).toBeInTheDocument();
     expect(components().map((entry) => entry.label)).toEqual(["Copy transaction hash"]);
   });
 });

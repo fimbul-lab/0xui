@@ -1,15 +1,6 @@
 // Docs: https://0xui.io/blocks/portfolio.md
-import {
-  Collapsible,
-  CollapsiblePanel,
-  CollapsibleTrigger,
-} from "@ui-sdk/react/collapsible";
-import {
-  Timeline,
-  TimelineDescription,
-  TimelineItem,
-  TimelineTitle,
-} from "@ui-sdk/react/timeline";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
+import { Timeline, TimelineDescription, TimelineItem, TimelineTitle } from "@ui-sdk/react/timeline";
 import { ChevronDownIcon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { Skeleton, SkeletonBox } from "skullet/react";
@@ -103,7 +94,18 @@ export function usePortfolio({
         hideUnpriced,
         minValue,
       }),
-    [onChain, chainId, balances, holdings, prices, hideZero, isSpam, showUnlisted, hideUnpriced, minValue],
+    [
+      onChain,
+      chainId,
+      balances,
+      holdings,
+      prices,
+      hideZero,
+      isSpam,
+      showUnlisted,
+      hideUnpriced,
+      minValue,
+    ],
   );
 
   return {
@@ -210,7 +212,11 @@ function Holding({
       className="flex items-center gap-3 rounded-sm py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       {/* Spam logos can be offensive or link to scams: letters only. */}
-      <TokenIcon symbol={token.symbol} src={row.hidden === "spam" ? undefined : token.logoURI} size={32} />
+      <TokenIcon
+        symbol={token.symbol}
+        src={row.hidden === "spam" ? undefined : token.logoURI}
+        size={32}
+      />
       {/* Focused with the arrow keys, a row reads as its title, the token and
           amount, then its description, the value. */}
       <TimelineTitle className="flex min-w-0 flex-1 flex-col">
@@ -224,7 +230,11 @@ function Holding({
         />
       </TimelineTitle>{" "}
       <TimelineDescription className="flex shrink-0 flex-col items-end text-sm tabular-nums">
-        {value === undefined ? <span className="text-muted-foreground">—</span> : money.format(value)}{" "}
+        {value === undefined ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          money.format(value)
+        )}{" "}
         {note && <span className="text-xs text-muted-foreground">{note}</span>}
       </TimelineDescription>
     </TimelineItem>
@@ -311,13 +321,17 @@ export function Portfolio({
         {phase === "ready" && (
           <span className="text-2xl font-semibold tabular-nums">
             <MorphText>{money.format(total)}</MorphText>
-            {unpriced > 0 && <span className="sr-only">, plus {unpriced} tokens without a price</span>}
+            {unpriced > 0 && (
+              <span className="sr-only">, plus {unpriced} tokens without a price</span>
+            )}
           </span>
         )}
       </header>
 
       {phase === "idle" && (
-        <p className="py-6 text-center text-sm text-muted-foreground">Connect a wallet to see its tokens.</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Connect a wallet to see its tokens.
+        </p>
       )}
       {phase === "error" && (
         <p role="alert" className="py-6 text-center text-sm text-destructive">
@@ -325,7 +339,9 @@ export function Portfolio({
         </p>
       )}
       {phase === "empty" && (
-        <p className="py-6 text-center text-sm text-muted-foreground">No tokens from this list in this wallet.</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          No tokens from this list in this wallet.
+        </p>
       )}
 
       {/* One tree for loading and ready: while loading it is measured into a
@@ -334,7 +350,9 @@ export function Portfolio({
         <Skeleton loading={phase === "loading"} label="Loading tokens">
           <div className="flex flex-col gap-3">
             {phase === "ready" && rows.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">Every token in this wallet is hidden.</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Every token in this wallet is hidden.
+              </p>
             )}
             {listRows.length > 0 && (
               // A list with arrow keys between rows, and rows an agent can find by text.

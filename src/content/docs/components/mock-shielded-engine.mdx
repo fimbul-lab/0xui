@@ -46,47 +46,47 @@ Creating the engine starts no timers, so it is safe to create during server rend
 
 ## Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `speed` | `number` | `1` | Divides every delay. `Infinity` skips timers altogether. |
-| `timings` | `Partial<MockTimings>` | see below | Override single delays, in ms. |
-| `account` | `"none" \| "locked"` | `"locked"` | Start with no account, or a locked one. |
-| `password` | `string` | `"password"` | Password of the initial locked account. |
-| `chains` | `number[]` | `[1]` | Chains scanned automatically after unlock. Others scan when `sync` is called. |
-| `funds` | `MockFunds[]` | `[]` | What the account holds: `{ token, amount, state?, chainId? }`. |
-| `circuitsCached` | `boolean` | `false` | Skip the slow first circuit download. |
-| `shieldSignature` | `boolean` | `true` | Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. |
+| Option            | Type                   | Default      | Description                                                                                                      |
+| ----------------- | ---------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `speed`           | `number`               | `1`          | Divides every delay. `Infinity` skips timers altogether.                                                         |
+| `timings`         | `Partial<MockTimings>` | see below    | Override single delays, in ms.                                                                                   |
+| `account`         | `"none" \| "locked"`   | `"locked"`   | Start with no account, or a locked one.                                                                          |
+| `password`        | `string`               | `"password"` | Password of the initial locked account.                                                                          |
+| `chains`          | `number[]`             | `[1]`        | Chains scanned automatically after unlock. Others scan when `sync` is called.                                    |
+| `funds`           | `MockFunds[]`          | `[]`         | What the account holds: `{ token, amount, state?, chainId? }`.                                                   |
+| `circuitsCached`  | `boolean`              | `false`      | Skip the slow first circuit download.                                                                            |
+| `shieldSignature` | `boolean`              | `true`       | Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. |
 
 ### Timings
 
 Measured against the Railgun SDK on Sepolia, except where marked as a guess.
 
-| Key | Default | What |
-| --- | --- | --- |
-| `createAccount` | 6 s | Creating or importing an account. |
-| `unlock` | 0.8 s | Unlocking an account. A guess. |
-| `firstScan` | 40 s | The first scan of a chain. |
-| `repeatScan` | 3.5 s | Every later scan, and the delay before a change shows up. |
-| `loadCircuits` | 4 s | Downloading circuits on the first proof. Later proofs take a twentieth. |
-| `prove` | 8 s | Generating the proof. |
-| `verify` | 1 s | Verifying it. |
-| `standby` | 60 s | How long shielded funds stay `pending`. Mainnet is one hour. |
-| `settle` | 15 s | How long change stays `proving`. A guess. |
-| `retryProofs` | 5 s | One "retry proofs" attempt. A guess. |
+| Key             | Default | What                                                                    |
+| --------------- | ------- | ----------------------------------------------------------------------- |
+| `createAccount` | 6 s     | Creating or importing an account.                                       |
+| `unlock`        | 0.8 s   | Unlocking an account. A guess.                                          |
+| `firstScan`     | 40 s    | The first scan of a chain.                                              |
+| `repeatScan`    | 3.5 s   | Every later scan, and the delay before a change shows up.               |
+| `loadCircuits`  | 4 s     | Downloading circuits on the first proof. Later proofs take a twentieth. |
+| `prove`         | 8 s     | Generating the proof.                                                   |
+| `verify`        | 1 s     | Verifying it.                                                           |
+| `standby`       | 60 s    | How long shielded funds stay `pending`. Mainnet is one hour.            |
+| `settle`        | 15 s    | How long change stays `proving`. A guess.                               |
+| `retryProofs`   | 5 s     | One "retry proofs" attempt. A guess.                                    |
 
 ## Making things happen
 
 `engine.simulate` holds the controls a real engine doesn't have. Each one changes what the account holds, then runs a scan, because that is the only way a balance changes.
 
-| Method | What it does |
-| --- | --- |
+| Method                                       | What it does                                                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `shield({ token, amount, outcome?, hash? })` | Funds arrive less the fee, `pending` for the standby period, then `spendable` or, with `outcome: "restricted"`, restricted. |
-| `unshield({ token, amount, change? })` | Spends whole notes. The remainder comes back as change: `proving`, then `spendable` or, with `change: "incomplete"`, stuck. |
-| `addFunds({ token, amount, state })` | Puts funds straight into any state. |
-| `failNextSync(message?)` | The next scan stops a third of the way in with an error. |
-| `failNextProof(message?)` | The next proof fails while proving. |
-| `failNextRetry(message?)` | The next `retryProofs` rejects. |
-| `keepIncomplete(keep?)` | While on, `retryProofs` finishes but changes nothing. |
+| `unshield({ token, amount, change? })`       | Spends whole notes. The remainder comes back as change: `proving`, then `spendable` or, with `change: "incomplete"`, stuck. |
+| `addFunds({ token, amount, state })`         | Puts funds straight into any state.                                                                                         |
+| `failNextSync(message?)`                     | The next scan stops a third of the way in with an error.                                                                    |
+| `failNextProof(message?)`                    | The next proof fails while proving.                                                                                         |
+| `failNextRetry(message?)`                    | The next `retryProofs` rejects.                                                                                             |
+| `keepIncomplete(keep?)`                      | While on, `retryProofs` finishes but changes nothing.                                                                       |
 
 `shield` and `unshield` resolve with `{ fee, received }`. Pass `hash` to `shield` (or to `addFunds`, or a `funds` entry) and `getTransaction` reports on that public transaction. This is how the [Shield](/blocks/shield/) block's demo tells the mock that the shield was sent.
 
@@ -110,7 +110,7 @@ await engine.sync(1);
 render(
   <ShieldedProvider engine={engine}>
     <ShieldedBalance token={weth} chainId={1} />
-  </ShieldedProvider>
+  </ShieldedProvider>,
 );
 expect(screen.getByText("Incomplete")).toBeInTheDocument();
 ```

@@ -1,10 +1,6 @@
 // Docs: https://0xui.io/components/contract-form.md
 import { useMutation } from "@tanstack/react-query";
-import {
-  Collapsible,
-  CollapsiblePanel,
-  CollapsibleTrigger,
-} from "@ui-sdk/react/collapsible";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { Field, FieldError, FieldLabel } from "@ui-sdk/react/field";
 import { Input } from "@ui-sdk/react/input";
 import {
@@ -65,7 +61,12 @@ export type ContractFunctionProps = {
 };
 
 /** One ABI function as a form: an input per parameter, then Read or a TransactionButton. */
-export function ContractFunction({ address, fn, chainId, defaultOpen = false }: ContractFunctionProps) {
+export function ContractFunction({
+  address,
+  fn,
+  chainId,
+  defaultOpen = false,
+}: ContractFunctionProps) {
   const config = useConfig();
   const currentChainId = useChainId();
   const [values, setValues] = useState<string[]>(() => initialFunctionValues(fn));
@@ -125,7 +126,9 @@ export function ContractFunction({ address, fn, chainId, defaultOpen = false }: 
                       value={values[i]}
                       onValueChange={(next) => setValue(i, next ?? "false")}
                     >
-                      <SelectTrigger className={cn(controlClassName, "flex h-9 items-center justify-between")}>
+                      <SelectTrigger
+                        className={cn(controlClassName, "flex h-9 items-center justify-between")}
+                      >
                         <SelectValue />
                         <ChevronDownIcon aria-hidden className="size-4 text-muted-foreground" />
                       </SelectTrigger>
@@ -172,9 +175,13 @@ export function ContractFunction({ address, fn, chainId, defaultOpen = false }: 
             })}
 
             {kind === "payable" && (
-              <Field invalid={draft.value === null ? true : undefined} className="flex flex-col gap-1">
+              <Field
+                invalid={draft.value === null ? true : undefined}
+                className="flex flex-col gap-1"
+              >
                 <FieldLabel className="text-xs text-muted-foreground">
-                  <span className="sr-only">{fn.name}:</span> Value <code className="font-mono">ETH</code>
+                  <span className="sr-only">{fn.name}:</span> Value{" "}
+                  <code className="font-mono">ETH</code>
                 </FieldLabel>
                 <Input
                   type="text"
@@ -199,8 +206,7 @@ export function ContractFunction({ address, fn, chainId, defaultOpen = false }: 
                 >
                   <MorphText>{read.isPending ? "Reading…" : "Read"}</MorphText>
                   {/* Every read function has this button, and the card's trigger
-                      holds "read balanceOf" too: "Read balanceOf from the contract". */}
-                  {" "}
+                      holds "read balanceOf" too: "Read balanceOf from the contract". */}{" "}
                   <span className="sr-only">{fn.name} from the contract</span>
                 </Button>
                 {read.isSuccess && <ReadResult name={fn.name} value={formatAbiValue(read.data)} />}
@@ -234,7 +240,8 @@ export function ContractFunction({ address, fn, chainId, defaultOpen = false }: 
                     ? undefined
                     : functionConfirmText(fn, draft, {
                         address,
-                        chainName: config.chains.find((c) => c.id === (chainId ?? currentChainId))?.name,
+                        chainName: config.chains.find((c) => c.id === (chainId ?? currentChainId))
+                          ?.name,
                       })
                 }
                 size="sm"
@@ -288,7 +295,14 @@ export type ContractFormProps = {
  * TransactionButton for writes. Handy for admin panels, debugging, and
  * agent-built tools.
  */
-export function ContractForm({ address, abi, chainId, functions, show = "all", className }: ContractFormProps) {
+export function ContractForm({
+  address,
+  abi,
+  chainId,
+  functions,
+  show = "all",
+  className,
+}: ContractFormProps) {
   const fns = useMemo(() => contractFunctions(abi, { functions, show }), [abi, functions, show]);
 
   return (
@@ -297,7 +311,12 @@ export function ContractForm({ address, abi, chainId, functions, show = "all", c
         <p className="text-sm text-muted-foreground">No matching functions in this ABI.</p>
       ) : (
         fns.map((fn, i) => (
-          <ContractFunction key={`${functionSignature(fn)}-${i}`} address={address} fn={fn} chainId={chainId} />
+          <ContractFunction
+            key={`${functionSignature(fn)}-${i}`}
+            address={address}
+            fn={fn}
+            chainId={chainId}
+          />
         ))
       )}
     </div>

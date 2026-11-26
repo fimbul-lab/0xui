@@ -24,7 +24,11 @@ const options = {
 function Prover() {
   const proof = useProof();
   // A proof needs spendable funds, which arrive with the first scan.
-  const ready = useShieldedState("balances", (engine) => engine.getBalances(1) !== undefined, false);
+  const ready = useShieldedState(
+    "balances",
+    (engine) => engine.getBalances(1) !== undefined,
+    false,
+  );
   const start = () => void proof.prove(draft);
 
   return (

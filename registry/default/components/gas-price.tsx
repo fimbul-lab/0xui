@@ -40,7 +40,7 @@ export function useGasPriceInfo({
   const config = useConfig();
   const currentChainId = useChainId();
   const { data, isError, isPending } = useQuery(
-    gasPriceQueryOptions(config, { chainId: chainId ?? currentChainId, refreshInterval })
+    gasPriceQueryOptions(config, { chainId: chainId ?? currentChainId, refreshInterval }),
   );
   return {
     gasPrice: data,
@@ -79,7 +79,7 @@ export function GasPrice({
       className={cn(
         "inline-flex items-center gap-1.5 text-sm tabular-nums text-muted-foreground",
         tone && toneClass[tone],
-        className
+        className,
       )}
     >
       {Icon && <Icon aria-hidden className="size-3.5 shrink-0" />}

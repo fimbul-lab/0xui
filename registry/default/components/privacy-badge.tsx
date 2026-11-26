@@ -65,10 +65,12 @@ export function PrivacyBadge({
         "inline-flex items-center gap-1 align-middle text-xs font-medium whitespace-nowrap",
         variant === "badge" && "rounded-full border px-2 py-0.5",
         variant === "badge" && iconOnly && "p-1",
-        variant === "badge" && privacy === "private" && "border-transparent bg-primary text-primary-foreground",
+        variant === "badge" &&
+          privacy === "private" &&
+          "border-transparent bg-primary text-primary-foreground",
         variant === "badge" && privacy === "public" && "text-muted-foreground",
         variant === "inline" && privacy === "public" && "text-muted-foreground",
-        className
+        className,
       )}
       {...props}
     >

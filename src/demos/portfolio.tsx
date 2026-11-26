@@ -22,7 +22,11 @@ const aave = erc20("0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", "Aave", "AAVE")
 const uni = erc20("0x1f9840a85d5aF4bf1D1762F925BDADdC4201F984", "Uniswap", "UNI");
 const shib = erc20("0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", "Shiba Inu", "SHIB");
 // Not real contracts: stand-ins for what an indexer returns besides the list.
-const airdrop = erc20("0x00000000000000000000000000000000000000A1", "Claim rewards at usd-bonus.io", "usd-bonus.io");
+const airdrop = erc20(
+  "0x00000000000000000000000000000000000000A1",
+  "Claim rewards at usd-bonus.io",
+  "usd-bonus.io",
+);
 const unlisted = erc20("0x00000000000000000000000000000000000000A2", "Some Token", "SOME");
 
 /** The token list: the allowlist. `shib` has no demo price, so it is hidden as unpriced. */

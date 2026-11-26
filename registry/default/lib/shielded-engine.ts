@@ -236,7 +236,7 @@ export interface ShieldedEngine {
    */
   prepareShield(
     draft: ShieldDraft,
-    options: { sign(message: string): Promise<Hex> }
+    options: { sign(message: string): Promise<Hex> },
   ): Promise<PreparedShield>;
 
   /**
@@ -246,6 +246,6 @@ export interface ShieldedEngine {
    */
   prove(
     draft: PrivateDraft,
-    options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
+    options: { onStage(stage: ProofStage): void; signal?: AbortSignal },
   ): Promise<ProvedOperation>;
 }

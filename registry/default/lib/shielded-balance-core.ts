@@ -70,10 +70,10 @@ export function createShieldedBalances(engine: ShieldedEngine, chainId: number):
       const update = () => store.set(readBalances(engine, chainId));
       update();
       const stops = (["account", "balances", "sync"] as const).map((event) =>
-        engine.subscribe(event, update)
+        engine.subscribe(event, update),
       );
       return () => stops.forEach((stop) => stop());
-    }
+    },
   );
 
   return {
@@ -104,9 +104,7 @@ const NO_FUNDS: ShieldedTokenBalance["amounts"] = {
 
 /** One token's amounts from a balances snapshot, any address casing. A token not held is all zeros. */
 export function tokenAmounts(balances: readonly ShieldedTokenBalance[], token: Address) {
-  return (
-    balances.find((b) => b.token.toLowerCase() === token.toLowerCase())?.amounts ?? NO_FUNDS
-  );
+  return balances.find((b) => b.token.toLowerCase() === token.toLowerCase())?.amounts ?? NO_FUNDS;
 }
 
 /** Sum of a token's private balance across every state. */
@@ -134,6 +132,7 @@ export const shieldedBalanceMeta: Record<
   },
   restricted: {
     label: "Restricted",
-    description: "Can't be spent privately. These funds can only go back to the address they came from.",
+    description:
+      "Can't be spent privately. These funds can only go back to the address they came from.",
   },
 };

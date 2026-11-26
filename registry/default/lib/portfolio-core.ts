@@ -46,7 +46,12 @@ export type PortfolioFilters = {
 /** Hidden reason for a holding, or undefined to show it. The native currency is always shown. */
 export function hiddenReason(
   row: Omit<PortfolioRow, "hidden">,
-  { isSpam = looksLikeSpam, showUnlisted = false, hideUnpriced = true, minValue = 0.5 }: PortfolioFilters = {},
+  {
+    isSpam = looksLikeSpam,
+    showUnlisted = false,
+    hideUnpriced = true,
+    minValue = 0.5,
+  }: PortfolioFilters = {},
 ): HiddenReason | undefined {
   if (isNativeToken(row.token)) return undefined;
   if (isSpam(row.token)) return "spam";
@@ -58,7 +63,8 @@ export function hiddenReason(
 
 const byValue = (a: PortfolioRow, b: PortfolioRow) =>
   (b.value ?? -1) - (a.value ?? -1) ||
-  Number(formatUnits(b.balance, b.token.decimals)) - Number(formatUnits(a.balance, a.token.decimals));
+  Number(formatUnits(b.balance, b.token.decimals)) -
+    Number(formatUnits(a.balance, a.token.decimals));
 
 /** Balances from your own source, keyed by token address in any case. */
 export type PortfolioBalances = ReadonlyMap<string, bigint> | Record<string, bigint>;
@@ -126,7 +132,9 @@ export function summarizePortfolio({
     .map((row) => {
       const price = getTokenPrice(prices, row.token);
       const value =
-        price === undefined ? undefined : Number(formatUnits(row.balance, row.token.decimals)) * price;
+        price === undefined
+          ? undefined
+          : Number(formatUnits(row.balance, row.token.decimals)) * price;
       return { ...row, value };
     })
     .filter((row) => !hideZero || row.balance > 0n)

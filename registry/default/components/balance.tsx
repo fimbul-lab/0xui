@@ -120,11 +120,7 @@ export function Balance({
   }
 
   return (
-    <span
-      data-slot="balance"
-      data-phase={phase}
-      className={cn("inline-flex", className)}
-    >
+    <span data-slot="balance" data-phase={phase} className={cn("inline-flex", className)}>
       <TokenAmount
         value={value!}
         decimals={decimals!}

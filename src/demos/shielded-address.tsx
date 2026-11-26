@@ -31,5 +31,5 @@ export const FromAccount = shieldedDemo(
       </span>
     );
   },
-  { timings: quickStart }
+  { timings: quickStart },
 );

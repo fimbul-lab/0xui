@@ -22,7 +22,13 @@ import {
 } from "@/lib/shielded-account-core";
 import { cn } from "@/lib/utils";
 
-export { MIN_PASSWORD_LENGTH, passwordBlocker, phraseBlocker, phraseWords, type ShieldedAccountPhase };
+export {
+  MIN_PASSWORD_LENGTH,
+  passwordBlocker,
+  phraseBlocker,
+  phraseWords,
+  type ShieldedAccountPhase,
+};
 
 /**
  * Create, import, unlock and lock the private account. The engine keeps the
@@ -323,7 +329,7 @@ export function RecoveryPhrase({ mnemonic, onConfirm, className }: RecoveryPhras
           aria-hidden={!revealed || undefined}
           className={cn(
             "grid grid-cols-2 gap-x-4 gap-y-1.5 font-mono sm:grid-cols-3",
-            !revealed && "blur-sm select-none"
+            !revealed && "blur-sm select-none",
           )}
         >
           {words.map((word, index) => (
@@ -380,7 +386,11 @@ export type ShieldedAccountSummaryProps = {
 };
 
 /** The unlocked account in one line: a private badge, its address, and a lock button. */
-export function ShieldedAccountSummary({ address, onLock, className }: ShieldedAccountSummaryProps) {
+export function ShieldedAccountSummary({
+  address,
+  onLock,
+  className,
+}: ShieldedAccountSummaryProps) {
   return (
     <div className={cn("flex items-center justify-between gap-2 text-sm", className)}>
       <span className="flex min-w-0 items-center gap-2">

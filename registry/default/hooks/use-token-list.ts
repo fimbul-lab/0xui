@@ -40,7 +40,7 @@ export function useTokenList(
     gateway,
     allowlist,
     blocklist,
-  }: UseTokenListOptions = {}
+  }: UseTokenListOptions = {},
 ) {
   const currentChainId = useChainId();
   const chains = useChains();
@@ -65,7 +65,7 @@ export function useTokenList(
       }),
     // `lists` is rebuilt every render; dataKey tracks its contents.
     // Filters are compared by content, so inline arrays don't recompute every render.
-    [dataKey, chainId, chains, includeNative, extraTokens, allowlist?.join(), blocklist?.join()]
+    [dataKey, chainId, chains, includeNative, extraTokens, allowlist?.join(), blocklist?.join()],
   );
 
   return {

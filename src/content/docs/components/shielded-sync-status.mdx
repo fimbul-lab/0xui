@@ -84,12 +84,12 @@ const { phase, stage, progress, isUpdate, error, sync } = useShieldedSync({ chai
 
 ## States
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `idle` | Nothing: no scan has started, or the account is locked. |
-| `syncing` | The pass ("Finding your funds", then "Checking transaction history"), "Step 1 of 2", a percentage and the bar. |
-| `synced` | "Private balance up to date", with a button to sync again. |
-| `error` | "Couldn't sync private balance", the reason, and **Retry**. |
+| `data-phase` | What the user sees                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `idle`       | Nothing: no scan has started, or the account is locked.                                                        |
+| `syncing`    | The pass ("Finding your funds", then "Checking transaction history"), "Step 1 of 2", a percentage and the bar. |
+| `synced`     | "Private balance up to date", with a button to sync again.                                                     |
+| `error`      | "Couldn't sync private balance", the reason, and **Retry**.                                                    |
 
 The root also sets `data-stage` to `notes` or `transactions`.
 
@@ -97,7 +97,7 @@ Once balances are showing, a later scan is an update. It reads "Updating private
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `chainId` | `number` | — | Chain to follow. Required. |
+| Prop      | Type                | Default | Description                                  |
+| --------- | ------------------- | ------- | -------------------------------------------- |
+| `chainId` | `number`            | —       | Chain to follow. Required.                   |
 | `variant` | `"bar" \| "inline"` | `"bar"` | Stage and progress bar, or one line of text. |

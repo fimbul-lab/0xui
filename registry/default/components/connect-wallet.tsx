@@ -15,7 +15,11 @@ import {
 } from "@/components/primitives/dialog";
 import { useStore } from "@/hooks/use-store";
 import { errorCode } from "@/lib/0xui-utils";
-import { createConnectWallet, type ConnectPhase, type WalletOption } from "@/lib/connect-wallet-core";
+import {
+  createConnectWallet,
+  type ConnectPhase,
+  type WalletOption,
+} from "@/lib/connect-wallet-core";
 import { cn } from "@/lib/utils";
 
 export type { ConnectPhase, WalletOption };

@@ -19,12 +19,7 @@ import {
 import { SHIELDED_BALANCE_STATES, type ShieldedBalanceState } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
 
-export {
-  shieldedBalanceMeta,
-  totalShielded,
-  type ShieldedBalancePhase,
-  type ShieldedRetryPhase,
-};
+export { shieldedBalanceMeta, totalShielded, type ShieldedBalancePhase, type ShieldedRetryPhase };
 
 /** SkeletonBox is a block by default. This one sits in a line of text. */
 const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
@@ -240,7 +235,10 @@ export function ShieldedBalance({
                     aria-busy={retryPhase === "retrying" || undefined}
                   >
                     {retryPhase === "retrying" && (
-                      <Loader2Icon aria-hidden className="animate-spin motion-reduce:animate-none" />
+                      <Loader2Icon
+                        aria-hidden
+                        className="animate-spin motion-reduce:animate-none"
+                      />
                     )}
                     {retryPhase === "retrying" ? "Retrying proofs…" : "Retry proofs"}
                   </Button>

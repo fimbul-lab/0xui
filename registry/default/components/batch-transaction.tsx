@@ -1,10 +1,5 @@
 // Docs: https://0xui.io/components/batch-transaction.md
-import {
-  Timeline,
-  TimelineItem,
-  TimelineTitle,
-  type TimelineStatus,
-} from "@ui-sdk/react/timeline";
+import { Timeline, TimelineItem, TimelineTitle, type TimelineStatus } from "@ui-sdk/react/timeline";
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
 import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import { useConfig } from "wagmi";
@@ -215,5 +210,11 @@ function StepIcon({ state }: { state: StepState }) {
         className={cn(className, "animate-spin text-muted-foreground")}
       />
     );
-  return <CircleIcon role="img" aria-label="Not started" className={cn(className, "text-muted-foreground")} />;
+  return (
+    <CircleIcon
+      role="img"
+      aria-label="Not started"
+      className={cn(className, "text-muted-foreground")}
+    />
+  );
 }

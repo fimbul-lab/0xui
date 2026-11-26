@@ -28,11 +28,11 @@ export type AddressProps = {
 /** Display name for an address: an explicit name, its ENS name, or the truncated address. */
 export function useAddressName(
   address: AddressType,
-  { ens = true, name }: { ens?: boolean; name?: string } = {}
+  { ens = true, name }: { ens?: boolean; name?: string } = {},
 ) {
   const config = useConfig();
   const { data: ensName, isLoading } = useQuery(
-    ensNameQueryOptions(config, { address, enabled: ens && !name })
+    ensNameQueryOptions(config, { address, enabled: ens && !name }),
   );
   const checksummed = getAddress(address);
   const resolved = name ?? ensName ?? undefined;
@@ -61,10 +61,7 @@ export function Address({
   const { text, label: fullLabel } = addressDisplay(checksummed, { name, truncate });
 
   const label = (
-    <span
-      title={checksummed}
-      className={cn(!name && "font-mono tabular-nums", "truncate")}
-    >
+    <span title={checksummed} className={cn(!name && "font-mono tabular-nums", "truncate")}>
       {/* Morphs from the address to the ENS name when it resolves. */}
       <span aria-hidden>
         <MorphText>{text}</MorphText>
@@ -79,7 +76,7 @@ export function Address({
       className={cn(
         "inline-flex min-w-0 items-center gap-1 align-middle",
         variant === "pill" && "rounded-full border px-2.5 py-0.5 text-sm",
-        className
+        className,
       )}
     >
       {explorer ? (

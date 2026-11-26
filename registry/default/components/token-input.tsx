@@ -1,11 +1,7 @@
 // Docs: https://0xui.io/components/token-input.md
 import { useId, type ReactNode } from "react";
 import { formatUnits } from "viem";
-import {
-  AmountInput,
-  getAmountState,
-  type AmountState,
-} from "@/components/amount-input";
+import { AmountInput, getAmountState, type AmountState } from "@/components/amount-input";
 import { useTokenBalance } from "@/components/balance";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
@@ -113,7 +109,7 @@ export function TokenInput({
       className={cn(
         "flex flex-col gap-2 rounded-2xl border bg-muted/30 p-4 focus-within:border-ring",
         current.insufficient && "border-destructive/60",
-        className
+        className,
       )}
     >
       {label && (

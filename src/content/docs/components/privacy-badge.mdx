@@ -80,20 +80,22 @@ The label stays available to screen readers, and the tooltip still says what it 
 The root sets `data-privacy`:
 
 ```css
-[data-privacy="public"] { border-style: dashed; }
+[data-privacy="public"] {
+  border-style: dashed;
+}
 ```
 
 ## Props
 
 Also accepts the props of a `<span>`.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `privacy` | `"public" \| "private"` | — | Whether the thing it marks is visible on-chain. |
-| `variant` | `"badge" \| "inline"` | `"badge"` | A chip, or plain text with an icon. |
-| `children` | `ReactNode` | `"Private"` / `"Public"` | Label override. |
-| `iconOnly` | `boolean` | `false` | Hide the label visually. |
-| `icon` | `ComponentType \| false` | eye / crossed-out eye | Custom icon. `false` hides it. |
-| `title` | `string` | what the state means | Tooltip override. |
+| Prop       | Type                     | Default                  | Description                                     |
+| ---------- | ------------------------ | ------------------------ | ----------------------------------------------- |
+| `privacy`  | `"public" \| "private"`  | —                        | Whether the thing it marks is visible on-chain. |
+| `variant`  | `"badge" \| "inline"`    | `"badge"`                | A chip, or plain text with an icon.             |
+| `children` | `ReactNode`              | `"Private"` / `"Public"` | Label override.                                 |
+| `iconOnly` | `boolean`                | `false`                  | Hide the label visually.                        |
+| `icon`     | `ComponentType \| false` | eye / crossed-out eye    | Custom icon. `false` hides it.                  |
+| `title`    | `string`                 | what the state means     | Tooltip override.                               |
 
 `privacyMeta` holds the default label, description and icon for each side.

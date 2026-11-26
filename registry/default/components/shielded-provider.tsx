@@ -27,9 +27,7 @@ export type ShieldedProviderProps = {
 /** Gives the shielded components below an engine. Wrap the private part of your app once. */
 export function ShieldedProvider({ engine, children }: ShieldedProviderProps) {
   const client = useMemo(() => createShieldedClient(engine), [engine]);
-  return (
-    <ShieldedClientContext.Provider value={client}>{children}</ShieldedClientContext.Provider>
-  );
+  return <ShieldedClientContext.Provider value={client}>{children}</ShieldedClientContext.Provider>;
 }
 
 /** The engine and its stores, from the nearest ShieldedProvider. */
@@ -64,17 +62,17 @@ export function useShieldedStore<T>(store: ReadableStore<T>, serverValue: T) {
 export function useShieldedState<T>(
   event: ShieldedEvent,
   read: (engine: ShieldedEngine) => T,
-  serverValue: T
+  serverValue: T,
 ) {
   const engine = useShieldedEngine();
   const subscribe = useCallback(
     (listener: () => void) => engine.subscribe(event, listener),
-    [engine, event]
+    [engine, event],
   );
   return useSyncExternalStore(
     subscribe,
     () => read(engine),
-    () => serverValue
+    () => serverValue,
   );
 }
 

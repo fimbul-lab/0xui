@@ -4,7 +4,13 @@ import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 
 /** Text records read by default. */
-export const defaultEnsRecords = ["description", "url", "com.twitter", "com.github", "email"] as const;
+export const defaultEnsRecords = [
+  "description",
+  "url",
+  "com.twitter",
+  "com.github",
+  "email",
+] as const;
 
 /** The normalized form of an ENS name, or undefined when it isn't a valid one. */
 export function safeNormalize(name: string) {
@@ -52,11 +58,14 @@ export function ensProfileQueryOptions(
       const resolved =
         address ??
         (ensName
-          ? ((await getEnsAddress(config, { name: ensName, chainId }).catch(() => null)) ?? undefined)
+          ? ((await getEnsAddress(config, { name: ensName, chainId }).catch(() => null)) ??
+            undefined)
           : undefined);
       const values = ensName
         ? await Promise.all(
-            records.map((key) => getEnsText(config, { name: ensName, key, chainId }).catch(() => null)),
+            records.map((key) =>
+              getEnsText(config, { name: ensName, key, chainId }).catch(() => null),
+            ),
           )
         : [];
       return {
@@ -88,7 +97,10 @@ export type EnsLinkKey = "url" | "com.twitter" | "com.github" | "email";
 
 export type EnsLink = { key: EnsLinkKey; label: string; href: string; text: string };
 
-const linkFormats: Record<EnsLinkKey, { label: string; href: (v: string) => string; text?: (v: string) => string }> = {
+const linkFormats: Record<
+  EnsLinkKey,
+  { label: string; href: (v: string) => string; text?: (v: string) => string }
+> = {
   url: {
     label: "Website",
     href: (v) => (/^https?:\/\//.test(v) ? v : `https://${v}`),
@@ -109,6 +121,8 @@ export function ensProfileLinks(records: Record<string, string | undefined>): En
     const value = records[key];
     if (!value) return [];
     const format = linkFormats[key];
-    return [{ key, label: format.label, href: format.href(value), text: format.text?.(value) ?? value }];
+    return [
+      { key, label: format.label, href: format.href(value), text: format.text?.(value) ?? value },
+    ];
   });
 }

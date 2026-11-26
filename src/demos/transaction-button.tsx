@@ -4,10 +4,7 @@ import { demoAccounts, demoRevertAddress } from "./wagmi-config";
 import { demo } from "./demo";
 
 export const Default = demo(() => (
-  <TransactionButton
-    chainId={1}
-    transaction={{ to: demoAccounts[1], value: parseEther("0.01") }}
-  >
+  <TransactionButton chainId={1} transaction={{ to: demoAccounts[1], value: parseEther("0.01") }}>
     Send 0.01 ETH
   </TransactionButton>
 ));

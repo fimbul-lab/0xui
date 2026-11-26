@@ -40,7 +40,12 @@ export type Prover = {
   reset(): void;
 };
 
-const idle: ProofState = { phase: "idle", stage: undefined, operation: undefined, error: undefined };
+const idle: ProofState = {
+  phase: "idle",
+  stage: undefined,
+  operation: undefined,
+  error: undefined,
+};
 
 /**
  * Generate a proof with the engine and follow it stage by stage. There is no
@@ -51,8 +56,7 @@ export function createProver(engine: ShieldedEngine, callbacks: ProofCallbacks =
   // The run in progress. A newer run or a reset replaces or aborts it.
   let current: AbortController | undefined;
 
-  const stopped = () =>
-    store.set((s) => ({ ...idle, phase: "cancelled", stage: s.stage }));
+  const stopped = () => store.set((s) => ({ ...idle, phase: "cancelled", stage: s.stage }));
 
   return {
     get: store.get,

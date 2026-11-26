@@ -187,7 +187,10 @@ function mockAddress(seed: string) {
 }
 
 function toBalances(notes: readonly Note[]): ShieldedTokenBalance[] {
-  const byToken = new Map<string, { token: Address; amounts: Record<ShieldedBalanceState, bigint> }>();
+  const byToken = new Map<
+    string,
+    { token: Address; amounts: Record<ShieldedBalanceState, bigint> }
+  >();
   for (const note of notes) {
     const key = note.token.toLowerCase();
     let balance = byToken.get(key);
@@ -209,7 +212,7 @@ function sameBalances(a: readonly ShieldedTokenBalance[], b: readonly ShieldedTo
     a.every(
       (balance, i) =>
         balance.token === b[i]!.token &&
-        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === b[i]!.amounts[state])
+        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === b[i]!.amounts[state]),
     )
   );
 }
@@ -481,7 +484,7 @@ export function createMockShieldedEngine({
           to: MOCK_SHIELD_CONTRACT,
           data: encodeAbiParameters(
             [{ type: "address" }, { type: "uint256" }],
-            [draft.token, draft.amount]
+            [draft.token, draft.amount],
           ),
           value: 0n,
         },

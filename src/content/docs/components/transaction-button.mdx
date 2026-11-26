@@ -84,7 +84,11 @@ This demo tries to send a billion USDC from the Demo Wallet. The check runs agai
 </Preview>
 
 ```tsx
-<TransactionButton chainId={1} simulate contract={{ address: usdc, abi: erc20Abi, functionName: "transfer", args: [to, amount] }}>
+<TransactionButton
+  chainId={1}
+  simulate
+  contract={{ address: usdc, abi: erc20Abi, functionName: "transfer", args: [to, amount] }}
+>
   Send
 </TransactionButton>
 ```
@@ -109,35 +113,35 @@ flow.execute({ transaction: { to, value } });
 
 `data-phase` on the root holds the current state, also exported as `TxPhase`.
 
-| `data-phase` | Button | Status line |
-| --- | --- | --- |
-| `idle` | Your label, or "Connect wallet" / "Switch to X" | — |
-| `idle`, with `simulate` | "Checking…", then your label or "Transaction will fail" | Alert with the revert reason when it would fail. |
-| `switching` | Spinner, "Switching network…" | Approve the network switch in your wallet. |
-| `confirming` | Spinner, "Confirm in wallet…" | Confirm the transaction in your wallet. |
-| `pending` | Spinner, "Pending…" | Transaction submitted. Waiting for confirmation… |
-| `success` | Check, `successLabel` | Transaction confirmed. Returns to idle after `resetAfter`. |
-| `reverted` | Your label (retry) | Alert: transaction reverted. |
-| `cancelled` | Your label | Cancelled in wallet. Not an error, and `onError` isn't called. |
-| `error` | Your label (retry) | Alert with the wallet or RPC message. |
+| `data-phase`            | Button                                                  | Status line                                                    |
+| ----------------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
+| `idle`                  | Your label, or "Connect wallet" / "Switch to X"         | —                                                              |
+| `idle`, with `simulate` | "Checking…", then your label or "Transaction will fail" | Alert with the revert reason when it would fail.               |
+| `switching`             | Spinner, "Switching network…"                           | Approve the network switch in your wallet.                     |
+| `confirming`            | Spinner, "Confirm in wallet…"                           | Confirm the transaction in your wallet.                        |
+| `pending`               | Spinner, "Pending…"                                     | Transaction submitted. Waiting for confirmation…               |
+| `success`               | Check, `successLabel`                                   | Transaction confirmed. Returns to idle after `resetAfter`.     |
+| `reverted`              | Your label (retry)                                      | Alert: transaction reverted.                                   |
+| `cancelled`             | Your label                                              | Cancelled in wallet. Not an error, and `onError` isn't called. |
+| `error`                 | Your label (retry)                                      | Alert with the wallet or RPC message.                          |
 
 ## Props
 
 Also accepts `Button` props (`variant`, `size`…). `className` goes on the root, which holds the button and its status line.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `transaction` | `{ to, value?, data? }` | — | Plain transaction. Pass this or `contract`. |
-| `contract` | `{ address, abi, functionName, args?, value? }` | — | Contract call. |
-| `chainId` | `number` | current chain | Chain the transaction must run on. |
-| `confirmations` | `number` | `1` | Confirmations before success. |
-| `disabledReason` | `string` | — | Disable and show this text. |
-| `simulate` | `boolean` | `false` | Dry-run first. Disable and show the revert reason when it would fail. |
-| `children` | `ReactNode` | `"Submit"` | Label. |
-| `successLabel` | `ReactNode` | `"Done"` | Label after success. |
-| `resetAfter` | `number \| false` | `4000` | Back to idle after success, in ms. |
-| `hideStatus` | `boolean` | `false` | Hide the status line. |
-| `agentConfirm` | `string \| false` | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. While the button offers a network switch it asks about the switch instead; while it opens the wallet picker it asks nothing, since each wallet there asks before connecting. |
-| `onSubmitted` | `(hash) => void` | — | Wallet returned a hash. |
-| `onSuccess` | `(receipt) => void` | — | Mined successfully. |
-| `onError` | `(error) => void` | — | Failed or reverted. Not called on cancel. |
+| Prop             | Type                                            | Default              | Description                                                                                                                                                                                                                                                     |
+| ---------------- | ----------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transaction`    | `{ to, value?, data? }`                         | —                    | Plain transaction. Pass this or `contract`.                                                                                                                                                                                                                     |
+| `contract`       | `{ address, abi, functionName, args?, value? }` | —                    | Contract call.                                                                                                                                                                                                                                                  |
+| `chainId`        | `number`                                        | current chain        | Chain the transaction must run on.                                                                                                                                                                                                                              |
+| `confirmations`  | `number`                                        | `1`                  | Confirmations before success.                                                                                                                                                                                                                                   |
+| `disabledReason` | `string`                                        | —                    | Disable and show this text.                                                                                                                                                                                                                                     |
+| `simulate`       | `boolean`                                       | `false`              | Dry-run first. Disable and show the revert reason when it would fail.                                                                                                                                                                                           |
+| `children`       | `ReactNode`                                     | `"Submit"`           | Label.                                                                                                                                                                                                                                                          |
+| `successLabel`   | `ReactNode`                                     | `"Done"`             | Label after success.                                                                                                                                                                                                                                            |
+| `resetAfter`     | `number \| false`                               | `4000`               | Back to idle after success, in ms.                                                                                                                                                                                                                              |
+| `hideStatus`     | `boolean`                                       | `false`              | Hide the status line.                                                                                                                                                                                                                                           |
+| `agentConfirm`   | `string \| false`                               | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. While the button offers a network switch it asks about the switch instead; while it opens the wallet picker it asks nothing, since each wallet there asks before connecting. |
+| `onSubmitted`    | `(hash) => void`                                | —                    | Wallet returned a hash.                                                                                                                                                                                                                                         |
+| `onSuccess`      | `(receipt) => void`                             | —                    | Mined successfully.                                                                                                                                                                                                                                             |
+| `onError`        | `(error) => void`                               | —                    | Failed or reverted. Not called on cancel.                                                                                                                                                                                                                       |

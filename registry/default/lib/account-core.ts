@@ -95,7 +95,10 @@ export function createConnectedAccount(config: Config): ConnectedAccount {
 }
 
 /** The ENS name, or the truncated address when there is none. */
-export function accountDisplayName(address: Address | undefined, ensName: string | null | undefined) {
+export function accountDisplayName(
+  address: Address | undefined,
+  ensName: string | null | undefined,
+) {
   return ensName ?? (address ? truncateAddress(address) : undefined);
 }
 

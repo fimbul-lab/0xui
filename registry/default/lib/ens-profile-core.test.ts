@@ -12,7 +12,10 @@ describe("ens-profile", () => {
         ),
       },
     });
-    const options = ensProfileQueryOptions(config, { name: "Vitalik.eth", records: ["description", "url"] });
+    const options = ensProfileQueryOptions(config, {
+      name: "Vitalik.eth",
+      records: ["description", "url"],
+    });
     const data = await options.queryFn();
 
     expect(data).toEqual({
@@ -25,14 +28,19 @@ describe("ens-profile", () => {
 
   it("is not found when a name points nowhere", async () => {
     const config = createTestConfig({ rpc: { eth_call: ensResolveRpc({}) } });
-    const data = await ensProfileQueryOptions(config, { name: "nobody.eth", records: [] }).queryFn();
+    const data = await ensProfileQueryOptions(config, {
+      name: "nobody.eth",
+      records: [],
+    }).queryFn();
     expect(data.address).toBeUndefined();
     expect(ensProfilePhase({ name: "nobody.eth" }, data, false)).toBe("not-found");
     expect(ensProfileQueryOptions(config, {}).enabled).toBe(false);
   });
 
   it("turns known records into links", () => {
-    expect(ensProfileLinks({ email: "a@b.c", "com.twitter": "@vitalik", description: "bio" })).toEqual([
+    expect(
+      ensProfileLinks({ email: "a@b.c", "com.twitter": "@vitalik", description: "bio" }),
+    ).toEqual([
       { key: "com.twitter", label: "X", href: "https://x.com/vitalik", text: "@vitalik" },
       { key: "email", label: "Email", href: "mailto:a@b.c", text: "a@b.c" },
     ]);

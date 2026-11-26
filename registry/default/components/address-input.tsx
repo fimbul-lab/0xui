@@ -39,7 +39,7 @@ function useDebounced<T>(value: T, delay: number) {
  */
 export function useAddressInput(
   value: string,
-  { debounce = 300, shielded = false }: { debounce?: number; shielded?: boolean } = {}
+  { debounce = 300, shielded = false }: { debounce?: number; shielded?: boolean } = {},
 ): AddressInputState {
   const config = useConfig();
   const input = parseAddressInput(value);
@@ -53,7 +53,7 @@ export function useAddressInput(
   return addressInputState(
     input,
     { ens, nameSettled: debouncedName === name, reverseName: reverse.data },
-    { shielded }
+    { shielded },
   );
 }
 

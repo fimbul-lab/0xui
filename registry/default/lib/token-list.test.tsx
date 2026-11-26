@@ -24,10 +24,18 @@ const usdc = {
   symbol: "USDC",
   decimals: 6,
   logoURI: "ipfs://QmUSDC",
-  extensions: { bridgeInfo: { "8453": { tokenAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" } } },
+  extensions: {
+    bridgeInfo: { "8453": { tokenAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" } },
+  },
 };
 const baseUsdc = { ...usdc, chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" };
-const solana = { chainId: 501000101, address: "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp", name: "michi", symbol: "$MICHI", decimals: 6 };
+const solana = {
+  chainId: 501000101,
+  address: "5mbK36SZ7J19An8jFochhQS4of8g6BwUjbeCSxBSoWdp",
+  name: "michi",
+  symbol: "$MICHI",
+  decimals: 6,
+};
 
 const list = (tokens: unknown[], name = "Test List") => ({
   name,
@@ -61,7 +69,9 @@ describe("helpers", () => {
       decimals: 18,
       logoURI: undefined,
     });
-    expect(isNativeToken({ address: NATIVE_TOKEN_ADDRESS.toLowerCase() as `0x${string}` })).toBe(true);
+    expect(isNativeToken({ address: NATIVE_TOKEN_ADDRESS.toLowerCase() as `0x${string}` })).toBe(
+      true,
+    );
   });
 
   it("merges lists with the first list winning", () => {
@@ -77,15 +87,21 @@ describe("applyTokenFilters", () => {
   const tokens = parseTokenList(list([usdc, baseUsdc])).tokens;
 
   it("keeps only allowlisted addresses, on any chain or a pinned one", () => {
-    expect(applyTokenFilters(tokens, { allowlist: [usdc.address] }).map((t) => t.chainId)).toEqual([1]);
+    expect(applyTokenFilters(tokens, { allowlist: [usdc.address] }).map((t) => t.chainId)).toEqual([
+      1,
+    ]);
     expect(
-      applyTokenFilters(tokens, { allowlist: [`8453:${baseUsdc.address.toLowerCase()}`] }).map((t) => t.chainId)
+      applyTokenFilters(tokens, { allowlist: [`8453:${baseUsdc.address.toLowerCase()}`] }).map(
+        (t) => t.chainId,
+      ),
     ).toEqual([8453]);
   });
 
   it("drops blocklisted tokens, even when allowlisted", () => {
     expect(applyTokenFilters(tokens, { blocklist: [baseUsdc.address] })).toHaveLength(1);
-    expect(applyTokenFilters(tokens, { allowlist: [usdc.address], blocklist: [usdc.address] })).toHaveLength(0);
+    expect(
+      applyTokenFilters(tokens, { allowlist: [usdc.address], blocklist: [usdc.address] }),
+    ).toHaveLength(0);
   });
 });
 
@@ -103,7 +119,9 @@ describe("useTokenList", () => {
   }
 
   it("loads a list, filters to the chain, and adds the native currency", async () => {
-    const { result } = renderHook(() => useTokenList(dataUrl(list([usdc, baseUsdc, solana]))), { wrapper });
+    const { result } = renderHook(() => useTokenList(dataUrl(list([usdc, baseUsdc, solana]))), {
+      wrapper,
+    });
     expect(result.current.isLoading).toBe(true);
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -120,19 +138,31 @@ describe("useTokenList", () => {
           includeNative: false,
           extraTokens: extra,
         }),
-      { wrapper }
+      { wrapper },
     );
 
     await waitFor(() => expect(result.current.lists).toHaveLength(2));
-    expect(result.current.tokens.map((t) => `${t.chainId}:${t.name}`)).toEqual(["1:My USDC", "8453:USDCoin"]);
+    expect(result.current.tokens.map((t) => `${t.chainId}:${t.name}`)).toEqual([
+      "1:My USDC",
+      "8453:USDCoin",
+    ]);
   });
 
   it("applies an allowlist but keeps the native currency", async () => {
     const { result } = renderHook(
-      () => useTokenList(dataUrl(list([usdc, { ...usdc, address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT" }])), {
-        allowlist: [usdc.address],
-      }),
-      { wrapper }
+      () =>
+        useTokenList(
+          dataUrl(
+            list([
+              usdc,
+              { ...usdc, address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", symbol: "USDT" },
+            ]),
+          ),
+          {
+            allowlist: [usdc.address],
+          },
+        ),
+      { wrapper },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.tokens.map((t) => t.symbol)).toEqual(["ETH", "USDC"]);
@@ -147,12 +177,18 @@ describe("useTokenList", () => {
 });
 
 describe("getTokenPrice", () => {
-  const token = { chainId: 1, address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC" } as const;
+  const token = {
+    chainId: 1,
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    symbol: "USDC",
+  } as const;
 
   it("prefers address keys over the symbol, in any casing", () => {
     expect(getTokenPrice({ USDC: 2 }, token)).toBe(2);
     expect(getTokenPrice({ USDC: 2, [token.address.toLowerCase()]: 1 }, token)).toBe(1);
-    expect(getTokenPrice({ [token.address.toLowerCase()]: 1, [`1:${token.address}`]: 0.99 }, token)).toBe(0.99);
+    expect(
+      getTokenPrice({ [token.address.toLowerCase()]: 1, [`1:${token.address}`]: 0.99 }, token),
+    ).toBe(0.99);
     expect(getTokenPrice(undefined, token)).toBeUndefined();
   });
 

@@ -37,7 +37,10 @@ describe("nextApproval", () => {
   });
 
   it("approves the amount, or the maximum", () => {
-    expect(nextApproval({ ...base, allowance: 0n })).toEqual({ kind: "approve", value: base.amount });
+    expect(nextApproval({ ...base, allowance: 0n })).toEqual({
+      kind: "approve",
+      value: base.amount,
+    });
     expect(nextApproval({ ...base, allowance: 0n, unlimited: true })).toEqual({
       kind: "approve",
       value: maxUint256,

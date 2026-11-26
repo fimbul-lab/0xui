@@ -8,7 +8,11 @@ const calls: BatchCall[] = [
   {
     label: "Approve 100 USDC",
     to: demoUsdc.address,
-    data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [router, parseUnits("100", 6)] }),
+    data: encodeFunctionData({
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [router, parseUnits("100", 6)],
+    }),
   },
   { label: "Swap 100 USDC for ETH", to: router, data: "0x3593564c" },
 ];

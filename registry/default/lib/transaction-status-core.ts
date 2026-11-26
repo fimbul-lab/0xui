@@ -19,7 +19,10 @@ type TxTarget = { hash: Hash | undefined; chainId: number | undefined };
  * a reverted transaction resolves with its receipt (`status: "reverted"`)
  * instead of throwing, so the UI can show it.
  */
-export function waitForMinedReceipt(config: Config, { hash, chainId }: { hash: Hash; chainId?: number }) {
+export function waitForMinedReceipt(
+  config: Config,
+  { hash, chainId }: { hash: Hash; chainId?: number },
+) {
   const client = getPublicClient(config, { chainId });
   if (!client) return Promise.reject(new Error(`Chain ${chainId} is not in the wagmi config.`));
   return client.waitForTransactionReceipt({ hash });

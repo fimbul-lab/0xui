@@ -32,10 +32,16 @@ function FieldLabel({ className, ...props }: ComponentProps<typeof FieldLabelPri
   );
 }
 
-function FieldDescription({ className, ...props }: ComponentProps<typeof FieldDescriptionPrimitive>) {
+function FieldDescription({
+  className,
+  ...props
+}: ComponentProps<typeof FieldDescriptionPrimitive>) {
   return (
     <FieldDescriptionPrimitive
-      className={withClassName("text-sm leading-normal font-normal text-muted-foreground", className)}
+      className={withClassName(
+        "text-sm leading-normal font-normal text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   );

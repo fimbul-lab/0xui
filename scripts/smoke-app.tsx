@@ -67,11 +67,31 @@ function Phase3() {
   return (
     <>
       <AmountInput value={amount} onValueChange={setAmount} decimals={18} />
-      <TokenSelect tokens={uniswap.tokens} isLoading={uniswap.isLoading} value={token} onValueChange={setToken} />
-      <TokenInput value={amount} onValueChange={setAmount} token={token} onTokenChange={setToken} tokens={tokens} />
+      <TokenSelect
+        tokens={uniswap.tokens}
+        isLoading={uniswap.isLoading}
+        value={token}
+        onValueChange={setToken}
+      />
+      <TokenInput
+        value={amount}
+        onValueChange={setAmount}
+        token={token}
+        onTokenChange={setToken}
+        tokens={tokens}
+      />
       <AddressInput value={recipient} onValueChange={setRecipient} onResolve={(s) => s.address} />
-      <ApproveButton token={{ address: usdc, symbol: "USDC" }} spender={address} amount={1n} chainId={1}>
-        <TransactionButton chainId={1} transaction={{ to: address }} onSubmitted={(hash) => toastTransaction(hash)}>
+      <ApproveButton
+        token={{ address: usdc, symbol: "USDC" }}
+        spender={address}
+        amount={1n}
+        chainId={1}
+      >
+        <TransactionButton
+          chainId={1}
+          transaction={{ to: address }}
+          onSubmitted={(hash) => toastTransaction(hash)}
+        >
           Go
         </TransactionButton>
       </ApproveButton>
@@ -94,8 +114,16 @@ function Shielded() {
       {account.address && <ShieldedAddress address={account.address} variant="pill" />}
       <PrivacyBadge privacy="private" />
       <PrivacyBadge privacy="public" variant="inline" iconOnly />
-      <ShieldedBalance token={{ address: usdc, symbol: "USDC", decimals: 6 }} chainId={1} price={1} />
-      <ShieldedBalance token={{ address: usdc, symbol: "USDC", decimals: 6 }} chainId={1} variant="inline" />
+      <ShieldedBalance
+        token={{ address: usdc, symbol: "USDC", decimals: 6 }}
+        chainId={1}
+        price={1}
+      />
+      <ShieldedBalance
+        token={{ address: usdc, symbol: "USDC", decimals: 6 }}
+        chainId={1}
+        variant="inline"
+      />
       <ShieldedSyncStatus chainId={1} />
       <ShieldedSyncStatus chainId={1} variant="inline" />
       <button
@@ -105,7 +133,12 @@ function Shielded() {
       >
         Prove
       </button>
-      <ProofProgress phase={proof.phase} stage={proof.stage} error={proof.error} onCancel={proof.cancel} />
+      <ProofProgress
+        phase={proof.phase}
+        stage={proof.stage}
+        error={proof.error}
+        onCancel={proof.cancel}
+      />
       <ShieldedAccount>
         <Shield
           tokens={tokens}
@@ -155,13 +188,18 @@ export default function App() {
       <Send tokens={tokens} />
       <Swap
         tokens={tokens}
-        getQuote={async ({ sellAmount }) => ({ buyAmount: sellAmount, transaction: { to: address } })}
+        getQuote={async ({ sellAmount }) => ({
+          buyAmount: sellAmount,
+          transaction: { to: address },
+        })}
       />
       <BatchTransaction chainId={1} calls={[{ to: address }, { to: usdc, data: "0x" }]} />
       <ContractForm address={usdc} abi={erc20Abi} show="read" />
       <Portfolio tokens={tokens} prices={{ ETH: 3000 }} />
       <TransactionHistory />
-      <button onClick={() => recordTransaction({ hash: `0x${"ab".repeat(32)}`, chainId: 1 })}>Record</button>
+      <button onClick={() => recordTransaction({ hash: `0x${"ab".repeat(32)}`, chainId: 1 })}>
+        Record
+      </button>
       <EnsProfile name="vitalik.eth" />
       <NftCard contract={address} tokenId={1n} />
       <EventFeed address={usdc} abi={erc20Abi} eventName="Transfer" />

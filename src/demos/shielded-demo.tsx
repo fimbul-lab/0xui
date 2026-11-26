@@ -47,7 +47,7 @@ export function shieldedDemo(
   }: MockShieldedEngineOptions & {
     unlock?: boolean;
     setup?: (engine: MockShieldedEngine) => void;
-  } = {}
+  } = {},
 ) {
   return demo(function ShieldedDemo() {
     const [run, setRun] = useState(0);

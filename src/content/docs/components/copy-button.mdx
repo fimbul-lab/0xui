@@ -43,21 +43,21 @@ Accepts every `Button` prop (the ui-sdk Button with 0xui's variants), including 
 
 ## States
 
-| State | What the user sees |
-| --- | --- |
-| Idle | Copy icon. |
-| Copied | Checkmark for `timeout` ms, "Copied" announced. `data-copied` is set on the button. |
-| Clipboard blocked | Nothing changes and `onCopy` is not called. |
+| State             | What the user sees                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| Idle              | Copy icon.                                                                          |
+| Copied            | Checkmark for `timeout` ms, "Copied" announced. `data-copied` is set on the button. |
+| Clipboard blocked | Nothing changes and `onCopy` is not called.                                         |
 
 ## Props
 
 Also accepts all `Button` props except `onClick` and `children`.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `value` | `string` | — | Text to copy. |
-| `label` | `string` | from `value` | Accessible label and tooltip. Name what it copies, so it's unique on the page for screen readers and browser agents. Defaults to `"Copy address"` for an address, `"Copy hash"` for a 32-byte hash, otherwise `"Copy"`. |
-| `timeout` | `number` | `2000` | How long the copied state lasts, in ms. |
-| `onCopy` | `(value: string) => void` | — | Called after a successful copy. |
-| `copyIcon` | `ComponentType \| false` | `CopyIcon` | Custom icon, or `false` to hide it. |
-| `copiedIcon` | `ComponentType \| false` | `CheckIcon` | Custom icon, or `false` to hide it. |
+| Prop         | Type                      | Default      | Description                                                                                                                                                                                                             |
+| ------------ | ------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`      | `string`                  | —            | Text to copy.                                                                                                                                                                                                           |
+| `label`      | `string`                  | from `value` | Accessible label and tooltip. Name what it copies, so it's unique on the page for screen readers and browser agents. Defaults to `"Copy address"` for an address, `"Copy hash"` for a 32-byte hash, otherwise `"Copy"`. |
+| `timeout`    | `number`                  | `2000`       | How long the copied state lasts, in ms.                                                                                                                                                                                 |
+| `onCopy`     | `(value: string) => void` | —            | Called after a successful copy.                                                                                                                                                                                         |
+| `copyIcon`   | `ComponentType \| false`  | `CopyIcon`   | Custom icon, or `false` to hide it.                                                                                                                                                                                     |
+| `copiedIcon` | `ComponentType \| false`  | `CheckIcon`  | Custom icon, or `false` to hide it.                                                                                                                                                                                     |

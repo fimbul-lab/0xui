@@ -119,10 +119,13 @@ export function addressInputState(
     }
     case "address": {
       const { text, address } = input;
-      if (address)
-        return { ...base, phase: "valid", address, ensName: reverseName ?? undefined };
+      if (address) return { ...base, phase: "valid", address, ensName: reverseName ?? undefined };
       if (text.length === 42)
-        return { ...base, phase: "invalid", error: "Checksum doesn't match. Check the address for typos." };
+        return {
+          ...base,
+          phase: "invalid",
+          error: "Checksum doesn't match. Check the address for typos.",
+        };
       if (text.length > 42) return { ...base, phase: "invalid", error: "Address is too long." };
       return { ...base, phase: "incomplete", error: "Enter a full 42-character address." };
     }
@@ -131,9 +134,19 @@ export function addressInputState(
       if (!name) return { ...base, phase: "invalid", error: "Not a valid ENS name." };
       if (!nameSettled || ens.isPending) return { ...base, phase: "resolving", ensName: name };
       if (ens.isError)
-        return { ...base, phase: "invalid", ensName: name, error: "Couldn't look up this name. Try again." };
+        return {
+          ...base,
+          phase: "invalid",
+          ensName: name,
+          error: "Couldn't look up this name. Try again.",
+        };
       if (!ens.data)
-        return { ...base, phase: "not-found", ensName: name, error: `No address found for ${name}.` };
+        return {
+          ...base,
+          phase: "not-found",
+          ensName: name,
+          error: `No address found for ${name}.`,
+        };
       return { ...base, phase: "valid", address: ens.data, ensName: name };
     }
     case "other":

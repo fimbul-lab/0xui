@@ -49,15 +49,21 @@ function Playground({ engine }: ShieldedDemoProps) {
       <ShieldedBalance token={demoWeth} chainId={1} />
       <ShieldedSyncStatus chainId={1} />
       <div className="flex flex-wrap gap-2 border-t pt-4">
-        {act("Shield 0.5", () => engine.simulate.shield({ token: weth, amount: parseEther("0.5") }))}
+        {act("Shield 0.5", () =>
+          engine.simulate.shield({ token: weth, amount: parseEther("0.5") }),
+        )}
         {act("Shield, restricted", () =>
-          engine.simulate.shield({ token: weth, amount: parseEther("0.5"), outcome: "restricted" })
+          engine.simulate.shield({ token: weth, amount: parseEther("0.5"), outcome: "restricted" }),
         )}
         {act("Unshield 0.2", () =>
-          engine.simulate.unshield({ token: weth, amount: parseEther("0.2") })
+          engine.simulate.unshield({ token: weth, amount: parseEther("0.2") }),
         )}
         {act("Unshield, change gets stuck", () =>
-          engine.simulate.unshield({ token: weth, amount: parseEther("0.2"), change: "incomplete" })
+          engine.simulate.unshield({
+            token: weth,
+            amount: parseEther("0.2"),
+            change: "incomplete",
+          }),
         )}
         {act("Fail the next scan", () => {
           engine.simulate.failNextSync();

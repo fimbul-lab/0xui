@@ -91,7 +91,9 @@ export function EnsProfile({ address, name, records, className }: EnsProfileProp
   const links = ensProfileLinks(profile.records);
   // While loading, the header is drawn from a stand-in and measured into a skeleton.
   const shown =
-    phase === "loading" ? { ...sampleProfile, address: profile.address ?? sampleProfile.address } : profile;
+    phase === "loading"
+      ? { ...sampleProfile, address: profile.address ?? sampleProfile.address }
+      : profile;
 
   return (
     <article
@@ -102,11 +104,17 @@ export function EnsProfile({ address, name, records, className }: EnsProfileProp
       <Skeleton loading={phase === "loading"} label="Loading ENS profile">
         <div className="flex flex-col gap-4">
           <header className="flex items-center gap-3">
-            {shown.address && <AddressAvatar address={shown.address} src={shown.avatar} size={56} />}
+            {shown.address && (
+              <AddressAvatar address={shown.address} src={shown.avatar} size={56} />
+            )}
             <div className="flex min-w-0 flex-col gap-0.5">
               <h3 className="truncate text-lg font-semibold">{shown.name ?? "No ENS name"}</h3>
               {shown.address && (
-                <Address address={shown.address} ens={false} className="text-sm text-muted-foreground" />
+                <Address
+                  address={shown.address}
+                  ens={false}
+                  className="text-sm text-muted-foreground"
+                />
               )}
             </div>
           </header>

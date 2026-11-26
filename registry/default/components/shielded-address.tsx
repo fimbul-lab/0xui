@@ -12,7 +12,7 @@ export type ShieldedAddressTruncate = { start?: number; end?: number };
  */
 export function truncateShieldedAddress(
   address: string,
-  { start = 9, end = 6 }: ShieldedAddressTruncate = {}
+  { start = 9, end = 6 }: ShieldedAddressTruncate = {},
 ) {
   if (address.length <= start + end + 1) return address;
   return `${address.slice(0, start)}…${address.slice(-end)}`;
@@ -51,7 +51,7 @@ export function ShieldedAddress({
         "inline-flex min-w-0 items-center gap-1 align-middle",
         variant === "pill" && "border px-2.5 py-0.5 text-sm",
         variant === "pill" && (full ? "rounded-xl" : "rounded-full"),
-        className
+        className,
       )}
     >
       {full ? (
@@ -62,9 +62,7 @@ export function ShieldedAddress({
           <span className="sr-only">{address}</span>
         </span>
       )}
-      {copyable && (
-        <CopyButton value={address} label="Copy private address" className="shrink-0" />
-      )}
+      {copyable && <CopyButton value={address} label="Copy private address" className="shrink-0" />}
     </span>
   );
 }

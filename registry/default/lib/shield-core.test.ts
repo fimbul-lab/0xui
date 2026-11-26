@@ -60,7 +60,11 @@ describe("createShieldFlow", () => {
     const submitted: Hash[] = [];
     const flow = createShieldFlow(config, engine, { onSubmitted: (hash) => submitted.push(hash) });
     const stop = flow.subscribe(() => {});
-    expect(flow.get()).toMatchObject({ connected: true, account: testAccounts[0], walletChainId: 1 });
+    expect(flow.get()).toMatchObject({
+      connected: true,
+      account: testAccounts[0],
+      walletChainId: 1,
+    });
 
     const draft = { chainId: 1, token, amount };
     const quote = await engine.quoteShield(draft);
@@ -83,7 +87,10 @@ describe("createShieldFlow", () => {
     await ready(flow);
     expect(shieldPhase(flow.get())).toBe("shielding");
     const { args } = decodeFunctionData({ abi: erc20Abi, data: sent[0]!.data! });
-    expect([String(args![0]).toLowerCase(), args![1]]).toEqual([MOCK_SHIELD_CONTRACT.toLowerCase(), amount]);
+    expect([String(args![0]).toLowerCase(), args![1]]).toEqual([
+      MOCK_SHIELD_CONTRACT.toLowerCase(),
+      amount,
+    ]);
 
     flow.act();
     await vi.waitFor(() => expect(submitted).toEqual([fakeTxHash]));
@@ -124,17 +131,33 @@ describe("createShieldFlow", () => {
       planned: true,
       symbol: "TKN",
     };
-    expect(shieldFormAction({ ...base, connected: false })).toEqual({ label: "Connect wallet", action: "connect" });
-    expect(shieldFormAction({ ...base, blocker: "Enter an amount" })).toEqual({ label: "Enter an amount" });
-    expect(shieldFormAction({ ...base, wrongChain: true })).toEqual({ label: "Switch to Sepolia", action: "switch" });
-    expect(shieldFormAction({ ...base, wrongChain: true, switching: true })).toEqual({ label: "Switching network…" });
+    expect(shieldFormAction({ ...base, connected: false })).toEqual({
+      label: "Connect wallet",
+      action: "connect",
+    });
+    expect(shieldFormAction({ ...base, blocker: "Enter an amount" })).toEqual({
+      label: "Enter an amount",
+    });
+    expect(shieldFormAction({ ...base, wrongChain: true })).toEqual({
+      label: "Switch to Sepolia",
+      action: "switch",
+    });
+    expect(shieldFormAction({ ...base, wrongChain: true, switching: true })).toEqual({
+      label: "Switching network…",
+    });
     expect(shieldFormAction({ ...base, planned: false })).toEqual({ label: "Fetching quote…" });
     expect(shieldFormAction(base)).toEqual({ label: "Shield TKN", action: "start" });
   });
 
   it("waits for the allowance before planning, when there is a spender", () => {
     const draft = { chainId: 1, token, amount };
-    const quote = { fee: 0n, received: amount, standby: 0, spender: MOCK_SHIELD_CONTRACT, needsSignature: false };
+    const quote = {
+      fee: 0n,
+      received: amount,
+      standby: 0,
+      spender: MOCK_SHIELD_CONTRACT,
+      needsSignature: false,
+    };
     expect(planShield({ draft, quote, allowance: undefined, atomic: true })).toBeUndefined();
     expect(planShield({ draft, quote, allowance: 5n, atomic: true })).toEqual({
       steps: ["batch"],
@@ -156,7 +179,9 @@ describe("shield confirmations", () => {
 
   it("names the amount, what arrives after the fee, the network and the prompts", () => {
     const quote = { fee: parseUnits("0.005", 18), received: parseUnits("1.995", 18) };
-    expect(shieldConfirmText({ amount, token, quote, steps: ["sign", "batch"], chainName: "Sepolia" })).toBe(
+    expect(
+      shieldConfirmText({ amount, token, quote, steps: ["sign", "batch"], chainName: "Sepolia" }),
+    ).toBe(
       "Shields 2 TKN from your wallet into your private balance on Sepolia: " +
         "1.995 TKN arrives after a 0.005 TKN fee. Two wallet prompts: sign, approve and shield together.",
     );

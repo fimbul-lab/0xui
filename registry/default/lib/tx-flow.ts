@@ -154,7 +154,10 @@ export function createTransactionFlow(
         // Pin the chain so the wallet can't send on a different one.
         hash =
           "contract" in request
-            ? await writeContract(config, { chainId: target, ...request.contract } as ContractRequest)
+            ? await writeContract(config, {
+                chainId: target,
+                ...request.contract,
+              } as ContractRequest)
             : await sendTransaction(config, {
                 chainId: target,
                 ...request.transaction,

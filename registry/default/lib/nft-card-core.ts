@@ -61,7 +61,11 @@ export function nftTokenQueryOptions(
     queryKeyHashFn: hashFn,
     select: ([erc721, erc1155, name]: Awaited<ReturnType<typeof options.queryFn>>): NftToken => {
       const raw =
-        erc721?.status === "success" ? erc721.result : erc1155?.status === "success" ? erc1155.result : undefined;
+        erc721?.status === "success"
+          ? erc721.result
+          : erc1155?.status === "success"
+            ? erc1155.result
+            : undefined;
       return {
         uri: raw ? expandTokenUri(raw, tokenId) : undefined,
         collection: name?.status === "success" ? name.result : undefined,
@@ -71,7 +75,13 @@ export function nftTokenQueryOptions(
 }
 
 /** TanStack query options for a token's metadata JSON. Retries once: IPFS gateways rate-limit. */
-export function nftMetadataQueryOptions({ uri, gateway }: { uri: string | undefined; gateway?: string }) {
+export function nftMetadataQueryOptions({
+  uri,
+  gateway,
+}: {
+  uri: string | undefined;
+  gateway?: string;
+}) {
   return {
     queryKey: ["0xui", "nft-metadata", uri, gateway] as const,
     queryFn: () => fetchNftMetadata(uri!, gateway),

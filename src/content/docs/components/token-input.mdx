@@ -44,20 +44,27 @@ Use `insufficient` to block the action, and name the reason on the button:
 ### "You receive" panel
 
 ```tsx
-<TokenInput label="You receive" value={quote} onValueChange={() => {}} token={out} readOnly checkBalance={false} />
+<TokenInput
+  label="You receive"
+  value={quote}
+  onValueChange={() => {}}
+  token={out}
+  readOnly
+  checkBalance={false}
+/>
 ```
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `label` | `ReactNode` | — | Label above the panel. A string also names the panel's controls for screen readers and browser agents: the field "You pay in ETH", "Max You pay" and "You pay token: ETH, change". So a swap's two panels, or a send and a swap on one page, never share a name. |
-| `value` | `string` | — | Decimal string. |
-| `onValueChange` | `(value, { amount, insufficient, balance }) => void` | — | Called on change. |
-| `token` | `Token` | — | Selected token. |
-| `onTokenChange` / `tokens` | — | — | Pass both to make the token pickable. |
-| `popular` | `string[]` | — | Quick picks in the picker. |
-| `price` / `currency` | `number` / `string` | — / `"USD"` | Fiat line. |
-| `prices` | `Record<symbol, number>` | — | Fiat line for any selected token, and value-sorted holdings in the picker. |
-| `checkBalance` | `boolean` | `true` | Read the balance, offer Max, flag insufficient amounts. |
-| `readOnly` | `boolean` | `false` | For quoted outputs. |
+| Prop                       | Type                                                 | Default     | Description                                                                                                                                                                                                                                                      |
+| -------------------------- | ---------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`                    | `ReactNode`                                          | —           | Label above the panel. A string also names the panel's controls for screen readers and browser agents: the field "You pay in ETH", "Max You pay" and "You pay token: ETH, change". So a swap's two panels, or a send and a swap on one page, never share a name. |
+| `value`                    | `string`                                             | —           | Decimal string.                                                                                                                                                                                                                                                  |
+| `onValueChange`            | `(value, { amount, insufficient, balance }) => void` | —           | Called on change.                                                                                                                                                                                                                                                |
+| `token`                    | `Token`                                              | —           | Selected token.                                                                                                                                                                                                                                                  |
+| `onTokenChange` / `tokens` | —                                                    | —           | Pass both to make the token pickable.                                                                                                                                                                                                                            |
+| `popular`                  | `string[]`                                           | —           | Quick picks in the picker.                                                                                                                                                                                                                                       |
+| `price` / `currency`       | `number` / `string`                                  | — / `"USD"` | Fiat line.                                                                                                                                                                                                                                                       |
+| `prices`                   | `Record<symbol, number>`                             | —           | Fiat line for any selected token, and value-sorted holdings in the picker.                                                                                                                                                                                       |
+| `checkBalance`             | `boolean`                                            | `true`      | Read the balance, offer Max, flag insufficient amounts.                                                                                                                                                                                                          |
+| `readOnly`                 | `boolean`                                            | `false`     | For quoted outputs.                                                                                                                                                                                                                                              |

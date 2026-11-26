@@ -114,7 +114,10 @@ export function entryStatus(
 }
 
 /** "2 minutes ago", from a timestamp in ms. */
-export function formatRelativeTime(ms: number, { locale, now = Date.now() }: { locale?: string; now?: number } = {}) {
+export function formatRelativeTime(
+  ms: number,
+  { locale, now = Date.now() }: { locale?: string; now?: number } = {},
+) {
   const seconds = Math.round((ms - now) / 1000);
   const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const abs = Math.abs(seconds);

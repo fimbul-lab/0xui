@@ -78,7 +78,7 @@ function stubWalletRpc(rpc: RpcResponses) {
  */
 function withCapabilities(
   wallet: ReturnType<typeof mock>,
-  capabilities: Record<number, unknown>
+  capabilities: Record<number, unknown>,
 ): ReturnType<typeof mock> {
   return createConnector((config) => {
     const connector = wallet(config);
@@ -92,8 +92,8 @@ function withCapabilities(
             args.method === "wallet_getCapabilities"
               ? Promise.resolve(
                   Object.fromEntries(
-                    Object.entries(capabilities).map(([id, value]) => [toHex(Number(id)), value])
-                  )
+                    Object.entries(capabilities).map(([id, value]) => [toHex(Number(id)), value]),
+                  ),
                 )
               : provider.request(args as never),
         } as typeof provider;
@@ -121,7 +121,7 @@ export function createTestConfig({
   stubWalletRpc(rpc);
   const transport = custom(
     { request: ({ method, params }) => respond(rpc, method, params) },
-    { retryCount: 0 }
+    { retryCount: 0 },
   );
   return createConfig({
     chains: [withoutMulticall(mainnet), withoutMulticall(sepolia)],
@@ -221,7 +221,7 @@ function withoutMulticall<chain extends Chain>(chain: chain): chain {
 
 export function renderWithWagmi(
   ui: ReactElement,
-  { config = createTestConfig() }: { config?: Config } = {}
+  { config = createTestConfig() }: { config?: Config } = {},
 ) {
   // No retries: a failing RPC should fail the query immediately.
   const queryClient = new QueryClient({
@@ -232,7 +232,7 @@ export function renderWithWagmi(
     ...render(
       <Web3Provider config={config} queryClient={queryClient}>
         {ui}
-      </Web3Provider>
+      </Web3Provider>,
     ),
   };
 }
@@ -303,7 +303,7 @@ const resolverAbi = parseAbi([
  */
 export function ensResolveRpc(
   names: Record<string, Address>,
-  texts: Record<string, Record<string, string>> = {}
+  texts: Record<string, Record<string, string>> = {},
 ) {
   return ([{ data }]: EthCall) => {
     const { args } = decodeFunctionData({ abi: universalResolverAbi, data });

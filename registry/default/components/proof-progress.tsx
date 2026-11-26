@@ -74,7 +74,11 @@ export function ProofStep({ state, label, hint }: ProofStepProps) {
           className={cn(icon, "animate-spin text-muted-foreground motion-reduce:animate-none")}
         />
       ) : (
-        <CircleIcon role="img" aria-label="Not started" className={cn(icon, "text-muted-foreground")} />
+        <CircleIcon
+          role="img"
+          aria-label="Not started"
+          className={cn(icon, "text-muted-foreground")}
+        />
       )}
       <span className="flex flex-col">
         <span className={cn(state === "todo" && "text-muted-foreground")}>{label}</span>

@@ -48,7 +48,10 @@ export function isNativeToken(token: Pick<TokenInfo, "address">) {
  * The chain's native currency as a token-list entry. Token lists don't
  * include it (Uniswap's has WETH, not ETH), so apps add it themselves.
  */
-export function nativeToken(chain: Pick<Chain, "id" | "nativeCurrency">, logoURI?: string): TokenInfo {
+export function nativeToken(
+  chain: Pick<Chain, "id" | "nativeCurrency">,
+  logoURI?: string,
+): TokenInfo {
   return {
     chainId: chain.id,
     address: NATIVE_TOKEN_ADDRESS,
@@ -83,7 +86,12 @@ function isTokenInfo(value: unknown): value is TokenInfo {
  */
 export function parseTokenList(json: unknown): TokenList {
   const list = json as Partial<TokenList> | null;
-  if (!list || typeof list !== "object" || !Array.isArray(list.tokens) || typeof list.name !== "string") {
+  if (
+    !list ||
+    typeof list !== "object" ||
+    !Array.isArray(list.tokens) ||
+    typeof list.name !== "string"
+  ) {
     throw new Error("Not a token list: expected an object with `name` and `tokens`.");
   }
   return {
@@ -153,7 +161,7 @@ function matcher(entries: readonly string[]) {
  */
 export function applyTokenFilters<T extends Pick<TokenInfo, "chainId" | "address">>(
   tokens: readonly T[],
-  { allowlist, blocklist }: TokenFilters
+  { allowlist, blocklist }: TokenFilters,
 ): T[] {
   const allowed = allowlist ? matcher(allowlist) : () => true;
   const blocked = blocklist ? matcher(blocklist) : () => false;
@@ -193,7 +201,7 @@ export type TokenPrices = Readonly<Record<string, number>>;
 /** A token's price from `prices`. Address keys win over the symbol. */
 export function getTokenPrice(
   prices: TokenPrices | undefined,
-  token: Pick<TokenInfo, "chainId" | "address" | "symbol">
+  token: Pick<TokenInfo, "chainId" | "address" | "symbol">,
 ) {
   if (!prices) return undefined;
   const lower = token.address.toLowerCase();
@@ -207,7 +215,8 @@ export function getTokenPrice(
 }
 
 // "Visit x.com to claim", links, and Telegram handles: phishing airdrops.
-const SPAM_TEXT = /https?:\/\/|www\.|t\.me\/|\b(claim|claimable|visit|airdrop|rewards?|voucher|bonus)\b/i;
+const SPAM_TEXT =
+  /https?:\/\/|www\.|t\.me\/|\b(claim|claimable|visit|airdrop|rewards?|voucher|bonus)\b/i;
 // A domain as the symbol, e.g. "ETHGIFT.COM". Names can be real projects (Ether.fi, io.net).
 const DOMAIN_SYMBOL = /\.(com|io|org|net|xyz|app|site|top|gift|cc|vip|me|live|pro|club|fun)$/i;
 const INVISIBLE = /[​-‏⁠﻿]/;

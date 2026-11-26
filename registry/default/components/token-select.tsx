@@ -66,7 +66,7 @@ export function useTokenBalances(
     chainId,
     address: addressProp,
     enabled = true,
-  }: { chainId?: number; address?: Address; enabled?: boolean } = {}
+  }: { chainId?: number; address?: Address; enabled?: boolean } = {},
 ) {
   const config = useConfig();
   const connection = useConnection();
@@ -77,7 +77,7 @@ export function useTokenBalances(
 
   const balances = useMemo(
     () => mergeTokenBalances(tokens, native.data, reads.data),
-    [tokens, native.data, reads.data]
+    [tokens, native.data, reads.data],
   );
 
   return {
@@ -122,15 +122,20 @@ export type TokenSelectDialogProps = {
 const presentations = { auto: "auto", dialog: "dialog", drawer: "sheet" } as const;
 
 /** Stand-in rows the loading skeleton is measured from. Never shown as text. */
-const sampleTokens: Token[] = ["Sample token", "Another one", "Third token name", "Fourth", "Fifth token", "Sixth one"].map(
-  (name, index) => ({
-    chainId: 0,
-    address: `0x${String(index + 1).padStart(40, "0")}`,
-    name,
-    symbol: "TKN",
-    decimals: 18,
-  })
-);
+const sampleTokens: Token[] = [
+  "Sample token",
+  "Another one",
+  "Third token name",
+  "Fourth",
+  "Fifth token",
+  "Sixth one",
+].map((name, index) => ({
+  chainId: 0,
+  address: `0x${String(index + 1).padStart(40, "0")}`,
+  name,
+  symbol: "TKN",
+  decimals: 18,
+}));
 
 const rowClassName = "flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left";
 
@@ -187,7 +192,7 @@ function TokenPicker({
 
   const tokens = useMemo(
     () => allTokens.filter((t) => t.chainId === chainId),
-    [allTokens, chainId]
+    [allTokens, chainId],
   );
   const rpc = useTokenBalances(tokens, {
     chainId,
@@ -195,7 +200,7 @@ function TokenPicker({
   });
   const balances = useMemo(
     () => (balancesProp ? toBalanceMap(balancesProp) : rpc.balances),
-    [balancesProp, rpc.balances]
+    [balancesProp, rpc.balances],
   );
 
   useEffect(() => {
@@ -241,7 +246,9 @@ function TokenPicker({
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">Search by name, symbol or address.</DialogDescription>
+          <DialogDescription className="sr-only">
+            Search by name, symbol or address.
+          </DialogDescription>
         </DialogHeader>
 
         <Command
@@ -291,7 +298,10 @@ function TokenPicker({
                   label={token.symbol}
                   onSelect={() => select(token)}
                   aria-current={(value !== undefined && key(value) === key(token)) || undefined}
-                  className={cn(rowClassName, "cursor-pointer aria-[current]:bg-muted data-highlighted:bg-accent")}
+                  className={cn(
+                    rowClassName,
+                    "cursor-pointer aria-[current]:bg-muted data-highlighted:bg-accent",
+                  )}
                 >
                   <TokenRowContent
                     token={token}

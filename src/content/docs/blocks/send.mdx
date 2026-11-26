@@ -37,16 +37,16 @@ Native currency (`NATIVE_TOKEN_ADDRESS`) is sent as a value transfer. ERC-20s ca
 import { sendBlocker, sendRequest } from "@/components/send";
 
 const blocker = sendBlocker(draft, { recipientPhase, insufficient }); // "Enter an amount" | undefined
-const request = sendRequest({ recipient, amount, token });            // { transaction } | { contract }
+const request = sendRequest({ recipient, amount, token }); // { transaction } | { contract }
 ```
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `tokens` | `Token[]` | — | Sendable tokens. One token locks the picker. |
-| `defaultToken` | `Token` | first token | Initial token. |
-| `popular` | `string[]` | — | Quick picks. |
-| `prices` | `Record<symbol, number>` | — | Fiat values. |
-| `onSubmitted` / `onSuccess` | — | — | Transaction callbacks. |
-| `title` | `ReactNode` | `"Send"` | Heading. `null` hides it. |
+| Prop                        | Type                     | Default     | Description                                  |
+| --------------------------- | ------------------------ | ----------- | -------------------------------------------- |
+| `tokens`                    | `Token[]`                | —           | Sendable tokens. One token locks the picker. |
+| `defaultToken`              | `Token`                  | first token | Initial token.                               |
+| `popular`                   | `string[]`               | —           | Quick picks.                                 |
+| `prices`                    | `Record<symbol, number>` | —           | Fiat values.                                 |
+| `onSubmitted` / `onSuccess` | —                        | —           | Transaction callbacks.                       |
+| `title`                     | `ReactNode`              | `"Send"`    | Heading. `null` hides it.                    |

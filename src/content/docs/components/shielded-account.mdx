@@ -19,7 +19,10 @@ The demo account is locked. Its password is `password`.
 It talks to a [shielded engine](/components/shielded-engine/), which holds the recovery phrase. These demos run on the [mock engine](/components/mock-shielded-engine/).
 
 <Aside type="caution" title="Before you ship this">
-  A recovery phrase in a browser can be read by any script on the page, including extensions and compromised dependencies. Review your own setup (content security policy, third-party scripts, where the engine stores the encrypted phrase) before real funds depend on it. This component has not had an independent security review.
+  A recovery phrase in a browser can be read by any script on the page, including extensions and
+  compromised dependencies. Review your own setup (content security policy, third-party scripts,
+  where the engine stores the encrypted phrase) before real funds depend on it. This component has
+  not had an independent security review.
 </Aside>
 
 ## Installation
@@ -82,15 +85,15 @@ The forms are exported for your own layout: `ShieldedAccountCreateForm`, `Shield
 
 ## States
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `none` | "Create a private account", with a link to import a recovery phrase instead. |
-| `creating` | The form disabled, "Creating account…", "This takes a few seconds." |
-| `backup` | The recovery phrase, hidden until revealed, and a checkbox to confirm it is saved. |
-| `importing` | The import form disabled, "Importing account…". |
-| `locked` | A password field and **Unlock**. A wrong password shows under the field. |
-| `unlocking` | "Unlocking…". |
-| `unlocked` | `children`, or a line with the private address and **Lock**. |
+| `data-phase` | What the user sees                                                                 |
+| ------------ | ---------------------------------------------------------------------------------- |
+| `none`       | "Create a private account", with a link to import a recovery phrase instead.       |
+| `creating`   | The form disabled, "Creating account…", "This takes a few seconds."                |
+| `backup`     | The recovery phrase, hidden until revealed, and a checkbox to confirm it is saved. |
+| `importing`  | The import form disabled, "Importing account…".                                    |
+| `locked`     | A password field and **Unlock**. A wrong password shows under the field.           |
+| `unlocking`  | "Unlocking…".                                                                      |
+| `unlocked`   | `children`, or a line with the private address and **Lock**.                       |
 
 Every submit button names what is missing: "Enter a password", "Use at least 8 characters", "Passwords don't match", "Enter all 12 or 24 words (5 so far)".
 
@@ -98,7 +101,7 @@ Nothing renders on the server. The account lives in the browser, and a locked ac
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `children` | `ReactNode` | — | Shown once unlocked, in place of the address line. |
-| `onUnlocked` | `(address: string) => void` | — | Called when the account becomes usable: unlocked, imported, or created and backed up. |
+| Prop         | Type                        | Default | Description                                                                           |
+| ------------ | --------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| `children`   | `ReactNode`                 | —       | Shown once unlocked, in place of the address line.                                    |
+| `onUnlocked` | `(address: string) => void` | —       | Called when the account becomes usable: unlocked, imported, or created and backed up. |

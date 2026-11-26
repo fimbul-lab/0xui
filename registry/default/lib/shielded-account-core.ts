@@ -123,7 +123,8 @@ export const MIN_PASSWORD_LENGTH = 8;
 /** Why a new password can't be used yet, as button text, or undefined when it's fine. */
 export function passwordBlocker(password: string, confirmation: string) {
   if (!password) return "Enter a password";
-  if (password.length < MIN_PASSWORD_LENGTH) return `Use at least ${MIN_PASSWORD_LENGTH} characters`;
+  if (password.length < MIN_PASSWORD_LENGTH)
+    return `Use at least ${MIN_PASSWORD_LENGTH} characters`;
   if (password !== confirmation) return "Passwords don't match";
   return undefined;
 }

@@ -40,9 +40,7 @@ export function ExplorerLink({
   className,
   ...props
 }: ExplorerLinkProps) {
-  const target = (
-    address ? { address } : tx ? { tx } : { block }
-  ) as ExplorerTarget;
+  const target = (address ? { address } : tx ? { tx } : { block }) as ExplorerTarget;
   const { href, explorerName } = useExplorerLink(target, chainId);
   const Icon = icon === false ? null : (icon ?? ExternalLinkIcon);
 
@@ -55,10 +53,7 @@ export function ExplorerLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn(
-        "inline-flex items-center gap-1 underline-offset-4 hover:underline",
-        className
-      )}
+      className={cn("inline-flex items-center gap-1 underline-offset-4 hover:underline", className)}
       {...props}
     >
       {children ?? `View on ${explorerName ?? "explorer"}`}

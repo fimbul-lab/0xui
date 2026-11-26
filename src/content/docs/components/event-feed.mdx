@@ -47,20 +47,20 @@ Headless: `useEventFeed(params)` returns `events`, newest first and deduplicated
 ```tsx
 <EventFeed address={pool} abi={poolAbi} eventName="Swap" initialEvents={eventsFromYourIndex} />
 ```
-</Aside>
 
+</Aside>
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `address` | `Address` | — | Contract. |
-| `abi` | `Abi` | — | ABI with the event. |
-| `eventName` | `string` | all | Event to follow. |
-| `args` | `object` | — | Indexed-argument filter. |
-| `chainId` | `number` | current | Chain. |
-| `historyBlocks` | `number` | `0` | Recent blocks to load first. |
-| `max` | `number` | `20` | Events kept. |
-| `initialEvents` | `FeedEvent[]` | — | Past events from your own source. |
-| `renderEvent` | `(event) => ReactNode` | — | Custom row. |
-| `title` | `ReactNode` | `"Live events"` | Heading. `null` hides it. |
+| Prop            | Type                   | Default         | Description                       |
+| --------------- | ---------------------- | --------------- | --------------------------------- |
+| `address`       | `Address`              | —               | Contract.                         |
+| `abi`           | `Abi`                  | —               | ABI with the event.               |
+| `eventName`     | `string`               | all             | Event to follow.                  |
+| `args`          | `object`               | —               | Indexed-argument filter.          |
+| `chainId`       | `number`               | current         | Chain.                            |
+| `historyBlocks` | `number`               | `0`             | Recent blocks to load first.      |
+| `max`           | `number`               | `20`            | Events kept.                      |
+| `initialEvents` | `FeedEvent[]`          | —               | Past events from your own source. |
+| `renderEvent`   | `(event) => ReactNode` | —               | Custom row.                       |
+| `title`         | `ReactNode`            | `"Live events"` | Heading. `null` hides it.         |

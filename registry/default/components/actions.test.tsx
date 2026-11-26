@@ -339,7 +339,9 @@ describe("agent", () => {
     await screen.findByRole("button", { name: "Switch to Sepolia" });
     expect(named("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia");
     const step = { steps: [{ ref: "Switch to Sepolia", action: "press" }] };
-    expect((await agent.act(step)).error?.message).toContain("Asks your wallet to switch to Sepolia");
+    expect((await agent.act(step)).error?.message).toContain(
+      "Asks your wallet to switch to Sepolia",
+    );
     expect(config.state.chainId).toBe(1);
     approve = true;
     expect((await agent.act(step)).ok).toBe(true);
@@ -401,21 +403,33 @@ describe("agent", () => {
     );
     await act(() => connectMock(config));
     await screen.findByRole("button", { name: "Approve USDC" });
-    expect(named("Approve USDC")?.confirm).toBe(
-      `Approve USDC: lets ${router} spend up to 50 USDC`,
-    );
+    expect(named("Approve USDC")?.confirm).toBe(`Approve USDC: lets ${router} spend up to 50 USDC`);
     expect((await agent.act({ steps: [{ ref: "Approve USDC", action: "press" }] })).ok).toBe(false);
   });
 
   it.each([
-    [{ unlimited: true }, usdc, `Approve USDC: lets ${router} spend all of your USDC, with no limit`],
-    [{}, { address: usdc.address, symbol: "USDC" }, `Approve USDC: lets ${router} spend up to 50000000 base units of USDC`],
+    [
+      { unlimited: true },
+      usdc,
+      `Approve USDC: lets ${router} spend all of your USDC, with no limit`,
+    ],
+    [
+      {},
+      { address: usdc.address, symbol: "USDC" },
+      `Approve USDC: lets ${router} spend up to 50000000 base units of USDC`,
+    ],
   ])("states the approval's size in its confirm (%o)", async (props, token, sentence) => {
     const config = createTestConfig({
       rpc: { ...fakeChainRpc(), eth_call: erc20CallRpc({ allowance: 0n }) },
     });
     renderWithWagmi(
-      <ApproveButton token={token} spender={router} amount={parseUnits("50", 6)} chainId={1} {...props}>
+      <ApproveButton
+        token={token}
+        spender={router}
+        amount={parseUnits("50", 6)}
+        chainId={1}
+        {...props}
+      >
         Swap
       </ApproveButton>,
       { config },

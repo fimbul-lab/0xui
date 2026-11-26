@@ -41,7 +41,7 @@ export const Default = shieldedDemo(
       </div>
     );
   },
-  { timings: { ...quickStart, standby: standby * 1_000 } }
+  { timings: { ...quickStart, standby: standby * 1_000 } },
 );
 
 /** A shield the engine already knows about. This hash is not on any chain. */
@@ -68,7 +68,7 @@ export const Restricted = shieldedDemo(
       },
     ],
     timings: quickStart,
-  }
+  },
 );
 
 /** A shield the engine has found and is holding for the standby period. Not on any chain. */
@@ -96,5 +96,5 @@ export const Line = shieldedDemo(
       },
     ],
     timings: quickStart,
-  }
+  },
 );

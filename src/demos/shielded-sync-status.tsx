@@ -26,13 +26,13 @@ export const Default = shieldedDemo(
     );
   },
   // Four times faster than the 40 s a first scan really takes.
-  { speed: 4 }
+  { speed: 4 },
 );
 
-export const Failed = shieldedDemo(
-  () => <ShieldedSyncStatus chainId={1} className="max-w-sm" />,
-  { speed: 4, setup: (engine) => engine.simulate.failNextSync("RPC returned 429: too many requests.") }
-);
+export const Failed = shieldedDemo(() => <ShieldedSyncStatus chainId={1} className="max-w-sm" />, {
+  speed: 4,
+  setup: (engine) => engine.simulate.failNextSync("RPC returned 429: too many requests."),
+});
 
 export const Inline = shieldedDemo(() => <ShieldedSyncStatus chainId={1} variant="inline" />, {
   speed: 4,

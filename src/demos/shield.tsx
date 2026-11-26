@@ -41,7 +41,7 @@ const shieldDemo = (variant: ShieldProps["variant"]) =>
       );
     },
     // The standby period is 20 s here, not the real 60.
-    { timings: { ...quickStart, standby: 20_000 } }
+    { timings: { ...quickStart, standby: 20_000 } },
   );
 
 export const Default = shieldDemo("in-place");

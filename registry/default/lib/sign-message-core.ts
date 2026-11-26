@@ -57,7 +57,12 @@ export type MessageSigner = {
 /** Signs messages (EIP-191) and typed data (EIP-712) with the connected wallet. Framework-free. */
 export function createMessageSigner(config: Config): MessageSigner {
   const store = createStore<MessageSignerState>(
-    { phase: "idle", signature: undefined, error: undefined, address: getConnection(config).address },
+    {
+      phase: "idle",
+      signature: undefined,
+      error: undefined,
+      address: getConnection(config).address,
+    },
     (store) => {
       store.set({ address: getConnection(config).address });
       return watchConnection(config, {

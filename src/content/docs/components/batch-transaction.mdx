@@ -27,7 +27,11 @@ import { BatchTransaction } from "@/components/batch-transaction";
 <BatchTransaction
   chainId={8453}
   calls={[
-    { label: "Approve USDC", to: usdc, data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [router, amount] }) },
+    {
+      label: "Approve USDC",
+      to: usdc,
+      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [router, amount] }),
+    },
     { label: "Swap", to: router, data: swapData },
   ]}
 >
@@ -37,11 +41,11 @@ import { BatchTransaction } from "@/components/batch-transaction";
 
 ## Modes
 
-| `mode` | Behavior |
-| --- | --- |
-| `"auto"` (default) | Atomic if the wallet reports `atomic` support on the chain, otherwise sequential. |
-| `"atomic"` | Always `wallet_sendCalls`. The wallet may reject it if it can't batch. |
-| `"sequential"` | One transaction per call, each waiting to be mined. Stops at the first revert or cancel. |
+| `mode`             | Behavior                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| `"auto"` (default) | Atomic if the wallet reports `atomic` support on the chain, otherwise sequential.        |
+| `"atomic"`         | Always `wallet_sendCalls`. The wallet may reject it if it can't batch.                   |
+| `"sequential"`     | One transaction per call, each waiting to be mined. Stops at the first revert or cancel. |
 
 Sequential, for comparison:
 
