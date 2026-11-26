@@ -73,12 +73,20 @@ export function installCommand(names: Array<string>) {
   return `${runner} add ${names.map((name) => `@0xui/${name}`).join(" ")}`;
 }
 
-const asideLabels: Record<string, string> = {
-  note: "Note",
-  tip: "Tip",
-  caution: "Caution",
-  danger: "Danger",
-};
+function asideLabel(type: string) {
+  switch (type) {
+    case "note":
+      return "Note";
+    case "tip":
+      return "Tip";
+    case "caution":
+      return "Caution";
+    case "danger":
+      return "Danger";
+    default:
+      return "Note";
+  }
+}
 
 function attribute(tag: string, name: string) {
   return tag.match(new RegExp(`${name}="([^"]*)"`))?.[1];
@@ -154,7 +162,7 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
     } else if (name === "Aside") {
       const type = attribute(open, "type") ?? "note";
       const title = attribute(open, "title");
-      const label = asideLabels[type] ?? "Note";
+      const label = asideLabel(type);
       out.push(`> **${title ? `${label}: ${title}` : label}**`, ">");
       for (const child of children) {
         out.push(`> ${rewriteLinks(child.trim())}`.trimEnd());

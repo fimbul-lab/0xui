@@ -14,15 +14,19 @@ const llms = `# 0xui
 - [Swap](https://0xui.io/blocks/swap.md): Swap form with quotes and an approval step.
 `;
 
-const files: Record<string, string> = {
+const files = {
   "/llms.txt": llms,
   "/components/balance.md": "# Balance",
   "/blocks/swap.md": "# Swap",
   "/r/balance.json": JSON.stringify({ name: "balance", dependencies: ["wagmi"] }),
-};
+} satisfies Record<string, string>;
+
+function hasOwnKey<T extends object>(record: T, key: string): key is Extract<keyof T, string> {
+  return Object.hasOwn(record, key);
+}
 
 const fetch = vi.fn(async (url: string) =>
-  url in files ? new Response(files[url]) : new Response("Not found", { status: 404 }),
+  hasOwnKey(files, url) ? new Response(files[url]) : new Response("Not found", { status: 404 }),
 );
 
 function tool(name: string, pagefind?: DocsToolsOptions["pagefind"]) {

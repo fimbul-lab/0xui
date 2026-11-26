@@ -111,20 +111,30 @@ function destructured(declaration: ts.Declaration) {
   return defaults;
 }
 
-const elementNames: Record<string, string> = {
-  Anchor: "a",
-  Button: "button",
-  Div: "div",
-  Input: "input",
-  Span: "span",
-  "": "HTML",
-};
+function elementName(tag: string) {
+  switch (tag) {
+    case "Anchor":
+      return "a";
+    case "Button":
+      return "button";
+    case "Div":
+      return "div";
+    case "Input":
+      return "input";
+    case "Span":
+      return "span";
+    case "":
+      return "HTML";
+    default:
+      return tag.toLowerCase();
+  }
+}
 
 function domElement(types: Array<string>) {
   for (const text of types) {
     const tag = text.match(/\bHTML(\w*)Element\b/)?.[1];
     if (tag !== undefined) {
-      return elementNames[tag] ?? tag.toLowerCase();
+      return elementName(tag);
     }
   }
   return "HTML";
