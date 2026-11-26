@@ -63,7 +63,6 @@ export default defineConfig({
     "unicorn/prefer-number-properties": "off",
     "unicorn/prefer-set-has": "off",
     "unicorn/prefer-single-call": "off",
-    "unicorn/prefer-string-raw": "off",
     "unicorn/prefer-top-level-await": "off",
     // Temporarily off: the test rewrite onto real implementations turns it on.
     "landmines/no-test-doubles": "off",
