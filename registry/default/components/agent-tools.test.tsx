@@ -191,7 +191,9 @@ describe("agentPermissions", () => {
   });
 });
 
-type Registered = Omit<AgentTool, "execute"> & { execute: (input: object) => Promise<any> };
+type Registered = Omit<AgentTool, "execute"> & {
+  execute: (input: Record<string, unknown>) => Promise<any>;
+};
 
 describe("AgentTools", () => {
   let tools: Map<string, Registered>;
