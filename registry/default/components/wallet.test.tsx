@@ -24,9 +24,7 @@ const recipient = testAccounts[1];
 
 /** A fake chain that has already received a transaction from the test account. */
 function sentTransaction(chain: ReturnType<typeof fakeChainRpc>) {
-  (chain.eth_sendTransaction as (params: unknown) => unknown)([
-    { from: testAccounts[0], to: recipient },
-  ]);
+  chain.eth_sendTransaction([{ from: testAccounts[0], to: recipient }]);
   return chain;
 }
 
@@ -351,8 +349,7 @@ describe("TransactionStatus", () => {
     const config = createTestConfig({
       rpc: {
         ...chain,
-        eth_getTransactionReceipt: () =>
-          mined ? (chain.eth_getTransactionReceipt as () => unknown)() : null,
+        eth_getTransactionReceipt: () => (mined ? chain.eth_getTransactionReceipt() : null),
       },
     });
     renderWithWagmi(

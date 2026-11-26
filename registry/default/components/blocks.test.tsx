@@ -112,7 +112,7 @@ describe("Send", () => {
     const user = userEvent.setup();
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
@@ -251,7 +251,7 @@ describe("BatchTransaction", () => {
     const user = userEvent.setup();
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: { ...chain, eth_sendTransaction: (p: unknown) => (sent(), send(p)) },
     });
@@ -549,9 +549,7 @@ describe("TransactionHistory", () => {
 
   it("lists recorded transactions and tracks their status", async () => {
     const chain = fakeChainRpc();
-    (chain.eth_sendTransaction as (p: unknown) => unknown)([
-      { from: testAccounts[0], to: recipient },
-    ]);
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: recipient }]);
     renderWithWagmi(<TransactionHistory from={null} />, {
       config: createTestConfig({ rpc: chain }),
     });
@@ -882,7 +880,7 @@ describe("Agents", () => {
   it("sends: fills recipient, token and amount, and needs a person to press Send", async () => {
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
@@ -1008,7 +1006,7 @@ describe("Agents", () => {
     function setup() {
       const sent = vi.fn();
       const chain = fakeChainRpc();
-      const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+      const send = chain.eth_sendTransaction;
       const config = createTestConfig({
         rpc: {
           ...chain,

@@ -109,11 +109,20 @@ export const fakeTxHash = `0x${"ab".repeat(32)}` as const;
  * mined in block 100 with `status`. Spread it into `rpc` and override
  * methods as needed, e.g. `eth_sendTransaction` to reject.
  */
+/** The sender and recipient of the transaction in eth_sendTransaction's params. */
+function sentTransaction(params: unknown) {
+  const tx: unknown = Array.isArray(params) ? params[0] : undefined;
+  if (typeof tx !== "object" || tx === null || !("to" in tx) || typeof tx.to !== "string") {
+    throw new Error("eth_sendTransaction needs a transaction with a `to` address.");
+  }
+  return { from: "from" in tx && typeof tx.from === "string" ? tx.from : undefined, to: tx.to };
+}
+
 export function fakeChainRpc({
   status = "success",
   chainId = 1,
-}: { status?: "success" | "reverted"; chainId?: number } = {}): RpcResponses {
-  let sent: { from: string; to: string } | undefined;
+}: { status?: "success" | "reverted"; chainId?: number } = {}) {
+  let sent: ReturnType<typeof sentTransaction> | undefined;
   let block = 100;
   return {
     eth_chainId: `0x${chainId.toString(16)}`,
@@ -129,8 +138,8 @@ export function fakeChainRpc({
       baseFeePerGas: "0x3b9aca00",
       transactions: [],
     },
-    eth_sendTransaction: ([tx]: [{ from: string; to: string }]) => {
-      sent = tx;
+    eth_sendTransaction: (params: unknown) => {
+      sent = sentTransaction(params);
       return fakeTxHash;
     },
     eth_getTransactionByHash: () =>
@@ -170,7 +179,7 @@ export function fakeChainRpc({
         status: status === "success" ? "0x1" : "0x0",
         type: "0x2",
       },
-  };
+  } satisfies RpcResponses;
 }
 
 /**

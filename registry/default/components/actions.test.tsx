@@ -56,7 +56,7 @@ describe("ApproveButton", () => {
     const user = userEvent.setup();
     let allowance = 0n;
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
@@ -112,7 +112,7 @@ describe("ApproveButton", () => {
     let allowance = parseUnits("5", 6);
     const approved: Array<bigint> = [];
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
@@ -293,9 +293,7 @@ describe("useTransactionToast", () => {
     expect(screen.getByText(`Send (${status})`)).toBeInTheDocument();
 
     // Now the transaction lands on chain.
-    (chain.eth_sendTransaction as (p: unknown) => unknown)([
-      { from: testAccounts[0], to: testAccounts[1] },
-    ]);
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: testAccounts[1] }]);
     const settled = await screen.findByText(heading, {}, { timeout: 5000 });
     // The shared toast queue is global, so earlier tests' toasts may still be showing.
     const toastEl = settled.closest<HTMLElement>("[data-slot=toast]");
@@ -483,9 +481,7 @@ describe("agent", () => {
     expect(entry.buttons).toContain("View");
 
     // Let it settle before the host unmounts.
-    (chain.eth_sendTransaction as (p: unknown) => unknown)([
-      { from: testAccounts[0], to: testAccounts[1] },
-    ]);
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: testAccounts[1] }]);
     const settled = await screen.findByText("Agent test send", {}, { timeout: 5000 });
     await waitFor(
       () => expect(settled.closest("[data-slot=toast]")).toHaveTextContent("Transaction confirmed"),

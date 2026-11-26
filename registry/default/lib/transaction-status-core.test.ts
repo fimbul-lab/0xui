@@ -13,9 +13,7 @@ const receipt = (status: "success" | "reverted") =>
 describe("minedReceiptQueryOptions", () => {
   it("resolves a reverted transaction with its receipt instead of throwing", async () => {
     const chain = fakeChainRpc({ status: "reverted" });
-    (chain.eth_sendTransaction as (params: unknown) => unknown)([
-      { from: testAccounts[0], to: testAccounts[1] },
-    ]);
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: testAccounts[1] }]);
     const config = createTestConfig({ rpc: chain });
     const options = minedReceiptQueryOptions(config, { hash: fakeTxHash, chainId: 1 });
 

@@ -217,7 +217,7 @@ describe("AgentTools", () => {
     agentConfirm?: string | false,
   ) {
     const rpc = fakeChainRpc();
-    const accept = rpc.eth_sendTransaction as (params: unknown) => unknown;
+    const accept = rpc.eth_sendTransaction;
     /** Transactions the wallet sent. */
     const sent: Array<unknown> = [];
     const wagmi = createTestConfig({

@@ -21,7 +21,7 @@ describe("createBatchTransaction", () => {
   it("sends one transaction per call when the wallet can't batch", async () => {
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: { ...chain, eth_sendTransaction: (p: unknown) => (sent(), send(p)) },
     });

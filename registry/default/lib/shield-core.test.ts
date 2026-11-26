@@ -31,7 +31,7 @@ type Sent = { to: Address; data?: `0x${string}` };
 function walletConfig({ sent, reject }: { sent: Array<Sent>; reject?: boolean }) {
   let allowance = 0n;
   const chain = fakeChainRpc();
-  const send = chain.eth_sendTransaction as (params: unknown) => unknown;
+  const send = chain.eth_sendTransaction;
   return createTestConfig({
     features: reject ? { signMessageError: true } : undefined,
     rpc: {

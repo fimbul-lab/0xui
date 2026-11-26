@@ -23,9 +23,7 @@ describe("toastTransaction", () => {
         action: { label: "View", href: `https://etherscan.io/tx/${fakeTxHash}` },
       });
 
-      (chain.eth_sendTransaction as (p: unknown) => unknown)([
-        { from: testAccounts[0], to: testAccounts[1] },
-      ]);
+      chain.eth_sendTransaction([{ from: testAccounts[0], to: testAccounts[1] }]);
       await vi.waitFor(() => expect(toaster.toasts()[0]).toMatchObject({ id, type, title }));
       expect(onConfirmed).toHaveBeenCalledTimes(confirmedCalls);
     },
@@ -37,9 +35,7 @@ describe("toastTransaction", () => {
     const id = toastTransaction(createTestConfig({ rpc: chain }), fakeTxHash, { toaster });
     toaster.dismiss(id);
 
-    (chain.eth_sendTransaction as (p: unknown) => unknown)([
-      { from: testAccounts[0], to: testAccounts[1] },
-    ]);
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: testAccounts[1] }]);
     await vi.waitFor(() =>
       expect(toaster.toasts().find((t) => t.id === id)).toMatchObject({ type: "success" }),
     );

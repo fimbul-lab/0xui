@@ -493,9 +493,7 @@ describe("AddressInput with private addresses", () => {
 function minedRpc(status: "success" | "reverted" = "success"): RpcResponses {
   const chain = fakeChainRpc({ status });
   // Sending is what makes the fake chain know the hash.
-  (chain.eth_sendTransaction as (params: unknown) => unknown)([
-    { from: testAccounts[0], to: MOCK_SHIELD_CONTRACT },
-  ]);
+  chain.eth_sendTransaction([{ from: testAccounts[0], to: MOCK_SHIELD_CONTRACT }]);
   return {
     ...chain,
     eth_getBlockByNumber: {
@@ -741,7 +739,7 @@ describe("Shield", () => {
     status?: "success" | "reverted";
   } = {}) {
     const chain = fakeChainRpc({ status });
-    const send = chain.eth_sendTransaction as (params: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     return createTestConfig({
       features,
       capabilities,
