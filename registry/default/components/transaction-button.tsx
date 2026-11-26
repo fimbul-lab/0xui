@@ -224,7 +224,7 @@ export function TransactionButton({
   }, [simulate, phase, resimulate]);
 
   let label: ReactNode = children;
-  let action: (() => unknown) | undefined;
+  let action: (() => void) | undefined;
   // What an agent must ask the person before pressing: the transaction by
   // default, the network switch while that's what the button does, and
   // nothing while it only opens the wallet picker (connecting asks there).

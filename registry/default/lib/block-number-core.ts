@@ -18,7 +18,7 @@ export function blockNumberQueryOptions(config: Config, { chainId }: { chainId?:
  */
 export function watchBlockNumberQuery(
   config: Config,
-  queryClient: { setQueryData(queryKey: ReadonlyArray<unknown>, data: bigint): unknown },
+  queryClient: { setQueryData(queryKey: ReadonlyArray<unknown>, data: bigint): void },
   { chainId }: { chainId?: number } = {},
 ) {
   const id = chainId ?? getChainId(config);

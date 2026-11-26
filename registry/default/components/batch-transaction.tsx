@@ -104,7 +104,7 @@ export function BatchTransaction({
 
   const chainName = batch.targetChain?.name ?? "the selected network";
   let label: ReactNode = children;
-  let action: (() => unknown) | undefined = batch.execute;
+  let action: (() => void) | undefined = batch.execute;
   // What a person confirms before an agent's press reaches the wallet.
   let confirm: string | undefined =
     agentConfirm === false
