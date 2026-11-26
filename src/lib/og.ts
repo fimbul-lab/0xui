@@ -230,9 +230,6 @@ function homeCard(): string {
   out.push(
     mark(left, base - cap - 6, markH),
     runs([["0x", { fill: c.gray3 }], ["ui"]], { ...big, x: left + markW + gap, y: base }).svg,
-  );
-
-  out.push(
     text("Web3 components you own.", {
       family: "mono",
       size: 33,

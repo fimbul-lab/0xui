@@ -240,10 +240,8 @@ export function bannerA(): string {
     `</g>`,
     chip(getY + 35, "USDC", usdc),
     `</g>`,
-  );
 
-  // Switch tokens.
-  out.push(
+    // Switch tokens.
     `<g class="${piece(3)}">`,
     rect(cx + cw / 2 - 18, payY + panelH + 3 - 18, 36, 36, {
       r: 11,
