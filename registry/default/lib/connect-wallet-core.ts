@@ -73,7 +73,9 @@ export function createConnectWallet(config: Config): ConnectWalletController {
       const sync = () => store.set({ wallets: walletOptions(getConnectors(config), recentId) });
       void Promise.resolve(config.storage?.getItem("recentConnectorId")).then((id) => {
         recentId = id ?? undefined;
-        if (active) sync();
+        if (active) {
+          sync();
+        }
       });
       const stop = watchConnectors(config, { onChange: sync });
       sync();

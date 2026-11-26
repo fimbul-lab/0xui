@@ -677,14 +677,16 @@ describe("NftCard", () => {
     const config = createTestConfig({
       rpc: {
         eth_call: ([{ data }]: [{ data: string }]) => {
-          if (data.startsWith("0xc87b56dd"))
+          if (data.startsWith("0xc87b56dd")) {
             return encodeFunctionResult({ abi: nftAbi, functionName: "tokenURI", result: uri });
-          if (data.startsWith("0x06fdde03"))
+          }
+          if (data.startsWith("0x06fdde03")) {
             return encodeFunctionResult({
               abi: nftAbi,
               functionName: "name",
               result: "Bored Ape Yacht Club",
             });
+          }
           throw new Error("execution reverted");
         },
       },
@@ -704,12 +706,13 @@ describe("NftCard", () => {
     const config = createTestConfig({
       rpc: {
         eth_call: ([{ data }]: [{ data: string }]) => {
-          if (data.startsWith("0xc87b56dd"))
+          if (data.startsWith("0xc87b56dd")) {
             return encodeFunctionResult({
               abi: nftAbi,
               functionName: "tokenURI",
               result: "data:application/json,{broken",
             });
+          }
           throw new Error("execution reverted");
         },
       },
@@ -830,7 +833,9 @@ describe("Agents", () => {
   const asked: Array<string> = [];
   const agent = createAgent({
     allow: (step) => {
-      if (step.confirm) asked.push(step.confirm);
+      if (step.confirm) {
+        asked.push(step.confirm);
+      }
       return !step.confirm || approve;
     },
   });
@@ -844,15 +849,20 @@ describe("Agents", () => {
   const entry = (label: string) => onPage().find((e) => e.label === label);
   const expectNamed = (labels: Array<string>) => {
     const components = onPage();
-    for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    for (const e of components) {
+      expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    }
     const names = components.map((e) => e.label);
-    for (const label of labels)
+    for (const label of labels) {
       expect(names, `${label} is missing from the snapshot`).toContain(label);
+    }
   };
   /** The value of the item named `text` in the list labelled `within`, as an agent finds it. */
   const pick = async (within: string, text: string) => {
     const found = await act(() => agent.query({ within, text }));
-    if ("error" in found) throw new Error(found.error);
+    if ("error" in found) {
+      throw new Error(found.error);
+    }
     const value = found[0]?.items?.[0]?.value;
     expect(value, `${text} isn't in ${within}`).toBeDefined();
     return value;
@@ -1164,7 +1174,9 @@ describe("Agents", () => {
 
     const rowsOf = async (text: string) => {
       const found = await act(() => agent.query({ text }));
-      if ("error" in found) throw new Error(found.error);
+      if ("error" in found) {
+        throw new Error(found.error);
+      }
       return found.flatMap((e) => (e.items ?? []).map((item) => `${e.label}: ${item.label}`));
     };
     expect(await rowsOf("Ether")).toEqual([
@@ -1199,9 +1211,13 @@ function collisions(labels: ReadonlyArray<string>) {
   const found: Array<string> = [];
   labels.forEach((a, i) =>
     labels.forEach((b, j) => {
-      if (i === j) return;
+      if (i === j) {
+        return;
+      }
       const wb = words(b);
-      if ([...words(a)].every((w) => wb.has(w))) found.push(`${a} / ${b}`);
+      if ([...words(a)].every((w) => wb.has(w))) {
+        found.push(`${a} / ${b}`);
+      }
     }),
   );
   return found;

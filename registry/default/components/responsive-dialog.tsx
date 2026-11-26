@@ -16,7 +16,9 @@ import {
 export function useMediaQuery(query: string) {
   const subscribe = useCallback(
     (onChange: () => void) => {
-      if (typeof window.matchMedia !== "function") return () => {};
+      if (typeof window.matchMedia !== "function") {
+        return () => {};
+      }
       const media = window.matchMedia(query);
       media.addEventListener("change", onChange);
       return () => media.removeEventListener("change", onChange);

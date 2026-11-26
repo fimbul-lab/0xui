@@ -108,7 +108,9 @@ export function ContractFunction({
             onSubmit={(e) => {
               e.preventDefault();
               setTouched(true);
-              if (kind === "read" && !draft.blocker) read.mutate(draft.args);
+              if (kind === "read" && !draft.blocker) {
+                read.mutate(draft.args);
+              }
             }}
           >
             {fn.inputs.map((input, i) => {

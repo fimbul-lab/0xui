@@ -45,7 +45,9 @@ export function toastTransaction<Content>(
   // A toast closed while pending comes back for the outcome.
   const settle = (next: Omit<ToastOptions, "id">) => {
     const full = { description, action, ...next };
-    if (!toaster.update(id, full)) toaster({ ...full, id });
+    if (!toaster.update(id, full)) {
+      toaster({ ...full, id });
+    }
   };
 
   if (!client) {

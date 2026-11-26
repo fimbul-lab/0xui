@@ -106,8 +106,12 @@ test("the overview pages list every listed page in their section, and no unliste
 
 test("llms.txt links every listed page and registry item, and no unlisted one", () => {
   const text = llmsTxt(docs, registry.items);
-  for (const doc of listed) expect(text).toContain(`(https://0xui.io/${doc.id}.md)`);
-  for (const doc of unlisted) expect(text).not.toContain(`/${doc.id}.md)`);
+  for (const doc of listed) {
+    expect(text).toContain(`(https://0xui.io/${doc.id}.md)`);
+  }
+  for (const doc of unlisted) {
+    expect(text).not.toContain(`/${doc.id}.md)`);
+  }
   const unlistedNames = new Set(unlisted.map((doc) => doc.id.split("/")[1]));
   for (const item of registry.items.filter(
     (item) => item.type !== "registry:example" && !unlistedNames.has(item.name),

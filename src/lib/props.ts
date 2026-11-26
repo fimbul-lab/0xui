@@ -49,7 +49,9 @@ let cached: ts.Program | undefined;
 
 /** One program over every item's main file, built on first use. */
 function program() {
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const configPath = join(root, "tsconfig.json");
   const config = ts.readConfigFile(configPath, ts.sys.readFile);
   const { options } = ts.parseJsonConfigFileContent(config.config, ts.sys, root, {}, configPath);
@@ -63,11 +65,17 @@ function program() {
 type Origin = { kind: "own" | "local" | "package" | "dom"; label?: string };
 
 function origin(file: string, mainFile: string): Origin {
-  if (file === mainFile) return { kind: "own" };
+  if (file === mainFile) {
+    return { kind: "own" };
+  }
   const path = relative(root, file).split(sep).join("/");
   const pkg = path.match(/node_modules\/((?:@[^/]+\/)?[^/]+)/)?.[1];
-  if (pkg === "@types/react") return { kind: "dom" };
-  if (pkg) return { kind: "package", label: pkg };
+  if (pkg === "@types/react") {
+    return { kind: "dom" };
+  }
+  if (pkg) {
+    return { kind: "package", label: pkg };
+  }
   return { kind: "local", label: path.replace(/^.*\//, "").replace(/\.tsx?$/, "") };
 }
 
@@ -115,7 +123,9 @@ const elementNames: Record<string, string> = {
 function domElement(types: Array<string>) {
   for (const text of types) {
     const match = text.match(/\bHTML(\w*)Element\b/);
-    if (match) return elementNames[match[1]] ?? match[1].toLowerCase();
+    if (match) {
+      return elementNames[match[1]] ?? match[1].toLowerCase();
+    }
   }
   return "HTML";
 }
@@ -123,23 +133,35 @@ function domElement(types: Array<string>) {
 /** The main component's props, or undefined when the item has no exported component of its name. */
 export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined {
   const path = item.files?.[0]?.path;
-  if (!path?.endsWith(".tsx")) return undefined;
+  if (!path?.endsWith(".tsx")) {
+    return undefined;
+  }
   const component = componentName(item.name);
   const mainFile = join(root, path);
   const prog = program();
   const checker = prog.getTypeChecker();
   const source = prog.getSourceFile(mainFile);
   const moduleSymbol = source && checker.getSymbolAtLocation(source);
-  if (!moduleSymbol) return undefined;
+  if (!moduleSymbol) {
+    return undefined;
+  }
 
   let symbol = checker.getExportsOfModule(moduleSymbol).find((s) => s.name === component);
-  if (!symbol) return undefined;
-  if (symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+  if (!symbol) {
+    return undefined;
+  }
+  if (symbol.flags & ts.SymbolFlags.Alias) {
+    symbol = checker.getAliasedSymbol(symbol);
+  }
   const declaration = symbol.valueDeclaration ?? symbol.declarations?.[0];
-  if (!declaration) return undefined;
+  if (!declaration) {
+    return undefined;
+  }
   const signature = checker.getTypeOfSymbolAtLocation(symbol, declaration).getCallSignatures()[0];
   const param = signature?.parameters[0];
-  if (!param) return { name: item.name, component, props: [] };
+  if (!param) {
+    return { name: item.name, component, props: [] };
+  }
 
   const propsType = checker.getTypeOfSymbolAtLocation(param, declaration);
   const variants = propsType.isUnion() ? propsType.types : [propsType];
@@ -187,15 +209,23 @@ export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined 
       required,
     };
     const description = docs.find((d) => d.description)?.description;
-    if (description) prop.description = description;
+    if (description) {
+      prop.description = description;
+    }
     const fallback = docs.find((d) => d.default)?.default ?? bound.get(name);
-    if (fallback) prop.default = fallback;
+    if (fallback) {
+      prop.default = fallback;
+    }
     if (best.o.kind === "dom") {
       prop.type = type.replace(/ \| undefined$/, "");
       prop.attribute = true;
     }
-    if (best.o.kind === "local") prop.from = best.o.label;
-    if (best.o.kind === "package") prop.package = best.o.label;
+    if (best.o.kind === "local") {
+      prop.from = best.o.label;
+    }
+    if (best.o.kind === "package") {
+      prop.package = best.o.label;
+    }
     props.push(prop);
   }
 

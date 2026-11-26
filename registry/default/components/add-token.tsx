@@ -49,7 +49,9 @@ export function AddToken({
 }: AddTokenProps) {
   const { phase, error, connected, add } = useAddToken(token);
 
-  if (!connected) return null;
+  if (!connected) {
+    return null;
+  }
 
   return (
     <span

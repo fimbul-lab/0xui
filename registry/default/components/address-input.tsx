@@ -131,7 +131,9 @@ export function AddressInput({
           value={value}
           onValueChange={(next) => {
             onValueChange(next);
-            if (touched) setTouched(false);
+            if (touched) {
+              setTouched(false);
+            }
           }}
           onBlur={(event) => {
             setTouched(true);

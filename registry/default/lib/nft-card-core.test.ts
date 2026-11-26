@@ -22,14 +22,16 @@ describe("nft-card", () => {
     const config = createTestConfig({
       rpc: {
         eth_call: ([{ data }]: [{ data: string }]) => {
-          if (data.startsWith("0x0e89341c"))
+          if (data.startsWith("0x0e89341c")) {
             return encodeFunctionResult({
               abi: nftAbi,
               functionName: "uri",
               result: "ipfs://Qm/{id}.json",
             });
-          if (data.startsWith("0x06fdde03"))
+          }
+          if (data.startsWith("0x06fdde03")) {
             return encodeFunctionResult({ abi: nftAbi, functionName: "name", result: "Items" });
+          }
           throw new Error("execution reverted");
         },
       },

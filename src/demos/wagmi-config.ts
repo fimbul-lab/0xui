@@ -73,7 +73,9 @@ function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }
 function demoAllowanceResult(token: Hex, data: Hex) {
   try {
     const call = decodeFunctionData({ abi: erc20Abi, data });
-    if (call.functionName !== "allowance") return undefined;
+    if (call.functionName !== "allowance") {
+      return undefined;
+    }
     const allowance = demoAllowance(token, call.args[0], call.args[1]);
     return allowance === undefined
       ? undefined
@@ -92,13 +94,17 @@ async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
   let calls: ReadonlyArray<{ target: Hex; callData: Hex }>;
   try {
     const decoded = decodeFunctionData({ abi: multicall3Abi, data });
-    if (decoded.functionName !== "aggregate3") return result;
+    if (decoded.functionName !== "aggregate3") {
+      return result;
+    }
     calls = decoded.args[0];
   } catch {
     return result;
   }
   const overrides = calls.map((c) => demoAllowanceResult(c.target, c.callData));
-  if (!overrides.some(Boolean)) return result;
+  if (!overrides.some(Boolean)) {
+    return result;
+  }
   const results = decodeFunctionResult({
     abi: multicall3Abi,
     functionName: "aggregate3",
@@ -120,8 +126,12 @@ const demoBatches = new Map<Hex, Array<Hex>>();
 function demoAllowance(token: Hex, owner: Hex, spender: Hex) {
   let allowance: bigint | undefined;
   for (const tx of demoTxs.values()) {
-    if (!isMined(tx) || tx.to.toLowerCase() !== token.toLowerCase()) continue;
-    if (tx.from.toLowerCase() !== owner.toLowerCase()) continue;
+    if (!isMined(tx) || tx.to.toLowerCase() !== token.toLowerCase()) {
+      continue;
+    }
+    if (tx.from.toLowerCase() !== owner.toLowerCase()) {
+      continue;
+    }
     try {
       const call = decodeFunctionData({ abi: erc20Abi, data: tx.data });
       if (call.functionName === "approve" && call.args[0].toLowerCase() === spender.toLowerCase()) {
@@ -248,11 +258,15 @@ function demoTransport(chain: Chain) {
       const hash = (params as [Hex] | undefined)?.[0];
       const tx = typeof hash === "string" ? demoTxs.get(hash) : undefined;
 
-      if (method === "eth_estimateGas") return "0x5208";
+      if (method === "eth_estimateGas") {
+        return "0x5208";
+      }
       if (method === "eth_call") {
         const [{ to, data }] = params as [{ to: Hex; data: Hex }];
         const direct = demoAllowanceResult(to, data);
-        if (direct) return direct;
+        if (direct) {
+          return direct;
+        }
         if (to.toLowerCase() === chain.contracts?.multicall3?.address.toLowerCase()) {
           return patchMulticall(data, () => rpc.request({ method, params } as never));
         }
@@ -278,7 +292,9 @@ function demoTransport(chain: Chain) {
         };
       }
       if (tx && method === "eth_getTransactionReceipt") {
-        if (!isMined(tx)) return null;
+        if (!isMined(tx)) {
+          return null;
+        }
         const blockNumber = await rpc.request({ method: "eth_blockNumber" });
         return {
           transactionHash: tx.hash,

@@ -82,7 +82,9 @@ export function ShieldedSyncStatus({
   className,
 }: ShieldedSyncStatusProps) {
   const { phase, stage, progress, error, isUpdate, sync } = useShieldedSync({ chainId });
-  if (phase === "idle") return null;
+  if (phase === "idle") {
+    return null;
+  }
 
   const percent = Math.round(progress * 100);
   const step = SHIELDED_SYNC_STAGES.indexOf(stage) + 1;

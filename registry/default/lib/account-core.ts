@@ -102,6 +102,8 @@ export function accountDisplayName(
 
 /** Which state a wallet button is in. "restoring" covers SSR and wagmi reconnecting on page load. */
 export function walletButtonPhase(status: ConnectionStatus, mounted: boolean): WalletButtonPhase {
-  if (!mounted || status === "reconnecting") return "restoring";
+  if (!mounted || status === "reconnecting") {
+    return "restoring";
+  }
   return status === "connected" ? "connected" : "disconnected";
 }

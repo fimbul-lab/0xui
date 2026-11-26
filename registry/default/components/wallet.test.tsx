@@ -431,7 +431,9 @@ describe("agent", () => {
         .filter(Boolean);
     for (const a of entries) {
       for (const b of entries) {
-        if (a === b) continue;
+        if (a === b) {
+          continue;
+        }
         const inside = words(a.label!).every((word) => words(b.label!).includes(word));
         expect(inside, `"${a.label}" also names "${b.label}"`).toBe(false);
       }

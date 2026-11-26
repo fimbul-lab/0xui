@@ -33,8 +33,12 @@ export type CopyButtonProps = Omit<
 
 /** The default label: what `value` looks like it is. */
 export function copyLabel(value: string) {
-  if (/^0x[0-9a-fA-F]{40}$/.test(value)) return "Copy address";
-  if (/^0x[0-9a-fA-F]{64}$/.test(value)) return "Copy hash";
+  if (/^0x[0-9a-fA-F]{40}$/.test(value)) {
+    return "Copy address";
+  }
+  if (/^0x[0-9a-fA-F]{64}$/.test(value)) {
+    return "Copy hash";
+  }
   return "Copy";
 }
 
@@ -69,7 +73,9 @@ export function CopyButton({
       title={label}
       data-copied={copied || undefined}
       onClick={async () => {
-        if (await copy(value)) onCopy?.(value);
+        if (await copy(value)) {
+          onCopy?.(value);
+        }
       }}
       // Grow the hit area past the small visual size.
       className={withClassName("relative after:absolute after:-inset-2", className)}

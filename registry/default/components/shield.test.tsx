@@ -92,7 +92,9 @@ let approve = false;
 const asked: Array<string> = [];
 const agent = createAgent({
   allow: (step) => {
-    if (step.confirm) asked.push(step.confirm);
+    if (step.confirm) {
+      asked.push(step.confirm);
+    }
     return !step.confirm || approve;
   },
 });
@@ -103,10 +105,13 @@ const run = (steps: Array<{ ref: string; action: string; args?: Array<unknown> }
   act(() => agent.act({ steps }));
 const expectNamed = (labels: Array<string>) => {
   const components = onPage();
-  for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+  for (const e of components) {
+    expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+  }
   const names = components.map((e) => e.label);
-  for (const label of labels)
+  for (const label of labels) {
     expect(names, `${label} is missing from the snapshot`).toContain(label);
+  }
 };
 /** Everything an agent has been shown: the page now, and what its steps returned. */
 const seen = (...results: Array<unknown>) => JSON.stringify([agent.snapshot(), ...results]);
@@ -839,7 +844,9 @@ describe("Shield", () => {
       allowance: () => allowance,
       onSend: (tx) => {
         sent.push(tx);
-        if (sent.length === 1) allowance = maxUint256;
+        if (sent.length === 1) {
+          allowance = maxUint256;
+        }
       },
     });
     const { user, engine, onSubmitted } = await setup(config);

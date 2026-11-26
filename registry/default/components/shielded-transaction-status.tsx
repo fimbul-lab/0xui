@@ -29,7 +29,9 @@ export { formatWait, shieldedStatusText, type ShieldedTxStatusPhase };
 function useSecondsUntil(target: number | undefined) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (target === undefined) return;
+    if (target === undefined) {
+      return;
+    }
     setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -70,7 +72,9 @@ export function useShieldedTransactionStatus({
   // scan as soon as it is mined, instead of waiting for the engine's next one.
   const nudged = useRef<Hash>(undefined);
   useEffect(() => {
-    if (mined?.status !== "success" || nudged.current === hash) return;
+    if (mined?.status !== "success" || nudged.current === hash) {
+      return;
+    }
     nudged.current = hash;
     void engine.sync(chainId);
   }, [mined, hash, chainId, engine]);

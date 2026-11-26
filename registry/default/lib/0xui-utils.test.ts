@@ -131,7 +131,9 @@ describe("isShieldedAddress", () => {
   ];
 
   it("accepts real addresses", () => {
-    for (const address of real) expect(isShieldedAddress(address)).toBe(true);
+    for (const address of real) {
+      expect(isShieldedAddress(address)).toBe(true);
+    }
   });
 
   it("rejects a single wrong character anywhere", () => {

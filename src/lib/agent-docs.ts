@@ -103,7 +103,9 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
 
     if (fence) {
       out.push(line);
-      if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = undefined;
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length) {
+        fence = undefined;
+      }
       continue;
     }
     if (marker) {
@@ -111,7 +113,9 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
       out.push(line);
       continue;
     }
-    if (/^(import|export) /.test(line)) continue;
+    if (/^(import|export) /.test(line)) {
+      continue;
+    }
 
     const name = line.match(/^\s*<([A-Z][A-Za-z.]*)/)?.[1];
     if (!name) {
@@ -121,7 +125,9 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
 
     // The opening tag can span lines, like `<Install name={[ … ]} />`.
     let open = line;
-    while (!/>\s*$/.test(open) && i + 1 < lines.length) open += `\n${lines[++i]}`;
+    while (!/>\s*$/.test(open) && i + 1 < lines.length) {
+      open += `\n${lines[++i]}`;
+    }
     const selfClosing = /\/>\s*$/.test(open);
     const children: Array<string> = [];
     if (!selfClosing && !open.includes(`</${name}>`)) {
@@ -139,7 +145,9 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
       const title = attribute(open, "title");
       const label = asideLabels[type] ?? "Note";
       out.push(`> **${title ? `${label}: ${title}` : label}**`, ">");
-      for (const child of children) out.push(`> ${rewriteLinks(child.trim())}`.trimEnd());
+      for (const child of children) {
+        out.push(`> ${rewriteLinks(child.trim())}`.trimEnd());
+      }
     } else if (name === "ComponentIndex") {
       out.push(index(attribute(open, "section") ?? ""));
     }

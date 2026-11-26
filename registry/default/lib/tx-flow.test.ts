@@ -16,7 +16,9 @@ function track(flow: ReturnType<typeof createTransactionFlow>) {
   const phases: Array<TxPhase> = [];
   const stop = flow.subscribe(() => {
     const { phase } = flow.get();
-    if (phases.at(-1) !== phase) phases.push(phase);
+    if (phases.at(-1) !== phase) {
+      phases.push(phase);
+    }
   });
   return { phases, stop };
 }

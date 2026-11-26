@@ -66,8 +66,12 @@ type ModelContext = {
 export function agentPermissions(confirm: AgentConfirm | false) {
   const approved = new WeakSet<AgentAction>();
   const allow: Allow = (step, { signal }) => {
-    if (!step.confirm) return true;
-    if (!confirm) return false;
+    if (!step.confirm) {
+      return true;
+    }
+    if (!confirm) {
+      return false;
+    }
     const sentence = step.confirm;
     return Promise.resolve()
       .then(() => confirm(sentence, { signal }))
@@ -93,12 +97,16 @@ const CONFIRM_TIMEOUT = 5 * 60_000;
 
 /** Runs `confirm` for a wallet tool, with the bridge's wording when it can't go ahead. */
 async function askPerson(confirm: AgentConfirm | false | undefined, sentence: string, ask: string) {
-  if (!confirm) throw new Error(`Needs a person: "${sentence}". ${ask}`);
+  if (!confirm) {
+    throw new Error(`Needs a person: "${sentence}". ${ask}`);
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CONFIRM_TIMEOUT);
   try {
     const yes = await confirm(sentence, { signal: controller.signal });
-    if (yes !== true) throw new Error(`The person said no to "${sentence}".`);
+    if (yes !== true) {
+      throw new Error(`The person said no to "${sentence}".`);
+    }
   } finally {
     clearTimeout(timer);
   }
@@ -133,7 +141,9 @@ export function pageAgentTools(agent: Agent): Array<AgentTool> {
 }
 
 function chainIdOf(config: Config, value: unknown) {
-  if (value === undefined) return getChainId(config);
+  if (value === undefined) {
+    return getChainId(config);
+  }
   const chain = getChains(config).find(
     (c) => c.id === Number(value) || c.name.toLowerCase() === String(value).toLowerCase(),
   );
@@ -146,7 +156,9 @@ function chainIdOf(config: Config, value: unknown) {
 
 function tokenOf(value: unknown): Address {
   const token = String(value ?? "");
-  if (!isAddress(token)) throw new Error(`"${token}" isn't a contract address.`);
+  if (!isAddress(token)) {
+    throw new Error(`"${token}" isn't a contract address.`);
+  }
   return token;
 }
 
@@ -155,7 +167,9 @@ function accountOf(config: Config, value: unknown, what = "address"): Address {
   if (!address) {
     throw new Error(`No wallet is connected. Pass ${what}, or ask the person to connect.`);
   }
-  if (!isAddress(address)) throw new Error(`"${address}" isn't an address.`);
+  if (!isAddress(address)) {
+    throw new Error(`"${address}" isn't an address.`);
+  }
   return address;
 }
 
@@ -193,7 +207,9 @@ export function walletAgentTools(
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute() {
         const connection = getConnection(config);
-        if (connection.status !== "connected") return { status: connection.status };
+        if (connection.status !== "connected") {
+          return { status: connection.status };
+        }
         const chain = getChains(config).find((c) => c.id === connection.chainId);
         return {
           status: "connected",
@@ -328,7 +344,9 @@ export function walletAgentTools(
       async execute(input) {
         const token = tokenOf(input.token);
         const spender = String(input.spender ?? "");
-        if (!isAddress(spender)) throw new Error(`"${spender}" isn't an address.`);
+        if (!isAddress(spender)) {
+          throw new Error(`"${spender}" isn't an address.`);
+        }
         const owner = accountOf(config, input.owner, "an owner");
         const chainId = chainIdOf(config, input.chain);
         const [value, decimals, symbol] = await readContracts(config, {
@@ -368,13 +386,17 @@ export function walletAgentTools(
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute(input) {
         const chainId = getChains(config).find((c) => c.id === 1)?.id;
-        if (!chainId) throw new Error("ENS needs Ethereum (chain 1) in this app's wagmi config.");
+        if (!chainId) {
+          throw new Error("ENS needs Ethereum (chain 1) in this app's wagmi config.");
+        }
         if (typeof input.name === "string") {
           const name = normalize(input.name);
           return { name, address: await getEnsAddress(config, { name, chainId }) };
         }
         const address = String(input.address ?? "");
-        if (!isAddress(address)) throw new Error("Pass a name, or an address to look up.");
+        if (!isAddress(address)) {
+          throw new Error("Pass a name, or an address to look up.");
+        }
         return { address, name: await getEnsName(config, { address, chainId }) };
       },
     },
@@ -418,7 +440,9 @@ export function walletAgentTools(
       annotations: { readOnlyHint: true },
       async execute(input) {
         const hash = String(input.hash ?? "");
-        if (!isHash(hash)) throw new Error(`"${hash}" isn't a transaction hash.`);
+        if (!isHash(hash)) {
+          throw new Error(`"${hash}" isn't a transaction hash.`);
+        }
         const chainId = chainIdOf(config, input.chain);
         const receipt = await getTransactionReceipt(config, { hash, chainId }).catch(
           () => undefined,
@@ -480,10 +504,14 @@ export function registerAgentTools(
   tools: Array<AgentTool>,
   { agent, allow }: RegisterAgentToolsOptions = {},
 ) {
-  if (agent && !allow) throw new Error("registerAgentTools needs an allow with an agent.");
+  if (agent && !allow) {
+    throw new Error("registerAgentTools needs an allow with an agent.");
+  }
   const context = (globalThis.document as { modelContext?: ModelContext } | undefined)
     ?.modelContext;
-  if (!context) return () => {};
+  if (!context) {
+    return () => {};
+  }
   const controller = new AbortController();
   for (const tool of tools) {
     // Early builds returned synchronously, and a second registration of a name

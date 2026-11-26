@@ -211,7 +211,9 @@ function TokenPicker({
 
   const results = useMemo(() => {
     const matches = filterTokens(tokens, query);
-    if (query) return matches;
+    if (query) {
+      return matches;
+    }
     return sortByHoldings(matches, balances, prices);
   }, [tokens, query, balances, prices]);
 
@@ -219,7 +221,9 @@ function TokenPicker({
   // the command's `run`. A symbol two tokens share also carries the address.
   const itemValue = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const token of tokens) counts.set(token.symbol, (counts.get(token.symbol) ?? 0) + 1);
+    for (const token of tokens) {
+      counts.set(token.symbol, (counts.get(token.symbol) ?? 0) + 1);
+    }
     return (token: Token) =>
       counts.get(token.symbol) === 1 ? token.symbol : `${token.symbol} ${key(token)}`;
   }, [tokens]);

@@ -35,20 +35,30 @@ function parseArgs(argv: Array<string>): Options {
     const a = argv[i];
     const next = () => {
       const v = argv[++i];
-      if (v === undefined) throw new Error(`${a} needs a value`);
+      if (v === undefined) {
+        throw new Error(`${a} needs a value`);
+      }
       return v;
     };
-    if (a === "--") continue;
-    else if (a === "--task") o.tasks.push(...next().split(",").filter(Boolean));
-    else if (a === "--model") o.model = next();
-    else if (a === "--keep") o.keep = true;
-    else if (a === "--timeout") o.timeoutMin = Number(next());
-    else if (a === "--budget") o.budgetUsd = Number(next());
-    else if (a === "--out") o.out = resolve(next());
-    else
+    if (a === "--") {
+      continue;
+    } else if (a === "--task") {
+      o.tasks.push(...next().split(",").filter(Boolean));
+    } else if (a === "--model") {
+      o.model = next();
+    } else if (a === "--keep") {
+      o.keep = true;
+    } else if (a === "--timeout") {
+      o.timeoutMin = Number(next());
+    } else if (a === "--budget") {
+      o.budgetUsd = Number(next());
+    } else if (a === "--out") {
+      o.out = resolve(next());
+    } else {
       throw new Error(
         `Unknown flag ${a}. Flags: --task <id> --model <id> --keep --timeout <min> --budget <usd> --out <dir>`,
       );
+    }
   }
   return o;
 }
@@ -77,7 +87,9 @@ function run(
     child.stdout.on("data", (d: Buffer) => {
       const s = d.toString();
       output += s;
-      if (!opts.onLine) return;
+      if (!opts.onLine) {
+        return;
+      }
       partial += s;
       const lines = partial.split("\n");
       partial = lines.pop() ?? "";
@@ -93,7 +105,9 @@ function run(
       : undefined;
     child.on("close", (code) => {
       clearTimeout(timer);
-      if (partial && opts.onLine) opts.onLine(partial);
+      if (partial && opts.onLine) {
+        opts.onLine(partial);
+      }
       done({ code, output, timedOut });
     });
   });
@@ -101,8 +115,9 @@ function run(
 
 async function must(cmd: string, args: Array<string>, cwd: string) {
   const r = await run(cmd, args, { cwd });
-  if (r.code !== 0)
+  if (r.code !== 0) {
     throw new Error(`${cmd} ${args.join(" ")} failed (${r.code}):\n${r.output.slice(-4000)}`);
+  }
   return r.output;
 }
 
@@ -152,7 +167,9 @@ async function scaffold(work: string, registryUrl: string) {
   await writeFile(configPath, JSON.stringify(config, null, 2) + "\n");
   await mkdir(join(app, ".claude/skills/0xui"), { recursive: true });
   await cp(join(ROOT, "skills/0xui/SKILL.md"), join(app, ".claude/skills/0xui/SKILL.md"));
-  if (!existsSync(join(app, ".git"))) await must("git", ["init", "-q"], app);
+  if (!existsSync(join(app, ".git"))) {
+    await must("git", ["init", "-q"], app);
+  }
   await must("git", ["add", "-A"], app);
   await must(
     "git",
@@ -204,15 +221,25 @@ function parseTranscript(lines: Array<string>): Transcript {
     }
     if (ev.type === "assistant") {
       for (const b of ev.message?.content ?? []) {
-        if (b.type !== "tool_use" || !b.name || (b.id && seen.has(b.id))) continue;
-        if (b.id) seen.add(b.id);
+        if (b.type !== "tool_use" || !b.name || (b.id && seen.has(b.id))) {
+          continue;
+        }
+        if (b.id) {
+          seen.add(b.id);
+        }
         t.toolCalls++;
         t.tools[b.name] = (t.tools[b.name] ?? 0) + 1;
         const input = JSON.stringify(b.input ?? {});
-        if ((b.name === "Skill" && input.includes("0xui")) || input.includes(".claude/skills/0xui"))
+        if (
+          (b.name === "Skill" && input.includes("0xui")) ||
+          input.includes(".claude/skills/0xui")
+        ) {
           t.skillUsed = true;
+        }
         const cmd = String(b.input?.command ?? "");
-        if (b.name === "Bash" && /shadcn\S*\s+add\b/.test(cmd)) t.shadcnAdds.push(cmd);
+        if (b.name === "Bash" && /shadcn\S*\s+add\b/.test(cmd)) {
+          t.shadcnAdds.push(cmd);
+        }
       }
     } else if (ev.type === "result") {
       t.costUsd = ev.total_cost_usd as number | undefined;
@@ -229,10 +256,15 @@ function parseTranscript(lines: Array<string>): Transcript {
 async function listFiles(dir: string, base = dir): Promise<Array<string>> {
   const out: Array<string> = [];
   for (const e of await readdir(dir, { withFileTypes: true })) {
-    if (e.name === "node_modules" || e.name === ".git" || e.name === "dist") continue;
+    if (e.name === "node_modules" || e.name === ".git" || e.name === "dist") {
+      continue;
+    }
     const p = join(dir, e.name);
-    if (e.isDirectory()) out.push(...(await listFiles(p, base)));
-    else out.push(relative(base, p));
+    if (e.isDirectory()) {
+      out.push(...(await listFiles(p, base)));
+    } else {
+      out.push(relative(base, p));
+    }
   }
   return out;
 }
@@ -264,11 +296,14 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
   const installedAt = (regPath: string) =>
     files.find((f) => f === regPath || f.endsWith("/" + regPath));
   const registryFiles = new Set<string>();
-  for (const paths of reg.values())
+  for (const paths of reg.values()) {
     for (const p of paths) {
       const at = installedAt(p);
-      if (at) registryFiles.add(at);
+      if (at) {
+        registryFiles.add(at);
+      }
     }
+  }
   const appCode = files.filter(
     (f) =>
       /\.(tsx?|jsx?)$/.test(f) &&
@@ -277,22 +312,31 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
       !registryFiles.has(f),
   );
   const sources = new Map<string, string>();
-  for (const f of appCode) sources.set(f, await readFile(join(app, f), "utf8"));
+  for (const f of appCode) {
+    sources.set(f, await readFile(join(app, f), "utf8"));
+  }
 
   const imported = new Set<string>();
   for (const [f, src] of sources) {
     for (const m of src.matchAll(IMPORT_RE)) {
       const spec = m[1];
       let target: string | undefined;
-      if (spec.startsWith("@/")) target = "src/" + spec.slice(2);
-      else if (spec.startsWith(".")) target = relative(app, resolve(app, dirname(f), spec));
-      if (target) imported.add(stripExt(target));
+      if (spec.startsWith("@/")) {
+        target = "src/" + spec.slice(2);
+      } else if (spec.startsWith(".")) {
+        target = relative(app, resolve(app, dirname(f), spec));
+      }
+      if (target) {
+        imported.add(stripExt(target));
+      }
     }
   }
 
   const itemStatus = (name: string) => {
     const paths = reg.get(name);
-    if (!paths) return { installed: false, imported: false, note: "not in registry" };
+    if (!paths) {
+      return { installed: false, imported: false, note: "not in registry" };
+    }
     const at = paths.map(installedAt);
     const installed = at.every(Boolean);
     const isImported = at.some((p) => p && imported.has(stripExt(p)));
@@ -323,10 +367,13 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
     rules.flatMap((r) => {
       const re = new RegExp(r.pattern);
       const hits: Array<string> = [];
-      for (const [f, src] of sources)
+      for (const [f, src] of sources) {
         src.split("\n").forEach((line, i) => {
-          if (re.test(line)) hits.push(`${f}:${i + 1}`);
+          if (re.test(line)) {
+            hits.push(`${f}:${i + 1}`);
+          }
         });
+      }
       return [{ ...r, hits }];
     });
 
@@ -401,17 +448,22 @@ async function runTask(
         lines.push(line);
         try {
           const ev = JSON.parse(line);
-          if (ev.type === "assistant")
-            for (const b of ev.message?.content ?? [])
-              if (b.type === "tool_use") console.log(`  [${task.id}] ${summarizeTool(b)}`);
+          if (ev.type === "assistant") {
+            for (const b of ev.message?.content ?? []) {
+              if (b.type === "tool_use") {
+                console.log(`  [${task.id}] ${summarizeTool(b)}`);
+              }
+            }
+          }
         } catch {}
       },
     },
   );
   const wallMs = Date.now() - started;
   await writeFile(join(logDir, "transcript.jsonl"), lines.join("\n") + "\n");
-  if (agent.code !== 0)
+  if (agent.code !== 0) {
     await writeFile(join(logDir, "agent-stderr.log"), agent.output.slice(-20_000));
+  }
   const transcript = parseTranscript(lines);
 
   console.log(
@@ -452,7 +504,9 @@ async function runTask(
   console.log(
     `  [${task.id}] ${result.pass ? "PASS" : "FAIL"}: build ${mark(graded.checks.build)}, items ${mark(graded.checks.items)}, forbidden ${mark(graded.checks.forbid)}, provider ${mark(graded.checks.required)}`,
   );
-  if (!o.keep) await rm(dir, { recursive: true, force: true });
+  if (!o.keep) {
+    await rm(dir, { recursive: true, force: true });
+  }
   return result;
 }
 
@@ -497,12 +551,14 @@ async function main() {
   const o = parseArgs(process.argv.slice(2));
   const selected = o.tasks.length ? tasks.filter((t) => o.tasks.includes(t.id)) : tasks;
   const unknown = o.tasks.filter((id) => !tasks.some((t) => t.id === id));
-  if (unknown.length)
+  if (unknown.length) {
     throw new Error(
       `Unknown task ${unknown.join(", ")}. Tasks: ${tasks.map((t) => t.id).join(", ")}`,
     );
-  if (!existsSync(join(ROOT, "public/r/registry.json")))
+  }
+  if (!existsSync(join(ROOT, "public/r/registry.json"))) {
     throw new Error("public/r is missing. Run `bun run registry:build` first.");
+  }
 
   const work = await mkdtemp(join(tmpdir(), "0xui-agent-eval-"));
   const out = o.out ?? join(work, "results");
@@ -513,8 +569,12 @@ async function main() {
     const reg = await loadRegistry();
     await mkdir(join(work, "template"));
     const template = await scaffold(join(work, "template"), server.url);
-    for (const task of selected) results.push(await runTask(task, template, work, out, o, reg));
-    if (!o.keep) await rm(join(work, "template"), { recursive: true, force: true });
+    for (const task of selected) {
+      results.push(await runTask(task, template, work, out, o, reg));
+    }
+    if (!o.keep) {
+      await rm(join(work, "template"), { recursive: true, force: true });
+    }
   } finally {
     server.close();
   }

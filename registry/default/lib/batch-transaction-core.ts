@@ -82,10 +82,18 @@ export function batchStepState(
   { phase, step }: Pick<BatchTransactionState, "phase" | "step">,
   index: number,
 ): StepState {
-  if (phase === "success" || index < step) return "done";
-  if (index > step) return "todo";
-  if (phase === "reverted" || phase === "error") return "failed";
-  if (phase === "confirming" || phase === "pending") return "active";
+  if (phase === "success" || index < step) {
+    return "done";
+  }
+  if (index > step) {
+    return "todo";
+  }
+  if (phase === "reverted" || phase === "error") {
+    return "failed";
+  }
+  if (phase === "confirming" || phase === "pending") {
+    return "active";
+  }
   return "todo";
 }
 
@@ -108,16 +116,22 @@ export function createBatchTransaction(
   };
 
   const checkCapabilities = async () => {
-    if (mode !== "auto") return;
+    if (mode !== "auto") {
+      return;
+    }
     const check = ++capabilityCheck;
-    if (!readConnection().isConnected) return store.set({ atomic: false });
+    if (!readConnection().isConnected) {
+      return store.set({ atomic: false });
+    }
     let atomic = false;
     try {
       atomic = supportsAtomic(await getCapabilities(config, { chainId }));
     } catch {
       // Wallets without EIP-5792 throw: send one by one.
     }
-    if (check === capabilityCheck) store.set({ atomic });
+    if (check === capabilityCheck) {
+      store.set({ atomic });
+    }
   };
 
   const store = createStore<BatchTransactionState>(
@@ -186,7 +200,9 @@ export function createBatchTransaction(
           store.set({ phase: "pending" });
           // viem resolves a reverted receipt; wagmi's action would throw instead.
           const receipt = await client!.waitForTransactionReceipt({ hash });
-          if (receipt.status === "reverted") return store.set({ phase: "reverted" });
+          if (receipt.status === "reverted") {
+            return store.set({ phase: "reverted" });
+          }
         }
         store.set({ step: calls.length, phase: "success" });
       } catch (error) {

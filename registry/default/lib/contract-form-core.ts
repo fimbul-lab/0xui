@@ -19,25 +19,33 @@ function intBounds(type: string) {
 function coerce(param: AbiParameter, value: unknown): unknown {
   const array = param.type.match(/^(.*)\[(\d*)\]$/);
   if (array) {
-    if (!Array.isArray(value)) throw new Error("Expected a JSON array");
-    if (array[2] && value.length !== Number(array[2]))
+    if (!Array.isArray(value)) {
+      throw new Error("Expected a JSON array");
+    }
+    if (array[2] && value.length !== Number(array[2])) {
       throw new Error(`Expected ${array[2]} items`);
+    }
     return value.map((item) => coerce({ ...param, type: array[1]! }, item));
   }
   if (param.type === "tuple") {
     const components = (param as { components: ReadonlyArray<AbiParameter> }).components;
-    if (Array.isArray(value)) return components.map((c, i) => coerce(c, value[i]));
-    if (value && typeof value === "object")
+    if (Array.isArray(value)) {
+      return components.map((c, i) => coerce(c, value[i]));
+    }
+    if (value && typeof value === "object") {
       return Object.fromEntries(
         components.map((c, i) => [
           c.name ?? i,
           coerce(c, (value as Record<string, unknown>)[c.name ?? i]),
         ]),
       );
+    }
     throw new Error("Expected a JSON object or array");
   }
   const parsed = parseAbiInput(param, typeof value === "string" ? value : JSON.stringify(value));
-  if (parsed.error) throw new Error(parsed.error);
+  if (parsed.error) {
+    throw new Error(parsed.error);
+  }
   return parsed.value;
 }
 
@@ -56,32 +64,54 @@ export function parseAbiInput(param: AbiParameter, raw: string): ParsedAbiInput 
   const type = param.type;
   try {
     if (isComplexAbiType(type)) {
-      if (!text) return { error: "Required" };
+      if (!text) {
+        return { error: "Required" };
+      }
       return { value: coerce(param, JSON.parse(text)) };
     }
-    if (type === "string") return { value: raw };
-    if (!text) return { error: "Required" };
+    if (type === "string") {
+      return { value: raw };
+    }
+    if (!text) {
+      return { error: "Required" };
+    }
     if (/^u?int\d*$/.test(type)) {
-      if (!/^-?\d+$/.test(text.replaceAll("_", ""))) return { error: "Whole number" };
+      if (!/^-?\d+$/.test(text.replaceAll("_", ""))) {
+        return { error: "Whole number" };
+      }
       const value = BigInt(text.replaceAll("_", ""));
       const { min, max } = intBounds(type);
-      if (value < min || value > max) return { error: `Out of range for ${type}` };
+      if (value < min || value > max) {
+        return { error: `Out of range for ${type}` };
+      }
       return { value };
     }
     if (type === "address") {
-      if (!isAddress(text, { strict: false })) return { error: "Not an address" };
-      if (!isAddress(text)) return { error: "Checksum doesn't match" };
+      if (!isAddress(text, { strict: false })) {
+        return { error: "Not an address" };
+      }
+      if (!isAddress(text)) {
+        return { error: "Checksum doesn't match" };
+      }
       return { value: getAddress(text) };
     }
     if (type === "bool") {
-      if (text === "true") return { value: true };
-      if (text === "false") return { value: false };
+      if (text === "true") {
+        return { value: true };
+      }
+      if (text === "false") {
+        return { value: false };
+      }
       return { error: "true or false" };
     }
     if (type.startsWith("bytes")) {
-      if (!isHex(text)) return { error: "Hex, starting with 0x" };
+      if (!isHex(text)) {
+        return { error: "Hex, starting with 0x" };
+      }
       const fixed = type.slice(5);
-      if (fixed && size(text) !== Number(fixed)) return { error: `Exactly ${fixed} bytes` };
+      if (fixed && size(text) !== Number(fixed)) {
+        return { error: `Exactly ${fixed} bytes` };
+      }
       return { value: text };
     }
     return { error: `Unsupported type ${type}` };
@@ -92,8 +122,12 @@ export function parseAbiInput(param: AbiParameter, raw: string): ParsedAbiInput 
 
 /** Readable text for a contract return value: bigints as digits, nested values as JSON. */
 export function formatAbiValue(value: unknown): string {
-  if (typeof value === "bigint") return value.toString();
-  if (typeof value === "string" || typeof value === "boolean") return String(value);
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  if (typeof value === "string" || typeof value === "boolean") {
+    return String(value);
+  }
   return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2);
 }
 
@@ -177,8 +211,9 @@ export function inputName(input: AbiParameter, index: number) {
 
 /** One argument on one line, for a confirmation: bigints as digits, nested values as compact JSON. */
 function formatArgInline(value: unknown) {
-  if (typeof value === "bigint" || typeof value === "string" || typeof value === "boolean")
+  if (typeof value === "bigint" || typeof value === "string" || typeof value === "boolean") {
     return String(value);
+  }
   return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v));
 }
 

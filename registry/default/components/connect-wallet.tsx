@@ -50,7 +50,9 @@ export function useConnectWallet({
 
   const connect = async (wallet: WalletOption) => {
     const connected = await controller.connect(wallet);
-    if (connected) onConnect?.(wallet.connector);
+    if (connected) {
+      onConnect?.(wallet.connector);
+    }
     return connected;
   };
 

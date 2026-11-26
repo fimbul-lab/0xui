@@ -146,7 +146,9 @@ const stepWords: Record<ShieldStepKind, string> = {
 
 /** "Two wallet prompts: sign, approve and shield together." */
 export function describeShieldSteps(steps: ReadonlyArray<ShieldStepKind>) {
-  if (steps.length === 1) return "One wallet prompt.";
+  if (steps.length === 1) {
+    return "One wallet prompt.";
+  }
   const count = ["", "", "Two", "Three", "Four"][steps.length] ?? String(steps.length);
   return `${count} wallet prompts: ${steps.map((kind) => stepWords[kind]).join(", ")}.`;
 }
@@ -204,18 +206,32 @@ export function shieldBlocker({
   amount: bigint | undefined;
   insufficient: boolean;
 }) {
-  if (accountStatus === "none") return "Create a private account first";
-  if (accountStatus === "locked") return "Unlock your private account";
-  if (!token) return "Select a token";
-  if (isNativeToken(token)) return `Wrap ${token.symbol} to shield it`;
-  if (!amount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${token.symbol} balance`;
+  if (accountStatus === "none") {
+    return "Create a private account first";
+  }
+  if (accountStatus === "locked") {
+    return "Unlock your private account";
+  }
+  if (!token) {
+    return "Select a token";
+  }
+  if (isNativeToken(token)) {
+    return `Wrap ${token.symbol} to shield it`;
+  }
+  if (!amount) {
+    return "Enter an amount";
+  }
+  if (insufficient) {
+    return `Insufficient ${token.symbol} balance`;
+  }
   return undefined;
 }
 
 /** A fee as a share of the amount: "0.25%". */
 export function formatFeePercent(fee: bigint, amount: bigint) {
-  if (amount === 0n) return "0%";
+  if (amount === 0n) {
+    return "0%";
+  }
   return `${Number((fee * 10_000n) / amount) / 100}%`;
 }
 
@@ -318,8 +334,12 @@ export function planShield({
   allowance: bigint | undefined;
   atomic: boolean;
 }): ShieldPlan | undefined {
-  if (!draft || !quote) return undefined;
-  if (quote.spender && allowance === undefined) return undefined;
+  if (!draft || !quote) {
+    return undefined;
+  }
+  if (quote.spender && allowance === undefined) {
+    return undefined;
+  }
   return {
     steps: shieldSteps({
       needsSignature: quote.needsSignature,
@@ -390,7 +410,9 @@ export function shieldPhase({
   active,
   index,
 }: Pick<ShieldFlowState, "problem" | "active" | "index">): ShieldPhase {
-  if (problem) return problem.kind;
+  if (problem) {
+    return problem.kind;
+  }
   const step = active?.steps[index];
   return step ? phaseOf[step] : "idle";
 }
@@ -438,15 +460,23 @@ export function shieldFormAction({
   planned: boolean;
   symbol: string | undefined;
 }): { label: string; action?: "connect" | "switch" | "start" } {
-  if (!connected) return { label: "Connect wallet", action: "connect" };
-  if (blocker) return { label: blocker };
+  if (!connected) {
+    return { label: "Connect wallet", action: "connect" };
+  }
+  if (blocker) {
+    return { label: blocker };
+  }
   if (wrongChain) {
     return switching
       ? { label: "Switching network…" }
       : { label: `Switch to ${chainName}`, action: "switch" };
   }
-  if (quoteFailed) return { label: "Can't shield this amount" };
-  if (quoting || !planned) return { label: "Fetching quote…" };
+  if (quoteFailed) {
+    return { label: "Can't shield this amount" };
+  }
+  if (quoting || !planned) {
+    return { label: "Fetching quote…" };
+  }
   return { label: `Shield ${symbol}`, action: "start" };
 }
 
@@ -525,7 +555,9 @@ export function createShieldFlow(
           chainId,
           ...approval(kind === "reset" ? 0n : amount),
         });
-        if (live()) store.set({ stepPhase: "pending" });
+        if (live()) {
+          store.set({ stepPhase: "pending" });
+        }
         const receipt = await getPublicClient(config, { chainId })!.waitForTransactionReceipt({
           hash: sent,
         });
@@ -541,7 +573,9 @@ export function createShieldFlow(
           chainId,
           calls: [...(flow.leftover ? [approval(0n)] : []), approval(amount), transaction],
         });
-        if (live()) store.set({ stepPhase: "pending" });
+        if (live()) {
+          store.set({ stepPhase: "pending" });
+        }
         const result = await waitForCallsStatus(config, { id: batch.id });
         const receipts = result.receipts ?? [];
         // The shield is the last call. A wallet can call a batch done while a
@@ -551,7 +585,9 @@ export function createShieldFlow(
           throw new Error("The batch reverted. Nothing was approved or shielded.");
         }
       }
-      if (!live()) return;
+      if (!live()) {
+        return;
+      }
 
       if (hash) {
         prepared = undefined;
@@ -561,7 +597,9 @@ export function createShieldFlow(
         store.set({ index: at + 1, stepPhase: "ready" });
       }
     } catch (error_) {
-      if (!live()) return;
+      if (!live()) {
+        return;
+      }
       const error = toError(error_);
       store.set({
         stepPhase: "ready",
@@ -586,7 +624,9 @@ export function createShieldFlow(
     },
     act() {
       const { active, stepPhase, index } = store.get();
-      if (active && stepPhase === "ready") void perform(active, index);
+      if (active && stepPhase === "ready") {
+        void perform(active, index);
+      }
     },
     leave() {
       run++;

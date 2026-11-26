@@ -57,7 +57,9 @@ export function docsTools({
 }: DocsToolsOptions = {}): Array<Tool> {
   const read = async (url: string) => {
     const response = await get(url);
-    if (!response.ok) throw new Error(`${url} returned ${response.status}.`);
+    if (!response.ok) {
+      throw new Error(`${url} returned ${response.status}.`);
+    }
     return response.text();
   };
 
@@ -106,7 +108,9 @@ export function docsTools({
       async execute(input) {
         const query = String(input.query ?? "").trim();
         const limit = Math.min(Math.max(Number(input.limit) || 5, 1), 20);
-        if (!query) throw new Error("Pass a query.");
+        if (!query) {
+          throw new Error("Pass a query.");
+        }
 
         const search = await pagefind().catch(() => undefined);
         if (search) {
@@ -175,7 +179,9 @@ export function docsTools({
         const name = String(input.name ?? "")
           .trim()
           .replace(/^@0xui\//, "");
-        if (!/^[a-z0-9-]+$/.test(name)) throw new Error(`"${name}" isn't a registry item name.`);
+        if (!/^[a-z0-9-]+$/.test(name)) {
+          throw new Error(`"${name}" isn't a registry item name.`);
+        }
         const item = JSON.parse(await read(`/r/${name}.json`));
         return { install: `npx shadcn@latest add @0xui/${name}`, ...item };
       },
@@ -195,7 +201,9 @@ export function registerDocsTools(options?: DocsToolsOptions) {
     scope.document?.modelContext ??
     (globalThis as { navigator?: { modelContext?: ModelContext } }).navigator?.modelContext;
   const controller = new AbortController();
-  if (!context) return () => {};
+  if (!context) {
+    return () => {};
+  }
 
   for (const tool of docsTools(options)) {
     // Early builds of navigator.modelContext returned synchronously. A refused

@@ -76,7 +76,9 @@ export function createMessageSigner(config: Config): MessageSigner {
     subscribe: store.subscribe,
     async sign(request, { verify = false, onSigned } = {}) {
       const address = getConnection(config).address;
-      if (!address) return undefined;
+      if (!address) {
+        return undefined;
+      }
       store.set({ phase: "signing", signature: undefined, error: undefined });
       try {
         const signature = request.typedData

@@ -200,7 +200,9 @@ export function TransactionButton({
   const { phase, reset } = flow;
 
   useEffect(() => {
-    if (phase !== "success" || resetAfter === false) return;
+    if (phase !== "success" || resetAfter === false) {
+      return;
+    }
     const timer = setTimeout(reset, resetAfter);
     return () => clearTimeout(timer);
   }, [phase, resetAfter, reset]);
@@ -216,7 +218,9 @@ export function TransactionButton({
   // The transaction just sent may have changed what the next one would do.
   const resimulate = simulation.refetch;
   useEffect(() => {
-    if (simulate && (phase === "success" || phase === "reverted")) void resimulate();
+    if (simulate && (phase === "success" || phase === "reverted")) {
+      void resimulate();
+    }
   }, [simulate, phase, resimulate]);
 
   let label: ReactNode = children;

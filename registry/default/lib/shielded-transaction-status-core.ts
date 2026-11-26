@@ -17,10 +17,18 @@ export type ShieldedTxStatusPhase =
 
 /** "about 2 min", "45 s", or undefined once there is nothing left to wait for. */
 export function formatWait(seconds: number) {
-  if (seconds <= 0) return undefined;
-  if (seconds >= 5400) return `about ${Math.round(seconds / 3600)} hours`;
-  if (seconds >= 3000) return "about 1 hour";
-  if (seconds >= 90) return `about ${Math.ceil(seconds / 60)} min`;
+  if (seconds <= 0) {
+    return undefined;
+  }
+  if (seconds >= 5400) {
+    return `about ${Math.round(seconds / 3600)} hours`;
+  }
+  if (seconds >= 3000) {
+    return "about 1 hour";
+  }
+  if (seconds >= 90) {
+    return `about ${Math.ceil(seconds / 60)} min`;
+  }
   return `${seconds} s`;
 }
 
@@ -47,8 +55,12 @@ export function shieldedTxPhase({
         ? "restricted"
         : "standby";
   }
-  if (receiptFailed) return "error";
-  if (!receipt) return "pending";
+  if (receiptFailed) {
+    return "error";
+  }
+  if (!receipt) {
+    return "pending";
+  }
   return receipt.status === "reverted" ? "reverted" : "confirmed";
 }
 
@@ -83,13 +95,27 @@ export function spendableAt(blockTimestamp: bigint | undefined, standby: number 
 
 /** What a shield is waiting for, as the end of a sentence: "waiting for a block". */
 export function shieldedStatusText(phase: ShieldedTxStatusPhase, secondsLeft?: number) {
-  if (phase === "pending") return "waiting for a block";
-  if (phase === "confirmed") return "updating private balance";
-  if (phase === "spendable") return "spendable";
-  if (phase === "restricted") return "restricted, it can only go back where it came from";
-  if (phase === "reverted") return "reverted, nothing was shielded";
-  if (phase === "error") return "couldn't be tracked";
-  if (secondsLeft === undefined) return "in its waiting period";
+  if (phase === "pending") {
+    return "waiting for a block";
+  }
+  if (phase === "confirmed") {
+    return "updating private balance";
+  }
+  if (phase === "spendable") {
+    return "spendable";
+  }
+  if (phase === "restricted") {
+    return "restricted, it can only go back where it came from";
+  }
+  if (phase === "reverted") {
+    return "reverted, nothing was shielded";
+  }
+  if (phase === "error") {
+    return "couldn't be tracked";
+  }
+  if (secondsLeft === undefined) {
+    return "in its waiting period";
+  }
   const wait = formatWait(secondsLeft);
   return wait ? `spendable in ${wait}` : "spendable any moment now";
 }
@@ -146,7 +172,9 @@ export function shieldedTxSteps({
       state: failed ? "failed" : blockNumber !== undefined || found ? "done" : "active",
     },
   ];
-  if (failed) return steps;
+  if (failed) {
+    return steps;
+  }
 
   const wait = secondsLeft === undefined ? undefined : formatWait(secondsLeft);
   steps.push(

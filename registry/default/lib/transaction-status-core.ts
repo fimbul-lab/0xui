@@ -25,7 +25,9 @@ export function waitForMinedReceipt(
   { hash, chainId }: { hash: Hash; chainId?: number },
 ) {
   const client = getPublicClient(config, { chainId });
-  if (!client) return Promise.reject(new Error(`Chain ${chainId} is not in the wagmi config.`));
+  if (!client) {
+    return Promise.reject(new Error(`Chain ${chainId} is not in the wagmi config.`));
+  }
   return client.waitForTransactionReceipt({ hash });
 }
 

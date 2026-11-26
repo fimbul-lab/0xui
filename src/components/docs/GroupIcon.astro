@@ -40,7 +40,7 @@ const icons = {
 
 const { name, class: className } = Astro.props;
 const Icon = name ? icons[name as keyof typeof icons] : undefined;
-if (name && !Icon) throw new Error(`GroupIcon: no icon "${name}". Add it to the map.`);
+if (name && !Icon) {throw new Error(`GroupIcon: no icon "${name}". Add it to the map.`);}
 ---
 
 {Icon && <Icon className={className} size={14} strokeWidth={1.75} aria-hidden="true" />}

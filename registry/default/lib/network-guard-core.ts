@@ -64,7 +64,9 @@ export function createNetworkGuard(
     get: store.get,
     subscribe: store.subscribe,
     async switchToTarget() {
-      if (!target) return false;
+      if (!target) {
+        return false;
+      }
       switching = true;
       store.set({ ...read(), cancelled: false, error: null });
       try {

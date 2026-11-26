@@ -174,7 +174,9 @@ export function useShieldFlow({
      * the shield is the click for its first step.
      */
     start: () => {
-      if (draft && quote && planned) controller.start({ draft, quote, ...planned });
+      if (draft && quote && planned) {
+        controller.start({ draft, quote, ...planned });
+      }
     },
     /** Open the wallet for the current step. One click, one prompt. */
     act: controller.act,
@@ -196,7 +198,9 @@ function AnimatedHeight({ children }: { children: ReactNode }) {
   const [height, setHeight] = useState<number>();
   useLayoutEffect(() => {
     const element = inner.current;
-    if (!element) return;
+    if (!element) {
+      return;
+    }
     const measure = () => setHeight(element.offsetHeight);
     measure();
     const observer = new ResizeObserver(measure);

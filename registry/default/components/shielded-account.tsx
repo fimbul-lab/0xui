@@ -100,7 +100,9 @@ function SubmitButton({
 }
 
 function FormError({ error }: { error: Error | undefined }) {
-  if (!error) return null;
+  if (!error) {
+    return null;
+  }
   return (
     <p role="alert" className="text-sm text-destructive">
       {error.message}
@@ -136,7 +138,9 @@ export function ShieldedAccountCreateForm({
       className={cn("flex flex-col gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (!blocker && !busy) onCreate(password);
+        if (!blocker && !busy) {
+          onCreate(password);
+        }
       }}
     >
       {/* "New password", not "Password": a label inside another ("Confirm
@@ -197,7 +201,9 @@ export function ShieldedAccountImportForm({
       className={cn("flex flex-col gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (!blocker && !busy) onImport(phraseWords(phrase).join(" "), password);
+        if (!blocker && !busy) {
+          onImport(phraseWords(phrase).join(" "), password);
+        }
       }}
     >
       {/* An agent may paste the phrase in, but never read it back. */}
@@ -270,7 +276,9 @@ export function ShieldedAccountUnlockForm({
       className={cn("flex flex-col gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (password && !busy) onUnlock(password);
+        if (password && !busy) {
+          onUnlock(password);
+        }
       }}
     >
       <TextField
@@ -439,15 +447,21 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
   };
 
   useEffect(() => {
-    if (phase === "unlocked" && address) onUnlocked?.(address);
+    if (phase === "unlocked" && address) {
+      onUnlocked?.(address);
+    }
     // Only reaching "unlocked" should fire the callback.
   }, [phase, address]);
 
   // The account lives in the browser. Render nothing on the server, so a
   // locked account never flashes the "create" form while hydrating.
-  if (!mounted) return null;
+  if (!mounted) {
+    return null;
+  }
 
-  if (phase === "unlocked" && children !== undefined) return <>{children}</>;
+  if (phase === "unlocked" && children !== undefined) {
+    return <>{children}</>;
+  }
 
   const importing = phase === "importing" || (phase === "none" && mode === "import");
 

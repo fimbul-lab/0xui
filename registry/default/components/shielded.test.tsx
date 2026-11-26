@@ -354,7 +354,9 @@ describe("advanceSync", () => {
   const run = (states: Array<ShieldedSync>, from?: ShieldedSyncView) => {
     const views: Array<ShieldedSyncView> = [];
     let view = from;
-    for (const state of states) views.push((view = advanceSync(view, state)));
+    for (const state of states) {
+      views.push((view = advanceSync(view, state)));
+    }
     return views;
   };
 
@@ -712,7 +714,9 @@ describe("Agents", () => {
     );
 
     const components = onPage();
-    for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    for (const e of components) {
+      expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    }
     const labels = components.map((e) => e.label!);
     for (const label of [
       "Retry sync",
@@ -746,7 +750,9 @@ function collisions(labels: ReadonlyArray<string>) {
   labels.forEach((a, i) =>
     labels.forEach((b, j) => {
       const wb = words(b);
-      if (i !== j && [...words(a)].every((w) => wb.has(w))) found.push(`${a} / ${b}`);
+      if (i !== j && [...words(a)].every((w) => wb.has(w))) {
+        found.push(`${a} / ${b}`);
+      }
     }),
   );
   return found;

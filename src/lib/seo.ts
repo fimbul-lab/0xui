@@ -26,10 +26,16 @@ const overviews: Record<string, string> = {
  * @param id Starlight route id, like `components/balance`. The landing page is `""`.
  */
 export function shareTitle(id: string, title: string): string {
-  if (!id) return homeTitle;
+  if (!id) {
+    return homeTitle;
+  }
   const [section, name] = id.split("/");
-  if (!name) return overviews[id] ?? title;
-  if (section === "blocks") return `${title} – React web3 block`;
+  if (!name) {
+    return overviews[id] ?? title;
+  }
+  if (section === "blocks") {
+    return `${title} – React web3 block`;
+  }
   if (section === "components") {
     // Utilities are plain UI (a copy button, a dialog), not web3.
     return `${title} – ${groupOf(name) === "Utilities" ? "React component" : "React web3 component"}`;

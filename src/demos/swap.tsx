@@ -15,8 +15,9 @@ const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount }) => {
   await new Promise((r) => setTimeout(r, 600));
   const sellPrice = demoPrices[sellToken.symbol];
   const buyPrice = demoPrices[buyToken.symbol];
-  if (!sellPrice || !buyPrice)
+  if (!sellPrice || !buyPrice) {
     throw new Error(`No demo price for ${sellPrice ? buyToken.symbol : sellToken.symbol}`);
+  }
   const sellUnits = Number(sellAmount) / 10 ** sellToken.decimals;
   const buyUnits = ((sellUnits * sellPrice) / buyPrice) * 0.997;
   return {

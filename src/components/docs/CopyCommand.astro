@@ -34,11 +34,11 @@ const { command } = Astro.props;
         }
         const status = this.querySelector('[role="status"]');
         this.dataset.copied = "";
-        if (status) status.textContent = "Copied";
+        if (status) {status.textContent = "Copied";}
         clearTimeout(this.#timer);
         this.#timer = window.setTimeout(() => {
           delete this.dataset.copied;
-          if (status) status.textContent = "";
+          if (status) {status.textContent = "";}
         }, 1600);
       });
     }

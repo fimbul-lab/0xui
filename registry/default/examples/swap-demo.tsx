@@ -21,7 +21,9 @@ const prices: Record<string, number> = { ETH: 3150, USDC: 1, USDT: 1, DAI: 1, WB
 const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount }) => {
   const sellPrice = prices[sellToken.symbol];
   const buyPrice = prices[buyToken.symbol];
-  if (!sellPrice || !buyPrice) throw new Error("No route for this pair");
+  if (!sellPrice || !buyPrice) {
+    throw new Error("No route for this pair");
+  }
   const sellUnits = Number(sellAmount) / 10 ** sellToken.decimals;
   const buyUnits = ((sellUnits * sellPrice) / buyPrice) * 0.997;
   return {

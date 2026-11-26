@@ -171,7 +171,9 @@ export function bannerC(): string {
   const start = 2;
   const next = hexStream(101);
   Array.from(line).forEach((ch, i) => {
-    if (ch === " ") return;
+    if (ch === " ") {
+      return;
+    }
     const x = tagX + tagAdv * i;
     const from = start + i * 0.04;
     const frames = 5;
@@ -202,7 +204,9 @@ export function bannerC(): string {
   const name = { family: "mono" as const, size: 14.5, fill: c.gray3 };
   const rowBase = rowY + (H - rowY) / 2 + 4.6;
   const parts: Array<[string, object?]> = [];
-  for (const item of components) parts.push([item], ["   /   ", { fill: c.gray5 }]);
+  for (const item of components) {
+    parts.push([item], ["   /   ", { fill: c.gray5 }]);
+  }
   const once = runs(parts, { ...name, x: 0, y: rowBase });
   const speed = 34;
   const scroll = "c-scroll";

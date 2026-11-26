@@ -55,7 +55,9 @@ export function AmountInput({
   const paste = (event: ClipboardEvent<HTMLInputElement>) => {
     onPaste?.(event);
     const next = pastedAmount(event.clipboardData.getData("text"), decimals);
-    if (next === undefined) return;
+    if (next === undefined) {
+      return;
+    }
     event.preventDefault();
     update(next);
   };
@@ -84,8 +86,11 @@ export function AmountInput({
           value={value}
           onValueChange={(raw, details) => {
             const next = sanitizeAmountInput(raw, decimals);
-            if (next === undefined) details.cancel();
-            else update(next);
+            if (next === undefined) {
+              details.cancel();
+            } else {
+              update(next);
+            }
           }}
           onPaste={paste}
           className="w-full min-w-0 bg-transparent text-3xl font-medium tabular-nums outline-none placeholder:text-muted-foreground/50 data-invalid:text-destructive"

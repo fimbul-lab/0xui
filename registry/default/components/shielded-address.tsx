@@ -14,7 +14,9 @@ export function truncateShieldedAddress(
   address: string,
   { start = 9, end = 6 }: ShieldedAddressTruncate = {},
 ) {
-  if (address.length <= start + end + 1) return address;
+  if (address.length <= start + end + 1) {
+    return address;
+  }
   return `${address.slice(0, start)}…${address.slice(-end)}`;
 }
 

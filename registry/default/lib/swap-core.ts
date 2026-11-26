@@ -30,7 +30,9 @@ export function formatRate(
 ) {
   const sellUnits = Number(formatUnits(sell.amount, sell.token.decimals));
   const buyUnits = Number(formatUnits(buy.amount, buy.token.decimals));
-  if (!sellUnits || !buyUnits) return undefined;
+  if (!sellUnits || !buyUnits) {
+    return undefined;
+  }
   const [from, to, rate] = invert
     ? [buy.token, sell.token, sellUnits / buyUnits]
     : [sell.token, buy.token, buyUnits / sellUnits];
@@ -103,11 +105,21 @@ export function swapBlocker({
   quoting: boolean;
   quote: SwapQuote | undefined;
 }) {
-  if (!sellToken || !buyToken) return "Select a token";
-  if (!sellAmount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${sellToken.symbol} balance`;
-  if (error) return "No route found";
-  if (quoting || !quote) return "Fetching quote…";
+  if (!sellToken || !buyToken) {
+    return "Select a token";
+  }
+  if (!sellAmount) {
+    return "Enter an amount";
+  }
+  if (insufficient) {
+    return `Insufficient ${sellToken.symbol} balance`;
+  }
+  if (error) {
+    return "No route found";
+  }
+  if (quoting || !quote) {
+    return "Fetching quote…";
+  }
   return undefined;
 }
 

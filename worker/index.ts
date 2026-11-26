@@ -15,7 +15,9 @@ interface Env {
 
 function withHeaders(response: Response, headers: Record<string, string>) {
   const next = new Response(response.body, response);
-  for (const [name, value] of Object.entries(headers)) next.headers.set(name, value);
+  for (const [name, value] of Object.entries(headers)) {
+    next.headers.set(name, value);
+  }
   return next;
 }
 
@@ -48,7 +50,9 @@ export default {
     }
 
     const response = await env.ASSETS.fetch(request);
-    if (!response.headers.get("Content-Type")?.startsWith("text/html")) return response;
+    if (!response.headers.get("Content-Type")?.startsWith("text/html")) {
+      return response;
+    }
     return withHeaders(response, { Vary: "Accept", Link: agentLinks });
   },
 };

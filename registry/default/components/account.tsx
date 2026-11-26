@@ -77,7 +77,9 @@ export function Account({
     onOpenChange?.(next);
   };
 
-  if (!account.address) return null;
+  if (!account.address) {
+    return null;
+  }
   const { address, displayName, ensName, connector, chainId } = account;
 
   return (

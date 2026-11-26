@@ -48,11 +48,21 @@ export function hiddenReason(
     minValue = 0.5,
   }: PortfolioFilters = {},
 ): HiddenReason | undefined {
-  if (isNativeToken(row.token)) return undefined;
-  if (isSpam(row.token)) return "spam";
-  if (row.unlisted && !showUnlisted) return "unlisted";
-  if (row.value === undefined) return hideUnpriced ? "unpriced" : undefined;
-  if (row.value < minValue) return "dust";
+  if (isNativeToken(row.token)) {
+    return undefined;
+  }
+  if (isSpam(row.token)) {
+    return "spam";
+  }
+  if (row.unlisted && !showUnlisted) {
+    return "unlisted";
+  }
+  if (row.value === undefined) {
+    return hideUnpriced ? "unpriced" : undefined;
+  }
+  if (row.value < minValue) {
+    return "dust";
+  }
   return undefined;
 }
 
@@ -162,9 +172,17 @@ export function portfolioPhase({
   /** Shown plus hidden rows. */
   count: number;
 }): PortfolioPhase {
-  if (loadingProp) return "loading";
-  if (!hasSource) return "idle";
-  if (isLoading) return "loading";
-  if (isError) return "error";
+  if (loadingProp) {
+    return "loading";
+  }
+  if (!hasSource) {
+    return "idle";
+  }
+  if (isLoading) {
+    return "loading";
+  }
+  if (isError) {
+    return "error";
+  }
   return count ? "ready" : "empty";
 }

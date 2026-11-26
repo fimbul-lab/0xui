@@ -54,7 +54,9 @@ function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string })
     chainId: entry.chainId,
   });
   useEffect(() => {
-    if (receipt.data) updateTransaction(entry.hash, { status: receiptStatus(receipt.data) });
+    if (receipt.data) {
+      updateTransaction(entry.hash, { status: receiptStatus(receipt.data) });
+    }
   }, [receipt.data, entry.hash]);
 
   const status = entryStatus(entry, receipt.data);

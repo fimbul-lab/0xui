@@ -29,7 +29,9 @@ function tool(name: string, pagefind?: DocsToolsOptions["pagefind"]) {
   const found = docsTools({ fetch, pagefind: pagefind ?? (async () => undefined) }).find(
     (candidate) => candidate.name === name,
   );
-  if (!found) throw new Error(`No tool ${name}`);
+  if (!found) {
+    throw new Error(`No tool ${name}`);
+  }
   return found;
 }
 
@@ -103,7 +105,9 @@ test("registers with document.modelContext and unregisters on abort", async () =
   const allRegistered = Promise.withResolvers<void>();
   const registerTool = vi.fn(async (_tool: unknown, options: { signal: AbortSignal }) => {
     signals.push(options.signal);
-    if (signals.length === 4) allRegistered.resolve();
+    if (signals.length === 4) {
+      allRegistered.resolve();
+    }
   });
   Object.defineProperty(document, "modelContext", { value: { registerTool }, configurable: true });
 

@@ -8,10 +8,16 @@ import { parseAmount } from "@/lib/0xui-utils";
  */
 export function sanitizeAmountInput(raw: string, decimals: number) {
   const text = raw.replaceAll(",", ".").replaceAll(/\s/g, "");
-  if (text === "") return "";
-  if (!/^\d*\.?\d*$/.test(text)) return undefined;
+  if (text === "") {
+    return "";
+  }
+  if (!/^\d*\.?\d*$/.test(text)) {
+    return undefined;
+  }
   const [, fraction = ""] = text.split(".");
-  if (fraction.length > decimals) return undefined;
+  if (fraction.length > decimals) {
+    return undefined;
+  }
   return text.startsWith(".") ? `0${text}` : text;
 }
 
@@ -20,7 +26,9 @@ export function sanitizeAmountInput(raw: string, decimals: number) {
  * string. Undefined when normal typing handles it, or when it isn't an amount.
  */
 export function pastedAmount(text: string, decimals: number) {
-  if (sanitizeAmountInput(text, decimals) !== undefined) return undefined;
+  if (sanitizeAmountInput(text, decimals) !== undefined) {
+    return undefined;
+  }
   const parsed = parseAmount(text, decimals);
   return parsed === undefined ? undefined : formatUnits(parsed, decimals);
 }

@@ -92,7 +92,9 @@ export function Balance({
     refreshInterval,
   });
 
-  if (phase === "idle") return null;
+  if (phase === "idle") {
+    return null;
+  }
 
   if (phase === "loading") {
     return (

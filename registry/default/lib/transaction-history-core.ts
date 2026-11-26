@@ -22,8 +22,12 @@ const listeners = new Set<() => void>();
 let cache: Array<HistoryEntry> | undefined;
 
 function load(): ReadonlyArray<HistoryEntry> {
-  if (cache) return cache;
-  if (typeof localStorage === "undefined") return EMPTY;
+  if (cache) {
+    return cache;
+  }
+  if (typeof localStorage === "undefined") {
+    return EMPTY;
+  }
   try {
     cache = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
   } catch {
@@ -39,13 +43,19 @@ function save(entries: ReadonlyArray<HistoryEntry>) {
   } catch {
     // Storage blocked or full: history lasts for this page only.
   }
-  for (const listener of [...listeners]) listener();
+  for (const listener of [...listeners]) {
+    listener();
+  }
 }
 
 function onStorage(e: StorageEvent) {
-  if (e.key !== STORAGE_KEY) return;
+  if (e.key !== STORAGE_KEY) {
+    return;
+  }
   cache = undefined;
-  for (const listener of [...listeners]) listener();
+  for (const listener of [...listeners]) {
+    listener();
+  }
 }
 
 /**
@@ -62,7 +72,9 @@ export const transactionHistory = {
       window.addEventListener("storage", onStorage);
     }
     return () => {
-      if (!listeners.delete(listener)) return;
+      if (!listeners.delete(listener)) {
+        return;
+      }
       if (listeners.size === 0 && typeof window !== "undefined") {
         window.removeEventListener("storage", onStorage);
       }
@@ -95,7 +107,9 @@ export function filterTransactions(
   entries: ReadonlyArray<HistoryEntry>,
   from: Address | undefined,
 ) {
-  if (!from) return entries;
+  if (!from) {
+    return entries;
+  }
   const sender = from.toLowerCase();
   return entries.filter((e) => !e.from || e.from.toLowerCase() === sender);
 }
@@ -124,8 +138,14 @@ export function formatRelativeTime(
   const seconds = Math.round((ms - now) / 1000);
   const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const abs = Math.abs(seconds);
-  if (abs < 60) return format.format(seconds, "second");
-  if (abs < 3600) return format.format(Math.round(seconds / 60), "minute");
-  if (abs < 86_400) return format.format(Math.round(seconds / 3600), "hour");
+  if (abs < 60) {
+    return format.format(seconds, "second");
+  }
+  if (abs < 3600) {
+    return format.format(Math.round(seconds / 60), "minute");
+  }
+  if (abs < 86_400) {
+    return format.format(Math.round(seconds / 3600), "hour");
+  }
   return format.format(Math.round(seconds / 86_400), "day");
 }

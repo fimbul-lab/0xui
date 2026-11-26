@@ -72,10 +72,14 @@ export function createProver(engine: ShieldedEngine, callbacks: ProofCallbacks =
         const operation = await engine.prove(draft, {
           signal: run.signal,
           onStage: (stage) => {
-            if (isCurrent() && !run.signal.aborted) store.set({ phase: stage, stage });
+            if (isCurrent() && !run.signal.aborted) {
+              store.set({ phase: stage, stage });
+            }
           },
         });
-        if (!isCurrent()) return undefined;
+        if (!isCurrent()) {
+          return undefined;
+        }
         if (run.signal.aborted) {
           stopped();
           return undefined;
@@ -84,7 +88,9 @@ export function createProver(engine: ShieldedEngine, callbacks: ProofCallbacks =
         callbacks.onProved?.(operation);
         return operation;
       } catch (error_) {
-        if (!isCurrent()) return undefined;
+        if (!isCurrent()) {
+          return undefined;
+        }
         if (run.signal.aborted) {
           stopped();
           return undefined;

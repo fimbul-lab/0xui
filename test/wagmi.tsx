@@ -35,7 +35,9 @@ export const testAccounts = [
 export type RpcResponses = Record<string, unknown | ((params: any) => unknown)>;
 
 async function respond(rpc: RpcResponses, method: string, params: unknown) {
-  if (!(method in rpc)) throw new Error(`RPC method not mocked: ${method}`);
+  if (!(method in rpc)) {
+    throw new Error(`RPC method not mocked: ${method}`);
+  }
   const response = rpc[method];
   return typeof response === "function" ? response(params) : response;
 }
@@ -49,7 +51,9 @@ function stubWalletRpc(rpc: RpcResponses) {
   const realFetch = globalThis.fetch;
   vi.stubGlobal("fetch", async (url: string, init?: { body?: string }) => {
     // Not JSON-RPC (e.g. NFT metadata, data: URIs): use the real fetch.
-    if (typeof init?.body !== "string") return realFetch(url, init as RequestInit);
+    if (typeof init?.body !== "string") {
+      return realFetch(url, init as RequestInit);
+    }
     const { id, method, params } = JSON.parse(init.body);
     try {
       const result = await respond(rpc, method, params);
@@ -272,7 +276,9 @@ export function erc20CallRpc({
             : functionName === "symbol"
               ? symbol
               : undefined;
-    if (result === undefined) throw new Error(`erc20 ${functionName} not mocked`);
+    if (result === undefined) {
+      throw new Error(`erc20 ${functionName} not mocked`);
+    }
     return encodeFunctionResult({ abi: erc20Abi, functionName, result } as never);
   };
 }

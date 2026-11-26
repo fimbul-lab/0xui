@@ -34,7 +34,9 @@ const cells = (line: string) =>
 
 function propsSection(page: string, body: string): PropsSection | undefined {
   const section = body.match(/^## Props\n([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1];
-  if (!section || !/^\| Prop +\|/m.test(section)) return undefined;
+  if (!section || !/^\| Prop +\|/m.test(section)) {
+    return undefined;
+  }
   const lines = section.split("\n");
   const [header, , ...table] = lines.filter((line) => line.startsWith("|"));
   const defaultColumn = cells(header).indexOf("Default");
@@ -88,9 +90,13 @@ const sameValue = (a: string, b: string) =>
 function defaultMismatches(section: PropsSection, props: Array<PropDoc>) {
   return section.rows.flatMap((row) => {
     const documented = row.default?.match(/^`([^`]+)`$/)?.[1];
-    if (row.names.length !== 1 || !documented) return [];
+    if (row.names.length !== 1 || !documented) {
+      return [];
+    }
     const code = props.find((prop) => prop.name === row.names[0])?.default;
-    if (!code || !literal.test(code) || sameValue(code, documented)) return [];
+    if (!code || !literal.test(code) || sameValue(code, documented)) {
+      return [];
+    }
     return [`${row.names[0]} is ${documented} in the docs, ${code} in code`];
   });
 }
@@ -122,7 +128,9 @@ describe("docs Props tables", () => {
       expect(stale, `${page}.mdx documents props ${componentName(page)} doesn't have`).toEqual([]);
 
       const missing = undocumented(section, doc!.props);
-      if (missing.length) report.push(`  ${page}: not documented: ${missing.join(", ")}`);
+      if (missing.length) {
+        report.push(`  ${page}: not documented: ${missing.join(", ")}`);
+      }
       for (const mismatch of defaultMismatches(section, doc!.props)) {
         report.push(`  ${page}: ${mismatch}`);
       }
@@ -131,6 +139,8 @@ describe("docs Props tables", () => {
 
   // Runs after the tables: a soft list, since some props are internal plumbing.
   test("reports props the tables leave out", () => {
-    if (report.length) console.warn(`Props tables that may be incomplete:\n${report.join("\n")}`);
+    if (report.length) {
+      console.warn(`Props tables that may be incomplete:\n${report.join("\n")}`);
+    }
   });
 });

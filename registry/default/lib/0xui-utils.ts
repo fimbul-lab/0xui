@@ -17,7 +17,9 @@ export function truncateAddress(
   { start = 6, end = 4 }: { start?: number; end?: number } = {},
 ) {
   const value = isAddress(address, { strict: false }) ? getAddress(address) : address;
-  if (value.length <= start + end + 1) return value;
+  if (value.length <= start + end + 1) {
+    return value;
+  }
   return `${value.slice(0, start)}…${value.slice(-end)}`;
 }
 
@@ -70,7 +72,9 @@ export function formatTokenAmount(
  */
 export function parseAmount(input: string, decimals: number) {
   let text = input.replaceAll(/[\s$€£¥_']/g, "");
-  if (!text) return undefined;
+  if (!text) {
+    return undefined;
+  }
 
   const lastComma = text.lastIndexOf(",");
   const lastDot = text.lastIndexOf(".");
@@ -83,7 +87,9 @@ export function parseAmount(input: string, decimals: number) {
     text = isGrouping ? text.split(",").join("") : text.replace(",", ".");
   }
 
-  if (!/^\d*\.?\d*$/.test(text) || text === ".") return undefined;
+  if (!/^\d*\.?\d*$/.test(text) || text === ".") {
+    return undefined;
+  }
 
   const [whole = "", fraction = ""] = text.split(".");
   const clamped = fraction.slice(0, decimals);
@@ -101,9 +107,15 @@ export function getExplorerUrl(
   target: ExplorerTarget,
 ) {
   const base = chain?.blockExplorers?.default.url.replace(/\/$/, "");
-  if (!base) return undefined;
-  if (target.address) return `${base}/address/${target.address}`;
-  if (target.tx) return `${base}/tx/${target.tx}`;
+  if (!base) {
+    return undefined;
+  }
+  if (target.address) {
+    return `${base}/address/${target.address}`;
+  }
+  if (target.tx) {
+    return `${base}/tx/${target.tx}`;
+  }
   return `${base}/block/${target.block}`;
 }
 
@@ -112,7 +124,9 @@ export function getExplorerUrl(
  * action, not a failure.
  */
 export function isUserRejection(error: unknown) {
-  if (!error) return false;
+  if (!error) {
+    return false;
+  }
   if (error instanceof BaseError) {
     return Boolean(
       error.walk(
@@ -162,11 +176,21 @@ const errorNames: Array<[ErrorCode, Array<string>]> = [
 
 /** The `data-error` for a component in `phase` that failed with `error`. */
 export function errorCode(phase: string, error?: unknown): ErrorCode | undefined {
-  if (phase === "cancelled") return "user-rejected";
-  if (phase === "reverted") return "reverted";
-  if (phase !== "error") return undefined;
-  if (!error) return "unknown";
-  if (isUserRejection(error)) return "user-rejected";
+  if (phase === "cancelled") {
+    return "user-rejected";
+  }
+  if (phase === "reverted") {
+    return "reverted";
+  }
+  if (phase !== "error") {
+    return undefined;
+  }
+  if (!error) {
+    return "unknown";
+  }
+  if (isUserRejection(error)) {
+    return "user-rejected";
+  }
 
   // viem and wagmi errors each chain their causes; walk them by name, since
   // wagmi's errors don't extend viem's BaseError.
@@ -186,7 +210,9 @@ export function errorCode(phase: string, error?: unknown): ErrorCode | undefined
  * approve this first". Leads with the button's label when it's plain text.
  */
 export function agentConfirmText(label: unknown, effect: string) {
-  if (typeof label === "string" && label.trim()) return `${label.trim()}: ${effect}`;
+  if (typeof label === "string" && label.trim()) {
+    return `${label.trim()}: ${effect}`;
+  }
   return effect.charAt(0).toUpperCase() + effect.slice(1);
 }
 
@@ -195,8 +221,12 @@ export function agentConfirmText(label: unknown, effect: string) {
  * into HTTP URLs. Other URIs pass through unchanged.
  */
 export function resolveUri(uri: string, gateway = "https://ipfs.io/ipfs/") {
-  if (uri.startsWith("ipfs://")) return gateway + uri.replace(/^ipfs:\/\/(ipfs\/)?/, "");
-  if (uri.startsWith("ar://")) return `https://arweave.net/${uri.slice(5)}`;
+  if (uri.startsWith("ipfs://")) {
+    return gateway + uri.replace(/^ipfs:\/\/(ipfs\/)?/, "");
+  }
+  if (uri.startsWith("ar://")) {
+    return `https://arweave.net/${uri.slice(5)}`;
+  }
   return uri;
 }
 
@@ -212,7 +242,9 @@ function bech32Polymod(values: ReadonlyArray<number>) {
     const top = checksum >>> 25;
     checksum = ((checksum & 0x1_ff_ff_ff) << 5) ^ value;
     for (let i = 0; i < 5; i++) {
-      if ((top >>> i) & 1) checksum ^= BECH32_GENERATORS[i]!;
+      if ((top >>> i) & 1) {
+        checksum ^= BECH32_GENERATORS[i]!;
+      }
     }
   }
   return checksum;
@@ -245,12 +277,18 @@ export const SHIELDED_ADDRESS_LENGTH = 127;
  * who holds the keys.
  */
 export function isShieldedAddress(value: string) {
-  if (value.length !== SHIELDED_ADDRESS_LENGTH) return false;
-  if (!value.startsWith(`${SHIELDED_ADDRESS_PREFIX}1`)) return false;
+  if (value.length !== SHIELDED_ADDRESS_LENGTH) {
+    return false;
+  }
+  if (!value.startsWith(`${SHIELDED_ADDRESS_PREFIX}1`)) {
+    return false;
+  }
   const words = Array.from(value.slice(SHIELDED_ADDRESS_PREFIX.length + 1), (char) =>
     BECH32_CHARSET.indexOf(char),
   );
-  if (words.includes(-1)) return false;
+  if (words.includes(-1)) {
+    return false;
+  }
   return (
     bech32Polymod([...bech32PrefixWords(SHIELDED_ADDRESS_PREFIX), ...words]) === BECH32M_CONSTANT
   );

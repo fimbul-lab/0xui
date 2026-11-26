@@ -14,14 +14,26 @@ export const tokenKey = (token: Pick<TokenInfo, "address">) => token.address.toL
  */
 export function filterTokens(tokens: ReadonlyArray<TokenInfo>, query: string) {
   const q = query.trim().toLowerCase();
-  if (!q) return [...tokens];
-  if (/^0x[0-9a-f]{40}$/.test(q)) return tokens.filter((t) => tokenKey(t) === q);
+  if (!q) {
+    return [...tokens];
+  }
+  if (/^0x[0-9a-f]{40}$/.test(q)) {
+    return tokens.filter((t) => tokenKey(t) === q);
+  }
   const rank = (t: TokenInfo) => {
     const symbol = t.symbol.toLowerCase();
-    if (symbol === q) return 0;
-    if (symbol.startsWith(q)) return 1;
-    if (symbol.includes(q)) return 2;
-    if (t.name.toLowerCase().includes(q)) return 3;
+    if (symbol === q) {
+      return 0;
+    }
+    if (symbol.startsWith(q)) {
+      return 1;
+    }
+    if (symbol.includes(q)) {
+      return 2;
+    }
+    if (t.name.toLowerCase().includes(q)) {
+      return 3;
+    }
     return -1;
   };
   return tokens
@@ -106,11 +118,15 @@ export function mergeTokenBalances(
   erc20: ReadonlyArray<{ status: "success" | "failure"; result?: unknown }> | undefined,
 ) {
   const map = new Map<string, bigint>();
-  if (native) map.set(tokenKey({ address: NATIVE_TOKEN_ADDRESS }), native.value);
+  if (native) {
+    map.set(tokenKey({ address: NATIVE_TOKEN_ADDRESS }), native.value);
+  }
   const contracts = tokens.filter((t) => !isNativeToken(t));
   erc20?.forEach((result, i) => {
     const token = contracts[i];
-    if (token && result.status === "success") map.set(tokenKey(token), result.result as bigint);
+    if (token && result.status === "success") {
+      map.set(tokenKey(token), result.result as bigint);
+    }
   });
   return map;
 }
@@ -128,7 +144,9 @@ export function quickPickTokens(
   const picked: Array<TokenInfo> = [];
   for (const w of wanted) {
     const token = tokens.find((t) => tokenKey(t) === w || t.symbol.toLowerCase() === w);
-    if (token && !picked.includes(token)) picked.push(token);
+    if (token && !picked.includes(token)) {
+      picked.push(token);
+    }
   }
   return picked.slice(0, 6);
 }

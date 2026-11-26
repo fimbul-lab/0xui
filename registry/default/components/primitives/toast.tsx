@@ -96,7 +96,9 @@ function Toaster({
     className: withClassName(regionClassName, className),
     children: renderToast,
   };
-  if (toaster) return <ToastRegion toaster={toaster} {...regionProps} />;
+  if (toaster) {
+    return <ToastRegion toaster={toaster} {...regionProps} />;
+  }
   return <OverlayHost overlays={overlays} toast={regionProps} />;
 }
 

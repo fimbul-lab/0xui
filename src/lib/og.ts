@@ -41,17 +41,24 @@ function wrap(str: string, width: number, max: number, o: TextOptions): Array<st
   let line = "";
   for (const word of str.split(/\s+/)) {
     const next = line ? `${line} ${word}` : word;
-    if (!line || measure(next, o) <= width) line = next;
-    else {
+    if (!line || measure(next, o) <= width) {
+      line = next;
+    } else {
       lines.push(line);
       line = word;
     }
   }
-  if (line) lines.push(line);
-  if (lines.length <= max) return lines;
+  if (line) {
+    lines.push(line);
+  }
+  if (lines.length <= max) {
+    return lines;
+  }
 
   let last = lines[max - 1];
-  while (last && measure(`${last}…`, o) > width) last = last.replace(/\s*\S+$/, "");
+  while (last && measure(`${last}…`, o) > width) {
+    last = last.replace(/\s*\S+$/, "");
+  }
   return [...lines.slice(0, max - 1), `${last.replace(/[.,;:]$/, "")}…`];
 }
 
@@ -60,7 +67,9 @@ function balance(str: string, width: number, max: number, o: TextOptions): Array
   let lines = wrap(str, width, max, o);
   for (let narrower = width - 20; narrower > width / 2; narrower -= 20) {
     const next = wrap(str, narrower, max, o);
-    if (next.length !== lines.length || next.at(-1)?.endsWith("…")) break;
+    if (next.length !== lines.length || next.at(-1)?.endsWith("…")) {
+      break;
+    }
     lines = next;
   }
   return lines;
@@ -98,11 +107,21 @@ function watermark(): string {
 /** Where the page sits in the docs, like "Components / Wallet". */
 function eyebrow(id: string): Array<string> {
   const [section, name] = id.split("/");
-  if (id === "shielded") return ["Preview"];
-  if (!name) return ["Overview"];
-  if (section === "getting-started") return ["Getting started"];
-  if (section === "blocks") return unlistedPages.has(id) ? ["Blocks", "Preview"] : ["Blocks"];
-  if (section === "components") return ["Components", groupOf(name) ?? "Preview"];
+  if (id === "shielded") {
+    return ["Preview"];
+  }
+  if (!name) {
+    return ["Overview"];
+  }
+  if (section === "getting-started") {
+    return ["Getting started"];
+  }
+  if (section === "blocks") {
+    return unlistedPages.has(id) ? ["Blocks", "Preview"] : ["Blocks"];
+  }
+  if (section === "components") {
+    return ["Components", groupOf(name) ?? "Preview"];
+  }
   return ["Docs"];
 }
 
@@ -155,7 +174,9 @@ function pageCard(page: OgPage): string {
   const heading = { weight: 600, tracking: -0.035, fill: c.white };
   const room = W - M * 2;
   let size = 92;
-  while (size > 68 && measure(page.title, { ...heading, size }) > room) size -= 2;
+  while (size > 68 && measure(page.title, { ...heading, size }) > room) {
+    size -= 2;
+  }
   const titleLines = wrap(page.title, room, 2, { ...heading, size });
   titleLines.forEach((line, i) => {
     out.push(
@@ -233,7 +254,9 @@ function homeCard(): string {
   const rowY = 536;
   const name = { family: "mono" as const, size: 21, fill: c.gray3 };
   const parts: Array<[string, TextOptions?]> = [];
-  for (const item of listedComponents) parts.push([item], ["   /   ", { fill: c.gray5 }]);
+  for (const item of listedComponents) {
+    parts.push([item], ["   /   ", { fill: c.gray5 }]);
+  }
   const fade = `<linearGradient id="fade" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="${c.bg}"/><stop offset="1" stop-color="${c.bg}" stop-opacity="0"/></linearGradient>`;
   out.push(
     `<defs>${fade}</defs>`,

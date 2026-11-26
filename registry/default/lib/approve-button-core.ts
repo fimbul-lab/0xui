@@ -65,11 +65,15 @@ export function nextApproval({
   unlimited?: boolean;
   resetFirst?: boolean;
 }): ApprovalStep {
-  if (amount === 0n || (allowance !== undefined && allowance >= amount)) return { kind: "none" };
+  if (amount === 0n || (allowance !== undefined && allowance >= amount)) {
+    return { kind: "none" };
+  }
   const reset =
     (resetFirst ?? requiresAllowanceReset(chainId, token)) &&
     allowance !== undefined &&
     allowance > 0n;
-  if (reset) return { kind: "reset", value: 0n };
+  if (reset) {
+    return { kind: "reset", value: 0n };
+  }
   return { kind: "approve", value: unlimited ? maxUint256 : amount };
 }

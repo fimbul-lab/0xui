@@ -90,7 +90,9 @@ export function ApproveButton({
     unlimited,
     resetFirst,
   });
-  if (step.kind === "none") return <>{children}</>;
+  if (step.kind === "none") {
+    return <>{children}</>;
+  }
 
   const checking = status === "connected" && allowance.isPending;
   const reset = step.kind === "reset";

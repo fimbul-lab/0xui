@@ -477,7 +477,9 @@ describe("agents", () => {
     for (const a of entries) {
       expect(a.label, `${a.component} ${a.ref} has no name`).toBeTruthy();
       for (const b of entries) {
-        if (a === b) continue;
+        if (a === b) {
+          continue;
+        }
         const inside = words(a.label!).every((word) => words(b.label!).includes(word));
         expect(inside, `"${a.label}" also names "${b.label}"`).toBe(false);
       }
@@ -572,11 +574,15 @@ describe("agents", () => {
     ]);
     // Open, the dialog takes its title, "Select a token". It shares words with
     // the button behind it, but a step there goes to the open dialog.
-    for (const entry of onPage()) expect(entry.label, `${entry.ref} has no name`).toBeTruthy();
+    for (const entry of onPage()) {
+      expect(entry.label, `${entry.ref} has no name`).toBeTruthy();
+    }
     expect(onPage().map((entry) => entry.label)).toContain("Close token picker");
 
     const found = await agent.query({ within: "Search tokens", text: "tether" });
-    if ("error" in found) throw new Error(found.error);
+    if ("error" in found) {
+      throw new Error(found.error);
+    }
     const [usdtItem] = found[0]!.items!;
     expect(usdtItem!.label).toBe("USDT Tether USD");
 

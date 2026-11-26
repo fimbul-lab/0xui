@@ -104,7 +104,9 @@ export function parseTokenList(json: unknown): TokenList {
 /** Download and parse a token list. `ipfs://` and `ar://` URLs go through a gateway. */
 export async function fetchTokenList(url: string, { gateway }: { gateway?: string } = {}) {
   const response = await fetch(resolveUri(url, gateway));
-  if (!response.ok) throw new Error(`Couldn't load token list ${url} (${response.status})`);
+  if (!response.ok) {
+    throw new Error(`Couldn't load token list ${url} (${response.status})`);
+  }
   return parseTokenList(await response.json());
 }
 
@@ -129,7 +131,9 @@ export function mergeTokenLists(lists: ReadonlyArray<Pick<TokenList, "tokens">>)
   for (const list of lists) {
     for (const token of list.tokens) {
       const key = `${token.chainId}:${token.address.toLowerCase()}`;
-      if (seen.has(key)) continue;
+      if (seen.has(key)) {
+        continue;
+      }
       seen.add(key);
       tokens.push(token);
     }
@@ -188,7 +192,9 @@ export function selectTokens(
   const onChain = chainId === null ? filtered : filtered.filter((t) => t.chainId === chainId);
   // Filters don't apply to the native currency: it can't be spoofed. Skip it
   // if a list (or extraTokens) already has an entry for it.
-  if (!nativeChain || onChain.some(isNativeToken)) return onChain;
+  if (!nativeChain || onChain.some(isNativeToken)) {
+    return onChain;
+  }
   return [nativeToken(nativeChain), ...onChain];
 }
 
@@ -204,7 +210,9 @@ export function getTokenPrice(
   prices: TokenPrices | undefined,
   token: Pick<TokenInfo, "chainId" | "address" | "symbol">,
 ) {
-  if (!prices) return undefined;
+  if (!prices) {
+    return undefined;
+  }
   const lower = token.address.toLowerCase();
   return (
     prices[`${token.chainId}:${lower}`] ??

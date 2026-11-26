@@ -90,7 +90,9 @@ export function ensProfilePhase(
   data: EnsProfileData | undefined,
   isLoading: boolean,
 ): EnsProfilePhase {
-  if (isLoading) return "loading";
+  if (isLoading) {
+    return "loading";
+  }
   return (name ? !data?.address : !data?.name) ? "not-found" : "ready";
 }
 
@@ -120,7 +122,9 @@ const linkFormats: Record<
 export function ensProfileLinks(records: Record<string, string | undefined>): Array<EnsLink> {
   return (Object.keys(linkFormats) as Array<EnsLinkKey>).flatMap((key) => {
     const value = records[key];
-    if (!value) return [];
+    if (!value) {
+      return [];
+    }
     const format = linkFormats[key];
     return [
       { key, label: format.label, href: format.href(value), text: format.text?.(value) ?? value },

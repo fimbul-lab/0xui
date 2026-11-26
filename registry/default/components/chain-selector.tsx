@@ -87,12 +87,16 @@ export function useChainSwitcher() {
   const mounted = useMounted();
 
   const onSwitch = async (id: number) => {
-    if (await switcher.switchTo(id)) setOpen(false);
+    if (await switcher.switchTo(id)) {
+      setOpen(false);
+    }
   };
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) switcher.reset();
+    if (next) {
+      switcher.reset();
+    }
   };
 
   return {
@@ -112,7 +116,9 @@ function resolveIcons({
   loaderIcon,
   disableIcons,
 }: Pick<ChainSelectorProps, "chainIcon" | "chevronIcon" | "loaderIcon" | "disableIcons">) {
-  if (disableIcons) return {};
+  if (disableIcons) {
+    return {};
+  }
   return {
     ChainIcon: chainIcon === false ? undefined : chainIcon || ChainIcon,
     ChevronIcon: chevronIcon === false ? undefined : chevronIcon || ChevronDownIcon,

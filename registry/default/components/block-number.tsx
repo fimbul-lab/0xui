@@ -40,7 +40,9 @@ export function useLiveBlockNumber({
   const query = useQuery(blockNumberQueryOptions(config, { chainId: id }));
 
   useEffect(() => {
-    if (watch) return watchBlockNumberQuery(config, queryClient, { chainId: id });
+    if (watch) {
+      return watchBlockNumberQuery(config, queryClient, { chainId: id });
+    }
   }, [config, queryClient, id, watch]);
 
   return { blockNumber: query.data, phase: blockNumberPhase(query) };

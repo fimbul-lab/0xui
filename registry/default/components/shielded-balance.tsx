@@ -155,7 +155,9 @@ export function ShieldedBalance({
   });
   const format = { maxDecimals, compact, locale };
 
-  if (phase === "idle") return null;
+  if (phase === "idle") {
+    return null;
+  }
 
   const headline =
     phase === "loading" ? (

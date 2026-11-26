@@ -126,7 +126,9 @@ export function createTransactionFlow(
     while (confirmations > 1 && id === run) {
       try {
         const count = await getTransactionConfirmations(config, { hash, chainId: target });
-        if (count >= BigInt(confirmations)) return;
+        if (count >= BigInt(confirmations)) {
+          return;
+        }
       } catch {
         // A failed poll isn't a failed transaction: try again next round.
       }
@@ -155,16 +157,22 @@ export function createTransactionFlow(
                 ...request.transaction,
               } as TransactionRequest);
       } catch (error) {
-        if (id === run) fail(error);
+        if (id === run) {
+          fail(error);
+        }
         return;
       }
-      if (id !== run) return;
+      if (id !== run) {
+        return;
+      }
       store.set({ phase: "pending", hash });
       onSubmitted?.(hash);
 
       try {
         const receipt = await waitForMinedReceipt(config, { hash, chainId: target });
-        if (id !== run) return;
+        if (id !== run) {
+          return;
+        }
         store.set({ receipt });
         if (receipt.status === "reverted") {
           store.set({ phase: "reverted" });
@@ -172,11 +180,15 @@ export function createTransactionFlow(
           return;
         }
         await waitForConfirmations(hash, target, id);
-        if (id !== run) return;
+        if (id !== run) {
+          return;
+        }
         store.set({ phase: "success" });
         onSuccess?.(receipt);
       } catch (error_) {
-        if (id !== run) return;
+        if (id !== run) {
+          return;
+        }
         const error = toError(error_);
         store.set({ phase: "error", error });
         onError?.(error);
@@ -184,14 +196,20 @@ export function createTransactionFlow(
     },
     async switchToTarget() {
       const target = chainId ?? getConnection(config).chainId;
-      if (target === undefined) return;
+      if (target === undefined) {
+        return;
+      }
       const id = ++run;
       store.set({ phase: "switching", error: undefined });
       try {
         await switchChain(config, { chainId: target });
-        if (id === run) store.set({ phase: "idle", ...readTarget(config, chainId) });
+        if (id === run) {
+          store.set({ phase: "idle", ...readTarget(config, chainId) });
+        }
       } catch (error) {
-        if (id === run) fail(error);
+        if (id === run) {
+          fail(error);
+        }
       }
     },
     reset() {

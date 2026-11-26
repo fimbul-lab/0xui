@@ -121,17 +121,27 @@ const glyphDefs = new Map<string, { id: string; d: string }>();
 function glyphId(family: Family, weight: number, glyph: any): string | undefined {
   const key = `${family}-${weight}-${glyph.id}`;
   const known = glyphDefs.get(key);
-  if (known) return known.id;
+  if (known) {
+    return known.id;
+  }
   let d = "";
   for (const { command, args } of glyph.path.commands) {
     const p = args.map((v: number) => Math.round(v));
-    if (command === "moveTo") d += `M${p}`;
-    else if (command === "lineTo") d += `L${p}`;
-    else if (command === "quadraticCurveTo") d += `Q${p}`;
-    else if (command === "bezierCurveTo") d += `C${p}`;
-    else if (command === "closePath") d += "Z";
+    if (command === "moveTo") {
+      d += `M${p}`;
+    } else if (command === "lineTo") {
+      d += `L${p}`;
+    } else if (command === "quadraticCurveTo") {
+      d += `Q${p}`;
+    } else if (command === "bezierCurveTo") {
+      d += `C${p}`;
+    } else if (command === "closePath") {
+      d += "Z";
+    }
   }
-  if (!d) return undefined;
+  if (!d) {
+    return undefined;
+  }
   const id = `g${glyphDefs.size.toString(36)}`;
   glyphDefs.set(key, { id, d });
   return id;
@@ -160,7 +170,9 @@ export function text(str: string, o: TextOptions = {}): string {
   let uses = "";
   for (const { glyph, at } of glyphs) {
     const id = glyphId(family, weight, glyph);
-    if (!id) continue;
+    if (!id) {
+      continue;
+    }
     const dx = Math.round(at / scale);
     uses += `<use href="#${id}"${dx ? ` x="${dx}"` : ""}/>`;
   }
@@ -219,8 +231,12 @@ export class Timeline {
     const sorted = [...stops].sort((a, b) => a[0] - b[0]);
     const first = sorted[0];
     const last = sorted[sorted.length - 1];
-    if (first[0] > 0) sorted.unshift([0, first[1], undefined]);
-    if (last[0] < this.duration) sorted.push([this.duration, last[1], undefined]);
+    if (first[0] > 0) {
+      sorted.unshift([0, first[1], undefined]);
+    }
+    if (last[0] < this.duration) {
+      sorted.push([this.duration, last[1], undefined]);
+    }
     const frames = sorted
       .map(
         ([t, decl, ease]) =>
@@ -230,7 +246,9 @@ export class Timeline {
     this.motion.push(
       `@keyframes ${name}{${frames}}.${name}{animation:${name} ${this.duration}s linear infinite;${o.extra ?? ""}}`,
     );
-    if (o.still) this.stillCss.push(`.${name}{${o.still}}`);
+    if (o.still) {
+      this.stillCss.push(`.${name}{${o.still}}`);
+    }
     return name;
   }
 
@@ -262,9 +280,13 @@ export class Timeline {
     const cut = 0.011;
     const hold = "steps(1,end)";
     const stops: Array<[number, string, string?]> = [];
-    if (from <= 0) stops.push([0, on]);
-    else if (dIn <= cut) stops.push([0, off, hold], [from, on]);
-    else stops.push([0, off], [from, off, EASE], [from + dIn, on]);
+    if (from <= 0) {
+      stops.push([0, on]);
+    } else if (dIn <= cut) {
+      stops.push([0, off, hold], [from, on]);
+    } else {
+      stops.push([0, off], [from, off, EASE], [from + dIn, on]);
+    }
     if (to < this.duration) {
       if (dOut <= cut) {
         stops[stops.length - 1][2] = hold;

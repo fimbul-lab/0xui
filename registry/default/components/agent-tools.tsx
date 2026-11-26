@@ -50,7 +50,9 @@ const subscribe = (listener: () => void) => {
 };
 const setInstances = (next: Array<Instance>) => {
   instances = next;
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 };
 
 /**
@@ -122,7 +124,9 @@ export function useAgentTools({
 
   useEffect(() => {
     // Without WebMCP there is nothing to register, so don't start the bridge for it.
-    if (!owner || !enabled || !("modelContext" in document)) return;
+    if (!owner || !enabled || !("modelContext" in document)) {
+      return;
+    }
     return registerAgentTools([...walletAgentTools(config, { confirm: askPerson }), ...tools], {
       agent: getAgent(),
       allow: permissions.approved,
@@ -136,7 +140,9 @@ function createDialogConfirm() {
   let queue: Promise<unknown> = Promise.resolve();
   const confirm: AgentConfirm = (message, { signal }) => {
     const answer = queue.then(async () => {
-      if (signal.aborted) return false;
+      if (signal.aborted) {
+        return false;
+      }
       const result = await controller.open({ payload: message, signal });
       return result.returnValue === "confirm";
     });

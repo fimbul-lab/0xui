@@ -33,7 +33,11 @@ export function formatGasPrice(wei: bigint, locale?: string) {
 
 export function gasTone(wei: bigint, thresholds: { low: number; high: number }): GasTone {
   const gwei = Number(formatGwei(wei));
-  if (gwei < thresholds.low) return "low";
-  if (gwei > thresholds.high) return "high";
+  if (gwei < thresholds.low) {
+    return "low";
+  }
+  if (gwei > thresholds.high) {
+    return "high";
+  }
   return "medium";
 }

@@ -53,7 +53,9 @@ export type NetworkGuardProps = {
  */
 export function NetworkGuard({ chainId, mode = "banner", children, className }: NetworkGuardProps) {
   const guard = useNetworkGuard(chainId);
-  if (!guard.wrongNetwork) return <>{children}</>;
+  if (!guard.wrongNetwork) {
+    return <>{children}</>;
+  }
 
   const names = guard.allowedChains.map((c) => c.name);
   const supported =
@@ -111,7 +113,9 @@ export function NetworkGuard({ chainId, mode = "banner", children, className }: 
     </div>
   );
 
-  if (mode === "replace") return notice;
+  if (mode === "replace") {
+    return notice;
+  }
   return (
     <>
       {notice}

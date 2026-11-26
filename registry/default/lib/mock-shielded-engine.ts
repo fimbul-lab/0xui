@@ -177,7 +177,9 @@ const IDLE: ShieldedSync = Object.freeze({ stage: "notes", status: "idle", progr
  */
 function mockAddress(seed: string) {
   let state = 2_166_136_261;
-  for (let i = 0; i < seed.length; i++) state = Math.imul(state ^ seed.charCodeAt(i), 16_777_619);
+  for (let i = 0; i < seed.length; i++) {
+    state = Math.imul(state ^ seed.charCodeAt(i), 16_777_619);
+  }
   // 117 five-bit words. The first is 0, as in a real address (version byte 01).
   const words = [0];
   while (words.length < 117) {
@@ -246,7 +248,9 @@ export function createMockShieldedEngine({
   circuitsCached = false,
   shieldSignature = true,
 }: MockShieldedEngineOptions = {}): MockShieldedEngine {
-  if (!(speed > 0)) throw new RangeError("speed must be greater than 0.");
+  if (!(speed > 0)) {
+    throw new RangeError("speed must be greater than 0.");
+  }
 
   const timings = { ...MOCK_TIMINGS, ...timingOverrides };
   const defaultChain = autoChains[0] ?? 1;
@@ -257,7 +261,9 @@ export function createMockShieldedEngine({
     balances: new Set(),
   };
   const emit = (event: ShieldedEvent) => {
-    for (const listener of listeners[event]) listener();
+    for (const listener of listeners[event]) {
+      listener();
+    }
   };
 
   let status: ShieldedAccountStatus = initialAccount;
@@ -294,10 +300,14 @@ export function createMockShieldedEngine({
   function wait(ms: number, signal?: AbortSignal) {
     const delay = ms / speed;
     return new Promise<void>((resolve, reject) => {
-      if (signal?.aborted) return reject(signal.reason);
+      if (signal?.aborted) {
+        return reject(signal.reason);
+      }
       // Nothing to wait for: stay on the microtask queue, so at
       // `speed: Infinity` a whole flow finishes without a single timer.
-      if (!(delay >= 1)) return resolve();
+      if (!(delay >= 1)) {
+        return resolve();
+      }
       const onAbort = () => {
         clearTimeout(timer);
         reject(signal!.reason);
@@ -328,7 +338,9 @@ export function createMockShieldedEngine({
     for (const [index, step] of steps.entries()) {
       setSync(chain, { ...step, status: "syncing" });
       await wait(stepTime);
-      if (started !== session) return;
+      if (started !== session) {
+        return;
+      }
       if (index === failAt) {
         setSync(chain, { ...step, status: "error", error: failure });
         return;
@@ -343,10 +355,14 @@ export function createMockShieldedEngine({
       changed = true;
     }
     for (const note of chain.notes) {
-      if (!note.hash) continue;
+      if (!note.hash) {
+        continue;
+      }
       const key = note.hash.toLowerCase();
       // A new object only when the state moved, so the reference is stable in between.
-      if (chain.transactions.get(key)?.state === note.state) continue;
+      if (chain.transactions.get(key)?.state === note.state) {
+        continue;
+      }
       chain.transactions.set(key, {
         kind: "shield",
         token: note.token,
@@ -355,18 +371,24 @@ export function createMockShieldedEngine({
       });
       changed = true;
     }
-    if (changed) emit("balances");
+    if (changed) {
+      emit("balances");
+    }
     // The SDK's "complete" event carries progress 0.
     setSync(chain, { stage: "transactions", status: "synced", progress: 0 });
   }
 
   /** Scan a chain, or join the scan already running. Does nothing while the account is not unlocked. */
   function scan(chainId: number): Promise<void> {
-    if (status !== "unlocked") return Promise.resolve();
+    if (status !== "unlocked") {
+      return Promise.resolve();
+    }
     const chain = chainOf(chainId);
     if (!chain.scan) {
       const running: Promise<void> = runScan(chain).finally(() => {
-        if (chain.scan === running) chain.scan = undefined;
+        if (chain.scan === running) {
+          chain.scan = undefined;
+        }
       });
       chain.scan = running;
     }
@@ -384,11 +406,15 @@ export function createMockShieldedEngine({
   const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
 
   function requireUnlocked() {
-    if (status !== "unlocked") throw new Error("Unlock the private account first.");
+    if (status !== "unlocked") {
+      throw new Error("Unlock the private account first.");
+    }
   }
 
   function requirePassword(value: string) {
-    if (!value) throw new Error("Choose a password.");
+    if (!value) {
+      throw new Error("Choose a password.");
+    }
   }
 
   /** Drop everything that needs the decrypted account. */
@@ -407,12 +433,16 @@ export function createMockShieldedEngine({
   function open() {
     status = "unlocked";
     emit("account");
-    for (const chainId of autoChains) void scan(chainId);
+    for (const chainId of autoChains) {
+      void scan(chainId);
+    }
   }
 
   async function setAccount(mnemonic: string, newPassword: string) {
     await wait(timings.createAccount);
-    if (status === "unlocked") close();
+    if (status === "unlocked") {
+      close();
+    }
     password = newPassword;
     address = mockAddress(mnemonic);
     open();
@@ -438,14 +468,22 @@ export function createMockShieldedEngine({
         await setAccount(words.join(" "), newPassword);
       },
       async unlock(attempt) {
-        if (status === "none") throw new Error("There is no private account to unlock.");
-        if (status === "unlocked") return;
+        if (status === "none") {
+          throw new Error("There is no private account to unlock.");
+        }
+        if (status === "unlocked") {
+          return;
+        }
         await wait(timings.unlock);
-        if (attempt !== password) throw new Error("Wrong password.");
+        if (attempt !== password) {
+          throw new Error("Wrong password.");
+        }
         open();
       },
       lock() {
-        if (status !== "unlocked") return;
+        if (status !== "unlocked") {
+          return;
+        }
         status = "locked";
         close();
         emit("account");
@@ -466,7 +504,9 @@ export function createMockShieldedEngine({
 
     // Fees are read once when a real engine starts, so a quote costs nothing.
     async quoteShield(draft) {
-      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (draft.amount <= 0n) {
+        throw new Error("Enter an amount.");
+      }
       const fee = feeOn(draft.amount);
       return {
         fee,
@@ -479,9 +519,13 @@ export function createMockShieldedEngine({
 
     async prepareShield(draft, { sign }) {
       requireUnlocked();
-      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (draft.amount <= 0n) {
+        throw new Error("Enter an amount.");
+      }
       // A real engine turns this signature into a one-off key. The mock only asks for it.
-      if (shieldSignature) await sign(MOCK_SHIELD_MESSAGE);
+      if (shieldSignature) {
+        await sign(MOCK_SHIELD_MESSAGE);
+      }
       requireUnlocked();
       return {
         transaction: {
@@ -501,27 +545,45 @@ export function createMockShieldedEngine({
       const failure = nextRetryFailure;
       nextRetryFailure = undefined;
       await wait(timings.retryProofs);
-      if (started !== session) return;
-      if (failure !== undefined) throw new Error(failure);
-      if (keepIncomplete) return;
+      if (started !== session) {
+        return;
+      }
+      if (failure !== undefined) {
+        throw new Error(failure);
+      }
+      if (keepIncomplete) {
+        return;
+      }
 
       const notes = chainOf(chainId).notes.filter((note) => note.state === "incomplete");
-      if (notes.length === 0) return;
-      for (const note of notes) note.state = "proving";
+      if (notes.length === 0) {
+        return;
+      }
+      for (const note of notes) {
+        note.state = "proving";
+      }
       later(timings.settle, chainId, () => {
-        for (const note of notes) note.state = "spendable";
+        for (const note of notes) {
+          note.state = "spendable";
+        }
       });
       await scan(chainId);
     },
 
     async prove(draft, { onStage, signal }) {
       requireUnlocked();
-      if (signal?.aborted) throw signal.reason;
-      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (signal?.aborted) {
+        throw signal.reason;
+      }
+      if (draft.amount <= 0n) {
+        throw new Error("Enter an amount.");
+      }
       const spendable = chainOf(draft.chainId)
         .notes.filter((note) => note.state === "spendable" && sameToken(note.token, draft.token))
         .reduce((sum, note) => sum + note.amount, 0n);
-      if (spendable < draft.amount) throw new Error("Not enough spendable balance.");
+      if (spendable < draft.amount) {
+        throw new Error("Not enough spendable balance.");
+      }
 
       const started = session;
       const failure = nextProofFailure;
@@ -532,10 +594,14 @@ export function createMockShieldedEngine({
       circuitsLoaded = true;
       onStage("proving");
       await wait(timings.prove, signal);
-      if (failure !== undefined) throw new Error(failure);
+      if (failure !== undefined) {
+        throw new Error(failure);
+      }
       onStage("verifying");
       await wait(timings.verify, signal);
-      if (started !== session) throw new Error("The private account was locked.");
+      if (started !== session) {
+        throw new Error("The private account was locked.");
+      }
 
       return { id: `mock-proof-${++proofCount}`, draft, expiresAt: Date.now() + PROOF_LIFETIME };
     },
@@ -558,12 +624,18 @@ export function createMockShieldedEngine({
         let covered = 0n;
         const spent = new Set<Note>();
         for (const note of chain.notes) {
-          if (covered >= amount) break;
-          if (note.state !== "spendable" || !sameToken(note.token, token)) continue;
+          if (covered >= amount) {
+            break;
+          }
+          if (note.state !== "spendable" || !sameToken(note.token, token)) {
+            continue;
+          }
           spent.add(note);
           covered += note.amount;
         }
-        if (amount <= 0n || covered < amount) throw new Error("Not enough spendable balance.");
+        if (amount <= 0n || covered < amount) {
+          throw new Error("Not enough spendable balance.");
+        }
         chain.notes = chain.notes.filter((note) => !spent.has(note));
 
         if (covered > amount) {

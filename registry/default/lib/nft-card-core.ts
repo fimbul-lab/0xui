@@ -29,7 +29,9 @@ export function expandTokenUri(uri: string, tokenId: bigint) {
  */
 export async function fetchNftMetadata(uri: string, gateway?: string): Promise<NftMetadata> {
   const response = await fetch(resolveUri(uri, gateway));
-  if (!response.ok) throw new Error(`Metadata request failed (${response.status})`);
+  if (!response.ok) {
+    throw new Error(`Metadata request failed (${response.status})`);
+  }
   return response.json();
 }
 
@@ -109,8 +111,14 @@ export function nftPhase({
   notFound: boolean;
   metadataError: boolean;
 }): NftPhase {
-  if (isLoading) return "loading";
-  if (notFound) return "not-found";
-  if (metadataError) return "metadata-error";
+  if (isLoading) {
+    return "loading";
+  }
+  if (notFound) {
+    return "not-found";
+  }
+  if (metadataError) {
+    return "metadata-error";
+  }
   return "ready";
 }

@@ -38,7 +38,9 @@ export function mergeFeedEvents(sources: ReadonlyArray<ReadonlyArray<FeedEvent>>
     .flat()
     .filter((log) => {
       const id = feedEventId(log);
-      if (seen.has(id)) return false;
+      if (seen.has(id)) {
+        return false;
+      }
       seen.add(id);
       return true;
     })
@@ -48,11 +50,18 @@ export function mergeFeedEvents(sources: ReadonlyArray<ReadonlyArray<FeedEvent>>
 
 /** Short display text for an event argument. */
 export function formatEventArg(value: unknown): string {
-  if (typeof value === "bigint") return value.toLocaleString();
-  if (typeof value === "string" && isAddress(value)) return truncateAddress(value);
-  if (typeof value === "string" && value.startsWith("0x") && value.length > 20)
+  if (typeof value === "bigint") {
+    return value.toLocaleString();
+  }
+  if (typeof value === "string" && isAddress(value)) {
+    return truncateAddress(value);
+  }
+  if (typeof value === "string" && value.startsWith("0x") && value.length > 20) {
     return truncateAddress(value, { start: 10, end: 6 });
-  if (Array.isArray(value)) return `[${value.map(formatEventArg).join(", ")}]`;
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(formatEventArg).join(", ")}]`;
+  }
   return String(value);
 }
 

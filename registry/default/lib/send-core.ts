@@ -26,11 +26,21 @@ export function sendBlocker(
   draft: SendDraft,
   { recipientPhase, insufficient }: { recipientPhase: SendRecipientPhase; insufficient: boolean },
 ) {
-  if (recipientPhase === "empty") return "Enter a recipient";
-  if (recipientPhase === "resolving") return "Looking up name…";
-  if (!draft.recipient) return "Enter a valid recipient";
-  if (!draft.amount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${draft.token.symbol} balance`;
+  if (recipientPhase === "empty") {
+    return "Enter a recipient";
+  }
+  if (recipientPhase === "resolving") {
+    return "Looking up name…";
+  }
+  if (!draft.recipient) {
+    return "Enter a valid recipient";
+  }
+  if (!draft.amount) {
+    return "Enter an amount";
+  }
+  if (insufficient) {
+    return `Insufficient ${draft.token.symbol} balance`;
+  }
   return undefined;
 }
 

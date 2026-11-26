@@ -29,8 +29,12 @@ export function advanceSync(
   previous: ShieldedSyncView | undefined,
   next: ShieldedSync,
 ): ShieldedSyncView {
-  if (next.status === "idle") return { ...idleView, stage: next.stage };
-  if (next.status === "synced") return { phase: "synced", stage: next.stage, progress: 1 };
+  if (next.status === "idle") {
+    return { ...idleView, stage: next.stage };
+  }
+  if (next.status === "synced") {
+    return { phase: "synced", stage: next.stage, progress: 1 };
+  }
 
   if (next.status === "error") {
     // The bar stays where the scan stopped.

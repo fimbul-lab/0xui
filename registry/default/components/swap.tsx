@@ -139,7 +139,9 @@ export function Swap({
   const pick = (side: "sell" | "buy") => (token: Token) => {
     const other = side === "sell" ? buyToken : sellToken;
     // Picking the other side's token swaps them.
-    if (isSameToken(other, token)) return flip();
+    if (isSameToken(other, token)) {
+      return flip();
+    }
     if (side === "sell") {
       setSellToken(token);
       setSellText("");

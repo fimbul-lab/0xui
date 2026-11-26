@@ -54,7 +54,9 @@ export function shieldedDemo(
 
     useEffect(() => {
       setup?.(engine);
-      if (unlock) void engine.account.unlock("password");
+      if (unlock) {
+        void engine.account.unlock("password");
+      }
       return () => engine.account.lock();
     }, [engine]);
 

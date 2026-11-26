@@ -50,7 +50,9 @@ const image = (source: string) =>
 const [mode, only] = process.argv.slice(2);
 
 for (const [key, { out, make, times }] of Object.entries(banners)) {
-  if (only && only !== key) continue;
+  if (only && only !== key) {
+    continue;
+  }
   const source = make();
   writeFileSync(out, source);
   console.log(`${key}  ${(source.length / 1024).toFixed(1)} kB  ${out}`);

@@ -105,7 +105,9 @@ function Letters({ symbol }: { symbol: string }) {
  */
 function ListLogo({ src, fallback }: { src: string; fallback: ReactNode }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <>{fallback}</>;
+  if (failed) {
+    return <>{fallback}</>;
+  }
   return (
     <Avatar
       aria-hidden

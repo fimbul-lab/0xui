@@ -134,7 +134,9 @@ export function BatchTransaction({
   } else if (batch.wrongChain) {
     label = `Switch to ${batch.targetChain?.name ?? "the right network"}`;
     action = batch.switchToTarget;
-    if (agentConfirm !== false) confirm = `Asks your wallet to switch to ${chainName}`;
+    if (agentConfirm !== false) {
+      confirm = `Asks your wallet to switch to ${chainName}`;
+    }
   }
 
   return (
@@ -198,11 +200,13 @@ export function BatchTransaction({
 
 function StepIcon({ state }: { state: StepState }) {
   const className = "size-4 shrink-0";
-  if (state === "done")
+  if (state === "done") {
     return <CheckIcon role="img" aria-label="Done" className={cn(className, "text-emerald-500")} />;
-  if (state === "failed")
+  }
+  if (state === "failed") {
     return <XIcon role="img" aria-label="Failed" className={cn(className, "text-destructive")} />;
-  if (state === "active")
+  }
+  if (state === "active") {
     return (
       <Loader2Icon
         role="img"
@@ -210,6 +214,7 @@ function StepIcon({ state }: { state: StepState }) {
         className={cn(className, "animate-spin text-muted-foreground")}
       />
     );
+  }
   return (
     <CircleIcon
       role="img"

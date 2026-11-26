@@ -35,7 +35,9 @@ function commitDates() {
       } catch {
         // Checked below.
       }
-      if (shallow()) return dates;
+      if (shallow()) {
+        return dates;
+      }
     }
     log = git("log", "--format=@%cI", "--name-only");
   } catch {
@@ -43,8 +45,11 @@ function commitDates() {
   }
   let date = "";
   for (const line of log.split("\n")) {
-    if (line.startsWith("@")) date = line.slice(1);
-    else if (line && !dates.has(line)) dates.set(line, date);
+    if (line.startsWith("@")) {
+      date = line.slice(1);
+    } else if (line && !dates.has(line)) {
+      dates.set(line, date);
+    }
   }
   return dates;
 }
