@@ -30,7 +30,7 @@ function Playground({ engine }: ShieldedDemoProps) {
     );
   }
 
-  const act = (label: string, run: () => unknown) => (
+  const act = (label: string, run: () => void) => (
     <Button
       variant="outline"
       size="sm"

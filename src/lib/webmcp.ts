@@ -7,13 +7,41 @@ type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject;
 type JsonObject = { [key: string]: JsonValue };
 
+interface SearchHit {
+  page: string;
+  title: string;
+  excerpt: string;
+}
+
+type DocsToolResult = string | Array<SearchHit> | JsonObject;
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+  if (typeof value === "object") {
+    return Object.values(value).every(isJsonValue);
+  }
+  return false;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && isJsonValue(value);
+}
+
 interface Tool {
   name: string;
   title: string;
   description: string;
   inputSchema: object;
   annotations: { readOnlyHint: boolean };
-  execute: (input: JsonObject) => Promise<unknown>;
+  execute: (input: JsonObject) => Promise<DocsToolResult>;
 }
 
 interface ModelContext {
@@ -188,7 +216,7 @@ export function docsTools({
           throw new Error(`"${name}" isn't a registry item name.`);
         }
         const item: unknown = JSON.parse(await read(`/r/${name}.json`));
-        if (typeof item !== "object" || item === null) {
+        if (!isJsonObject(item)) {
           throw new Error(`/r/${name}.json isn't a registry item.`);
         }
         return { install: `npx shadcn@latest add @0xui/${name}`, ...item };
