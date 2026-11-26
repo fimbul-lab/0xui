@@ -31,7 +31,6 @@ export default defineConfig({
     "quality/no-object-parameters": "off",
     "quality/no-unknown-returns": "off",
     "quality/no-unsafe-dictionary-type": "off",
-    "react/no-unescaped-entities": "off",
     "typescript/no-explicit-any": "off",
     "typescript/no-misused-promises": "off",
     "typescript/no-non-null-assertion": "off",
@@ -60,6 +59,9 @@ export default defineConfig({
     "react/no-unknown-property": ["error", { ignore: ["skullet-block"] }],
     // A stray `console.log` is the slip; demos and tests report problems on purpose.
     "no-console": ["error", { allow: ["error", "warn"] }],
+    // Quotes and apostrophes in JSX text render as written, and TypeScript already
+    // rejects a bare `>` or `}`. oxlint's version can't narrow `forbid` to those.
+    "react/no-unescaped-entities": "off",
     "typescript/no-base-to-string": "warn",
     "typescript/restrict-template-expressions": "warn",
     "react-hooks/exhaustive-deps": "warn",
