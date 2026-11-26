@@ -12,7 +12,8 @@ const files: Record<string, [string, string]> = {
 const env = {
   ASSETS: {
     async fetch(input: Request | URL | string) {
-      const path = new URL(input instanceof Request ? input.url : input).pathname;
+      const url = typeof input === "object" && "url" in input ? input.url : input;
+      const path = new URL(url).pathname;
       const [body, type] = files[path] ?? files["/404.html"];
       return new Response(body, {
         status: path in files ? 200 : 404,

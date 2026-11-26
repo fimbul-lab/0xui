@@ -70,7 +70,8 @@ export function sortByHoldings(
 
 /** Caller-supplied balances, keyed by lowercase address. */
 export function toBalanceMap(balances: ReadonlyMap<string, bigint> | Record<string, bigint>) {
-  const entries = balances instanceof Map ? [...balances] : Object.entries(balances);
+  // A map is iterable and a plain record is not, even across realms.
+  const entries = Symbol.iterator in balances ? [...balances] : Object.entries(balances);
   return new Map(entries.map(([address, value]) => [address.toLowerCase(), value]));
 }
 

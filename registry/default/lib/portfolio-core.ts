@@ -76,7 +76,8 @@ export type PortfolioBalances = ReadonlyMap<string, bigint> | Record<string, big
 
 /** Balances keyed by lowercase address. */
 export function normalizeBalances(balances: PortfolioBalances): Map<string, bigint> {
-  const entries = balances instanceof Map ? [...balances] : Object.entries(balances);
+  // A map is iterable and a plain record is not, even across realms.
+  const entries = Symbol.iterator in balances ? [...balances] : Object.entries(balances);
   return new Map(entries.map(([key, value]) => [key.toLowerCase(), value]));
 }
 
