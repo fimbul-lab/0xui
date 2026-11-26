@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { parseEther, parseUnits } from "viem";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { WagmiProvider } from "wagmi";
 import { provideModelContext } from "../../../test/webmcp";
 import type { RegisteredTool } from "../../../test/webmcp";
@@ -136,7 +136,7 @@ describe("walletAgentTools", () => {
       tool(walletAgentTools(wagmi), "switch_chain").execute({ chain: "Sepolia" }),
     ).rejects.toThrow('Needs a person: "Asks your wallet to switch to Sepolia".');
 
-    const no = vi.fn(async () => false);
+    const no: AgentConfirm = async () => false;
     await expect(
       tool(walletAgentTools(wagmi, { confirm: no }), "switch_chain").execute({ chain: "Sepolia" }),
     ).rejects.toThrow('The person said no to "Asks your wallet to switch to Sepolia".');
@@ -144,15 +144,19 @@ describe("walletAgentTools", () => {
       chain: { id: 1 },
     });
 
-    const yes = vi.fn<AgentConfirm>(async () => true);
+    const asked: Array<Parameters<AgentConfirm>> = [];
+    const yes: AgentConfirm = async (...question) => {
+      asked.push(question);
+      return true;
+    };
     expect(
       await tool(walletAgentTools(wagmi, { confirm: yes }), "switch_chain").execute({
         chain: 11_155_111,
       }),
     ).toEqual({ id: 11_155_111, name: "Sepolia" });
-    expect(yes).toHaveBeenCalledWith("Asks your wallet to switch to Sepolia", {
-      signal: expect.any(AbortSignal),
-    });
+    expect(asked).toEqual([
+      ["Asks your wallet to switch to Sepolia", { signal: expect.any(AbortSignal) }],
+    ]);
   });
 });
 
@@ -167,11 +171,14 @@ describe("agentPermissions", () => {
   const signal = new AbortController().signal;
 
   it("lets unmarked steps run without asking", () => {
-    const confirm = vi.fn(() => true);
-    const { allow, approved } = agentPermissions(confirm);
+    const asked: Array<string> = [];
+    const { allow, approved } = agentPermissions((message) => {
+      asked.push(message);
+      return true;
+    });
     expect(allow(step(), { signal })).toBe(true);
     expect(approved(step())).toBe(true);
-    expect(confirm).not.toHaveBeenCalled();
+    expect(asked).toEqual([]);
   });
 
   it("passes a marked step to registerTools only once the person approved that step", async () => {
@@ -210,8 +217,18 @@ describe("AgentTools", () => {
     agentConfirm?: string | false,
   ) {
     const rpc = fakeChainRpc();
-    const sendTransaction = vi.fn(rpc.eth_sendTransaction as (params: unknown) => unknown);
-    const wagmi = createTestConfig({ rpc: { ...rpc, eth_sendTransaction: sendTransaction } });
+    const accept = rpc.eth_sendTransaction as (params: unknown) => unknown;
+    /** Transactions the wallet sent. */
+    const sent: Array<unknown> = [];
+    const wagmi = createTestConfig({
+      rpc: {
+        ...rpc,
+        eth_sendTransaction: (params: unknown) => {
+          sent.push(params);
+          return accept(params);
+        },
+      },
+    });
     const view = renderWithWagmi(
       <>
         <AgentTools {...props} />
@@ -226,7 +243,7 @@ describe("AgentTools", () => {
     await waitFor(() => expect(tools.has("act")).toBe(true));
     const press = () =>
       tools.get("act")!.execute({ steps: [{ ref: "Send 0.1 ETH", action: "press" }] });
-    return { ...view, sendTransaction, press };
+    return { ...view, sent, press };
   }
 
   it("registers the page and wallet tools while mounted", async () => {
@@ -275,7 +292,7 @@ describe("AgentTools", () => {
   });
 
   it("asks the person before an agent presses a marked button", async () => {
-    const { sendTransaction, press } = await setup();
+    const { sent, press } = await setup();
 
     let result = press();
     const dialog = await screen.findByRole("alertdialog", {
@@ -293,39 +310,47 @@ describe("AgentTools", () => {
       ok: false,
       error: { message: expect.stringContaining(`said no to "${sentence}"`) },
     });
-    expect(sendTransaction).not.toHaveBeenCalled();
+    expect(sent).toEqual([]);
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
 
     result = press();
     fireEvent.click(await screen.findByRole("button", { name: "Allow" }));
     expect((await result).ok).toBe(true);
-    expect(sendTransaction).toHaveBeenCalledOnce();
+    expect(sent).toHaveLength(1);
   });
 
   it("lets unmarked steps run without asking", async () => {
-    const confirm = vi.fn(async () => true);
-    const { sendTransaction, press } = await setup({ confirm }, false);
+    const asked: Array<string> = [];
+    const confirm: AgentConfirm = async (message) => {
+      asked.push(message);
+      return true;
+    };
+    const { sent, press } = await setup({ confirm }, false);
     expect((await press()).ok).toBe(true);
-    expect(confirm).not.toHaveBeenCalled();
-    expect(sendTransaction).toHaveBeenCalledOnce();
+    expect(asked).toEqual([]);
+    expect(sent).toHaveLength(1);
   });
 
   it("uses the confirm prop instead of the dialog", async () => {
-    const confirm = vi.fn<AgentConfirm>(async () => true);
-    const { sendTransaction, press } = await setup({ confirm });
+    const asked: Array<Parameters<AgentConfirm>> = [];
+    const confirm: AgentConfirm = async (...question) => {
+      asked.push(question);
+      return true;
+    };
+    const { sent, press } = await setup({ confirm });
 
     expect((await press()).ok).toBe(true);
-    expect(confirm).toHaveBeenCalledWith(sentence, { signal: expect.any(AbortSignal) });
+    expect(asked).toEqual([[sentence, { signal: expect.any(AbortSignal) }]]);
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(sendTransaction).toHaveBeenCalledOnce();
+    expect(sent).toHaveLength(1);
   });
 
   it("refuses every marked step with confirm={false}", async () => {
-    const { sendTransaction, press } = await setup({ confirm: false });
+    const { sent, press } = await setup({ confirm: false });
 
     expect((await press()).ok).toBe(false);
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(sendTransaction).not.toHaveBeenCalled();
+    expect(sent).toEqual([]);
   });
 
   it("asks in the same dialog before switch_chain", async () => {

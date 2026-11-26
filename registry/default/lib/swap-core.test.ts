@@ -1,5 +1,5 @@
 import { parseEther, parseUnits } from "viem";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   formatRate,
   isSameToken,
@@ -9,7 +9,7 @@ import {
   swapNeedsApproval,
   swapQuoteQueryOptions,
 } from "./swap-core";
-import type { SwapQuote } from "./swap-core";
+import type { GetQuote, SwapQuote } from "./swap-core";
 import { NATIVE_TOKEN_ADDRESS } from "./token-list";
 import type { TokenInfo } from "./token-list";
 
@@ -46,7 +46,11 @@ describe("swap", () => {
   });
 
   it("quotes only a complete swap", async () => {
-    const getQuote = vi.fn(async () => quote);
+    const requests: Array<Parameters<GetQuote>[0]> = [];
+    const getQuote: GetQuote = async (request) => {
+      requests.push(request);
+      return quote;
+    };
     const options = swapQuoteQueryOptions({
       getQuote,
       sellToken: eth,
@@ -57,12 +61,14 @@ describe("swap", () => {
     expect(options.enabled).toBe(true);
     expect(options.queryKey).toContain("2");
     expect(await options.queryFn()).toBe(quote);
-    expect(getQuote).toHaveBeenCalledWith({
-      sellToken: eth,
-      buyToken: usdc,
-      sellAmount: 2n,
-      taker: undefined,
-    });
+    expect(requests).toEqual([
+      {
+        sellToken: eth,
+        buyToken: usdc,
+        sellAmount: 2n,
+        taker: undefined,
+      },
+    ]);
     expect(
       swapQuoteQueryOptions({
         getQuote,

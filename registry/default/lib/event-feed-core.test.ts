@@ -54,7 +54,11 @@ describe("event-feed", () => {
   });
 
   it("loads recent history", async () => {
-    const getLogs = vi.fn(() => [rpcLog]);
+    let getLogsCalls = 0;
+    const getLogs = () => {
+      getLogsCalls += 1;
+      return [rpcLog];
+    };
     const config = createTestConfig({ rpc: { ...fakeChainRpc(), eth_getLogs: getLogs } });
     const options = eventHistoryQueryOptions(config, {
       address: usdc,
@@ -65,7 +69,7 @@ describe("event-feed", () => {
     const logs = await options.queryFn();
 
     expect(logs[0]).toMatchObject({ eventName: "Transfer", args: { value: 5n } });
-    expect(getLogs).toHaveBeenCalledOnce();
+    expect(getLogsCalls).toBe(1);
     expect(
       eventHistoryQueryOptions(config, { address: usdc, abi: erc20Abi, blocks: 0 }).enabled,
     ).toBe(false);

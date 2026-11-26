@@ -152,7 +152,11 @@ describe("Swap", () => {
 
   it("quotes, shows the rate, and swaps", async () => {
     const user = userEvent.setup();
-    const quote = vi.fn(getQuote);
+    let quotes = 0;
+    const quote: GetQuote = (request) => {
+      quotes += 1;
+      return getQuote(request);
+    };
     const config = createTestConfig({
       rpc: { ...fakeChainRpc(), eth_getBalance: toHex(parseEther("5")) },
     });
@@ -170,7 +174,7 @@ describe("Swap", () => {
     );
     expect(screen.getByText(/1 ETH = 3,150 USDC/)).toBeInTheDocument();
     expect(screen.getByText("Price impact 0.12%")).toBeInTheDocument();
-    expect(quote).toHaveBeenCalledTimes(1);
+    expect(quotes).toBe(1);
 
     await user.click(screen.getByRole("button", { name: "Swap" }));
     // "Done" shows even though the input clears on success.
