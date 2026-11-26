@@ -32,7 +32,6 @@ export default defineConfig({
     "quality/no-unknown-returns": "off",
     "quality/no-unsafe-dictionary-type": "off",
     "typescript/no-explicit-any": "off",
-    "typescript/no-misused-promises": "off",
     "typescript/no-non-null-assertion": "off",
     "typescript/no-unnecessary-type-assertion": "off",
     "typescript/no-unsafe-argument": "off",

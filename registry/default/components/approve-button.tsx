@@ -124,9 +124,9 @@ export function ApproveButton({
       }
       successLabel={reset ? "Approval reset" : "Approved"}
       resetAfter={false}
-      onSuccess={async (receipt) => {
-        await allowance.refetch();
-        onSuccess?.(receipt);
+      onSuccess={(receipt) => {
+        // `refetch` resolves even when the read fails, so this never rejects.
+        void allowance.refetch().then(() => onSuccess?.(receipt));
       }}
     >
       {reset ? `Reset ${token.symbol} approval` : `Approve ${token.symbol}`}

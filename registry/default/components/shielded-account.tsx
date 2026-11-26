@@ -481,7 +481,7 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
             It is stored encrypted on this device.
           </Heading>
           <ShieldedAccountUnlockForm
-            onUnlock={account.unlock}
+            onUnlock={(password) => void account.unlock(password)}
             busy={phase === "unlocking"}
             error={error}
           />
@@ -492,7 +492,7 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
             Enter its recovery phrase and choose a password for this device.
           </Heading>
           <ShieldedAccountImportForm
-            onImport={account.importAccount}
+            onImport={(phrase, password) => void account.importAccount(phrase, password)}
             busy={phase === "importing"}
             error={error}
           />
@@ -506,7 +506,7 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
             It holds your shielded balance and is separate from your wallet.
           </Heading>
           <ShieldedAccountCreateForm
-            onCreate={account.create}
+            onCreate={(password) => void account.create(password)}
             busy={phase === "creating"}
             error={error}
           />

@@ -145,7 +145,7 @@ export function ConnectWalletDialog({
                   wallet={wallet}
                   pending={wallet.id === pendingId}
                   disabled={phase === "connecting"}
-                  onSelect={() => connect(wallet)}
+                  onSelect={() => void connect(wallet)}
                 />
               </li>
             ))}

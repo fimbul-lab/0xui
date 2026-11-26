@@ -479,7 +479,7 @@ export function ChainSelector(props: ChainSelectorProps) {
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}
-          onSwitch={s.onSwitch}
+          onSwitch={(id) => void s.onSwitch(id)}
           ChainIcon={s.ChainIcon}
           LoaderIcon={s.LoaderIcon}
           variant={s.variant}
@@ -530,7 +530,7 @@ export function ChainSelectorDialog(props: ChainSelectorProps) {
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}
-          onSwitch={s.onSwitch}
+          onSwitch={(id) => void s.onSwitch(id)}
           ChainIcon={s.ChainIcon}
           LoaderIcon={s.LoaderIcon}
           variant={s.variant}

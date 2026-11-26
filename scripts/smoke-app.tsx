@@ -111,7 +111,10 @@ function Shielded() {
   const proof = useProof();
   return (
     <>
-      <button type="button" onClick={() => shieldedEngine.account.unlock("password")}>
+      <button
+        type="button"
+        onClick={() => void shieldedEngine.account.unlock("password").catch(console.error)}
+      >
         Unlock
       </button>
       {account.address && <ShieldedAddress address={account.address} variant="pill" />}
@@ -132,7 +135,13 @@ function Shielded() {
       <button
         type="button"
         onClick={() =>
-          proof.prove({ kind: "unshield", chainId: 1, token: usdc, amount: 1n, recipient: address })
+          void proof.prove({
+            kind: "unshield",
+            chainId: 1,
+            token: usdc,
+            amount: 1n,
+            recipient: address,
+          })
         }
       >
         Prove
@@ -147,7 +156,9 @@ function Shielded() {
         <Shield
           tokens={tokens}
           chainId={1}
-          onSubmitted={(hash, draft) => shieldedEngine.simulate.shield({ ...draft, hash })}
+          onSubmitted={(hash, draft) =>
+            void shieldedEngine.simulate.shield({ ...draft, hash }).catch(console.error)
+          }
         />
         <Shield tokens={tokens} chainId={1} variant="collapse" />
       </ShieldedAccount>
