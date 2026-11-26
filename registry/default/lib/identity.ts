@@ -58,7 +58,7 @@ export function addressDisplay(
  */
 export function addressGradient(address: string) {
   const hex = address.toLowerCase().replace(/^0x/, "").padEnd(12, "0");
-  const from = parseInt(hex.slice(0, 6), 16) % 360;
-  const to = (from + 40 + (parseInt(hex.slice(6, 12), 16) % 120)) % 360;
+  const from = Number.parseInt(hex.slice(0, 6), 16) % 360;
+  const to = (from + 40 + (Number.parseInt(hex.slice(6, 12), 16) % 120)) % 360;
   return `linear-gradient(135deg, oklch(0.75 0.15 ${from}), oklch(0.55 0.2 ${to}))`;
 }
