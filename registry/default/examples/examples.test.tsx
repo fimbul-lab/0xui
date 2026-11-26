@@ -1,7 +1,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { http, HttpResponse } from "msw";
 import type { ComponentType } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { server } from "../../../test/msw";
 import { createTestConfig, fakeChainRpc, renderWithWagmi } from "../../../test/wagmi";
 
 const root = process.cwd();
@@ -31,14 +33,8 @@ function docsPages(section: "components" | "blocks") {
 
 /** Answer JSON-RPC from a fake chain, and refuse other requests (token lists, NFT metadata). */
 function offlineConfig() {
-  const config = createTestConfig({ rpc: fakeChainRpc() });
-  const rpcFetch = globalThis.fetch;
-  vi.stubGlobal("fetch", (url: string, init?: { body?: string }) =>
-    typeof init?.body === "string"
-      ? rpcFetch(url, init as RequestInit)
-      : Promise.reject(new Error(`Offline: ${url}`)),
-  );
-  return config;
+  server.use(http.all(/^(?!https:\/\/rpc\.test\/)/, () => HttpResponse.error()));
+  return createTestConfig({ rpc: fakeChainRpc() });
 }
 
 describe("examples", () => {

@@ -2,18 +2,17 @@ import { QueryClient } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import {
-  custom,
   decodeFunctionData,
   encodeAbiParameters,
   encodeFunctionResult,
   erc20Abi,
   hexToBytes,
+  http as httpTransport,
   parseAbi,
   toHex,
   zeroAddress,
 } from "viem";
 import type { Address, Chain, Hex } from "viem";
-import { vi } from "vitest";
 import { createConfig, createConnector } from "wagmi";
 import type { Config } from "wagmi";
 import { connect } from "wagmi/actions";
@@ -21,61 +20,16 @@ import { mainnet, sepolia } from "wagmi/chains";
 import { mock } from "wagmi/connectors";
 import type { MockParameters } from "wagmi/connectors";
 import { Web3Provider } from "@/components/web3-provider";
+import { serveRpc } from "./rpc";
+import type { RpcResponses } from "./rpc";
 
 export const testAccounts = [
   "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
 ] as const;
 
-/**
- * Canned JSON-RPC responses by method name. A function receives the params.
- * Throw `{ code, message }` from a function to return a JSON-RPC error, e.g.
- * `{ code: 4001 }` for a user rejection.
- */
-export type RpcResponses = Record<string, unknown | ((params: any) => unknown)>;
+export type { RpcResponses };
 
-async function respond(rpc: RpcResponses, method: string, params: unknown) {
-  if (!(method in rpc)) {
-    throw new Error(`RPC method not mocked: ${method}`);
-  }
-  const response = rpc[method];
-  return typeof response === "function" ? response(params) : response;
-}
-
-/**
- * The mock connector forwards wallet methods it doesn't handle (e.g.
- * eth_sendTransaction) to the chain's RPC URL with fetch. Answer those from
- * the same map, as a JSON-RPC server would.
- */
-function stubWalletRpc(rpc: RpcResponses) {
-  const realFetch = globalThis.fetch;
-  vi.stubGlobal("fetch", async (url: string, init?: { body?: string }) => {
-    // Not JSON-RPC (e.g. NFT metadata, data: URIs): use the real fetch.
-    if (typeof init?.body !== "string") {
-      return realFetch(url, init as RequestInit);
-    }
-    const { id, method, params } = JSON.parse(init.body);
-    try {
-      const result = await respond(rpc, method, params);
-      return Response.json({ jsonrpc: "2.0", id, result });
-    } catch (error) {
-      const { code = -32_603, message = String(error) } = error as {
-        code?: number;
-        message?: string;
-      };
-      return Response.json({ jsonrpc: "2.0", id, error: { code, message } });
-    }
-  });
-}
-
-/**
- * wagmi config with only the mock connector and a fake RPC. Nothing touches
- * the network: methods missing from `rpc` fail like an unreachable node.
- * Stubs `fetch` for the test (restored in test/setup.ts).
- *
- * Use `features` to make the "wallet" reject or fail, e.g.
- * `{ switchChainError: true }` for a user rejection.
- */
 /**
  * The mock wallet, reporting the given EIP-5792 capabilities per chain id,
  * e.g. `{ 1: { atomic: { status: "supported" } } }`.
@@ -106,6 +60,14 @@ function withCapabilities(
   });
 }
 
+/**
+ * wagmi config with only the mock connector and a fake RPC node. Methods
+ * missing from `rpc` fail with a JSON-RPC error, and any other request fails
+ * the test (MSW in test/setup.ts).
+ *
+ * Use `features` to make the "wallet" reject or fail, e.g.
+ * `{ switchChainError: true }` for a user rejection.
+ */
 export function createTestConfig({
   features,
   rpc = {},
@@ -122,13 +84,10 @@ export function createTestConfig({
   /** EIP-5792 capabilities the wallet reports, by chain id. Without it the wallet can't batch. */
   capabilities?: Record<number, unknown>;
 } = {}) {
-  stubWalletRpc(rpc);
-  const transport = custom(
-    { request: ({ method, params }) => respond(rpc, method, params) },
-    { retryCount: 0 },
-  );
+  const url = serveRpc(rpc);
+  const transport = httpTransport(url, { retryCount: 0 });
   return createConfig({
-    chains: [withoutMulticall(mainnet), withoutMulticall(sepolia)],
+    chains: [testChain(mainnet, url), testChain(sepolia, url)],
     connectors: wallets.map((walletAccounts) => {
       const wallet = mock({ accounts: walletAccounts, features });
       return capabilities ? withCapabilities(wallet, capabilities) : wallet;
@@ -215,12 +174,13 @@ export function fakeChainRpc({
 }
 
 /**
- * wagmi batches reads through Multicall3 by default. Without it, reads become
- * plain RPC calls (eth_getBalance, eth_call) that are easy to fake.
+ * `chain` served by the test node at `url`. wagmi batches reads through
+ * Multicall3 by default; without it, reads become plain RPC calls
+ * (eth_getBalance, eth_call) that are easy to fake.
  */
-function withoutMulticall<chain extends Chain>(chain: chain): chain {
+function testChain<chain extends Chain>(chain: chain, url: string): chain {
   const { multicall3: _, ...contracts } = chain.contracts ?? {};
-  return { ...chain, contracts };
+  return { ...chain, contracts, rpcUrls: { default: { http: [url] } } };
 }
 
 export function renderWithWagmi(
