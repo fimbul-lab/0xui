@@ -27,7 +27,6 @@ export default defineConfig({
     // commit: fixed and turned on, or kept off with the reason.
     "@nkzw/no-instanceof": "off",
     "@nkzw/require-use-effect-arguments": "off",
-    "import/namespace": "off",
     "no-console": "off",
     "no-promise-executor-return": "off",
     "no-undef": "off",
