@@ -45,7 +45,10 @@ export function unshieldQuoteQueryOptions(
       draft?.token,
       draft?.amount.toString(),
     ],
-    queryFn: () => engine.quote({ kind: "unshield", ...draft!, recipient: zeroAddress }),
+    queryFn: () =>
+      draft
+        ? engine.quote({ kind: "unshield", ...draft, recipient: zeroAddress })
+        : Promise.reject(new Error("Nothing to quote yet.")),
     enabled: Boolean(enabled && draft && draft.amount > 0n),
     staleTime: 30_000,
     retry: false,
@@ -104,6 +107,9 @@ export function parseUnshieldAmount(text: string, decimals: number) {
   }
 }
 
+/** The form button's label, and whether pressing it starts the unshield. */
+export type UnshieldFormAction = { label: string; ready: boolean };
+
 /** The form's button before an unshield starts: the blocker, or the call to action. */
 export function unshieldFormAction({
   blocker,
@@ -117,7 +123,7 @@ export function unshieldFormAction({
   quoting: boolean;
   quoted: boolean;
   symbol: string | undefined;
-}): { label: string; ready: boolean } {
+}): UnshieldFormAction {
   if (blocker) {
     return { label: blocker, ready: false };
   }

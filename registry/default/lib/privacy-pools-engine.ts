@@ -3,8 +3,10 @@ import type {
   AccountCommitment,
   AccountService,
   DepositEvent,
+  Hash as PoolHash,
   PoolAccount,
   PoolInfo,
+  PrivacyPoolSDK,
   RagequitEvent,
   WithdrawalEvent,
   WithdrawalProof,
@@ -17,6 +19,8 @@ import {
   getAddress,
   formatUnits,
   http,
+  isAddress,
+  isHex,
   parseAbi,
 } from "viem";
 import type { Address, Hash, Hex } from "viem";
@@ -83,15 +87,12 @@ export const PRIVACY_POOLS_SEPOLIA = {
 /** Where the encrypted recovery phrase is kept. `localStorage` fits. */
 export type PrivacyPoolsStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
-/** A decoded pool event, as viem's `getLogs` returns it. */
-type PoolLog = {
-  address: Address;
-  eventName: string;
-  args: Record<string, unknown>;
-  blockNumber: bigint | null;
-  transactionHash: Hash | null;
-  logIndex: number | null;
-};
+/** A pool event read from a decoded log, in the SDK's shape, with the pool it came from. */
+type PoolLog = { pool: string; blockNumber: bigint } & (
+  | { kind: "deposits"; event: DepositEvent }
+  | { kind: "withdrawals"; event: WithdrawalEvent }
+  | { kind: "ragequits"; event: RagequitEvent }
+);
 
 /**
  * Where pool events are kept between page loads, so a reload reads only what
@@ -117,6 +118,7 @@ export type PrivacyPoolsClient = {
     abi: ReadonlyArray<unknown>;
     functionName: string;
     args?: ReadonlyArray<unknown>;
+    // oxlint-disable-next-line quality/no-unknown-returns -- what a read returns depends on the ABI passed; the engine parses each answer
   }): Promise<unknown>;
 };
 
@@ -235,59 +237,83 @@ const RATE_LIMIT_WAIT = 1000;
 /** Final blocks read since the last save before the cache is written again, when no event came with them. */
 const CACHE_STRIDE = 2000n;
 
+const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
+const isArray = (value: unknown): value is ReadonlyArray<unknown> => Array.isArray(value);
+const isString = (value: unknown): value is string => typeof value === "string";
+const isNumber = (value: unknown): value is number => typeof value === "number";
+const isBigint = (value: unknown): value is bigint => typeof value === "bigint";
+const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
+const isStringArray = (value: unknown): value is ReadonlyArray<string> =>
+  isArray(value) && value.every(isString);
+const isOptionalNumber = (value: unknown): value is number | undefined =>
+  value === undefined || isNumber(value);
+/** The SDK brands its uint256 hashes. On chain and in JSON they are plain numbers. */
+const isPoolHash = <T>(value: T): value is T & PoolHash => typeof value === "bigint";
+const textOf = (value: unknown) => (isString(value) ? value : undefined);
+
 /** True when an RPC refused a request for coming too fast, not for what it asked. */
 function isRateLimit(cause: unknown) {
-  const { status, code, message, details } = cause as {
-    status?: number;
-    code?: number;
-    message?: string;
-    details?: string;
-  };
+  if (!isObject(cause)) {
+    return false;
+  }
+  const details = "details" in cause ? textOf(cause.details) : undefined;
+  const message = "message" in cause ? textOf(cause.message) : undefined;
   return (
-    status === 429 ||
-    code === -32_005 ||
+    ("status" in cause && cause.status === 429) ||
+    ("code" in cause && cause.code === -32_005) ||
     /rate limit|too many requests|429/i.test(`${details ?? ""} ${message ?? ""}`)
   );
 }
 
 // JSON has no bigint. Events carry many.
 const toJson = (value: unknown) =>
-  JSON.stringify(value, (_key, item) => (typeof item === "bigint" ? `${item}n` : item));
-const fromJson = (text: string) =>
-  JSON.parse(text, (_key, item) =>
-    typeof item === "string" && /^-?\d+n$/.test(item) ? BigInt(item.slice(0, -1)) : item,
-  );
+  JSON.stringify(value, (_key, item: unknown) => (typeof item === "bigint" ? `${item}n` : item));
+
+const openEventsDatabase = () =>
+  new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open("0xui.privacy-pools", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("events");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+/** Run one request on the events store, and read its result. */
+async function inEventStore<T>(
+  mode: IDBTransactionMode,
+  work: (store: IDBObjectStore) => IDBRequest,
+  read: (result: unknown) => T,
+) {
+  const database = await openEventsDatabase();
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      const request = work(database.transaction("events", mode).objectStore("events"));
+      request.onsuccess = () => resolve(read(request.result));
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    database.close();
+  }
+}
 
 /** A cache in IndexedDB, or undefined where there is none. */
 function browserCache(): PrivacyPoolsCache | undefined {
   if (typeof indexedDB === "undefined") {
     return undefined;
   }
-  const open = () =>
-    new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("0xui.privacy-pools", 1);
-      request.onupgradeneeded = () => request.result.createObjectStore("events");
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  const run = async <T>(
-    mode: IDBTransactionMode,
-    work: (store: IDBObjectStore) => IDBRequest<T>,
-  ) => {
-    const database = await open();
-    try {
-      return await new Promise<T>((resolve, reject) => {
-        const request = work(database.transaction("events", mode).objectStore("events"));
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    } finally {
-      database.close();
-    }
-  };
   return {
-    get: (key) => run<string | undefined>("readonly", (store) => store.get(key)),
-    set: async (key, value) => void (await run("readwrite", (store) => store.put(value, key))),
+    get: (key) =>
+      inEventStore(
+        "readonly",
+        (store) => store.get(key),
+        (value) => (isString(value) ? value : undefined),
+      ),
+    set: async (key, value) => {
+      await inEventStore(
+        "readwrite",
+        (store) => store.put(value, key),
+        () => undefined,
+      );
+    },
   };
 }
 
@@ -300,12 +326,16 @@ const isNative = (asset: Address) => lower(asset) === lower(PRIVACY_POOLS_NATIVE
 
 /** One line saying why. viem's full message carries the whole request. */
 function reason(cause: unknown) {
-  const { details, shortMessage, message } = cause as {
-    details?: string;
-    shortMessage?: string;
-    message?: string;
-  };
-  return details || shortMessage || message || String(cause);
+  if (isObject(cause)) {
+    const details = "details" in cause ? textOf(cause.details) : undefined;
+    const shortMessage = "shortMessage" in cause ? textOf(cause.shortMessage) : undefined;
+    const message = "message" in cause ? textOf(cause.message) : undefined;
+    const line = details || shortMessage || message;
+    if (line) {
+      return line;
+    }
+  }
+  return String(cause);
 }
 
 /**
@@ -396,10 +426,26 @@ export async function encryptPhrase(mnemonic: string, password: string) {
   });
 }
 
+/** What `encryptPhrase` writes, in base64. */
+type EncryptedPhrase = { salt: string; iv: string; data: string };
+
+const isEncryptedPhrase = (value: unknown): value is EncryptedPhrase =>
+  isObject(value) &&
+  "salt" in value &&
+  isString(value.salt) &&
+  "iv" in value &&
+  isString(value.iv) &&
+  "data" in value &&
+  isString(value.data);
+
 /** Decrypt what `encryptPhrase` made. Rejects with "Wrong password." */
 export async function decryptPhrase(stored: string, password: string) {
   try {
-    const { salt, iv, data } = JSON.parse(stored) as { salt: string; iv: string; data: string };
+    const parsed: unknown = JSON.parse(stored);
+    if (!isEncryptedPhrase(parsed)) {
+      throw new Error("Not an encrypted phrase.");
+    }
+    const { salt, iv, data } = parsed;
     const plain = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: fromBase64(iv) },
       await passwordKey(password, fromBase64(salt)),
@@ -445,7 +491,7 @@ function defaultStorage(): PrivacyPoolsStorage {
 type Pool = {
   asset: Address;
   address: Address;
-  scope: bigint;
+  scope: PoolHash;
   decimals: number;
   deploymentBlock: bigint;
   minimum: bigint;
@@ -454,10 +500,66 @@ type Pool = {
   maxRelayFeeBps: bigint;
 };
 
-/** The relayer's signed promise to send a withdrawal for a fee. Lasts about a minute. */
-type FeeCommitment = { expiration: number; withdrawalData: Hex; [key: string]: unknown };
+/**
+ * The relayer's signed promise to send a withdrawal for a fee. Lasts about a
+ * minute. It carries more than this, such as the signature, and goes back to
+ * the relayer as it came.
+ */
+type FeeCommitment = { expiration: number; withdrawalData: Hex };
 
-type RelayerQuote = { feeBPS: string; feeCommitment?: FeeCommitment };
+const isFeeCommitment = (value: unknown): value is FeeCommitment =>
+  isObject(value) &&
+  "expiration" in value &&
+  isNumber(value.expiration) &&
+  "withdrawalData" in value &&
+  isHex(value.withdrawalData);
+
+/** A number the relayer may send as a string or as JSON's number. */
+const isAmount = (value: unknown): value is string | number => isString(value) || isNumber(value);
+
+/** The relayer's smallest withdrawal, from its `details` answer. */
+const parseMinimum = (answer: unknown) =>
+  isObject(answer) && "minWithdrawAmount" in answer && isAmount(answer.minWithdrawAmount)
+    ? answer.minWithdrawAmount
+    : undefined;
+
+type RelayerQuote = { feeBPS: string | number; feeCommitment?: FeeCommitment };
+
+function parseQuote(answer: unknown): RelayerQuote | undefined {
+  if (!isObject(answer) || !("feeBPS" in answer) || !isAmount(answer.feeBPS)) {
+    return undefined;
+  }
+  const feeCommitment =
+    "feeCommitment" in answer && isFeeCommitment(answer.feeCommitment)
+      ? answer.feeCommitment
+      : undefined;
+  return { feeBPS: answer.feeBPS, feeCommitment };
+}
+
+/** What the relayer says about a withdrawal it was asked to send. */
+type RelayAnswer = { success?: boolean; txHash?: Hash; error?: string };
+
+function parseRelayAnswer(answer: unknown): RelayAnswer {
+  if (!isObject(answer)) {
+    return {};
+  }
+  return {
+    success: "success" in answer && isBoolean(answer.success) ? answer.success : undefined,
+    txHash: "txHash" in answer && isHex(answer.txHash) ? answer.txHash : undefined,
+    error: "error" in answer ? textOf(answer.error) : undefined,
+  };
+}
+
+/** Why the relayer refused, when it says. */
+function refusalOf(answer: unknown) {
+  if (!isObject(answer)) {
+    return undefined;
+  }
+  return (
+    ("message" in answer ? textOf(answer.message) : undefined) ??
+    ("error" in answer ? textOf(answer.error) : undefined)
+  );
+}
 
 /** A proved withdrawal, waiting to be handed to the relayer. */
 type Proved = {
@@ -507,60 +609,372 @@ type ChainState = {
 
 type Reservation = { key: string; index: string; at: number };
 
+const isReservation = (value: unknown): value is Reservation =>
+  isObject(value) &&
+  "key" in value &&
+  isString(value.key) &&
+  "index" in value &&
+  isString(value.index) &&
+  "at" in value &&
+  isNumber(value.at);
+
 const emptyEvents = (): PoolEvents => ({ deposits: [], withdrawals: [], ragequits: [] });
 
-/** Turn decoded logs into the SDK's event shapes, grouped by pool. */
+const NO_LABELS: ReadonlySet<string> = new Set();
+
+/** The arguments of each pool event, as viem decodes them from `POOL_EVENTS`. */
+type DepositedArgs = {
+  _depositor: string;
+  _commitment: PoolHash;
+  _label: PoolHash;
+  _value: bigint;
+  _merkleRoot: PoolHash;
+};
+type WithdrawnArgs = { _value: bigint; _spentNullifier: PoolHash; _newCommitment: PoolHash };
+type RagequitArgs = {
+  _ragequitter: string;
+  _commitment: PoolHash;
+  _label: PoolHash;
+  _value: bigint;
+};
+
+const isDepositedArgs = (args: unknown): args is DepositedArgs =>
+  isObject(args) &&
+  "_depositor" in args &&
+  isString(args._depositor) &&
+  "_commitment" in args &&
+  isPoolHash(args._commitment) &&
+  "_label" in args &&
+  isPoolHash(args._label) &&
+  "_value" in args &&
+  isBigint(args._value) &&
+  "_merkleRoot" in args &&
+  isPoolHash(args._merkleRoot);
+
+const isWithdrawnArgs = (args: unknown): args is WithdrawnArgs =>
+  isObject(args) &&
+  "_value" in args &&
+  isBigint(args._value) &&
+  "_spentNullifier" in args &&
+  isPoolHash(args._spentNullifier) &&
+  "_newCommitment" in args &&
+  isPoolHash(args._newCommitment);
+
+const isRagequitArgs = (args: unknown): args is RagequitArgs =>
+  isObject(args) &&
+  "_ragequitter" in args &&
+  isString(args._ragequitter) &&
+  "_commitment" in args &&
+  isPoolHash(args._commitment) &&
+  "_label" in args &&
+  isPoolHash(args._label) &&
+  "_value" in args &&
+  isBigint(args._value);
+
+/**
+ * Read a decoded log, as viem's `getLogs` returns it, into the SDK's event
+ * shape. Undefined for a log not mined yet, which a later scan reads again,
+ * and for any other event.
+ */
+function parseLog(log: unknown): PoolLog | undefined {
+  if (
+    !isObject(log) ||
+    !("blockNumber" in log) ||
+    !isBigint(log.blockNumber) ||
+    !("transactionHash" in log) ||
+    !isHex(log.transactionHash)
+  ) {
+    return undefined;
+  }
+  const eventName = "eventName" in log ? log.eventName : undefined;
+  if (eventName !== "Deposited" && eventName !== "Withdrawn" && eventName !== "Ragequit") {
+    return undefined;
+  }
+  const address = "address" in log ? textOf(log.address) : undefined;
+  const args = "args" in log ? log.args : undefined;
+  const at = { blockNumber: log.blockNumber, transactionHash: log.transactionHash };
+  if (address === undefined) {
+    throw new Error("A pool event could not be read.");
+  }
+  const pool = lower(address);
+  if (eventName === "Deposited" && isDepositedArgs(args)) {
+    const event = {
+      ...at,
+      depositor: lower(args._depositor),
+      commitment: args._commitment,
+      label: args._label,
+      value: args._value,
+      precommitment: args._merkleRoot,
+      logIndex: "logIndex" in log && isNumber(log.logIndex) ? log.logIndex : undefined,
+    };
+    return { pool, blockNumber: at.blockNumber, kind: "deposits", event };
+  }
+  if (eventName === "Withdrawn" && isWithdrawnArgs(args)) {
+    const event = {
+      ...at,
+      withdrawn: args._value,
+      spentNullifier: args._spentNullifier,
+      newCommitment: args._newCommitment,
+    };
+    return { pool, blockNumber: at.blockNumber, kind: "withdrawals", event };
+  }
+  if (eventName === "Ragequit" && isRagequitArgs(args)) {
+    const event = {
+      ...at,
+      ragequitter: lower(args._ragequitter),
+      commitment: args._commitment,
+      label: args._label,
+      value: args._value,
+    };
+    return { pool, blockNumber: at.blockNumber, kind: "ragequits", event };
+  }
+  throw new Error(`A ${eventName} event could not be read.`);
+}
+
+/** Group events read from logs by pool. */
 function addLogs(target: Map<string, PoolEvents>, logs: ReadonlyArray<PoolLog>) {
   for (const log of logs) {
-    if (log.blockNumber === null || log.transactionHash === null) {
-      continue;
-    }
-    const key = lower(log.address);
-    let events = target.get(key);
+    let events = target.get(log.pool);
     if (!events) {
-      target.set(key, (events = emptyEvents()));
+      events = emptyEvents();
+      target.set(log.pool, events);
     }
-    const at = { blockNumber: log.blockNumber, transactionHash: log.transactionHash };
-    const args = log.args as Record<string, bigint> & Record<string, string>;
-    if (log.eventName === "Deposited") {
-      events.deposits.push({
-        ...at,
-        depositor: lower(args._depositor!),
-        commitment: args._commitment,
-        label: args._label,
-        value: args._value ?? 0n,
-        precommitment: args._merkleRoot,
-        logIndex: log.logIndex ?? undefined,
-      } as DepositEvent);
-    } else if (log.eventName === "Withdrawn") {
-      events.withdrawals.push({
-        ...at,
-        withdrawn: args._value ?? 0n,
-        spentNullifier: args._spentNullifier,
-        newCommitment: args._newCommitment,
-      } as WithdrawalEvent);
-    } else if (log.eventName === "Ragequit") {
-      events.ragequits.push({
-        ...at,
-        ragequitter: lower(args._ragequitter!),
-        commitment: args._commitment,
-        label: args._label,
-        value: args._value ?? 0n,
-      } as RagequitEvent);
+    if (log.kind === "deposits") {
+      events.deposits.push(log.event);
+    } else if (log.kind === "withdrawals") {
+      events.withdrawals.push(log.event);
+    } else {
+      events.ragequits.push(log.event);
     }
   }
+}
+
+/** Where an event is on chain, as the SDK's event shapes keep it. */
+type EventPosition = { blockNumber: bigint; transactionHash: Hex };
+
+const isEventPosition = (value: unknown): value is EventPosition =>
+  isObject(value) &&
+  "blockNumber" in value &&
+  isBigint(value.blockNumber) &&
+  "transactionHash" in value &&
+  isHex(value.transactionHash);
+
+const isDepositEvent = (value: unknown): value is DepositEvent =>
+  isEventPosition(value) &&
+  "depositor" in value &&
+  isString(value.depositor) &&
+  "commitment" in value &&
+  isPoolHash(value.commitment) &&
+  "label" in value &&
+  isPoolHash(value.label) &&
+  "value" in value &&
+  isBigint(value.value) &&
+  "precommitment" in value &&
+  isPoolHash(value.precommitment) &&
+  (!("logIndex" in value) || isOptionalNumber(value.logIndex));
+
+const isWithdrawalEvent = (value: unknown): value is WithdrawalEvent =>
+  isEventPosition(value) &&
+  "withdrawn" in value &&
+  isBigint(value.withdrawn) &&
+  "spentNullifier" in value &&
+  isPoolHash(value.spentNullifier) &&
+  "newCommitment" in value &&
+  isPoolHash(value.newCommitment);
+
+const isRagequitEvent = (value: unknown): value is RagequitEvent =>
+  isEventPosition(value) &&
+  "ragequitter" in value &&
+  isString(value.ragequitter) &&
+  "commitment" in value &&
+  isPoolHash(value.commitment) &&
+  "label" in value &&
+  isPoolHash(value.label) &&
+  "value" in value &&
+  isBigint(value.value);
+
+function parsePoolEvents(value: unknown): PoolEvents | undefined {
+  if (
+    !isObject(value) ||
+    !("deposits" in value) ||
+    !("withdrawals" in value) ||
+    !("ragequits" in value)
+  ) {
+    return undefined;
+  }
+  const { deposits, withdrawals, ragequits } = value;
+  if (
+    !isArray(deposits) ||
+    !deposits.every(isDepositEvent) ||
+    !isArray(withdrawals) ||
+    !withdrawals.every(isWithdrawalEvent) ||
+    !isArray(ragequits) ||
+    !ragequits.every(isRagequitEvent)
+  ) {
+    return undefined;
+  }
+  return { deposits: [...deposits], withdrawals: [...withdrawals], ragequits: [...ragequits] };
+}
+
+/** What the cache keeps for a chain: final events by pool, and the block they reach. */
+type CachedEvents = { syncedTo: bigint; events: Array<[string, PoolEvents]> };
+
+/** Read what `toJson` wrote for a chain. Undefined when it is something else. */
+function parseCachedEvents(text: string): CachedEvents | undefined {
+  const value: unknown = JSON.parse(text, (_key, item: unknown) =>
+    typeof item === "string" && /^-?\d+n$/.test(item) ? BigInt(item.slice(0, -1)) : item,
+  );
+  if (!isObject(value) || !("syncedTo" in value) || !("events" in value)) {
+    return undefined;
+  }
+  const { syncedTo, events: entries } = value;
+  if (!isBigint(syncedTo) || !isArray(entries)) {
+    return undefined;
+  }
+  const events: CachedEvents["events"] = [];
+  for (const entry of entries) {
+    const [pool, poolEvents] = isArray(entry) ? entry : [];
+    const parsed = parsePoolEvents(poolEvents);
+    if (!isString(pool) || !parsed) {
+      return undefined;
+    }
+    events.push([pool, parsed]);
+  }
+  return { syncedTo, events };
+}
+
+/** One entry per chain and set of pools. Changing the pools starts a new one. */
+function cacheKey(chainId: number, pools: Array<Pool>) {
+  const parts = pools.map((pool) => `${lower(pool.address)}@${pool.deploymentBlock}`).sort();
+  return `events:${chainId}:${parts.join(",")}`;
+}
+
+/** An Entrypoint's `assetConfig` answer. */
+function parseAssetConfig(value: unknown) {
+  const [address, minimum, feeBps, maxRelayFeeBps] = isArray(value) ? value : [];
+  if (
+    !isString(address) ||
+    !isAddress(address, { strict: false }) ||
+    !isBigint(minimum) ||
+    !isBigint(feeBps) ||
+    !isBigint(maxRelayFeeBps)
+  ) {
+    return undefined;
+  }
+  return { address, minimum, feeBps, maxRelayFeeBps };
+}
+
+/** A list of decimal strings in the ASP's answer. A missing list is empty. */
+function leafList(leaves: unknown) {
+  if (leaves === undefined) {
+    return [];
+  }
+  if (!isStringArray(leaves)) {
+    throw new Error("The ASP's answer could not be read.");
+  }
+  return leaves;
+}
+
+/** The ASP's two trees for a pool: approved labels, and every commitment. */
+function parseLeaves(body: unknown) {
+  if (!isObject(body)) {
+    throw new Error("The ASP's answer could not be read.");
+  }
+  return {
+    aspLeaves: leafList("aspLeaves" in body ? body.aspLeaves : undefined),
+    stateTreeLeaves: leafList("stateTreeLeaves" in body ? body.stateTreeLeaves : undefined),
+  };
+}
+
+/** A Merkle proof's root, as the SDK's hash. */
+function rootOf(proof: { root: bigint }) {
+  const { root } = proof;
+  if (!isPoolHash(root)) {
+    throw new Error("The Merkle proof has no root.");
+  }
+  return root;
+}
+
+const unexpectedProof = () => new Error("The proof has an unexpected shape. Nothing was sent.");
+
+/** Two numbers of a proof's point, as the verifier contract takes them. */
+function pair(values: ReadonlyArray<string> | undefined) {
+  const [x, y] = values ?? [];
+  if (x === undefined || y === undefined) {
+    throw unexpectedProof();
+  }
+  return [BigInt(x), BigInt(y)] as const;
+}
+
+/** The verifier contract takes each pair of a proof's middle point the other way round. */
+function flipped(values: ReadonlyArray<string> | undefined) {
+  const [x, y] = pair(values);
+  return [y, x] as const;
+}
+
+/**
+ * The relayer writes the withdrawal's instructions, and the proof is bound
+ * to them. Check they pay the draft's recipient, at the quoted fee, before
+ * proving anything.
+ */
+function checkCommitment(
+  commitment: FeeCommitment | undefined,
+  draft: PrivateDraft,
+  feeBps: bigint,
+): asserts commitment is FeeCommitment {
+  let decoded: readonly [Address, Address, bigint];
+  try {
+    if (!commitment) {
+      throw new Error("no commitment");
+    }
+    decoded = decodeAbiParameters(RELAY_DATA, commitment.withdrawalData);
+  } catch {
+    throw new Error("The relayer's answer could not be read.");
+  }
+  if (lower(decoded[0]) !== lower(draft.recipient) || decoded[2] !== feeBps) {
+    throw new Error("The relayer's answer does not match this unshield. Nothing was sent.");
+  }
+}
+
+/** Reject with the signal's reason as soon as it aborts, without waiting for `work`. */
+function abortable<T>(work: Promise<T>, signal?: AbortSignal) {
+  if (!signal) {
+    return work;
+  }
+  return new Promise<T>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}
+
+/** Chain reads through viem, on an RPC. */
+function viemClient(rpcUrl: string): PrivacyPoolsClient {
+  const client = createPublicClient({ transport: http(rpcUrl) });
+  return {
+    getBlockNumber: () => client.getBlockNumber(),
+    getLogs: (args) => client.getLogs(args),
+    readContract: (args) => client.readContract(args),
+  };
 }
 
 function sameExits(a: ReadonlyArray<ShieldedExit>, b: ReadonlyArray<ShieldedExit>) {
   return (
     a.length === b.length &&
-    a.every(
-      (exit, i) =>
-        exit.id === b[i]!.id &&
-        exit.amount === b[i]!.amount &&
-        exit.state === b[i]!.state &&
-        exit.depositor === b[i]!.depositor,
-    )
+    a.every((exit, i) => {
+      const other = b[i];
+      return (
+        other !== undefined &&
+        exit.id === other.id &&
+        exit.amount === other.amount &&
+        exit.state === other.state &&
+        exit.depositor === other.depositor
+      );
+    })
   );
 }
 
@@ -570,11 +984,14 @@ function sameBalances(
 ) {
   return (
     a.length === b.length &&
-    a.every(
-      (balance, i) =>
-        balance.token === b[i]!.token &&
-        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === b[i]!.amounts[state]),
-    )
+    a.every((balance, i) => {
+      const other = b[i];
+      return (
+        other !== undefined &&
+        balance.token === other.token &&
+        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === other.amounts[state])
+      );
+    })
   );
 }
 
@@ -640,11 +1057,7 @@ export function createPrivacyPoolsEngine({
   function client(chainId: number) {
     let existing = clients.get(chainId);
     if (!existing) {
-      existing =
-        clientFor?.(chainId) ??
-        (createPublicClient({
-          transport: http(configOf(chainId).rpcUrl),
-        }) as unknown as PrivacyPoolsClient);
+      existing = clientFor?.(chainId) ?? viemClient(configOf(chainId).rpcUrl);
       clients.set(chainId, existing);
     }
     return existing;
@@ -685,12 +1098,18 @@ export function createPrivacyPoolsEngine({
       const reader = client(chainId);
       chain.pools = Promise.all(
         config.pools.map(async ({ asset, deploymentBlock }): Promise<Pool> => {
-          const [address, minimum, feeBps, maxRelayFeeBps] = (await reader.readContract({
-            address: config.entrypoint,
-            abi: ENTRYPOINT_ABI,
-            functionName: "assetConfig",
-            args: [asset],
-          })) as [Address, bigint, bigint, bigint];
+          const answer = parseAssetConfig(
+            await reader.readContract({
+              address: config.entrypoint,
+              abi: ENTRYPOINT_ABI,
+              functionName: "assetConfig",
+              args: [asset],
+            }),
+          );
+          if (!answer) {
+            throw new Error(`The Entrypoint's answer for ${asset} could not be read.`);
+          }
+          const { address, minimum, feeBps, maxRelayFeeBps } = answer;
           if (BigInt(address) === 0n) {
             throw new Error(`No Privacy Pool for ${asset}.`);
           }
@@ -700,10 +1119,13 @@ export function createPrivacyPoolsEngine({
               ? 18
               : reader.readContract({ address: asset, abi: erc20Abi, functionName: "decimals" }),
           ]);
+          if (!isPoolHash(scope)) {
+            throw new Error(`The Privacy Pool for ${asset} has no scope.`);
+          }
           return {
             asset,
             address,
-            scope: scope as bigint,
+            scope,
             decimals: Number(decimals),
             deploymentBlock,
             minimum,
@@ -735,12 +1157,6 @@ export function createPrivacyPoolsEngine({
 
   const cache = cacheOption === false ? undefined : (cacheOption ?? browserCache());
 
-  /** One entry per chain and set of pools. Changing the pools starts a new one. */
-  function cacheKey(chainId: number, pools: Array<Pool>) {
-    const parts = pools.map((pool) => `${lower(pool.address)}@${pool.deploymentBlock}`).sort();
-    return `events:${chainId}:${parts.join(",")}`;
-  }
-
   /** Load final events saved by an earlier page load. A cache that can't be read is ignored. */
   async function readCache(chainId: number, pools: Array<Pool>) {
     const chain = chainOf(chainId);
@@ -756,13 +1172,11 @@ export function createPrivacyPoolsEngine({
       if (!stored) {
         return;
       }
-      const { syncedTo, events } = fromJson(stored) as {
-        syncedTo: bigint;
-        events: Array<[string, PoolEvents]>;
-      };
-      if (typeof syncedTo !== "bigint" || chain.syncedTo !== undefined) {
+      const cached = parseCachedEvents(stored);
+      if (!cached || chain.syncedTo !== undefined) {
         return;
       }
+      const { syncedTo, events } = cached;
       chain.events = new Map(events);
       chain.syncedTo = chain.cachedTo = syncedTo;
     } catch {
@@ -770,20 +1184,20 @@ export function createPrivacyPoolsEngine({
     }
   }
 
-  function writeCache(chainId: number, pools: Array<Pool>) {
+  async function writeCache(chainId: number, pools: Array<Pool>) {
     const chain = chainOf(chainId);
     if (!cache || chain.syncedTo === undefined) {
       return;
     }
     chain.cachedTo = chain.syncedTo;
-    void cache
-      .set(
+    try {
+      await cache.set(
         cacheKey(chainId, pools),
         toJson({ syncedTo: chain.syncedTo, events: [...chain.events] }),
-      )
-      .catch(() => {
-        // A full or blocked disk only costs the next load a longer scan.
-      });
+      );
+    } catch {
+      // A full or blocked disk only costs the next load a longer scan.
+    }
   }
 
   /**
@@ -808,16 +1222,18 @@ export function createPrivacyPoolsEngine({
     async function range(fromBlock: bigint, toBlock: bigint, attempt = 0): Promise<void> {
       const wait = resumeAt - Date.now();
       if (wait > 0) {
-        await new Promise((resolve) => setTimeout(resolve, wait));
+        await new Promise((resolve) => {
+          setTimeout(resolve, wait);
+        });
       }
+      let found: Array<unknown>;
       try {
-        const found = await reader.getLogs({
+        found = await reader.getLogs({
           address: addresses,
           events: POOL_EVENTS,
           fromBlock,
           toBlock,
         });
-        logs.push(...(found as Array<PoolLog>));
       } catch (error) {
         if (isRateLimit(error)) {
           // Smaller ranges would only mean more requests. Slow down instead.
@@ -833,6 +1249,13 @@ export function createPrivacyPoolsEngine({
         const middle = fromBlock + (toBlock - fromBlock) / 2n;
         await range(fromBlock, middle);
         await range(middle + 1n, toBlock);
+        return;
+      }
+      for (const log of found) {
+        const parsed = parseLog(log);
+        if (parsed) {
+          logs.push(parsed);
+        }
       }
     }
 
@@ -843,8 +1266,8 @@ export function createPrivacyPoolsEngine({
     let next = 0;
     let done = 0;
     const worker = async () => {
-      while (next < ranges.length) {
-        const [start, end] = ranges[next++]!;
+      for (let entry = ranges[next++]; entry; entry = ranges[next++]) {
+        const [start, end] = entry;
         await range(start, end);
         onProgress(++done / ranges.length);
       }
@@ -861,11 +1284,8 @@ export function createPrivacyPoolsEngine({
     if (!response.ok) {
       throw new Error(`The ASP answered ${response.status}.`);
     }
-    const { aspLeaves = [], stateTreeLeaves = [] } = (await response.json()) as {
-      aspLeaves?: Array<string>;
-      stateTreeLeaves?: Array<string>;
-    };
-    return { aspLeaves, stateTreeLeaves };
+    const body: unknown = await response.json();
+    return parseLeaves(body);
   }
 
   /** Which of these labels the ASP declined. Naming them tells the ASP they belong together. */
@@ -880,10 +1300,19 @@ export function createPrivacyPoolsEngine({
     if (!response.ok) {
       throw new Error(`The ASP answered ${response.status}.`);
     }
-    const deposits = (await response.json()) as Array<{ label: string; reviewStatus: string }>;
-    return deposits
-      .filter((entry) => entry.reviewStatus === "declined")
-      .map((entry) => entry.label);
+    const deposits: unknown = await response.json();
+    if (!isArray(deposits)) {
+      throw new Error("The ASP's answer could not be read.");
+    }
+    return deposits.flatMap((entry) =>
+      isObject(entry) &&
+      "label" in entry &&
+      isString(entry.label) &&
+      "reviewStatus" in entry &&
+      entry.reviewStatus === "declined"
+        ? [entry.label]
+        : [],
+    );
   }
 
   /** The ASP's approved labels for a pool, as decimal strings. */
@@ -930,7 +1359,7 @@ export function createPrivacyPoolsEngine({
 
       // Keep what can no longer be reorganised away. The rest is read again next time.
       const final = head > REORG_DEPTH ? head - REORG_DEPTH : 0n;
-      const settled = logs.filter((log) => log.blockNumber !== null && log.blockNumber <= final);
+      const settled = logs.filter((log) => log.blockNumber <= final);
       addLogs(chain.events, settled);
       if (chain.syncedTo === undefined || final > chain.syncedTo) {
         chain.syncedTo = final;
@@ -941,34 +1370,46 @@ export function createPrivacyPoolsEngine({
         (chain.syncedTo > chain.cachedTo &&
           (settled.length > 0 || chain.syncedTo - chain.cachedTo >= CACHE_STRIDE))
       ) {
-        writeCache(chainId, pools);
+        void writeCache(chainId, pools);
       }
 
       const recent = new Map<string, PoolEvents>();
       addLogs(
         recent,
-        logs.filter((log) => log.blockNumber !== null && log.blockNumber > final),
+        logs.filter((log) => log.blockNumber > final),
       );
-      const eventsOf = (pool: PoolInfo, kind: keyof PoolEvents) => [
-        ...((chain.events.get(lower(pool.address))?.[kind] ?? []) as Array<never>),
-        ...((recent.get(lower(pool.address))?.[kind] ?? []) as Array<never>),
-      ];
+      /** A pool's final events, then the recent ones. */
+      const eventsOf = (address: Address): PoolEvents => {
+        const kept = chain.events.get(lower(address));
+        const fresh = recent.get(lower(address));
+        return {
+          deposits: [...(kept?.deposits ?? []), ...(fresh?.deposits ?? [])],
+          withdrawals: [...(kept?.withdrawals ?? []), ...(fresh?.withdrawals ?? [])],
+          ragequits: [...(kept?.ragequits ?? []), ...(fresh?.ragequits ?? [])],
+        };
+      };
 
-      const { AccountService } = await loadSdk();
+      const { AccountService, DataService } = await loadSdk();
       // The SDK's own data service refetches everything on every call. This
       // one answers from the events above.
-      const source = {
-        getDeposits: async (pool: PoolInfo) => eventsOf(pool, "deposits"),
-        getWithdrawals: async (pool: PoolInfo) => eventsOf(pool, "withdrawals"),
-        getRagequits: async (pool: PoolInfo) => eventsOf(pool, "ragequits"),
-      };
+      class ScannedEvents extends DataService {
+        override async getDeposits(pool: PoolInfo) {
+          return eventsOf(pool.address).deposits;
+        }
+        override async getWithdrawals(pool: PoolInfo) {
+          return eventsOf(pool.address).withdrawals;
+        }
+        override async getRagequits(pool: PoolInfo) {
+          return eventsOf(pool.address).ragequits;
+        }
+      }
       const { account, errors } = await AccountService.initializeWithEvents(
-        source as never,
+        new ScannedEvents([]),
         { mnemonic: phrase },
         pools.map((pool) => ({
           chainId,
           address: pool.address,
-          scope: pool.scope as PoolInfo["scope"],
+          scope: pool.scope,
           deploymentBlock: pool.deploymentBlock,
         })),
       );
@@ -976,8 +1417,9 @@ export function createPrivacyPoolsEngine({
         return;
       }
       // A pool that failed to load is absent, not empty. Show nothing rather than too little.
-      if (errors.length > 0) {
-        throw new Error(errors[0]!.reason);
+      const [failed] = errors;
+      if (failed) {
+        throw new Error(failed.reason);
       }
 
       stage = "transactions";
@@ -995,9 +1437,10 @@ export function createPrivacyPoolsEngine({
       const declined = new Set<string>();
       if (checkDeclined) {
         for (const pool of pools) {
-          const accounts = account.account.poolAccounts.get(pool.scope as PoolInfo["scope"]) ?? [];
+          const accounts = account.account.poolAccounts.get(pool.scope) ?? [];
+          const labels = approved.get(pool.scope) ?? NO_LABELS;
           const waiting = accounts
-            .filter((entry) => poolAccountState(entry, approved.get(pool.scope)!) === "pending")
+            .filter((entry) => poolAccountState(entry, labels) === "pending")
             .map((entry) => entry.label.toString());
           for (const label of await declinedLabels(chainId, pool, waiting)) {
             declined.add(label);
@@ -1011,10 +1454,11 @@ export function createPrivacyPoolsEngine({
       const depositors = new Map<string, Address>();
       const withdrawals: ChainState["withdrawals"] = new Map();
       for (const pool of pools) {
-        for (const event of eventsOf(pool as never, "withdrawals") as Array<WithdrawalEvent>) {
+        const events = eventsOf(pool.address);
+        for (const event of events.withdrawals) {
           withdrawals.set(event.spentNullifier, event.transactionHash);
         }
-        for (const event of eventsOf(pool as never, "deposits") as Array<DepositEvent>) {
+        for (const event of events.deposits) {
           depositors.set(`${pool.scope}:${event.label}`, getAddress(event.depositor));
         }
       }
@@ -1037,9 +1481,10 @@ export function createPrivacyPoolsEngine({
       for (const pool of pools) {
         const amounts = { spendable: 0n, pending: 0n, proving: 0n, incomplete: 0n, restricted: 0n };
         let held = false;
-        const accounts = account.account.poolAccounts.get(pool.scope as PoolInfo["scope"]) ?? [];
+        const accounts = account.account.poolAccounts.get(pool.scope) ?? [];
+        const labels = approved.get(pool.scope) ?? NO_LABELS;
         for (const poolAccount of accounts) {
-          const state = poolAccountState(poolAccount, approved.get(pool.scope)!, declined);
+          const state = poolAccountState(poolAccount, labels, declined);
           if (state) {
             const commitment = poolAccount.children.at(-1) ?? poolAccount.deposit;
             latest.add(commitment.hash);
@@ -1150,7 +1595,8 @@ export function createPrivacyPoolsEngine({
 
   function reservations(): Array<Reservation> {
     try {
-      return JSON.parse(storage.getItem(RESERVED_KEY) ?? "[]") as Array<Reservation>;
+      const stored: unknown = JSON.parse(storage.getItem(RESERVED_KEY) ?? "[]");
+      return isArray(stored) ? stored.filter(isReservation) : [];
     } catch {
       return [];
     }
@@ -1189,7 +1635,7 @@ export function createPrivacyPoolsEngine({
   /** Withdrawals proved in this session and not yet submitted, by operation id. */
   const proved = new Map<string, Proved>();
   let proofCount = 0;
-  let prover: Promise<{ sdk: import("@0xbow/privacy-pools-core-sdk").PrivacyPoolSDK }> | undefined;
+  let prover: Promise<{ sdk: PrivacyPoolSDK }> | undefined;
 
   /** The SDK's prover with the circuit files loaded. They are downloaded once per session. */
   function loadProver() {
@@ -1222,7 +1668,13 @@ export function createPrivacyPoolsEngine({
     return url;
   }
 
-  async function relayer<T>(chainId: number, path: string, body?: unknown): Promise<T> {
+  /** Ask the relayer, and read its answer with `parse`. */
+  async function relayer<T>(
+    chainId: number,
+    path: string,
+    parse: (answer: unknown) => T | undefined,
+    body?: unknown,
+  ): Promise<T> {
     const response = await request(
       `${relayerOf(chainId)}/relayer/${path}`,
       body === undefined
@@ -1234,20 +1686,23 @@ export function createPrivacyPoolsEngine({
           },
     );
     const text = await response.text();
-    let answer: { error?: unknown; message?: unknown } | undefined;
+    let answer: unknown;
     try {
       answer = JSON.parse(text);
     } catch {
       // Not JSON. The status says enough.
     }
     if (!response.ok) {
-      const why = answer?.message ?? answer?.error;
-      throw Object.assign(
-        new Error(typeof why === "string" ? why : `The relayer answered ${response.status}.`),
-        { status: response.status },
-      );
+      const why = refusalOf(answer);
+      throw Object.assign(new Error(why ?? `The relayer answered ${response.status}.`), {
+        status: response.status,
+      });
     }
-    return answer as T;
+    const parsed = parse(answer);
+    if (parsed === undefined) {
+      throw new Error("The relayer's answer could not be read.");
+    }
+    return parsed;
   }
 
   /**
@@ -1255,12 +1710,13 @@ export function createPrivacyPoolsEngine({
    * fee commitment, which a proof is then bound to.
    */
   async function relayerQuote(draft: PrivateDraft, pool: Pool, withRecipient: boolean) {
-    const [details, quote] = await Promise.all([
-      relayer<{ minWithdrawAmount: string }>(
+    const [minWithdrawAmount, quote] = await Promise.all([
+      relayer(
         draft.chainId,
         `details?chainId=${draft.chainId}&assetAddress=${pool.asset}`,
+        parseMinimum,
       ),
-      relayer<RelayerQuote>(draft.chainId, "quote", {
+      relayer(draft.chainId, "quote", parseQuote, {
         chainId: draft.chainId,
         amount: draft.amount.toString(),
         asset: pool.asset,
@@ -1268,7 +1724,7 @@ export function createPrivacyPoolsEngine({
         extraGas: false,
       }),
     ]);
-    const minimum = BigInt(details.minWithdrawAmount);
+    const minimum = BigInt(minWithdrawAmount);
     if (draft.amount < minimum) {
       throw new Error(`The minimum is ${formatUnits(minimum, pool.decimals)}.`);
     }
@@ -1286,30 +1742,6 @@ export function createPrivacyPoolsEngine({
   }
 
   /**
-   * The relayer writes the withdrawal's instructions, and the proof is bound
-   * to them. Check they pay the draft's recipient, at the quoted fee, before
-   * proving anything.
-   */
-  function checkCommitment(
-    commitment: FeeCommitment | undefined,
-    draft: PrivateDraft,
-    feeBps: bigint,
-  ): asserts commitment is FeeCommitment {
-    let decoded: readonly [Address, Address, bigint];
-    try {
-      if (!commitment) {
-        throw new Error("no commitment");
-      }
-      decoded = decodeAbiParameters(RELAY_DATA, commitment.withdrawalData);
-    } catch {
-      throw new Error("The relayer's answer could not be read.");
-    }
-    if (lower(decoded[0]) !== lower(draft.recipient) || decoded[2] !== feeBps) {
-      throw new Error("The relayer's answer does not match this unshield. Nothing was sent.");
-    }
-  }
-
-  /**
    * The deposit an unshield spends. A withdrawal spends one deposit, so the
    * amount has to fit in one, and what it leaves behind has to be worth
    * withdrawing later.
@@ -1317,7 +1749,7 @@ export function createPrivacyPoolsEngine({
   function sourceFor(chainId: number, pool: Pool, amount: bigint, minimum: bigint) {
     const chain = chainOf(chainId);
     const approved = chain.approved.get(pool.scope) ?? new Set<string>();
-    const accounts = chain.account?.account.poolAccounts.get(pool.scope as PoolInfo["scope"]) ?? [];
+    const accounts = chain.account?.account.poolAccounts.get(pool.scope) ?? [];
     const spendable: Array<AccountCommitment> = [];
     for (const account of accounts) {
       if (poolAccountState(account, approved) !== "spendable") {
@@ -1343,27 +1775,13 @@ export function createPrivacyPoolsEngine({
     const fits = spendable.filter((commitment) => commitment.value >= amount);
     const source = fits.find(({ value }) => value === amount || value - amount >= minimum);
     if (!source) {
-      const { value } = fits[0]!;
+      // The amount fits the largest deposit, so there is a smallest one it fits.
+      const value = fits[0]?.value ?? largest;
       throw new Error(
         `That would leave ${show(value - amount)} behind, less than the minimum of ${show(minimum)}. Unshield ${show(value)} instead.`,
       );
     }
     return source;
-  }
-
-  /** Reject with the signal's reason as soon as it aborts, without waiting for `work`. */
-  function abortable<T>(work: Promise<T>, signal?: AbortSignal) {
-    if (!signal) {
-      return work;
-    }
-    return new Promise<T>((resolve, reject) => {
-      if (signal.aborted) {
-        return reject(signal.reason);
-      }
-      const onAbort = () => reject(signal.reason);
-      signal.addEventListener("abort", onAbort, { once: true });
-      work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
-    });
   }
 
   function requireUnlocked() {
@@ -1397,15 +1815,16 @@ export function createPrivacyPoolsEngine({
     emit("balances");
   }
 
+  function scanAll() {
+    for (const chainId of Object.keys(chains)) {
+      void scan(Number(chainId));
+    }
+  }
+
   function open(phrase: string) {
     mnemonic = phrase;
     status = "unlocked";
     emit("account");
-    const scanAll = () => {
-      for (const chainId of Object.keys(chains)) {
-        void scan(Number(chainId));
-      }
-    };
     scanAll();
     if (pollInterval > 0) {
       poll = setInterval(scanAll, pollInterval);
@@ -1515,7 +1934,7 @@ export function createPrivacyPoolsEngine({
       }
 
       const chain = chainOf(draft.chainId);
-      const scope = pool.scope as PoolInfo["scope"];
+      const { scope } = pool;
       // The next index comes from the pool's history. Without all of it, an index could be used twice.
       if (!chain.account?.isScopeComplete(scope)) {
         await scan(draft.chainId);
@@ -1614,11 +2033,18 @@ export function createPrivacyPoolsEngine({
         Promise.all([
           relayerQuote(draft, pool, true),
           treeLeaves(chainId, pool),
-          client(chainId).readContract({
-            address: configOf(chainId).entrypoint,
-            abi: ASP_ROOT_ABI,
-            functionName: "latestRoot",
-          }) as Promise<bigint>,
+          client(chainId)
+            .readContract({
+              address: configOf(chainId).entrypoint,
+              abi: ASP_ROOT_ABI,
+              functionName: "latestRoot",
+            })
+            .then((root) => {
+              if (!isBigint(root)) {
+                throw new Error("The approval list on chain could not be read.");
+              }
+              return root;
+            }),
         ]),
         signal,
       );
@@ -1641,7 +2067,7 @@ export function createPrivacyPoolsEngine({
       const secrets = account.createWithdrawalSecrets(source);
       const context = calculateContext(
         { processooor: configOf(chainId).entrypoint, data: commitment.withdrawalData },
-        pool.scope as PoolInfo["scope"],
+        pool.scope,
       );
 
       onStage("proving");
@@ -1651,9 +2077,9 @@ export function createPrivacyPoolsEngine({
           withdrawalAmount: draft.amount,
           stateMerkleProof: stateProof,
           aspMerkleProof: aspProof,
-          stateRoot: stateProof.root as never,
+          stateRoot: rootOf(stateProof),
           stateTreeDepth: TREE_DEPTH,
-          aspRoot: aspProof.root as never,
+          aspRoot: rootOf(aspProof),
           aspTreeDepth: TREE_DEPTH,
           newNullifier: secrets.nullifier,
           newSecret: secrets.secret,
@@ -1689,17 +2115,20 @@ export function createPrivacyPoolsEngine({
       let { feeCommitment } = entry;
       if (feeCommitment.expiration - Date.now() < COMMITMENT_MARGIN) {
         // The relayer's promise ran out. A new one fits this proof only if it says the same thing.
-        const fresh = await relayerQuote(draft, pool, true);
-        if (lower(fresh.commitment?.withdrawalData ?? "") !== lower(feeCommitment.withdrawalData)) {
+        const { commitment } = await relayerQuote(draft, pool, true);
+        if (
+          !commitment ||
+          lower(commitment.withdrawalData) !== lower(feeCommitment.withdrawalData)
+        ) {
           throw new Error("The relayer's fee changed. Prove again.");
         }
-        feeCommitment = fresh.commitment!;
+        feeCommitment = commitment;
       }
 
       const chain = chainOf(draft.chainId);
-      let answer: { success?: boolean; txHash?: Hash; error?: string };
+      let answer: ReturnType<typeof parseRelayAnswer>;
       try {
-        answer = await relayer(draft.chainId, "request", {
+        answer = await relayer(draft.chainId, "request", parseRelayAnswer, {
           withdrawal: {
             processooor: configOf(draft.chainId).entrypoint,
             data: feeCommitment.withdrawalData,
@@ -1711,14 +2140,21 @@ export function createPrivacyPoolsEngine({
           feeCommitment,
         });
       } catch (error) {
-        const status = (error as { status?: number }).status;
+        const status =
+          isObject(error) && "status" in error && isNumber(error.status) ? error.status : undefined;
         // The relayer said no. Nothing was sent.
-        if (status !== undefined && status < 500) throw error;
+        if (status !== undefined && status < 500) {
+          throw error;
+        }
         // No clear answer: a timeout, a gateway error, a dropped connection.
         // The relayer may have sent it all the same, so look on chain.
         chain.submitted.set(source.hash, Date.now());
         // The proof's second public signal is the nullifier the withdrawal spends.
-        const nullifier = BigInt(proof.publicSignals[1]!);
+        const spent = proof.publicSignals[1];
+        if (spent === undefined) {
+          throw new Error("The proof has no nullifier to look for on chain.", { cause: error });
+        }
+        const nullifier = BigInt(spent);
         const until = Date.now() + RELAY_WATCH;
         for (;;) {
           await freshScan(draft.chainId);
@@ -1732,7 +2168,9 @@ export function createPrivacyPoolsEngine({
           if (Date.now() >= until) {
             break;
           }
-          await new Promise((resolve) => setTimeout(resolve, RELAY_WATCH_INTERVAL));
+          await new Promise((resolve) => {
+            setTimeout(resolve, RELAY_WATCH_INTERVAL);
+          });
         }
         throw new Error(
           "The relayer gave no answer, and the withdrawal is not on chain yet. It may still arrive: check the balance again in a few minutes before trying again.",
@@ -1784,12 +2222,16 @@ export function createPrivacyPoolsEngine({
       }
 
       const { pi_a, pi_b, pi_c } = proof.proof;
-      const pair = (values: Array<string>) => [BigInt(values[0]!), BigInt(values[1]!)] as const;
-      // The verifier contract takes each pair of the middle point the other way round.
-      const flipped = (values: Array<string>) => [BigInt(values[1]!), BigInt(values[0]!)] as const;
-      const signals = proof.publicSignals.map(BigInt);
-      if (signals.length !== 4) {
-        throw new Error("The proof has an unexpected shape. Nothing was sent.");
+      const [commitmentHash, nullifierHash, value, label, ...extra] =
+        proof.publicSignals.map(BigInt);
+      if (
+        commitmentHash === undefined ||
+        nullifierHash === undefined ||
+        value === undefined ||
+        label === undefined ||
+        extra.length > 0
+      ) {
+        throw unexpectedProof();
       }
       return {
         transaction: {
@@ -1800,9 +2242,9 @@ export function createPrivacyPoolsEngine({
             args: [
               {
                 pA: pair(pi_a),
-                pB: [flipped(pi_b[0]!), flipped(pi_b[1]!)],
+                pB: [flipped(pi_b[0]), flipped(pi_b[1])],
                 pC: pair(pi_c),
-                pubSignals: signals as unknown as readonly [bigint, bigint, bigint, bigint],
+                pubSignals: [commitmentHash, nullifierHash, value, label],
               },
             ],
           }),

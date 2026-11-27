@@ -1,7 +1,7 @@
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { parseUnits } from "viem";
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -11,6 +11,8 @@ import {
   testAccounts,
 } from "../../../test/wagmi";
 import { MOCK_SHIELD_CONTRACT, createMockShieldedEngine } from "../lib/mock-shielded-engine";
+import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
+import type { ShieldedExit } from "../lib/shielded-engine";
 import { ShieldedExits, shieldedExitBlocker } from "./shielded-exits";
 import { ShieldedProvider } from "./shielded-provider";
 
@@ -51,15 +53,35 @@ describe("ShieldedExits", () => {
   const button = (name: string | RegExp) =>
     screen.findByRole("button", { name }, { timeout: 5000 });
 
-  async function setup({ depositor = testAccounts[0], connect = true } = {}) {
+  /** `failFirstProof` makes the first exit proof fail with that message, as one that ran out of memory would. */
+  async function setup({
+    depositor = testAccounts[0],
+    connect = true,
+    failFirstProof,
+  }: { depositor?: Address; connect?: boolean; failFirstProof?: string } = {}) {
     const user = userEvent.setup();
-    const engine = createMockShieldedEngine({
+    const mock = createMockShieldedEngine({
       speed: Infinity,
       funds: [
         { token: tkn.address, amount: parseUnits("3", 18), state: "restricted", depositor },
         { token: tkn.address, amount: parseUnits("10", 18) },
       ],
     });
+    let failure = failFirstProof;
+    const engine: MockShieldedEngine = {
+      ...mock,
+      async prepareExit(...args) {
+        const message = failure;
+        failure = undefined;
+        if (message !== undefined) {
+          throw new Error(message);
+        }
+        if (!mock.prepareExit) {
+          throw new Error("The mock engine has no exits.");
+        }
+        return mock.prepareExit(...args);
+      },
+    };
     await engine.account.unlock("password");
     await engine.sync(1);
     const sends: Array<{ to: string }> = [];
@@ -74,7 +96,9 @@ describe("ShieldedExits", () => {
         },
       },
     });
-    const onSubmitted = vi.fn();
+    /** `firstSubmit` resolves with the first call to `onSubmitted`. */
+    const { promise: firstSubmit, resolve } = Promise.withResolvers<[Hash, ShieldedExit]>();
+    const onSubmitted = (hash: Hash, exit: ShieldedExit) => resolve([hash, exit]);
     renderWithWagmi(
       <ShieldedProvider engine={engine}>
         <ShieldedExits chainId={1} tokens={[tkn]} onSubmitted={onSubmitted} />
@@ -84,7 +108,7 @@ describe("ShieldedExits", () => {
     if (connect) {
       await act(() => connectMock(config));
     }
-    return { user, engine, onSubmitted, sends };
+    return { user, engine, firstSubmit, sends };
   }
 
   it("renders nothing when there is nothing to exit", async () => {
@@ -114,7 +138,7 @@ describe("ShieldedExits", () => {
   });
 
   it("makes the proof on one click and opens the wallet on the next", async () => {
-    const { user, engine, onSubmitted, sends } = await setup();
+    const { user, engine, firstSubmit, sends } = await setup();
     await user.click(await button("Exit publicly"));
     await user.click(await button("Prepare exit"));
 
@@ -123,9 +147,8 @@ describe("ShieldedExits", () => {
     expect(sends).toHaveLength(0);
 
     await user.click(send);
-    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    const [hash, exit] = await firstSubmit;
     expect(sends[0]!.to.toLowerCase()).toBe(MOCK_SHIELD_CONTRACT.toLowerCase());
-    const [hash, exit] = onSubmitted.mock.calls[0]!;
     expect(exit).toMatchObject({ amount: parseUnits("3", 18), state: "restricted" });
     expect(document.querySelector("[data-slot=transaction-status]")).toHaveTextContent(
       "Exit TKN publicly",
@@ -152,8 +175,7 @@ describe("ShieldedExits", () => {
   });
 
   it("shows a failed proof and tries again", async () => {
-    const { user, engine } = await setup();
-    vi.spyOn(engine, "prepareExit").mockRejectedValueOnce(new Error("Out of memory"));
+    const { user } = await setup({ failFirstProof: "Out of memory" });
     await user.click(await button("Exit publicly"));
     await user.click(await button("Prepare exit"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Out of memory");

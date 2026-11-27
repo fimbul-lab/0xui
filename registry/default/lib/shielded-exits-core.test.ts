@@ -1,9 +1,10 @@
 import { parseUnits } from "viem";
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import { connectMock, createTestConfig, fakeChainRpc, testAccounts } from "../../../test/wagmi";
 import { MOCK_SHIELD_CONTRACT, createMockShieldedEngine } from "./mock-shielded-engine";
 import { createShieldedClient } from "./shielded-client";
+import type { ShieldedExit } from "./shielded-engine";
 import {
   createShieldedExitFlow,
   exitProofPhase,
@@ -35,16 +36,20 @@ async function setup() {
     },
   });
   await connectMock(config);
-  const onSubmitted = vi.fn();
-  const flow = createShieldedExitFlow(config, engine, { chainId: 1, onSubmitted });
+  /** `firstSubmit` resolves with the first call to `onSubmitted`. */
+  const { promise: firstSubmit, resolve } = Promise.withResolvers<[Hash, ShieldedExit]>();
+  const flow = createShieldedExitFlow(config, engine, {
+    chainId: 1,
+    onSubmitted: (hash, exit) => resolve([hash, exit]),
+  });
   const stop = flow.subscribe(() => {});
   const exits = selectShieldedExits(createShieldedClient(engine), 1).get()!;
-  return { engine, flow, stop, onSubmitted, sends, exit: exits[0]! };
+  return { engine, flow, stop, firstSubmit, sends, exit: exits[0]! };
 }
 
 describe("createShieldedExitFlow", () => {
   it("proves on one call and opens the wallet on the next", async () => {
-    const { flow, onSubmitted, sends, exit, stop } = await setup();
+    const { flow, firstSubmit, sends, exit, stop } = await setup();
     expect(flow.get().address).toBe(depositor);
 
     flow.prepare(exit);
@@ -53,8 +58,9 @@ describe("createShieldedExitFlow", () => {
     expect(sends).toHaveLength(0);
 
     flow.send();
-    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
-    expect(onSubmitted.mock.calls[0]![1]).toEqual(exit);
+    const [hash, sent] = await firstSubmit;
+    expect(hash).toMatch(/^0x/);
+    expect(sent).toEqual(exit);
     expect(sends[0]!.to.toLowerCase()).toBe(MOCK_SHIELD_CONTRACT.toLowerCase());
     // Sent: the exit is closed.
     expect(flow.get().exit).toBeUndefined();
@@ -64,10 +70,14 @@ describe("createShieldedExitFlow", () => {
 
   it("records a failed proof and closes on leave", async () => {
     const { engine, flow, exit, stop } = await setup();
-    vi.spyOn(engine, "prepareExit").mockRejectedValueOnce(new Error("Out of memory"));
+    // The funds went back before the proof was asked for, so the engine can't prove it.
+    await engine.simulate.exit(exit.id);
     flow.prepare(exit);
     await vi.waitFor(() => expect(flow.get().phase).toBe("error"));
-    expect(flow.get().problem).toMatchObject({ message: "Out of memory", proof: true });
+    expect(flow.get().problem).toMatchObject({
+      message: "These funds are no longer there to exit. Scan again.",
+      proof: true,
+    });
     flow.leave();
     expect(flow.get()).toMatchObject({ phase: "idle", exit: undefined, problem: undefined });
     stop();

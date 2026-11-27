@@ -429,10 +429,11 @@ export function createMockShieldedEngine({
         const { token, amount, state, depositor } = note;
         return { id: exitId(note), token, amount, state, depositor };
       });
+    const previous = chain.exits;
     if (
-      !chain.exits ||
-      chain.exits.length !== exits.length ||
-      exits.some((exit, i) => exit.id !== chain.exits![i]!.id)
+      !previous ||
+      previous.length !== exits.length ||
+      exits.some((exit, i) => exit.id !== previous[i]?.id)
     ) {
       chain.exits = exits;
       changed = true;
@@ -478,8 +479,6 @@ export function createMockShieldedEngine({
     }
     return id;
   }
-
-  const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
 
   /** Spend whole notes for an unshield, and bring the remainder back as change. */
   async function unshield(
