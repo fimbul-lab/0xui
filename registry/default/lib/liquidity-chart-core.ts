@@ -22,10 +22,12 @@ export function chartExtent(
   currentTick: number,
   tickSpacing: number,
 ) {
-  if (!bins.length) {
+  const first = bins[0];
+  const last = bins.at(-1);
+  if (!first || !last) {
     return { lower: currentTick - 100 * tickSpacing, upper: currentTick + 100 * tickSpacing };
   }
-  return { lower: bins[0]!.tickLower, upper: bins.at(-1)!.tickUpper };
+  return { lower: first.tickLower, upper: last.tickUpper };
 }
 
 /**
@@ -91,9 +93,14 @@ export function toBars(
   const bars: Array<Bar> = [];
   for (let i = 0; i < visible.length; i += perBar) {
     const group = visible.slice(i, i + perBar);
+    const first = group[0];
+    const last = group.at(-1);
+    if (!first || !last) {
+      continue;
+    }
     bars.push({
-      tickLower: group[0]!.tickLower,
-      tickUpper: group.at(-1)!.tickUpper,
+      tickLower: first.tickLower,
+      tickUpper: last.tickUpper,
       // Average, so merged bars stay on the same scale as single ones.
       liquidity: group.reduce((s, b) => s + Number(b.liquidity), 0) / group.length,
       amount0: group.reduce((s, b) => s + b.amount0, 0),
@@ -138,14 +145,15 @@ export function describeBar(
     locale?: string;
   },
 ) {
-  const [a, b] = [price(bar.tickLower), price(bar.tickUpper)].sort((m, n) => m - n);
+  const edges = [price(bar.tickLower), price(bar.tickUpper)];
+  const [a, b] = [Math.min(...edges), Math.max(...edges)];
   const amounts = [
     bar.amount0 > 0 && `${compactAmount(bar.amount0, locale)} ${token0.symbol}`,
     bar.amount1 > 0 && `${compactAmount(bar.amount1, locale)} ${token1.symbol}`,
   ].filter((line): line is string => Boolean(line));
   return {
     amounts: amounts.length ? amounts : ["No liquidity"],
-    range: `${formatPrice(a!, { locale })} – ${formatPrice(b!, { locale })} ${unit}`,
+    range: `${formatPrice(a, { locale })} – ${formatPrice(b, { locale })} ${unit}`,
   };
 }
 
@@ -165,16 +173,16 @@ export function nextBar(
   const current = bars.findIndex((b) => b.isCurrent);
   const from = active ?? (current === -1 ? 0 : current);
   const dir = invert ? -1 : 1;
-  const next: Record<string, number> = {
-    ArrowRight: from + dir,
-    ArrowLeft: from - dir,
-    Home: invert ? bars.length - 1 : 0,
-    End: invert ? 0 : bars.length - 1,
-  };
-  if (!(key in next)) {
+  const next = new Map([
+    ["ArrowRight", from + dir],
+    ["ArrowLeft", from - dir],
+    ["Home", invert ? bars.length - 1 : 0],
+    ["End", invert ? 0 : bars.length - 1],
+  ]).get(key);
+  if (next === undefined) {
     return undefined;
   }
-  return Math.max(0, Math.min(bars.length - 1, next[key]!));
+  return Math.max(0, Math.min(bars.length - 1, next));
 }
 
 /** "+4.88%", "−100%" or "∞" from the price at an edge against the current one. */

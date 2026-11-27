@@ -83,10 +83,12 @@ export function sampleDepth(
 export function niceTicks(max: number) {
   const raw = max / 3;
   const pow = Math.pow(10, Math.floor(Math.log10(raw)));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw)!;
+  // Ten times `pow` is always at least `raw`.
+  const step = [1, 2, 2.5, 5].map((m) => m * pow).find((s) => s >= raw) ?? 10 * pow;
   const ticks = [0];
-  while (ticks.at(-1)! < max) {
-    ticks.push(ticks.at(-1)! + step);
+  for (let tick = 0; tick < max;) {
+    tick += step;
+    ticks.push(tick);
   }
   return ticks;
 }
@@ -100,14 +102,14 @@ export function signedPercent(percent: number) {
 export function nextDepthReading(key: string, from: number | undefined, span: number) {
   const step = span / 20;
   const at = from ?? 0;
-  const next: Record<string, number> = {
-    ArrowRight: at + step,
-    ArrowLeft: at - step,
-    Home: -span,
-    End: span,
-  };
-  if (!(key in next)) {
+  const next = new Map([
+    ["ArrowRight", at + step],
+    ["ArrowLeft", at - step],
+    ["Home", -span],
+    ["End", span],
+  ]).get(key);
+  if (next === undefined) {
     return undefined;
   }
-  return Math.max(-span, Math.min(span, Math.round(next[key]! * 100) / 100));
+  return Math.max(-span, Math.min(span, Math.round(next * 100) / 100));
 }

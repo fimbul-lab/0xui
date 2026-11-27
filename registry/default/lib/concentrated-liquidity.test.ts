@@ -182,14 +182,12 @@ describe("distribution and depth", () => {
 
   it("puts token0 above the price and token1 below", () => {
     const bins = getLiquidityBins(pool, ticks, { bins: 12 });
-    for (const bin of bins) {
-      if (bin.tickLower > 5) {
-        expect(bin.amount1).toBe(0);
-      }
-      if (bin.tickUpper <= 5) {
-        expect(bin.amount0).toBe(0);
-      }
-    }
+    const above = bins.filter((b) => b.tickLower > 5);
+    const below = bins.filter((b) => b.tickUpper <= 5);
+    expect(above.length).toBeGreaterThan(0);
+    expect(below.length).toBeGreaterThan(0);
+    expect(above.map((b) => b.amount1)).toEqual(above.map(() => 0));
+    expect(below.map((b) => b.amount0)).toEqual(below.map(() => 0));
     const total0 = bins.reduce((s, b) => s + b.amount0, 0);
     const exact =
       getAmountsForLiquidity(
@@ -214,7 +212,7 @@ describe("distribution and depth", () => {
     expect(asks.at(-1)!.price).toBeGreaterThan(price);
     expect(bids.at(-1)!.price).toBeLessThan(price);
     for (let i = 1; i < asks.length; i++) {
-      expect(asks[i].amount0).toBeGreaterThan(asks[i - 1].amount0);
+      expect(asks[i]!.amount0).toBeGreaterThan(asks[i - 1]!.amount0);
     }
 
     const half = getMarketDepth(bins, price, 0.25);
