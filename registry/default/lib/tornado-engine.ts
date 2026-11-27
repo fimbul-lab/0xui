@@ -6,11 +6,13 @@ import {
   hexToBytes,
   http,
   isAddress,
+  isHex,
   parseAbi,
   toHex,
   zeroAddress,
 } from "viem";
 import type { Address, Hash, Hex } from "viem";
+import type { G1Point, G2Point, GrothOpts, ProvingKey } from "micro-zk-proofs";
 import { sameMixerPool } from "@/lib/mixer-engine";
 import type {
   MixerDeposit,
@@ -63,7 +65,9 @@ export type TornadoClient = {
     abi: typeof TORNADO_ABI;
     functionName: "isSpent" | "isKnownRoot" | "commitments" | "nextIndex";
     args?: readonly [Hex];
+    // oxlint-disable-next-line quality/no-unknown-returns -- any client fits: the engine checks each result it reads
   }): Promise<unknown>;
+  // oxlint-disable-next-line quality/no-unknown-returns -- any client fits: the engine only waits for the call, a refusal rejects
   call(parameters: { to: Address; data: Hex }): Promise<unknown>;
 };
 
@@ -147,19 +151,44 @@ const RATE_LIMIT_WAIT = 1000;
 const lower = (value: string) => value.toLowerCase();
 const aborted = () => new DOMException("The proof was cancelled.", "AbortError");
 
+/** A string field of an error, or "" when it has none. */
+const textOf = (value: unknown) => (typeof value === "string" ? value : "");
+
 /** True when an RPC refused a request for coming too fast, not for what it asked. */
 function isRateLimit(cause: unknown) {
-  const { status, code, message, details } = cause as {
-    status?: number;
-    code?: number;
-    message?: string;
-    details?: string;
-  };
+  if (typeof cause !== "object" || cause === null) {
+    return false;
+  }
+  const details = "details" in cause ? textOf(cause.details) : "";
+  const message = "message" in cause ? textOf(cause.message) : "";
   return (
-    status === 429 ||
-    code === -32_005 ||
-    /rate limit|too many requests|429/i.test(`${details ?? ""} ${message ?? ""}`)
+    ("status" in cause && cause.status === 429) ||
+    ("code" in cause && cause.code === -32_005) ||
+    /rate limit|too many requests|429/i.test(`${details} ${message}`)
   );
+}
+
+/** One request to the deposits store in IndexedDB. `read` checks what it returns. */
+async function inIndexedDb<T>(
+  mode: IDBTransactionMode,
+  work: (store: IDBObjectStore) => IDBRequest,
+  read: (result: unknown) => T,
+) {
+  const database = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open("0xui.tornado", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("deposits");
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      const request = work(database.transaction("deposits", mode).objectStore("deposits"));
+      request.onsuccess = () => resolve(read(request.result));
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    database.close();
+  }
 }
 
 /** A cache in IndexedDB, or undefined where there is none. */
@@ -167,30 +196,47 @@ function browserCache(): TornadoCache | undefined {
   if (typeof indexedDB === "undefined") {
     return undefined;
   }
-  const run = async <T>(
-    mode: IDBTransactionMode,
-    work: (store: IDBObjectStore) => IDBRequest<T>,
-  ) => {
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("0xui.tornado", 1);
-      request.onupgradeneeded = () => request.result.createObjectStore("deposits");
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    try {
-      return await new Promise<T>((resolve, reject) => {
-        const request = work(database.transaction("deposits", mode).objectStore("deposits"));
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    } finally {
-      database.close();
-    }
-  };
   return {
-    get: (key) => run<string | undefined>("readonly", (store) => store.get(key)),
-    set: async (key, value) => void (await run("readwrite", (store) => store.put(value, key))),
+    get: (key) =>
+      inIndexedDb(
+        "readonly",
+        (store) => store.get(key),
+        (value) => (typeof value === "string" ? value : undefined),
+      ),
+    set: (key, value) =>
+      inIndexedDb(
+        "readwrite",
+        (store) => store.put(value, key),
+        () => undefined,
+      ),
   };
+}
+
+const isHexList = (value: unknown): value is Array<Hex> =>
+  Array.isArray(value) && value.every((item) => typeof item === "string" && isHex(item));
+const isNumberList = (value: unknown): value is Array<number> =>
+  Array.isArray(value) && value.every((item) => typeof item === "number");
+
+/** A pool's deposits as the cache keeps them, or undefined when the entry is something else. */
+function readSavedDeposits(stored: string) {
+  const saved: unknown = JSON.parse(stored);
+  if (
+    typeof saved !== "object" ||
+    saved === null ||
+    !("syncedTo" in saved && "leaves" in saved && "times" in saved)
+  ) {
+    return undefined;
+  }
+  const { syncedTo, leaves, times } = saved;
+  if (
+    typeof syncedTo !== "string" ||
+    !isHexList(leaves) ||
+    !isNumberList(times) ||
+    times.length !== leaves.length
+  ) {
+    return undefined;
+  }
+  return { syncedTo: BigInt(syncedTo), leaves, times };
 }
 
 const littleEndian = (bytes: Uint8Array) =>
@@ -207,7 +253,13 @@ const loadHashes = async () => {
       pedersen.Point.decode(pedersen.pedersenHash(bytes)) as { toAffine(): { x: bigint } }
     ).toAffine().x;
   /** One node of the deposit tree: MiMC sponge over its two children. */
-  const node = (left: bigint, right: bigint) => mimc.multiHash([left, right]) as bigint;
+  const node = (left: bigint, right: bigint) => {
+    const hash = mimc.multiHash([left, right]);
+    if (typeof hash !== "bigint") {
+      throw new TypeError("MiMC gave more than one output for a tree node.");
+    }
+    return hash;
+  };
   return { pedersenX, node };
 };
 
@@ -238,8 +290,10 @@ export async function tornadoMerklePath(leaves: ReadonlyArray<bigint>, index: nu
     pathIndices.push(position & 1);
     pathElements.push(level[position ^ 1] ?? zero);
     const next: Array<bigint> = [];
-    for (let i = 0; i < level.length; i += 2) {
-      next.push(node(level[i]!, level[i + 1] ?? zero));
+    for (const [i, left] of level.entries()) {
+      if (i % 2 === 0) {
+        next.push(node(left, level[i + 1] ?? zero));
+      }
     }
     level = next;
     zero = node(zero, zero);
@@ -249,6 +303,41 @@ export async function tornadoMerklePath(leaves: ReadonlyArray<bigint>, index: nu
 }
 
 type ProofSystem = Awaited<ReturnType<typeof loadProver>>;
+
+/** The prover's two heavy sums, run in worker threads. */
+type MsmWorkers = Pick<GrothOpts, "G1msm" | "G2msm">;
+
+const isG1Msm = (value: unknown): value is NonNullable<GrothOpts["G1msm"]> =>
+  typeof value === "function";
+const isG2Msm = (value: unknown): value is NonNullable<GrothOpts["G2msm"]> =>
+  typeof value === "function";
+
+/** The bn254 sums from micro-zk-proofs' worker pool, whose methods it types as `any`. */
+function msmWorkers(methods: unknown): MsmWorkers {
+  if (typeof methods !== "object" || methods === null) {
+    return {};
+  }
+  const g1 = "bn254_msmG1" in methods ? methods.bn254_msmG1 : undefined;
+  const g2 = "bn254_msmG2" in methods ? methods.bn254_msmG2 : undefined;
+  return { G1msm: isG1Msm(g1) ? g1 : undefined, G2msm: isG2Msm(g2) ? g2 : undefined };
+}
+
+/** micro-zk-proofs types a witness as `any`. It is a list of field elements. */
+function witnessOf(value: unknown) {
+  if (!Array.isArray(value)) {
+    throw new TypeError("The circuit gave no witness.");
+  }
+  return value.map((item: unknown) => {
+    if (typeof item !== "bigint") {
+      throw new TypeError("The circuit's witness holds something other than numbers.");
+    }
+    return item;
+  });
+}
+
+/** `count` values, `size` bytes apart from `start`. */
+const points = <T>(read: (offset: number) => T, start: number, count: number, size: number) =>
+  Array.from({ length: count }, (_, i) => read(start + i * size));
 
 /**
  * The proving key file, read into the shape the prover takes. The file is
@@ -261,8 +350,6 @@ async function loadProver(circuit: unknown, key: ArrayBuffer) {
     import("micro-zk-proofs/witness.js"),
     import("@noble/curves/bn254.js"),
   ]);
-  type G1 = [bigint, bigint, bigint];
-  type G2 = [[bigint, bigint], [bigint, bigint], [bigint, bigint]];
   const { Fp, Fr } = bn254.fields;
   const fpInverse = Fp.inv(2n ** 256n % Fp.ORDER);
   const frInverse = Fr.inv(2n ** 256n % Fr.ORDER);
@@ -273,21 +360,19 @@ async function loadProver(circuit: unknown, key: ArrayBuffer) {
   const fp = (offset: number) => field(offset, fpInverse, Fp);
 
   // The point at infinity is written as (0, 1). The prover wants null there.
-  const g1 = (offset: number): G1 => {
+  const g1 = (offset: number): G1Point | null => {
     const [x, y] = [fp(offset), fp(offset + 32)];
-    return (x === 0n && y === 1n ? null : [x, y, 1n]) as G1;
+    return x === 0n && y === 1n ? null : [x, y, 1n];
   };
-  const g2 = (offset: number): G2 => {
+  const g2 = (offset: number): G2Point | null => {
     const [x0, x1, y0, y1] = [fp(offset), fp(offset + 32), fp(offset + 64), fp(offset + 96)];
-    return (
-      x0 === 0n && x1 === 0n && y0 === 1n && y1 === 0n
-        ? null
-        : [
-            [x0, x1],
-            [y0, y1],
-            [1n, 0n],
-          ]
-    ) as G2;
+    return x0 === 0n && x1 === 0n && y0 === 1n && y1 === 0n
+      ? null
+      : [
+          [x0, x1],
+          [y0, y1],
+          [1n, 0n],
+        ];
   };
   const u32 = (offset: number) => view.getUint32(offset, true);
 
@@ -319,9 +404,6 @@ async function loadProver(circuit: unknown, key: ArrayBuffer) {
     }
     return list;
   };
-  const points = <T>(read: (offset: number) => T, start: number, count: number, size: number) =>
-    Array.from({ length: count }, (_, i) => read(start + i * size));
-
   const provingKey = {
     nVars,
     nPublic,
@@ -335,7 +417,7 @@ async function loadProver(circuit: unknown, key: ArrayBuffer) {
     B1: points(g1, pointsB1, nVars, 64),
     B2: points(g2, pointsB2, nVars, 128),
     C: [
-      ...Array.from({ length: nPublic + 1 }, () => null as unknown as G1),
+      ...Array.from({ length: nPublic + 1 }, () => null),
       ...points(g1, pointsC, nVars - nPublic - 1, 64),
     ],
     hExps: points(g1, hExps, domainSize - 1, 64),
@@ -348,21 +430,21 @@ async function loadProver(circuit: unknown, key: ArrayBuffer) {
   // The key was made with a non-residue of 7. The library's default of 5
   // gives other roots of unity, and proofs the verifier refuses.
   // The two heavy sums run in worker threads where the bundler can start them.
-  let workers: { bn254_msmG1?: never; bn254_msmG2?: never } = {};
+  let workers: MsmWorkers = {};
   try {
-    workers = (await import("micro-zk-proofs/msm.js")).initMSM().methods;
+    workers = msmWorkers((await import("micro-zk-proofs/msm.js")).initMSM().methods);
   } catch {
     // No workers here. The proof still works, on this thread, several times slower.
   }
-  const { groth } = zkp.buildSnark(bn254, {
-    nqr: 7,
-    G1msm: workers.bn254_msmG1,
-    G2msm: workers.bn254_msmG2,
-  });
+  const { groth } = zkp.buildSnark(bn254, { nqr: 7, ...workers });
   const makeWitness = witness.generateWitness(circuit);
 
   return async (inputs: Record<string, bigint | Array<bigint> | Array<number>>): Promise<Hex> => {
-    const { proof } = await groth.createProof(provingKey, makeWitness(inputs));
+    const { proof } = await groth.createProof(
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- micro-zk-proofs takes null for the point at infinity, which its ProvingKey type leaves out
+      provingKey as ProvingKey,
+      witnessOf(makeWitness(inputs)),
+    );
     // The verifier reads each G2 coordinate real part first.
     const words = zkp.stringBigints.decode([
       proof.pi_a[0],
@@ -373,19 +455,20 @@ async function loadProver(circuit: unknown, key: ArrayBuffer) {
       proof.pi_b[1][0],
       proof.pi_c[0],
       proof.pi_c[1],
-    ]) as Array<bigint>;
+    ]);
     return `0x${words.map((word) => word.toString(16).padStart(64, "0")).join("")}`;
   };
 }
 
 /** One line saying why. viem's full message carries the whole request. */
 function reason(cause: unknown) {
-  const { details, shortMessage, message } = cause as {
-    details?: string;
-    shortMessage?: string;
-    message?: string;
-  };
-  return details || shortMessage || message || String(cause);
+  const fields = typeof cause === "object" && cause !== null ? cause : {};
+  return (
+    ("details" in fields ? textOf(fields.details) : "") ||
+    ("shortMessage" in fields ? textOf(fields.shortMessage) : "") ||
+    ("message" in fields ? textOf(fields.message) : "") ||
+    String(cause)
+  );
 }
 
 type PoolState = {
@@ -442,17 +525,22 @@ export function createTornadoEngine({
     return { key, state };
   };
   const known = (pool: MixerPool) => pools.find((candidate) => sameMixerPool(candidate, pool));
-  const read = <T>(
+  const read = async (
     pool: TornadoPool,
     functionName: "isSpent" | "isKnownRoot" | "commitments",
     arg: Hex,
-  ) =>
-    client(pool.chainId).readContract({
+  ) => {
+    const result = await client(pool.chainId).readContract({
       address: pool.address,
       abi: TORNADO_ABI,
       functionName,
       args: [arg],
-    }) as Promise<T>;
+    });
+    if (typeof result !== "boolean") {
+      throw new TypeError(`The pool's ${functionName} read did not return true or false.`);
+    }
+    return result;
+  };
 
   const noteText = (pool: TornadoPool, preimage: Uint8Array) =>
     `tornado-${lower(pool.symbol)}-${formatUnits(pool.denomination, pool.decimals)}-${pool.chainId}-${toHex(preimage)}`;
@@ -460,16 +548,16 @@ export function createTornadoEngine({
   async function parse(text: string) {
     const trimmed = text.trim();
     const match = /^tornado-(\w+)-([\d.]+)-(\d+)-0x([0-9a-fA-F]{124})$/.exec(trimmed);
-    if (!match) {
+    const [, currency, amount, chainId, hex] = match ?? [];
+    if (!currency || !amount || !chainId || !hex) {
       throw new Error(
         trimmed ? "This is not a note. Paste the whole text you saved." : "Paste your note.",
       );
     }
-    const [, currency, amount, chainId, hex] = match;
     const pool = pools.find(
       (candidate) =>
         candidate.chainId === Number(chainId) &&
-        lower(candidate.symbol) === lower(currency!) &&
+        lower(candidate.symbol) === lower(currency) &&
         formatUnits(candidate.denomination, candidate.decimals) === amount,
     );
     if (!pool) {
@@ -490,7 +578,9 @@ export function createTornadoEngine({
     async function range(fromBlock: bigint, toBlock: bigint, attempt = 0): Promise<void> {
       const wait = resumeAt - Date.now();
       if (wait > 0) {
-        await new Promise((resolve) => setTimeout(resolve, wait));
+        await new Promise((resolve) => {
+          setTimeout(resolve, wait);
+        });
       }
       try {
         const logs = await reader.getLogs({
@@ -500,12 +590,17 @@ export function createTornadoEngine({
           toBlock,
         });
         for (const { args, blockNumber } of logs) {
+          const { leafIndex, commitment, timestamp } = args;
+          // An event without its fields is as good as left out, which the leaf numbers catch.
+          if (leafIndex === undefined || commitment === undefined) {
+            continue;
+          }
           // A log with no block yet is pending: it counts as newer than anything final.
           found.push({
-            index: args.leafIndex!,
-            commitment: args.commitment!,
+            index: leafIndex,
+            commitment,
             block: blockNumber ?? toBlock,
-            time: Number(args.timestamp ?? 0n),
+            time: Number(timestamp ?? 0n),
           });
         }
       } catch (error) {
@@ -532,9 +627,8 @@ export function createTornadoEngine({
     }
     let next = 0;
     const worker = async () => {
-      while (next < ranges.length) {
-        const [start, end] = ranges[next++]!;
-        await range(start, end);
+      for (let current = ranges[next++]; current; current = ranges[next++]) {
+        await range(...current);
       }
     };
     await Promise.all(Array.from({ length: Math.min(LOG_REQUESTS, ranges.length) }, worker));
@@ -549,18 +643,11 @@ export function createTornadoEngine({
         state.cacheRead = true;
         try {
           const stored = await cache.get(`deposits:${key}`);
-          const saved =
-            stored &&
-            (JSON.parse(stored) as { syncedTo: string; leaves: Array<Hex>; times: Array<number> });
-          if (
-            saved &&
-            Array.isArray(saved.leaves) &&
-            saved.times?.length === saved.leaves.length &&
-            state.syncedTo === undefined
-          ) {
+          const saved = stored ? readSavedDeposits(stored) : undefined;
+          if (saved && state.syncedTo === undefined) {
             state.leaves = saved.leaves;
             state.times = saved.times;
-            state.syncedTo = BigInt(saved.syncedTo);
+            state.syncedTo = saved.syncedTo;
           }
         } catch {
           // Unreadable or from another version. The chain is read instead.
@@ -604,7 +691,8 @@ export function createTornadoEngine({
               JSON.stringify({ syncedTo: `${final}`, leaves: state.leaves, times: state.times }),
             )
             .catch(() => {
-              // A full or blocked disk only costs the next load a longer read.
+              // A full or blocked disk only costs the next load a longer read. The next read tries again.
+              state.saved = false;
             });
         }
       }
@@ -714,8 +802,8 @@ export function createTornadoEngine({
     async getDeposit(note, { signal } = {}): Promise<MixerDeposit> {
       const { pool, commitment, nullifierHash } = await parse(note);
       const [deposited, spent] = await Promise.all([
-        read<boolean>(pool, "commitments", commitment),
-        read<boolean>(pool, "isSpent", nullifierHash),
+        read(pool, "commitments", commitment),
+        read(pool, "isSpent", nullifierHash),
       ]);
       if (signal?.aborted) {
         throw aborted();
@@ -780,7 +868,7 @@ export function createTornadoEngine({
       if (index < 0) {
         throw new Error("No deposit was found for this note.");
       }
-      if (await read<boolean>(pool, "isSpent", nullifierHash)) {
+      if (await read(pool, "isSpent", nullifierHash)) {
         throw new Error("This note was already withdrawn.");
       }
       const { root, pathElements, pathIndices } = await tornadoMerklePath(
@@ -789,7 +877,7 @@ export function createTornadoEngine({
       );
       const rootHex = toHex(root, { size: 32 });
       // The pool remembers its last 30 roots. Anything else means the read was wrong or too old.
-      if (!(await read<boolean>(pool, "isKnownRoot", rootHex))) {
+      if (!(await read(pool, "isKnownRoot", rootHex))) {
         throw new Error("The deposits read from the RPC don't match the pool. Try again.");
       }
 
@@ -798,7 +886,9 @@ export function createTornadoEngine({
 
       stage("proving");
       // Let the stage paint before the tab is busy with the proof.
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 30);
+      });
       if (signal?.aborted) {
         throw aborted();
       }
