@@ -29,16 +29,18 @@ export const MOCK_MIXER_TIMINGS = {
 export type MockMixerTimings = typeof MOCK_MIXER_TIMINGS;
 
 /** The mock's pools: 0.1, 1 and 10 ETH on Ethereum. No contract lives at these addresses. */
-export const MOCK_MIXER_POOLS: ReadonlyArray<MixerPool> = [
-  ["0x00000000000000000000000000000000000a1ce1", 10n ** 17n],
-  ["0x00000000000000000000000000000000000a1ce2", 10n ** 18n],
-  ["0x00000000000000000000000000000000000a1ce3", 10n ** 19n],
-].map(([address, denomination]) => ({
+export const MOCK_MIXER_POOLS: ReadonlyArray<MixerPool> = (
+  [
+    ["0x00000000000000000000000000000000000a1ce1", 10n ** 17n],
+    ["0x00000000000000000000000000000000000a1ce2", 10n ** 18n],
+    ["0x00000000000000000000000000000000000a1ce3", 10n ** 19n],
+  ] as const
+).map(([address, denomination]) => ({
   chainId: 1,
-  address: address as `0x${string}`,
+  address,
   symbol: "ETH",
   decimals: 18,
-  denomination: denomination as bigint,
+  denomination,
 }));
 
 /** What a mock note starts with. A real protocol's note never does. */
@@ -88,6 +90,10 @@ export type MockMixerSimulate = {
 export type MockMixerEngine = MixerEngine & { simulate: MockMixerSimulate };
 
 const aborted = () => new DOMException("The proof was cancelled.", "AbortError");
+const poolKey = (pool: MixerPool) => `${pool.chainId}:${pool.address.toLowerCase()}`;
+
+/** Failures the mock was asked for, each with its message, until they happen. */
+type MockFailures = { proof?: string; sync?: string; relay?: string };
 
 /**
  * A mixer engine that lives in memory. Notes are random, proofs are waits,
@@ -106,7 +112,6 @@ export function createMockMixerEngine({
   }
   const timings = { ...MOCK_MIXER_TIMINGS, ...overrides };
 
-  const poolKey = (pool: MixerPool) => `${pool.chainId}:${pool.address.toLowerCase()}`;
   /** Deposits in each pool so far. */
   const counts = new Map(pools.map((pool) => [poolKey(pool), existingDeposits]));
   const deposits = new Map<Hex, { pool: MixerPool; index: number; timestamp: number }>();
@@ -118,7 +123,7 @@ export function createMockMixerEngine({
   const synced = new Set<string>();
   let circuitsLoaded = false;
   let nextId = 0;
-  const failures: { proof?: string; sync?: string; relay?: string } = {};
+  const failures: MockFailures = {};
 
   const sleep = (ms: number, signal?: AbortSignal) => {
     if (signal?.aborted) {
@@ -144,13 +149,13 @@ export function createMockMixerEngine({
   const known = (pool: MixerPool) => pools.find((candidate) => sameMixerPool(candidate, pool));
 
   const read = (text: string): MixerNote => {
-    const match = /^mock-note-([a-z0-9]+)-([0-9.]+)-(\d+)-(0x[0-9a-f]{124})$/.exec(text.trim());
-    if (!match) {
+    const match = /^mock-note-([a-z0-9]+)-([0-9.]+)-(\d+)-0x([0-9a-f]{124})$/.exec(text.trim());
+    const [note, symbol, amount, chainId, secret] = match ?? [];
+    if (!note || !symbol || !amount || !chainId || !secret) {
       throw new Error(
         text.trim() ? "This is not a note. Paste the whole text you saved." : "Paste your note.",
       );
     }
-    const [note, symbol, amount, chainId, secret] = match;
     const pool = pools.find(
       (candidate) =>
         candidate.chainId === Number(chainId) &&
@@ -160,7 +165,7 @@ export function createMockMixerEngine({
     if (!pool) {
       throw new Error(`This note is for a pool that is not offered here.`);
     }
-    const commitment = keccak256(secret as Hex);
+    const commitment = keccak256(`0x${secret}`);
     made.set(commitment, pool);
     return { note, pool, commitment };
   };
@@ -184,7 +189,7 @@ export function createMockMixerEngine({
     return {
       state: spent.has(commitment) ? "withdrawn" : "deposited",
       timestamp: deposit.timestamp,
-      depositsSince: counts.get(poolKey(deposit.pool))! - deposit.index - 1,
+      depositsSince: (counts.get(poolKey(deposit.pool)) ?? 0) - deposit.index - 1,
     };
   };
 
@@ -318,7 +323,10 @@ export function createMockMixerEngine({
         if (deposits.has(commitment)) {
           return false;
         }
-        const pool = made.get(commitment) ?? pools[0]!;
+        const pool = made.get(commitment) ?? pools[0];
+        if (!pool) {
+          throw new Error("This engine has no pools.");
+        }
         const key = poolKey(pool);
         const index = counts.get(key) ?? 0;
         counts.set(key, index + 1);
