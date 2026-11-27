@@ -20,8 +20,9 @@ Connect the **Demo Wallet** and shield some WETH. The demo's private account is 
 </Preview>
 
 <Aside type="caution" title="Preview">
-  This runs on the [mock engine](/components/mock-shielded-engine/). A Railgun engine is planned.
-  Until then the block can't move real funds.
+  This demo runs on the [mock engine](/components/mock-shielded-engine/). With the [Privacy Pools
+  engine](/components/privacy-pools-engine/) the same block deposits into the real Privacy Pools
+  contracts.
 </Aside>
 
 It is built from [Token Input](/components/token-input/) and [Shielded Transaction Status](/components/shielded-transaction-status/), on a [shielded engine](/components/shielded-engine/).
@@ -115,9 +116,13 @@ It explains more and moves more. Good when shielding is new to your users.
 
 ## Native currency
 
-ETH can't be shielded directly: the button reads "Wrap ETH to shield it". Shield the wrapped token instead. A wrap step inside the block is planned.
+It depends on the engine.
 
-0xui uses the wrapped token in both directions. Going out, the Railgun SDK builds its native-token unshield as an EIP-7702 transaction on networks that support it, which an ordinary wallet can't send as a plain call. The wrapped token goes through a call any wallet can send, and using it on the way in as well keeps one token on both sides.
+An engine with `shieldsNative`, like the [Privacy Pools engine](/components/privacy-pools-engine/), takes ETH as it is. Offer the native token in `tokens`: there is no approval, and the shield transaction carries the amount as its value.
+
+On other engines ETH can't be shielded directly: the button reads "Wrap ETH to shield it". Shield the wrapped token instead. A wrap step inside the block is planned.
+
+For those, 0xui uses the wrapped token in both directions. Going out, the Railgun SDK builds its native-token unshield as an EIP-7702 transaction on networks that support it, which an ordinary wallet can't send as a plain call. The wrapped token goes through a call any wallet can send, and using it on the way in as well keeps one token on both sides.
 
 ## With the mock engine
 
@@ -135,18 +140,18 @@ A real engine finds a shield by scanning the chain. The mock has no chain, so te
 
 The form's button always names the blocker:
 
-| Situation                       | Button                                    |
-| ------------------------------- | ----------------------------------------- |
-| Wallet not connected            | Connect wallet                            |
-| No private account              | Create a private account first            |
-| Account locked                  | Unlock your private account               |
-| Native token selected           | Wrap ETH to shield it                     |
-| No amount                       | Enter an amount                           |
-| Amount above the wallet balance | Insufficient WETH balance                 |
-| Wallet on another network       | Switch to Ethereum                        |
-| Quote or allowance loading      | Fetching quote…                           |
-| Quote failed                    | Can't shield this amount, plus the reason |
-| Ready                           | Shield WETH                               |
+| Situation                                                   | Button                                    |
+| ----------------------------------------------------------- | ----------------------------------------- |
+| Wallet not connected                                        | Connect wallet                            |
+| No private account                                          | Create a private account first            |
+| Account locked                                              | Unlock your private account               |
+| Native token selected, on an engine without `shieldsNative` | Wrap ETH to shield it                     |
+| No amount                                                   | Enter an amount                           |
+| Amount above the wallet balance                             | Insufficient WETH balance                 |
+| Wallet on another network                                   | Switch to Ethereum                        |
+| Quote or allowance loading                                  | Fetching quote…                           |
+| Quote failed                                                | Can't shield this amount, plus the reason |
+| Ready                                                       | Shield WETH                               |
 
 `data-phase` on the root follows the wallet step in progress. `data-variant` holds the variant.
 

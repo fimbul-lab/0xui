@@ -154,23 +154,31 @@ Shared helpers install on their own as dependencies: `0xui-utils` (address and a
 
 ## `0x03` Shielded (preview)
 
-Components for private balances. They talk to a shielded engine, and only a mock engine exists so far. Not for real funds: `shielded-account` has not had a security review. The docs site leaves these out of its sidebar, search, `llms.txt` and agent skill until a real engine works; [/shielded/](https://0xui.io/shielded/) links them all.
+Components for private balances and mixer pools. The balance components talk to a shielded engine: a mock one, and a Privacy Pools one that shields and unshields on the real contracts. The mixer block talks to a mixer engine: a mock one, and one for classic Tornado Cash pools. Not ready for real funds: `shielded-account` and the two real engines have not had a security review. The docs site leaves these out of its sidebar, search, `llms.txt` and agent skill until a real engine works; [/shielded/](https://0xui.io/shielded/) links them all.
 
 <details>
-<summary>The 10 shielded items</summary>
+<summary>The 18 shielded items</summary>
 
 | Item                          | Description                                                                                                                                                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `shielded-engine`             | The interface between the components and a privacy protocol, with its provider and hooks.                                                                                                                            |
 | `mock-shielded-engine`        | In-memory engine for demos and tests. No network, no funds.                                                                                                                                                          |
+| `privacy-pools-engine`        | Engine on Privacy Pools v1 (0xbow): real deposits and relayed withdrawals on the deployed contracts.                                                                                                                 |
 | `shield`                      | Shield block: fee, wait and wallet prompts up front, then sign, approve and shield one click at a time (approve and shield in one prompt on batching wallets), and the funds followed until spendable. Two variants. |
+| `unshield`                    | Unshield block: private balance, fee and what the recipient gets, then the proof stage by stage and the send. No wallet prompt. Asks again if the fee went up.                                                       |
 | `shielded-account`            | Create, import, unlock and lock the private account, with a recovery phrase step.                                                                                                                                    |
 | `shielded-transaction-status` | Follows a shield from the public chain into the private balance.                                                                                                                                                     |
 | `shielded-balance`            | Private balance of a token, split into spendable, pending, proving, incomplete and restricted.                                                                                                                       |
 | `shielded-sync-status`        | Scan progress with a bar that never moves backwards, and a retry.                                                                                                                                                    |
 | `proof-progress`              | Proof generation as stages, with cancel and retry.                                                                                                                                                                   |
+| `shielded-exits`              | The public way out: funds that can go back to the address that shielded them, with a warning, the proof and the wallet step.                                                                                         |
 | `shielded-address`            | Truncated private address with copy.                                                                                                                                                                                 |
 | `privacy-badge`               | Marks a value or action as public or private.                                                                                                                                                                        |
+| `mixer`                       | Mixer block for note-based pools: deposit a fixed amount behind a note backup, withdraw with the note through a relayer or the wallet.                                                                               |
+| `mixer-engine`                | The interface between the mixer block and a note-based pool.                                                                                                                                                         |
+| `mock-mixer-engine`           | In-memory mixer engine for demos and tests.                                                                                                                                                                          |
+| `tornado-engine`              | Mixer engine on classic Tornado Cash pools: original note format, proof made in the browser. Run on Sepolia.                                                                                                         |
+| `note-backup`                 | Shows a secret once, with reveal, copy and download, and a checkbox that gates the next step.                                                                                                                        |
 
 </details>
 

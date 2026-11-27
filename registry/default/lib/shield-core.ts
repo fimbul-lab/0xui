@@ -200,11 +200,14 @@ export function shieldBlocker({
   token,
   amount,
   insufficient,
+  shieldsNative = false,
 }: {
   accountStatus: ShieldedAccountStatus;
   token: { address: Address; symbol: string } | undefined;
   amount: bigint | undefined;
   insufficient: boolean;
+  /** The engine takes native currency as it is, so there is nothing to wrap. */
+  shieldsNative?: boolean;
 }) {
   if (accountStatus === "none") {
     return "Create a private account first";
@@ -215,7 +218,7 @@ export function shieldBlocker({
   if (!token) {
     return "Select a token";
   }
-  if (isNativeToken(token)) {
+  if (isNativeToken(token) && !shieldsNative) {
     return `Wrap ${token.symbol} to shield it`;
   }
   if (!amount) {

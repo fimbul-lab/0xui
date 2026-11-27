@@ -416,6 +416,39 @@ describe("shielding through the interface", () => {
   });
 });
 
+describe("exits", () => {
+  it("lists restricted funds only, and drops one that went back", async () => {
+    const depositor = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
+    const engine = await unlocked({
+      funds: [
+        { token: weth, amount: 10n },
+        { token: weth, amount: 3n, state: "restricted", depositor },
+      ],
+    });
+    const exits = engine.getExits!(1)!;
+    expect(exits).toEqual([
+      { id: expect.any(String), token: weth, amount: 3n, state: "restricted", depositor },
+    ]);
+    // Same array until something changes.
+    await engine.sync(1);
+    expect(engine.getExits!(1)).toBe(exits);
+
+    const stages: Array<ProofStage> = [];
+    const { transaction } = await engine.prepareExit!(1, exits[0]!.id, {
+      onStage: (stage) => stages.push(stage),
+    });
+    expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
+    expect(transaction.to).toBeDefined();
+    await expect(engine.prepareExit!(1, "nope", { onStage() {} })).rejects.toThrow(
+      "no longer there",
+    );
+
+    await engine.simulate.exit(exits[0]!.id);
+    expect(engine.getExits!(1)).toEqual([]);
+    expect(amountsOf(engine)?.restricted).toBe(0n);
+  });
+});
+
 describe("prove", () => {
   const draft = {
     kind: "unshield",
@@ -425,6 +458,38 @@ describe("prove", () => {
     recipient: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   } as const;
   const funds = [{ token: weth, amount: 10n }];
+
+  it("quotes the fee and refuses more than is spendable", async () => {
+    const engine = await unlocked({ funds: [{ token: weth, amount: 100_000n }] });
+    expect(await engine.quote({ ...draft, amount: 40_000n })).toEqual({
+      fee: 100n,
+      received: 39_900n,
+    });
+    await expect(engine.quote({ ...draft, amount: 200_000n })).rejects.toThrow(
+      "Not enough spendable balance.",
+    );
+    await expect(engine.quote({ ...draft, amount: 0n })).rejects.toThrow("Enter an amount.");
+  });
+
+  it("submits a proved unshield once, and spends the funds", async () => {
+    const engine = await unlocked({ funds });
+    const operation = await engine.prove(draft, { onStage() {} });
+    expect(operation.quote).toEqual({ fee: 0n, received: 4n });
+
+    const { hash } = await engine.submit(operation);
+    expect(hash).toMatch(/^0x[0-9a-f]{64}$/);
+    // 10 was one note: 4 left, 6 came back as change.
+    expect(amountsOf(engine)?.spendable).toBe(6n);
+    await expect(engine.submit(operation)).rejects.toThrow("Prove again.");
+  });
+
+  it("refuses a proof from before the account was locked", async () => {
+    const engine = await unlocked({ funds });
+    const operation = await engine.prove(draft, { onStage() {} });
+    engine.account.lock();
+    await engine.account.unlock("password");
+    await expect(engine.submit(operation)).rejects.toThrow("Prove again.");
+  });
 
   it("reports the three stages in order and returns the operation", async () => {
     const engine = await unlocked({ funds });

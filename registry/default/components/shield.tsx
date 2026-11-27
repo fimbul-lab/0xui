@@ -392,6 +392,7 @@ export function Shield({
   title = "Shield",
   className,
 }: ShieldProps) {
+  const engine = useShieldedEngine();
   const account = useShieldedAccount();
   const { chains } = useConfig();
   const onChain = tokens.filter((t) => t.chainId === chainId);
@@ -418,6 +419,7 @@ export function Shield({
     token,
     amount: amount?.amount,
     insufficient: amount?.insufficient ?? false,
+    shieldsNative: engine.shieldsNative,
   });
   const draft: ShieldDraft | undefined =
     !blocker && token && amount?.amount

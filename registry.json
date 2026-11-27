@@ -65,7 +65,7 @@
       "name": "morph-text",
       "type": "registry:component",
       "title": "Morph Text",
-      "description": "Text that morphs when it changes: shared characters slide to their new place and digits roll by place value. Used across 0xui for phase labels ('Confirm in wallet…' to 'Pending…') and live numbers such as block height, gas and balances. Strings and numbers animate; any other child renders as-is. Screen readers get the plain text, prefers-reduced-motion is respected, and it renders plain text where the Web Animations API is missing (jsdom tests). Wraps TextMorph from torph.",
+      "description": "Text that morphs when it changes: shared characters slide to their new place and digits roll by place value. Used across 0xui for phase labels ('Confirm in wallet\u2026' to 'Pending\u2026') and live numbers such as block height, gas and balances. Strings and numbers animate; any other child renders as-is. Screen readers get the plain text, prefers-reduced-motion is respected, and it renders plain text where the Web Animations API is missing (jsdom tests). Wraps TextMorph from torph.",
       "docs": "Docs: https://0xui.io/components/morph-text.md",
       "categories": ["utilities"],
       "files": [
@@ -111,7 +111,7 @@
       "name": "address",
       "type": "registry:component",
       "title": "Address",
-      "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234…abcd, with a copy button and an optional block-explorer link. Inline or pill variant. The text morphs from the address to the ENS name when it resolves (MorphText). Full address on hover and for screen readers. Exports useAddressName.",
+      "description": "Address display: shows the ENS name (resolved on mainnet with useEnsName) or the checksummed, truncated 0x1234\u2026abcd, with a copy button and an optional block-explorer link. Inline or pill variant. The text morphs from the address to the ENS name when it resolves (MorphText). Full address on hover and for screen readers. Exports useAddressName.",
       "docs": "Docs: https://0xui.io/components/address.md",
       "categories": ["identity"],
       "files": [
@@ -281,7 +281,7 @@
       "name": "balance",
       "type": "registry:component",
       "title": "Balance",
-      "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton (skullet), '—' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
+      "description": "Native or ERC-20 balance of the connected account (or any address) formatted with TokenAmount. ERC-20 balance, decimals and symbol are read in one multicall. Refreshes on an interval. Loading skeleton (skullet), '\u2014' on error, nothing when there is no address. Exports useTokenBalance with refetch. data-phase: idle | loading | ready | error.",
       "docs": "Docs: https://0xui.io/components/balance.md",
       "categories": ["tokens"],
       "files": [
@@ -378,7 +378,7 @@
       "name": "transaction-button",
       "type": "registry:component",
       "title": "Transaction Button",
-      "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet…', 'Pending…', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error. With simulate it dry-runs the call (useSimulateContract, useCall) and shows the revert reason on a disabled button before the wallet opens. Exports useTransactionSimulation and revertReason.",
+      "description": "Button that sends a transaction (sendTransaction) or contract call (writeContract) and shows every step on itself: opens the wallet picker when disconnected, 'Switch to <chain>' on the wrong network, then 'Confirm in wallet\u2026', 'Pending\u2026', 'Done', with a status line and alerts. A wallet rejection shows as cancelled and doesn't call onError. Reverted transactions are detected. disabledReason names the blocker ('Enter an amount'). Exports useTransactionFlow and TxPhase: idle | switching | confirming | pending | success | reverted | cancelled | error. With simulate it dry-runs the call (useSimulateContract, useCall) and shows the revert reason on a disabled button before the wallet opens. Exports useTransactionSimulation and revertReason.",
       "docs": "Docs: https://0xui.io/components/transaction-button.md",
       "categories": ["transactions"],
       "files": [
@@ -489,7 +489,7 @@
       "name": "address-input",
       "type": "registry:component",
       "title": "Address Input",
-      "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, a hint line that morphs between 'Looking up…', the name and the address (MorphText), strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found. With the shielded prop it also accepts private 0zk addresses (Railgun format), validated by length and bech32m checksum and reported as state.shieldedAddress; they are never sent to a resolver.",
+      "description": "Recipient input for an address or ENS name: debounced ENS resolution on mainnet (useEnsAddress) with avatar and resolved-address preview, reverse ENS name for pasted addresses, a hint line that morphs between 'Looking up\u2026', the name and the address (MorphText), strict checksum validation that catches typos, a paste button, and errors shown after blur rather than while typing. onResolve returns { phase, address, ensName, error }. Exports useAddressInput. data-phase: empty | incomplete | resolving | valid | invalid | not-found. With the shielded prop it also accepts private 0zk addresses (Railgun format), validated by length and bech32m checksum and reported as state.shieldedAddress; they are never sent to a resolver.",
       "docs": "Docs: https://0xui.io/components/address-input.md",
       "categories": ["identity"],
       "files": [
@@ -697,10 +697,78 @@
       ]
     },
     {
+      "name": "add-liquidity",
+      "type": "registry:block",
+      "title": "Add Liquidity",
+      "description": "Add liquidity block for concentrated liquidity pools (Uniswap v3 style new-position flow): optional FeeTierSelect, PriceRange on the pool's liquidity chart, two TokenInputs linked by the exact deposit ratio (type either, the other fills; one side locks for single-sided ranges / range orders), balances, ApproveButton for each ERC-20, and a mint button naming the blocker. Agent-ready: the mint button's data-agent-confirm states the exact deposit, range and network. Bring your own transaction via getTransaction(MintRequest), or use v3Mint({ positionManager, weth }) for NonfungiblePositionManager.mint (native ETH via multicall + refundETH). Logic in lib/add-liquidity-core.ts (framework-free: getDepositAmounts, mintRequest, mintTransactionQueryOptions, addLiquidityBlocker, addLiquidityConfirmText). Exports useDepositAmounts, withSlippage, v3Mint and MintRequest/GetMintTransaction types. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": ["blocks"],
+      "files": [
+        {
+          "path": "registry/default/components/add-liquidity.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/add-liquidity-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem", "wagmi", "@tanstack/react-query", "lucide-react", "skullet"],
+      "registryDependencies": [
+        "@0xui/approve-button",
+        "@0xui/balance",
+        "@0xui/fee-tier-select",
+        "@0xui/price-range",
+        "@0xui/slippage-input",
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/transaction-button",
+        "@0xui/concentrated-liquidity",
+        "@0xui/v3-position-manager",
+        "@0xui/0xui-utils",
+        "@0xui/liquidity-utils",
+        "@0xui/token-list"
+      ]
+    },
+    {
+      "name": "remove-liquidity",
+      "type": "registry:block",
+      "title": "Remove Liquidity",
+      "description": "Remove liquidity block for a concentrated liquidity position: ui-sdk slider plus 25/50/75/Max presets, 'You receive' with principal at the current price plus all uncollected fees (fiat total), SlippageInput, compact RangeIndicator, and one transaction via getTransaction or v3Remove({ positionManager, weth }) (decreaseLiquidity + collect, native ETH unwrapped). Deadline refreshed every minute. data-agent-confirm states the share, the slippage floor and the fees. Logic in lib/remove-liquidity-core.ts (framework-free). Exports getRemoveAmounts, removeBlocker, removeRequest and removeConfirmText. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/blocks/remove-liquidity.md",
+      "categories": ["blocks"],
+      "files": [
+        {
+          "path": "registry/default/components/remove-liquidity.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/remove-liquidity-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["skullet", "viem", "wagmi"],
+      "registryDependencies": [
+        "@0xui/primitive-button",
+        "@0xui/primitive-slider",
+        "@0xui/range-indicator",
+        "@0xui/slippage-input",
+        "@0xui/token-amount",
+        "@0xui/token-icon",
+        "@0xui/token-select",
+        "@0xui/transaction-button",
+        "@0xui/concentrated-liquidity",
+        "@0xui/fee-tier-select",
+        "@0xui/liquidity-utils",
+        "@0xui/v3-position-manager",
+        "@0xui/token-list"
+      ]
+    },
+    {
       "name": "batch-transaction",
       "type": "registry:component",
       "title": "Batch Transaction",
-      "description": "Runs several calls (e.g. approve + swap) as one action: a single wallet prompt via EIP-5792 wallet_sendCalls when the wallet reports atomic support (useCapabilities), else one transaction per call, waiting for each. Step list with per-step status, step-counting labels ('Confirm 2 of 3 in wallet…'), network switch, rejection shown as cancelled. mode: auto | atomic | sequential. Exports useBatchTransaction.",
+      "description": "Runs several calls (e.g. approve + swap) as one action: a single wallet prompt via EIP-5792 wallet_sendCalls when the wallet reports atomic support (useCapabilities), else one transaction per call, waiting for each. Step list with per-step status, step-counting labels ('Confirm 2 of 3 in wallet\u2026'), network switch, rejection shown as cancelled. mode: auto | atomic | sequential. Exports useBatchTransaction.",
       "docs": "Docs: https://0xui.io/components/batch-transaction.md",
       "categories": ["transactions"],
       "files": [
@@ -905,7 +973,7 @@
       "name": "shielded-address",
       "type": "registry:component",
       "title": "Shielded Address",
-      "description": "Private (shielded) address display, e.g. a 127-character Railgun 0zk address: truncated as 0zk1qyk9n…x8w3ld with the full address on hover, for screen readers and on copy. Inline or pill variant, configurable truncation, or truncate={false} to show the whole address wrapped. Exports truncateShieldedAddress. Needs no engine or provider.",
+      "description": "Private (shielded) address display, e.g. a 127-character Railgun 0zk address: truncated as 0zk1qyk9n\u2026x8w3ld with the full address on hover, for screen readers and on copy. Inline or pill variant, configurable truncation, or truncate={false} to show the whole address wrapped. Exports truncateShieldedAddress. Needs no engine or provider.",
       "docs": "Docs: https://0xui.io/components/shielded-address.md",
       "categories": ["shielded"],
       "files": [
@@ -1008,6 +1076,38 @@
       ]
     },
     {
+      "name": "shielded-exits",
+      "type": "registry:component",
+      "title": "Shielded Exits",
+      "description": "The public way out of a private balance, on a ShieldedEngine that has one (ragequit on Privacy Pools, restricted funds on Railgun): a list of funds that can go back to the address that shielded them, whether or not the protocol cleared them for private use. Opening one shows a warning that it is public and final, names the wallet that must send it (Connect wallet / Switch wallet to 0xabc\u2026 / Switch network), then makes the proof stage by stage on one click and opens the wallet on the next. After sending it follows the transaction and has the engine scan. Renders nothing when there is nothing to exit. Exports useShieldedExits, useShieldedExit, shieldedExitBlocker, shieldedExitConfirmText and the framework-free createShieldedExitFlow (lib/shielded-exits-core.ts). data-phase: idle | proving | ready | wallet | cancelled | error.",
+      "docs": "Docs: https://0xui.io/components/shielded-exits.md",
+      "categories": ["shielded"],
+      "files": [
+        {
+          "path": "registry/default/components/shielded-exits.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/shielded-exits-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["lucide-react", "viem", "wagmi", "@wagmi/core"],
+      "registryDependencies": [
+        "@0xui/connect-wallet",
+        "@0xui/morph-text",
+        "@0xui/primitive-button",
+        "@0xui/proof-progress",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/token-amount",
+        "@0xui/transaction-status",
+        "@0xui/use-store",
+        "@0xui/0xui-utils",
+        "@0xui/0xui-store"
+      ]
+    },
+    {
       "name": "shielded-account",
       "type": "registry:component",
       "title": "Shielded Account",
@@ -1096,6 +1196,151 @@
         "@0xui/primitive-button",
         "@0xui/token-list",
         "@0xui/use-store"
+      ]
+    },
+    {
+      "name": "unshield",
+      "type": "registry:block",
+      "title": "Unshield",
+      "description": "Unshield block: move a token from a private (shielded) balance to a public address through a ShieldedEngine. Shows the spendable private balance with Max, a recipient field (address or ENS, or the connected wallet's address on request), and a quote with the fee and what the recipient gets, asked before the recipient is entered. Then it makes the proof in the tab, stage by stage with a cancel, and submits it through the engine: no wallet prompt and no connected wallet needed. The proof commits to its own fee; if that is higher than the one shown it stops and asks before sending. After sending it follows the transaction and has the engine scan once it is mined. The button names the blocker (Unlock your private account / Enter an amount / Insufficient private balance / Enter a recipient / Fetching quote / Can't unshield this amount). Exports useUnshieldFlow, useUnshieldQuote, unshieldBlocker, unshieldConfirmText, UnshieldQuoteRows and the framework-free createUnshieldFlow (lib/unshield-core.ts). data-phase: idle | proving | review | submitting | cancelled | error.",
+      "docs": "Docs: https://0xui.io/blocks/unshield.md",
+      "categories": ["blocks"],
+      "files": [
+        {
+          "path": "registry/default/components/unshield.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/unshield-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["wagmi", "viem", "@tanstack/react-query", "lucide-react"],
+      "registryDependencies": [
+        "@0xui/address-input",
+        "@0xui/morph-text",
+        "@0xui/primitive-button",
+        "@0xui/privacy-badge",
+        "@0xui/proof-progress",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/token-amount",
+        "@0xui/token-input",
+        "@0xui/token-select",
+        "@0xui/transaction-status",
+        "@0xui/use-store",
+        "@0xui/0xui-utils",
+        "@0xui/shield",
+        "@0xui/0xui-store"
+      ]
+    },
+    {
+      "name": "mixer-engine",
+      "type": "registry:lib",
+      "title": "Mixer engine",
+      "description": "The interface between the mixer block and a note-based mixer protocol (Tornado-style pools: one fixed amount per pool, a secret note per deposit, no account and no balance). A MixerEngine lists its pools, makes and reads notes (createNote, parseNote), builds the deposit call (prepareDeposit), reads where a note's deposit is and how many deposits came after it (getDeposit: missing | deposited | withdrawn), quotes a withdrawal through the wallet or a relayer (quote), makes the withdrawal proof stage by stage with a cancel signal (prove: syncing, loading-circuits, proving, verifying) and hands a relayed withdrawal to the relayer (relay). The engine never keeps a note, and a proved withdrawal carries nothing that points back at its deposit. Exports the types, MIXER_STAGES, mixerPoolLabel and sameMixerPool.",
+      "docs": "Docs: https://0xui.io/components/mixer-engine.md",
+      "categories": ["shielded"],
+      "files": [
+        {
+          "path": "registry/default/lib/mixer-engine.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem"],
+      "registryDependencies": ["@0xui/shielded-engine"]
+    },
+    {
+      "name": "mock-mixer-engine",
+      "type": "registry:lib",
+      "title": "Mock mixer engine",
+      "description": "In-memory MixerEngine for demos, tests and building UI before a real mixer is wired up: no network, no cryptography, no funds. Three ETH pools (0.1, 1, 10) with a crowd of existing deposits, random notes with a mock- prefix, staged proofs with a slow first deposit read and circuit download, a relayer with a fee in basis points (or none), and a speed option (Infinity for tests). simulate.* tells it what a real engine reads from the chain and produces every state on demand: deposit, crowd, withdrawn, failNextSync, failNextProof, failNextRelay.",
+      "docs": "Docs: https://0xui.io/components/mock-mixer-engine.md",
+      "categories": ["shielded"],
+      "files": [
+        {
+          "path": "registry/default/lib/mock-mixer-engine.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem"],
+      "registryDependencies": ["@0xui/mixer-engine"]
+    },
+    {
+      "name": "tornado-engine",
+      "type": "registry:lib",
+      "title": "Tornado engine",
+      "description": "MixerEngine on classic Tornado Cash instances (ETHTornado, ERC20Tornado) and forks with the same contracts and circuit, called directly with viem. Notes are the original format (tornado-eth-0.1-1-0x\u2026), so they work in any Tornado client. Commitment and nullifier hash are Pedersen hashes on Baby Jubjub; the deposit tree is MiMC sponge, 20 levels. A withdrawal reads the pool's Deposit events in chunks (halved when the RPC refuses a range, retried with backoff on a rate limit, final blocks kept in IndexedDB), checks that no leaf is missing and that the pool knows the root, downloads the two circuit files of the original trusted setup from circuitsUrl (tornado.json and tornadoProvingKey.bin, 33 MB, each checked against a SHA-256 the engine ships with), makes the Groth16 proof in the browser with micro-zk-proofs (worker threads where the bundler can start them), and has the pool's own verifier check it with an eth_call that sends nothing. The connected wallet sends the withdrawal, or a TornadoRelayer you supply (none is built in). Ships the Sepolia pools (0.01, 0.1, 1 ETH), which share mainnet's verifying key. Run end to end on Sepolia; no security review, no mainnet run. Exports createTornadoEngine, TORNADO_SEPOLIA_POOLS, TORNADO_CIRCUIT_FILES, TORNADO_ABI, tornadoNoteHashes and tornadoMerklePath.",
+      "docs": "Docs: https://0xui.io/components/tornado-engine.md",
+      "categories": ["shielded"],
+      "files": [
+        {
+          "path": "registry/default/lib/tornado-engine.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem", "micro-zk-proofs@0.3.1", "@noble/curves@~2.2.0"],
+      "registryDependencies": ["@0xui/mixer-engine"]
+    },
+    {
+      "name": "note-backup",
+      "type": "registry:ui",
+      "title": "Note Backup",
+      "description": "Shows a secret note once, for backup before anything is sent: blurred and hidden from assistive technology until revealed, with copy and a download as a text file made in memory, and a checkbox that stays closed until the note has been revealed, copied or downloaded. Controlled through saved and onSavedChange, so the caller's button can name the blocker (Save your note first). The note is never put in an attribute or in storage, and agents never see it (data-agent-hidden). Exports NoteBackup and downloadTextFile.",
+      "docs": "Docs: https://0xui.io/components/note-backup.md",
+      "categories": ["shielded"],
+      "files": [
+        {
+          "path": "registry/default/components/note-backup.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": ["@ui-sdk/react", "@ui-sdk/core", "lucide-react"],
+      "registryDependencies": ["@0xui/copy-button", "@0xui/primitive-button"]
+    },
+    {
+      "name": "mixer",
+      "type": "registry:block",
+      "title": "Mixer",
+      "description": "Mixer block for note-based privacy pools (Tornado-style: fixed amounts, one secret note per deposit) through a MixerEngine, in two tabs that both stay mounted. Deposit: pick one of the pool's amounts, make the note locally, save it behind a backup gate (the button reads Save your note first), then approve if the pool holds an ERC-20 (one prompt with the deposit on wallets that batch atomically, with an allowance reset for tokens that need one) and deposit. The note is frozen before anything is sent, dropped from memory once the deposit is sent, and never stored or passed to a callback: onDeposited gets the commitment. Withdraw: paste the note, see its deposit (amount, age, how many deposits came after it, with a warning when that crowd is small), enter a recipient, choose a relayer (no wallet needed, fee shown) or the connected wallet (pays the gas in public), then the deposit read and the proof stage by stage with a cancel. A relayed withdrawal is sent at once unless the proof's fee is higher than the one shown; a wallet withdrawal waits for a second click, because a prompt has to come from one. The button names the blocker (Connect wallet / Switch to <chain> / Insufficient ETH / Create note / Save your note first / Paste your note / Not a valid note / No deposit found / Already withdrawn / Enter a recipient). Exports Mixer, MixerDepositForm, MixerWithdrawForm, MixerPoolPicker, MixerProofProgress, useMixerDeposit, useMixerWithdraw, useMixerNote, mixerDepositSteps and mixerWalletBlocker; lib/mixer-core.ts holds the framework-free controllers (createMixerDeposit, createMixerNoteLookup, createMixerWithdraw). data-phase on each form: deposit idle | creating | backup | wallet | pending | cancelled | error; withdraw idle | syncing | proving | review | ready | wallet | submitting | cancelled | error.",
+      "docs": "Docs: https://0xui.io/blocks/mixer.md",
+      "categories": ["blocks"],
+      "files": [
+        {
+          "path": "registry/default/components/mixer.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/mixer-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": [
+        "@tanstack/react-query",
+        "@ui-sdk/react",
+        "@ui-sdk/core",
+        "lucide-react",
+        "skullet",
+        "viem",
+        "wagmi",
+        "@wagmi/core"
+      ],
+      "registryDependencies": [
+        "@0xui/address-input",
+        "@0xui/connect-wallet",
+        "@0xui/morph-text",
+        "@0xui/note-backup",
+        "@0xui/primitive-button",
+        "@0xui/primitive-tabs",
+        "@0xui/privacy-badge",
+        "@0xui/proof-progress",
+        "@0xui/token-amount",
+        "@0xui/transaction-status",
+        "@0xui/use-store",
+        "@0xui/0xui-utils",
+        "@0xui/mixer-engine",
+        "@0xui/0xui-store",
+        "@0xui/approve-button"
       ]
     },
     {
@@ -1234,6 +1479,22 @@
       "registryDependencies": ["@0xui/shielded-engine", "@0xui/0xui-utils"]
     },
     {
+      "name": "privacy-pools-engine",
+      "type": "registry:lib",
+      "title": "Privacy Pools engine",
+      "description": "ShieldedEngine on Privacy Pools v1 (0xbow) through its public SDK, for real funds on the deployed contracts. The private account is a BIP-39 recovery phrase kept encrypted with a password (PBKDF2 into AES-GCM), the same phrase privacypools.com takes. A scan reads the pools' Deposited, Withdrawn and Ragequit logs in chunks (halved when the RPC refuses a range, retried with backoff on a rate limit, final blocks kept in IndexedDB between page loads), rebuilds the account from the phrase, and asks the ASP which deposits are approved: pending until approved, then spendable. quoteShield reads the pool's vetting fee and minimum from the Entrypoint; prepareShield builds the Entrypoint deposit for ETH or an ERC-20, needs no signature, and never hands out one deposit index twice. Ships a Sepolia preset (ETH, USDC, USDT). Unshield spends one approved deposit: quote asks the relayer's fee, prove makes the withdrawal proof in the browser (needs circuitsUrl, about 24 MB of hash-checked circuit files) after checking the relayer's instructions pay the recipient at the quoted fee, and submit hands it to the relayer (needs the chain's relayerUrl). getExits lists every deposit that still holds funds, with its depositor, and prepareExit builds the ragequit call that returns one to that address in public, approved or not. With checkDeclined it asks the ASP about unapproved deposits and shows declined ones as restricted (off by default: it names your deposits to the ASP). Exports createPrivacyPoolsEngine, PRIVACY_POOLS_SEPOLIA, PRIVACY_POOLS_NATIVE, poolAccountState, nextDepositIndex, encryptPhrase and decryptPhrase.",
+      "docs": "Docs: https://0xui.io/components/privacy-pools-engine.md",
+      "categories": ["shielded"],
+      "files": [
+        {
+          "path": "registry/default/lib/privacy-pools-engine.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem", "@0xbow/privacy-pools-core-sdk", "assert", "buffer"],
+      "registryDependencies": ["@0xui/shielded-engine"]
+    },
+    {
       "name": "agent-tools",
       "type": "registry:component",
       "title": "Agent Tools",
@@ -1252,6 +1513,212 @@
       ],
       "dependencies": ["wagmi", "viem", "@wagmi/core", "@ui-sdk/core", "@ui-sdk/react"],
       "registryDependencies": ["@0xui/primitive-alert-dialog", "@0xui/primitive-button"]
+    },
+    {
+      "name": "concentrated-liquidity",
+      "type": "registry:lib",
+      "title": "Concentrated liquidity",
+      "description": "Uniswap v3/v4 concentrated liquidity math for LP components (also PancakeSwap v3, Aerodrome Slipstream, Sushi v3). Framework-free. Exact bigint ports of TickMath and LiquidityAmounts: getSqrtRatioAtTick, getAmountsForLiquidity, getLiquidityForAmounts, getDependentAmount (other side of a two-sided deposit). Display math: tickToPrice, priceToTick, nearestUsableTick, priceRangeToTicks, rangeAroundTick (±%), displayPrice and priceUnit (inverted quotes), moveRangeEdge and shiftRange (snapped range edits), getDepositMode, getRangeStatus, getLiquidityBins (distribution rebuilt from liquidityNet), ticksFromPositions, getDepthCurve and getMarketDepth (±2% depth), formatPrice. Types: PoolState, TickData, LiquidityBin, TickRange, PairToken.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/lib/concentrated-liquidity.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "liquidity-utils",
+      "type": "registry:lib",
+      "title": "Liquidity utils",
+      "description": "Framework-free helpers shared by the LP blocks: positionValue (fiat value of two token amounts from prices), formatMoney and formatPair ('1.5 ETH and 300 USDC', used in agent confirm text).",
+      "docs": "Docs: https://0xui.io/components/position-card.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/lib/liquidity-utils.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem"],
+      "registryDependencies": ["@0xui/token-list"]
+    },
+    {
+      "name": "v3-position-manager",
+      "type": "registry:lib",
+      "title": "Uniswap v3 position manager",
+      "description": "Transaction builders for Uniswap v3's NonfungiblePositionManager (and forks with the same ABI: PancakeSwap v3, Sushi v3): v3Mint (mint, native ETH as value + refundETH), v3Remove (decreaseLiquidity + collect in one multicall), v3Collect (collect fees). Native ETH withdrawals collect to the manager, then unwrapWETH9 + sweepToken. Also positionManagerAbi (mint, decreaseLiquidity, collect, positions, multicall, refundETH, unwrapWETH9, sweepToken), withSlippage(amount, bps) and deadlineIn(seconds).",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/lib/v3-position-manager.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem"]
+    },
+    {
+      "name": "liquidity-chart",
+      "type": "registry:component",
+      "title": "Liquidity Chart",
+      "description": "Liquidity distribution histogram for a concentrated liquidity pool (Uniswap v3/v4 style): one bar per tick range, token0 above the price and token1 below it in their own colors, current price line, tooltip with tokens locked per bar, keyboard reading, zoom, invert. Optional range highlight with draggable handles (a ui-sdk range slider over the visible window, arrow keys step one tick spacing) and a draggable band. Hand-drawn SVG, no chart library. Viewport, bar and handle math in lib/liquidity-chart-core.ts (framework-free). Exports useChartViewport, TickRange and liquidityColors (--lp-token0 / --lp-token1). Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/components/liquidity-chart.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/liquidity-chart-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["@ui-sdk/react", "@ui-sdk/core", "lucide-react", "skullet"],
+      "registryDependencies": ["@0xui/primitive-button", "@0xui/concentrated-liquidity"]
+    },
+    {
+      "name": "price-range",
+      "type": "registry:component",
+      "title": "Price Range",
+      "description": "'Set price range' panel for a new LP position, like Uniswap's: liquidity chart with draggable handles, presets by tick spacing (±0.05% for stables to ±50%, plus full range) as a segmented control, min/max price fields with -/+ tick steppers that snap to the spacing, a token toggle to invert the quote, and a notice when the range is out of range and single-sided. data-deposit-mode (both/token0/token1) and data-full-range. Range math in lib/price-range-core.ts (framework-free). Exports usePriceRange and defaultRangePresets. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/price-range.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/components/price-range.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/price-range-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["@ui-sdk/react", "@ui-sdk/core", "lucide-react", "skullet"],
+      "registryDependencies": [
+        "@0xui/liquidity-chart",
+        "@0xui/primitive-button",
+        "@0xui/primitive-field",
+        "@0xui/primitive-segmented-control",
+        "@0xui/concentrated-liquidity"
+      ]
+    },
+    {
+      "name": "depth-chart",
+      "type": "registry:component",
+      "title": "Depth Chart",
+      "description": "Order book style market depth for a concentrated liquidity pool: cumulative bids (quote token, price down) and asks (base token, price up) from the current price, both valued in the quote token on one axis, headline ±2% depth figures, a window segmented control (±2/5/10/25%), crosshair tooltip, keyboard reading, screen reader table, invert. Depth math in lib/depth-chart-core.ts (framework-free). Exports readDepth and sampleDepth. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/depth-chart.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/components/depth-chart.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/depth-chart-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["skullet"],
+      "registryDependencies": [
+        "@0xui/primitive-segmented-control",
+        "@0xui/concentrated-liquidity",
+        "@0xui/liquidity-chart"
+      ]
+    },
+    {
+      "name": "range-indicator",
+      "type": "registry:component",
+      "title": "Range Indicator",
+      "description": "LP position range status: In range / Out of range / Closed badge (data-status, text not just color) and a log-scale bar with the range and a marker at the current price, min/current/max labels, full range and invert support. Bar math in lib/range-indicator-core.ts (framework-free, getRangeBar). Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/range-indicator.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/components/range-indicator.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/range-indicator-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["skullet"],
+      "registryDependencies": ["@0xui/concentrated-liquidity"]
+    },
+    {
+      "name": "fee-tier-select",
+      "type": "registry:component",
+      "title": "Fee Tier Select",
+      "description": "Fee tier picker for a new LP position: a ui-sdk radio group of cards with fee (0.01/0.05/0.3/1%), when to use it, share of the pair's liquidity ('71% select') and 'Not created' for missing pools. onValueChange returns the tier with its tickSpacing. Exports defaultFeeTiers, formatFee and feeTierBadge (lib/fee-tier-core.ts, framework-free). Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/fee-tier-select.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/components/fee-tier-select.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/fee-tier-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["@ui-sdk/react", "@ui-sdk/core", "lucide-react", "skullet"],
+      "registryDependencies": ["@0xui/primitive-field"]
+    },
+    {
+      "name": "position-card",
+      "type": "registry:component",
+      "title": "Position Card",
+      "description": "Concentrated liquidity position card (Uniswap v3 style): pair icons, fee tier and token id, RangeIndicator (in range / out of range / closed, data-status), tokens held now (exact getPositionAmounts) and uncollected fees with fiat totals, a Collect fees TransactionButton (bring getCollectTransaction or v3Collect) that names its blocker and states the exact fees in data-agent-confirm, and an actions slot for Add / Remove. Exports positionValue and collectConfirmText. Skeleton (skullet) while its data loads.",
+      "docs": "Docs: https://0xui.io/components/position-card.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/components/position-card.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/position-card-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["viem", "wagmi", "skullet"],
+      "registryDependencies": [
+        "@0xui/range-indicator",
+        "@0xui/token-amount",
+        "@0xui/token-icon",
+        "@0xui/token-select",
+        "@0xui/transaction-button",
+        "@0xui/concentrated-liquidity",
+        "@0xui/fee-tier-select",
+        "@0xui/liquidity-utils",
+        "@0xui/v3-position-manager",
+        "@0xui/token-list"
+      ]
+    },
+    {
+      "name": "slippage-input",
+      "type": "registry:component",
+      "title": "Slippage Input",
+      "description": "Slippage tolerance control in basis points: presets (0.1/0.5/1%) as a ui-sdk segmented control, custom percent field (decimal text input, max 50%), and warnings for too low (may revert) or too high (sandwich risk) on data-warning. Exports formatSlippage, parseSlippageInput, slippageWarning and the LOW/HIGH/MAX thresholds (lib/slippage-core.ts, framework-free).",
+      "docs": "Docs: https://0xui.io/components/slippage-input.md",
+      "categories": ["liquidity"],
+      "files": [
+        {
+          "path": "registry/default/components/slippage-input.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "registry/default/lib/slippage-core.ts",
+          "type": "registry:lib"
+        }
+      ],
+      "dependencies": ["@ui-sdk/react", "@ui-sdk/core"],
+      "registryDependencies": ["@0xui/primitive-segmented-control"]
     },
     {
       "name": "account-demo",
@@ -1569,6 +2036,28 @@
       ]
     },
     {
+      "name": "privacy-pools-engine-demo",
+      "type": "registry:example",
+      "title": "Privacy Pools engine demo",
+      "description": "Shield block on the real Privacy Pools contracts on Sepolia: private account, scan status, ETH and USDC shields, and private balances.",
+      "docs": "Docs: https://0xui.io/components/privacy-pools-engine.md",
+      "categories": ["shielded"],
+      "registryDependencies": [
+        "@0xui/privacy-pools-engine",
+        "@0xui/shield",
+        "@0xui/shielded-account",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/shielded-sync-status"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/privacy-pools-engine-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
       "name": "morph-text-demo",
       "type": "registry:example",
       "title": "Morph Text demo",
@@ -1665,6 +2154,28 @@
       ]
     },
     {
+      "name": "shielded-exits-demo",
+      "type": "registry:example",
+      "title": "Shielded Exits demo",
+      "description": "Restricted funds and their public exit, next to the private balance, on a mock shielded engine.",
+      "docs": "Docs: https://0xui.io/components/shielded-exits.md",
+      "categories": ["shielded"],
+      "registryDependencies": [
+        "@0xui/shielded-exits",
+        "@0xui/shielded-account",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/mock-shielded-engine"
+      ],
+      "dependencies": ["viem"],
+      "files": [
+        {
+          "path": "registry/default/examples/shielded-exits-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
       "name": "responsive-dialog-demo",
       "type": "registry:example",
       "title": "Responsive Dialog demo",
@@ -1712,6 +2223,88 @@
       "files": [
         {
           "path": "registry/default/examples/shield-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "unshield-demo",
+      "type": "registry:example",
+      "title": "Unshield demo",
+      "description": "Unshield block on Sepolia behind a private account unlock, with private balances below, on a mock engine.",
+      "docs": "Docs: https://0xui.io/blocks/unshield.md",
+      "categories": ["blocks"],
+      "registryDependencies": [
+        "@0xui/unshield",
+        "@0xui/shielded-account",
+        "@0xui/shielded-balance",
+        "@0xui/shielded-engine",
+        "@0xui/mock-shielded-engine"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/unshield-demo.tsx",
+          "type": "registry:example"
+        }
+      ],
+      "dependencies": ["viem"]
+    },
+    {
+      "name": "mixer-demo",
+      "type": "registry:example",
+      "title": "Mixer demo",
+      "description": "Mixer block on a mock engine: deposit with a note backup, then withdraw with the note through a relayer or the wallet.",
+      "docs": "Docs: https://0xui.io/blocks/mixer.md",
+      "categories": ["blocks"],
+      "registryDependencies": ["@0xui/mixer", "@0xui/mock-mixer-engine"],
+      "files": [
+        {
+          "path": "registry/default/examples/mixer-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "note-backup-demo",
+      "type": "registry:example",
+      "title": "Note Backup demo",
+      "description": "A secret note with reveal, copy and download, gating a button until the user confirms the backup.",
+      "docs": "Docs: https://0xui.io/components/note-backup.md",
+      "categories": ["shielded"],
+      "registryDependencies": ["@0xui/note-backup", "@0xui/primitive-button"],
+      "files": [
+        {
+          "path": "registry/default/examples/note-backup-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "mock-mixer-engine-demo",
+      "type": "registry:example",
+      "title": "Mock mixer engine demo",
+      "description": "Withdraw form on a mock mixer engine, with buttons that make a deposited note and fail the next proof.",
+      "docs": "Docs: https://0xui.io/components/mock-mixer-engine.md",
+      "categories": ["shielded"],
+      "registryDependencies": ["@0xui/mixer", "@0xui/primitive-button", "@0xui/mock-mixer-engine"],
+      "files": [
+        {
+          "path": "registry/default/examples/mock-mixer-engine-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "tornado-engine-demo",
+      "type": "registry:example",
+      "title": "Tornado engine demo",
+      "description": "Mixer block on the real Tornado Cash test pools on Sepolia: deposit 0.01, 0.1 or 1 ETH behind a note backup, and withdraw with the note.",
+      "docs": "Docs: https://0xui.io/components/tornado-engine.md",
+      "categories": ["shielded"],
+      "registryDependencies": ["@0xui/tornado-engine", "@0xui/mixer"],
+      "files": [
+        {
+          "path": "registry/default/examples/tornado-engine-demo.tsx",
           "type": "registry:example"
         }
       ]
@@ -2008,6 +2601,149 @@
       ]
     },
     {
+      "name": "liquidity-chart-demo",
+      "type": "registry:example",
+      "title": "Liquidity Chart demo",
+      "description": "Liquidity chart with a draggable ±8% range.",
+      "docs": "Docs: https://0xui.io/components/liquidity-chart.md",
+      "categories": ["liquidity"],
+      "registryDependencies": ["@0xui/liquidity-chart", "@0xui/concentrated-liquidity"],
+      "files": [
+        {
+          "path": "registry/default/examples/liquidity-chart-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "price-range-demo",
+      "type": "registry:example",
+      "title": "Price Range demo",
+      "description": "Set price range panel on a made-up ETH/USDC pool.",
+      "docs": "Docs: https://0xui.io/components/price-range.md",
+      "categories": ["liquidity"],
+      "registryDependencies": ["@0xui/price-range", "@0xui/concentrated-liquidity"],
+      "files": [
+        {
+          "path": "registry/default/examples/price-range-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "depth-chart-demo",
+      "type": "registry:example",
+      "title": "Depth Chart demo",
+      "description": "Market depth with ±2% figures on a made-up ETH/USDC pool.",
+      "docs": "Docs: https://0xui.io/components/depth-chart.md",
+      "categories": ["liquidity"],
+      "registryDependencies": ["@0xui/depth-chart", "@0xui/concentrated-liquidity"],
+      "files": [
+        {
+          "path": "registry/default/examples/depth-chart-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "range-indicator-demo",
+      "type": "registry:example",
+      "title": "Range Indicator demo",
+      "description": "An in-range and an out-of-range position.",
+      "docs": "Docs: https://0xui.io/components/range-indicator.md",
+      "categories": ["liquidity"],
+      "registryDependencies": ["@0xui/range-indicator", "@0xui/concentrated-liquidity"],
+      "files": [
+        {
+          "path": "registry/default/examples/range-indicator-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "fee-tier-select-demo",
+      "type": "registry:example",
+      "title": "Fee Tier Select demo",
+      "description": "Fee tiers with liquidity shares and a tier without a pool.",
+      "docs": "Docs: https://0xui.io/components/fee-tier-select.md",
+      "categories": ["liquidity"],
+      "registryDependencies": ["@0xui/fee-tier-select"],
+      "files": [
+        {
+          "path": "registry/default/examples/fee-tier-select-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "add-liquidity-demo",
+      "type": "registry:example",
+      "title": "Add Liquidity demo",
+      "description": "USDC/WETH 0.05% position on made-up liquidity, minted through Uniswap v3's position manager.",
+      "docs": "Docs: https://0xui.io/blocks/add-liquidity.md",
+      "categories": ["blocks"],
+      "registryDependencies": ["@0xui/add-liquidity", "@0xui/concentrated-liquidity"],
+      "files": [
+        {
+          "path": "registry/default/examples/add-liquidity-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "position-card-demo",
+      "type": "registry:example",
+      "title": "Position Card demo",
+      "description": "An in-range USDC/ETH position with fees and a Collect button.",
+      "docs": "Docs: https://0xui.io/components/position-card.md",
+      "categories": ["liquidity"],
+      "registryDependencies": [
+        "@0xui/position-card",
+        "@0xui/concentrated-liquidity",
+        "@0xui/v3-position-manager"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/position-card-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "slippage-input-demo",
+      "type": "registry:example",
+      "title": "Slippage Input demo",
+      "description": "Slippage tolerance at 0.5%.",
+      "docs": "Docs: https://0xui.io/components/slippage-input.md",
+      "categories": ["liquidity"],
+      "registryDependencies": ["@0xui/slippage-input"],
+      "files": [
+        {
+          "path": "registry/default/examples/slippage-input-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
+      "name": "remove-liquidity-demo",
+      "type": "registry:example",
+      "title": "Remove Liquidity demo",
+      "description": "Remove part of a USDC/ETH position through Uniswap v3's position manager.",
+      "docs": "Docs: https://0xui.io/blocks/remove-liquidity.md",
+      "categories": ["blocks"],
+      "registryDependencies": [
+        "@0xui/remove-liquidity",
+        "@0xui/concentrated-liquidity",
+        "@0xui/v3-position-manager"
+      ],
+      "files": [
+        {
+          "path": "registry/default/examples/remove-liquidity-demo.tsx",
+          "type": "registry:example"
+        }
+      ]
+    },
+    {
       "name": "primitive-class-name",
       "type": "registry:lib",
       "title": "Primitive class names",
@@ -2101,6 +2837,34 @@
         }
       ],
       "dependencies": ["@ui-sdk/core", "@ui-sdk/react"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
+    },
+    {
+      "name": "primitive-segmented-control",
+      "type": "registry:component",
+      "title": "Segmented control primitive",
+      "description": "0xui's styled segmented control (one choice from a few, with a sliding indicator) on ui-sdk (@ui-sdk/react/segmented-control): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/segmented-control.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/segmented-control.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": ["@ui-sdk/react", "@ui-sdk/core"],
+      "registryDependencies": ["@0xui/primitive-class-name"]
+    },
+    {
+      "name": "primitive-slider",
+      "type": "registry:component",
+      "title": "Slider primitive",
+      "description": "0xui's styled slider (one thumb or a range) on ui-sdk (@ui-sdk/react/slider): ui-sdk handles keyboard, focus and ARIA, Tailwind classes give the default look. Other 0xui components import it from @/components/primitives/slider.",
+      "files": [
+        {
+          "path": "registry/default/components/primitives/slider.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "dependencies": ["@ui-sdk/react", "@ui-sdk/core"],
       "registryDependencies": ["@0xui/primitive-class-name"]
     },
     {

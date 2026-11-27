@@ -101,7 +101,7 @@ Nothing renders on the server. The account lives in the browser, and a locked ac
 
 ## Props
 
-| Prop         | Type                        | Default | Description                                                                           |
-| ------------ | --------------------------- | ------- | ------------------------------------------------------------------------------------- |
-| `children`   | `ReactNode`                 | —       | Shown once unlocked, in place of the address line.                                    |
-| `onUnlocked` | `(address: string) => void` | —       | Called when the account becomes usable: unlocked, imported, or created and backed up. |
+| Prop         | Type                                | Default | Description                                                                                                                                     |
+| ------------ | ----------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `children`   | `ReactNode`                         | —       | Shown once unlocked, in place of the address line.                                                                                              |
+| `onUnlocked` | `(address: string \| null) => void` | —       | Called when the account becomes usable: unlocked, imported, or created and backed up. `address` is null for a protocol with no private address. |

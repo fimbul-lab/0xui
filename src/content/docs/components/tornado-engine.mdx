@@ -1,0 +1,126 @@
+---
+title: Tornado Engine
+description: A mixer engine on classic Tornado Cash pools, with the proof made in the browser.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+
+A [mixer engine](/components/mixer-engine/) for classic Tornado Cash instances (`ETHTornado`, `ERC20Tornado`) and forks that kept the contracts and the circuit. It calls the pool directly: no router, no governance token, no backend.
+
+Notes are the original format, `tornado-eth-0.1-1-0x…`. A note made here withdraws in any Tornado client, and the other way round.
+
+<Aside type="caution" title="No security review">
+  This engine handles notes that are worth money. It has not been reviewed. It was run end to end on
+  Sepolia: a deposit, a proof accepted by the pool's verifier, and a withdrawal. It was not run on
+  mainnet, with an ERC-20 pool, or against a live relayer.
+</Aside>
+
+<Aside title="Know the law where you are">
+  The US lifted its sanctions on Tornado Cash in March 2025. Rules still differ by country, and
+  mixers get extra scrutiny from exchanges. This is a UI library, not advice.
+</Aside>
+
+## Installation
+
+<Install name="tornado-engine" />
+
+## Usage
+
+```tsx
+import { Mixer } from "@/components/mixer";
+import { TORNADO_SEPOLIA_POOLS, createTornadoEngine } from "@/lib/tornado-engine";
+
+const engine = createTornadoEngine({
+  pools: TORNADO_SEPOLIA_POOLS, // 0.01, 0.1 and 1 ETH
+  chains: { 11155111: { rpcUrl: "https://…" } },
+  circuitsUrl: "/tornado", // serves tornado.json and tornadoProvingKey.bin
+});
+
+<Mixer engine={engine} />;
+```
+
+For other pools, list them yourself:
+
+```ts
+const pools = [
+  {
+    chainId: 1,
+    address: "0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc",
+    symbol: "ETH",
+    decimals: 18,
+    denomination: parseEther("0.1"),
+    deploymentBlock: 9_116_966n,
+  },
+];
+```
+
+An ERC-20 pool also takes `token`. `symbol` and `denomination` are what the note says, so they have to match what other clients write: `eth`, `dai`, `usdc`, and the amount in whole units.
+
+## Circuit files
+
+Withdrawing needs the two files of the original trusted setup:
+
+| File                    | Size                   | SHA-256             |
+| ----------------------- | ---------------------- | ------------------- |
+| `tornado.json`          | 19 MB (1.8 MB gzipped) | `3ddd61db…fe536f98` |
+| `tornadoProvingKey.bin` | 14 MB (9.6 MB gzipped) | `8e2d2f22…fa16a3af` |
+
+They are published with [tornado-core v2.1](https://github.com/tornadocash/tornado-core/releases/tag/v2.1) and in tornado-cli under `build/circuits`. Host them yourself and point `circuitsUrl` at the folder. The engine checks each file against the hash it ships with (`TORNADO_CIRCUIT_FILES`) and refuses anything else, so the host does not have to be trusted.
+
+They load on the first withdrawal, not before. Deposits need neither.
+
+<Aside title="The circuit runs as code">
+  `tornado.json` holds the circuit as JavaScript, and the prover runs it with `new Function`. A
+  strict Content Security Policy has to allow `unsafe-eval` for this. The hash check is what makes
+  that acceptable: only the published file is ever run.
+</Aside>
+
+## What a withdrawal does
+
+1. **Reads the pool's deposits.** Every `Deposit` event since `deploymentBlock`, in chunks. Final blocks are kept in IndexedDB, so later reads only fetch what is new. A big mainnet pool has around 80,000 deposits: the first read is slow on a public RPC.
+2. **Checks them.** Leaves are numbered, so a gap is caught. Then the tree's root has to be one the pool knows. A wrong or stale read stops here, with a message.
+3. **Loads the circuit files** and checks their hashes.
+4. **Makes the proof.** 10 to 20 seconds on a laptop with worker threads, about a minute without. The tab is busy while it runs.
+5. **Asks the pool.** The finished withdrawal is simulated with `eth_call`. The pool's own verifier checks the proof, and nothing is sent. This is the `verifying` stage.
+
+A cancel stops between stages. It can't interrupt the proof itself.
+
+## Relayers
+
+With no relayer set up, a withdrawal is sent by the connected wallet. That wallet pays the gas and shows up next to the recipient.
+
+None is built in, because none could be tested: the public relayers we knew of were gone, and there is none on Sepolia. Bring your own as a `TornadoRelayer`:
+
+```ts
+const relayer: TornadoRelayer = {
+  address: "0x…", // where the fee goes: the relayer's reward account
+  quote: async (pool) => fee, // in the pool's token
+  send: async ({ pool, proof, args }) => hash, // args: root, nullifierHash, recipient, relayer, fee, refund
+};
+
+createTornadoEngine({ pools, chains: { 1: { rpcUrl, relayer } }, circuitsUrl });
+```
+
+The proof commits to `address` and to the fee from `quote`, so a relayer can't take more or pay someone else. The classic relayer's REST API maps onto this: `GET /status` for the reward account and fee, `POST /v1/tornadoWithdraw` to send, `GET /v1/jobs/:id` for the hash.
+
+## Options
+
+| Option        | Type                                                | Default          | Description                                                                                                        |
+| ------------- | --------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pools`       | `TornadoPool[]`                                     | —                | The pools offered. A `MixerPool` plus `deploymentBlock`.                                                           |
+| `chains`      | `Record<number, { rpcUrl, relayer?, blockRange? }>` | —                | One entry per chain. `blockRange` is the blocks per `eth_getLogs`, 50,000 by default, halved when the RPC refuses. |
+| `circuitsUrl` | `string`                                            | —                | Folder with the two circuit files. Needed to withdraw.                                                             |
+| `cache`       | `TornadoCache \| false`                             | IndexedDB        | Where final deposits are kept between page loads.                                                                  |
+| `client`      | `(chainId) => TornadoClient`                        | viem on `rpcUrl` | Chain reads. For tests.                                                                                            |
+| `fetch`       | `typeof fetch`                                      | global           | HTTP for the circuit files.                                                                                        |
+
+The cache holds commitments and their timestamps only. They are public: every one is in the pool's event log.
+
+## What it never does
+
+- Keep a note. A note is read, used and dropped inside one call.
+- Send anything on its own. Deposits and wallet withdrawals are calls the wallet sends.
+- Put the deposit on the withdrawal object. The proof stays inside the engine, behind an id.
+
+`tornadoNoteHashes` and `tornadoMerklePath` are exported for tests and tools. The commitment matches the test vector in the tornado-cli README, and the tree matches the root a live pool reports.

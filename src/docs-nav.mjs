@@ -72,6 +72,20 @@ const groups = [
     ],
   },
   {
+    label: "Liquidity",
+    icon: "chart-column",
+    blurb: "Pool depth, price ranges and positions for concentrated liquidity.",
+    items: [
+      "price-range",
+      "position-card",
+      "liquidity-chart",
+      "depth-chart",
+      "range-indicator",
+      "fee-tier-select",
+      "slippage-input",
+    ],
+  },
+  {
     label: "Utilities",
     icon: "wrench",
     blurb: "Small pieces the other components are built from, and tools for browser agents.",
@@ -89,17 +103,23 @@ const groups = [
  * The `/shielded/` page links them all.
  */
 export const shieldedPreview = {
-  blocks: ["shield"],
+  blocks: ["shield", "unshield", "mixer"],
   components: [
     "shielded-engine",
     "mock-shielded-engine",
+    "privacy-pools-engine",
     "shielded-account",
     "shielded-balance",
     "shielded-sync-status",
     "shielded-transaction-status",
     "proof-progress",
+    "shielded-exits",
     "shielded-address",
     "privacy-badge",
+    "mixer-engine",
+    "mock-mixer-engine",
+    "tornado-engine",
+    "note-backup",
   ],
 };
 

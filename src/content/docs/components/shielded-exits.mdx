@@ -1,0 +1,136 @@
+---
+title: Shielded Exits
+description: The public way out of a private balance. Funds go back to the address that shielded them, with a warning first.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default } from "@/demos/shielded-exits";
+
+Privacy protocols screen what comes in. Funds they do not clear can't be spent privately, but they are never locked: they can always go back to the address that shielded them, in public. Privacy Pools calls this ragequit. This component is that exit.
+
+Connect the **Demo Wallet** and exit the restricted 0.4 WETH. Nothing is broadcast.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+It works with a [shielded engine](/components/shielded-engine/) that has `getExits` and `prepareExit`. This demo runs on the [mock engine](/components/mock-shielded-engine/).
+
+## Installation
+
+<Install name="shielded-exits" />
+
+## Usage
+
+```tsx
+import { ShieldedExits } from "@/components/shielded-exits";
+
+<ShieldedExits chainId={1} tokens={tokens} />;
+```
+
+It renders nothing when there is nothing to exit, or when the engine's protocol has no public exit. Put it next to the balance.
+
+## What an exit is
+
+|                               | Unshield                      | Exit                                |
+| ----------------------------- | ----------------------------- | ----------------------------------- |
+| Needs the protocol's approval | Yes                           | No                                  |
+| Recipient                     | Any address                   | The address that shielded the funds |
+| Who sends                     | The engine, through a relayer | That address's wallet               |
+| Amount                        | Any part                      | Everything left of that deposit     |
+| Privacy                       | Kept                          | Lost                                |
+
+It exists so that screening can refuse privacy but never hold funds.
+
+## What the user goes through
+
+1. **Exit publicly** opens the row. Nothing has started.
+2. A warning says it is public and final, and names the address the funds go back to.
+3. The button names the wallet that has to send it. Only the address that shielded the funds can.
+4. **Prepare exit** makes the proof, stage by stage, with a cancel.
+5. **Send exit from wallet** opens the wallet. A dismissed prompt is a cancel, and the proof is kept.
+6. The transaction is followed, and the engine scans once it is mined.
+
+The proof and the wallet prompt are separate clicks. A wallet prompt has to come straight from a click, and a proof takes seconds.
+
+## Which funds are listed
+
+That is the engine's choice.
+
+- The [Privacy Pools engine](/components/privacy-pools-engine/) lists every deposit that still holds funds: pending, declined or approved. An approved one can be unshielded privately, and the warning says so.
+- The [mock engine](/components/mock-shielded-engine/) lists `restricted` funds only, as Railgun would.
+
+## States
+
+| Situation                 | Button                                                         |
+| ------------------------- | -------------------------------------------------------------- |
+| No wallet connected       | Connect wallet                                                 |
+| Another address connected | Switch wallet to 0xd8dA…6045 (the user switches in the wallet) |
+| Wallet on another network | Switch to Ethereum                                             |
+| Ready to prove            | Prepare exit                                                   |
+| Proof running             | Preparing exit…                                                |
+| Proof ready               | Send exit from wallet                                          |
+| Wallet prompt open        | Confirm in wallet…                                             |
+| Proof failed              | Try again, with the reason shown                               |
+
+`data-phase` on the root follows the open exit:
+
+| `data-phase` | Meaning                                               |
+| ------------ | ----------------------------------------------------- |
+| `idle`       | No exit is running.                                   |
+| `proving`    | The proof is being made.                              |
+| `ready`      | The proof is made. The wallet step waits for a click. |
+| `wallet`     | The wallet prompt is open.                            |
+| `cancelled`  | The proof was cancelled, or the prompt dismissed.     |
+| `error`      | The proof or the send failed.                         |
+
+Each row has `data-state` with the funds' balance state.
+
+## With the mock engine
+
+A real engine sees an exit by scanning the chain. The mock has no chain, so tell it:
+
+```tsx
+<ShieldedExits
+  chainId={1}
+  tokens={tokens}
+  onSubmitted={(hash, exit) => engine.simulate.exit(exit.id)}
+/>
+```
+
+Give a restricted note a `depositor` and only that address can send its exit.
+
+## Build your own
+
+```tsx
+import {
+  useShieldedExit,
+  useShieldedExits,
+  shieldedExitBlocker,
+} from "@/components/shielded-exits";
+
+const exits = useShieldedExits({ chainId }); // [{ id, token, amount, state, depositor }]
+const flow = useShieldedExit({ chainId, onSubmitted });
+
+flow.open(exit); // show what it means first
+flow.prepare(exit); // the proof, then the transaction
+flow.phase; // "proving", then "ready"
+flow.send(); // opens the wallet
+flow.leave(); // close it
+```
+
+`shieldedExitBlocker` is the pure rule for which wallet may send. The logic is framework-free in `@/lib/shielded-exits-core`: `createShieldedExitFlow(config, engine, { chainId, onSubmitted })` is the controller under `useShieldedExit`, on `@wagmi/core`, and `selectShieldedExits(client, chainId)` is the list as a store.
+
+## Props
+
+| Prop          | Type                   | Default           | Description                                                                       |
+| ------------- | ---------------------- | ----------------- | --------------------------------------------------------------------------------- |
+| `chainId`     | `number`               | —                 | Chain to list exits on. Required.                                                 |
+| `tokens`      | `ShieldedToken[]`      | —                 | Symbol and decimals for the tokens that may show up. Others are shown by address. |
+| `onSubmitted` | `(hash, exit) => void` | —                 | The wallet sent the exit.                                                         |
+| `onConfirmed` | `(hash) => void`       | —                 | The exit was mined. The engine is already scanning.                               |
+| `title`       | `ReactNode`            | `"Exit publicly"` | Heading. `null` hides it.                                                         |
+| `empty`       | `ReactNode`            | —                 | Shown when there is nothing to exit. Without it the component renders nothing.    |
+| `className`   | `string`               | —                 |                                                                                   |

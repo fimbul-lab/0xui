@@ -677,6 +677,8 @@ describe("Shield", () => {
     expect(shieldBlocker({ ...base, accountStatus: "locked" })).toBe("Unlock your private account");
     expect(shieldBlocker({ ...base, token: undefined })).toBe("Select a token");
     expect(shieldBlocker({ ...base, token: eth })).toBe("Wrap ETH to shield it");
+    // An engine that takes native currency as it is has nothing to wrap.
+    expect(shieldBlocker({ ...base, token: eth, shieldsNative: true })).toBeUndefined();
     expect(shieldBlocker({ ...base, amount: undefined })).toBe("Enter an amount");
     expect(shieldBlocker({ ...base, insufficient: true })).toBe("Insufficient TKN balance");
     expect(shieldBlocker(base)).toBeUndefined();

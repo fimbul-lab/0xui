@@ -1,0 +1,118 @@
+---
+title: Price Range
+description: Set price range panel for a new LP position, with a draggable liquidity chart, presets and min/max price fields.
+---
+
+import Install from "@/components/docs/Install.astro";
+import Preview from "@/components/docs/Preview.astro";
+import { Default, WithoutChart, Preview as WithIndicator } from "@/demos/price-range";
+
+The range step of adding liquidity: the pool's [liquidity chart](/components/liquidity-chart/) with draggable handles, range presets, min and max price fields with −/+ steppers, and a toggle for which token to quote prices in.
+
+<Preview>
+  <Default client:load />
+</Preview>
+
+Every range is in ticks snapped to the pool's tick spacing, so whatever the user types, drags or steps is a range the pool accepts. Typed prices snap when the field loses focus.
+
+## Installation
+
+<Install name="price-range" />
+
+## Usage
+
+```tsx
+import { PriceRange } from "@/components/price-range";
+import { getLiquidityBins } from "@/lib/concentrated-liquidity";
+
+<PriceRange
+  pool={pool}
+  bins={getLiquidityBins(pool, ticks)}
+  token0={eth}
+  token1={usdc}
+  onValueChange={({ tickLower, tickUpper }) => setRange({ tickLower, tickUpper })}
+/>;
+```
+
+Pass `tickLower` and `tickUpper` straight to the position manager's `mint`. To fill in the deposit, use `getDependentAmount` from `concentrated-liquidity`: give it the amount of one token and it returns the other.
+
+```ts
+import { getDependentAmount } from "@/lib/concentrated-liquidity";
+
+const usdcNeeded = getDependentAmount({
+  sqrtPriceX96,
+  tickLower,
+  tickUpper,
+  amount: ethAmount,
+  token: "token0",
+});
+// undefined: the range takes only USDC. 0n: it takes only ETH.
+```
+
+## Examples
+
+### Without the chart
+
+Set `showChart={false}` for a compact form, like a mobile sheet or a pool without tick data.
+
+<Preview>
+  <WithoutChart client:load />
+</Preview>
+
+### With a range indicator
+
+Controlled, next to a [Range Indicator](/components/range-indicator/) showing the same range.
+
+<Preview>
+  <WithIndicator client:load />
+</Preview>
+
+## Loading
+
+Leave out `pool`, `bins` or both while it loads. The panel and the chart each show a [skullet](https://skullet.lochie.me) skeleton in its own shape, "Loading pool" for screen readers, and fades into the content when it arrives. The demo above loads for a second first.
+
+## Presets
+
+The default presets follow the tick spacing: ±0.05%, ±0.1% and ±0.5% for stable pools (spacing 1), ±1%, ±5% and ±10% for spacing 10, and ±10%, ±20% and ±50% for the rest, plus full range. Pass your own:
+
+```tsx
+<PriceRange
+  presets={[
+    { label: "Narrow", percent: 2 },
+    { label: "Wide", percent: 30 },
+    { label: "Full range", full: true },
+  ]}
+/>
+```
+
+## States
+
+The root sets `data-deposit-mode` and `data-full-range`:
+
+| `data-deposit-mode` | Meaning                        | Shown                                                             |
+| ------------------- | ------------------------------ | ----------------------------------------------------------------- |
+| `both`              | The price is inside the range. | Nothing extra.                                                    |
+| `token0`            | The range is above the price.  | "Takes only ETH and earns no fees until the price moves into it." |
+| `token1`            | The range is below the price.  | The same, for the quote token.                                    |
+
+## Hook
+
+`usePriceRange` holds the logic without the UI: `range`, `setRange`, `priceOf("min" | "max")`, `setPrice`, `step`, `applyPreset`, `isPreset`, `isFullRange` and `depositMode`. It handles the inverted case, where the displayed min price is the upper tick.
+
+Under it, `@/lib/price-range-core` needs no framework: `defaultRange`, `rangeWithPrice`, `stepRangeEdge`, `presetRange`, `activePreset` and `parsePriceInput` each take a range and return the next one. The presets and the token toggle are ui-sdk segmented controls.
+
+## Props
+
+| Prop                       | Type                                          | Default             | Description                                                  |
+| -------------------------- | --------------------------------------------- | ------------------- | ------------------------------------------------------------ |
+| `pool`                     | `{ tick, tickSpacing, decimals0, decimals1 }` | —                   | Current tick, spacing and decimals. Leave out while loading. |
+| `bins`                     | `LiquidityBin[]`                              | —                   | For the chart. Leave out while loading.                      |
+| `showChart`                | `boolean`                                     | `true`              | Show the liquidity chart.                                    |
+| `token0` / `token1`        | `{ symbol: string }`                          | —                   | Any `Token` fits.                                            |
+| `value` / `defaultValue`   | `{ tickLower, tickUpper }`                    | ±10%                | Controlled or starting range.                                |
+| `onValueChange`            | `(range) => void`                             | —                   | Called with snapped ticks.                                   |
+| `invert` / `defaultInvert` | `boolean`                                     | `false`             | Quote prices in token0.                                      |
+| `onInvertChange`           | `(invert) => void`                            | —                   | Called when the token toggle changes.                        |
+| `presets`                  | `RangePreset[]`                               | by spacing          | `[]` hides them.                                             |
+| `title`                    | `ReactNode`                                   | `"Set price range"` | Heading.                                                     |
+| `locale`                   | `string`                                      | runtime locale      | Number formatting locale.                                    |

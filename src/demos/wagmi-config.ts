@@ -108,7 +108,8 @@ function parseSendCalls(params: unknown) {
   return { from: request.from, calls: request.calls.map(parseCall) };
 }
 
-function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }) {
+/** Record a transaction the demo chain will report as mined, and return its hash. */
+export function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }) {
   const hash = keccak256(toHex(`${tx.from}${tx.to}${Date.now()}${Math.random()}`));
   demoTxs.set(hash, {
     hash,
