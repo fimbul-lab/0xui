@@ -41,7 +41,7 @@ const pool = { tick, liquidity, tickSpacing: 10, decimals0: 18, decimals1: 6 };
 const bins = getLiquidityBins(pool, ticks, { bins: 300 });
 const price = tickToPrice(tick, 18, 6);
 
-const fields = () => screen.getAllByRole("textbox") as Array<HTMLInputElement>;
+const fields = () => screen.getAllByRole<HTMLInputElement>("textbox");
 
 describe("LiquidityChart", () => {
   it("moves a range handle with the keyboard, snapped to the spacing", async () => {
@@ -174,7 +174,7 @@ describe("PriceRange", () => {
         locale="en-US"
       />,
     );
-    const min = screen.getByLabelText("Min price") as HTMLInputElement;
+    const min = screen.getByLabelText<HTMLInputElement>("Min price");
     const before = min.value;
     await userEvent.clear(min);
     await userEvent.type(min, "1{Escape}");

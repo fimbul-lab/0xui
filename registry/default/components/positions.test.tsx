@@ -63,7 +63,13 @@ const position = {
 };
 
 const decode = (data: Hex) => decodeFunctionData({ abi: positionManagerAbi, data });
-const inner = (data: Hex) => (decode(data).args as unknown as [Array<Hex>])[0].map(decode);
+const inner = (data: Hex) => {
+  const call = decode(data);
+  if (call.functionName !== "multicall") {
+    throw new Error(`Expected a multicall, got ${call.functionName}`);
+  }
+  return call.args[0].map(decode);
+};
 
 describe("v3Remove", () => {
   it("decreases and collects, unwrapping native ETH", () => {
@@ -78,15 +84,14 @@ describe("v3Remove", () => {
       deadline: 99n,
     });
     const [decrease, collect, unwrap, sweep] = inner(tx.data);
-    expect(decrease.functionName).toBe("decreaseLiquidity");
-    expect((decrease.args as unknown as [{ liquidity: bigint }])[0].liquidity).toBe(5n);
-    expect(collect.functionName).toBe("collect");
+    expect(decrease).toMatchObject({
+      functionName: "decreaseLiquidity",
+      args: [{ liquidity: 5n }],
+    });
     // Collected into the manager, so it can unwrap.
-    expect((collect.args as unknown as [{ recipient: string }])[0].recipient).toBe(zeroAddress);
-    expect(unwrap.functionName).toBe("unwrapWETH9");
-    expect(unwrap.args).toEqual([2n, me]);
-    expect(sweep.functionName).toBe("sweepToken");
-    expect(sweep.args).toEqual([usdc.address, 1n, me]);
+    expect(collect).toMatchObject({ functionName: "collect", args: [{ recipient: zeroAddress }] });
+    expect(unwrap).toEqual({ functionName: "unwrapWETH9", args: [2n, me] });
+    expect(sweep).toEqual({ functionName: "sweepToken", args: [usdc.address, 1n, me] });
   });
 
   it("collects straight to the user for two ERC-20s", () => {
@@ -96,9 +101,7 @@ describe("v3Remove", () => {
       token1: usdc,
       recipient: me,
     });
-    const call = decode(tx.data);
-    expect(call.functionName).toBe("collect");
-    expect((call.args as unknown as [{ recipient: string }])[0].recipient).toBe(me);
+    expect(decode(tx.data)).toMatchObject({ functionName: "collect", args: [{ recipient: me }] });
   });
 });
 
@@ -188,7 +191,7 @@ describe("PositionCard", () => {
     );
     await userEvent.click(collect);
     await waitFor(() => expect(sent).toHaveLength(1));
-    expect(inner(sent[0].data).map((c) => c.functionName)).toEqual([
+    expect(inner(sent[0]!.data).map((c) => c.functionName)).toEqual([
       "collect",
       "unwrapWETH9",
       "sweepToken",
@@ -246,10 +249,11 @@ describe("RemoveLiquidity", () => {
     );
     await userEvent.click(button);
     await waitFor(() => expect(sent).toHaveLength(1));
-    const [decrease] = inner(sent[0].data);
-    expect((decrease.args as unknown as [{ liquidity: bigint }])[0].liquidity).toBe(
-      position.liquidity,
-    );
+    const [decrease] = inner(sent[0]!.data);
+    expect(decrease).toMatchObject({
+      functionName: "decreaseLiquidity",
+      args: [{ liquidity: position.liquidity }],
+    });
   });
 
   it("blocks a closed position", async () => {
