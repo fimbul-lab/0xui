@@ -11,8 +11,7 @@ import {
   testAccounts,
 } from "../../../test/wagmi";
 import { createMockShieldedEngine } from "../lib/mock-shielded-engine";
-import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
-import type { ShieldedEngine, UnshieldDraft } from "../lib/shielded-engine";
+import type { UnshieldDraft } from "../lib/shielded-engine";
 import { ShieldedProvider } from "./shielded-provider";
 import type { Token } from "./token-select";
 import { Unshield, unshieldBlocker } from "./unshield";
@@ -63,25 +62,18 @@ describe("Unshield", () => {
 
   /**
    * Rendered with 10 TKN spendable. No wallet is connected unless asked.
-   * `quote` stands in for the engine's price, as a relayer's would change.
    */
   async function setup({
     engine: engineOptions,
     connect = false,
-    quote,
     ...props
-  }: Partial<UnshieldProps> & {
-    engine?: MockOptions;
-    connect?: boolean;
-    quote?: (mock: MockShieldedEngine) => ShieldedEngine["quote"];
-  } = {}) {
+  }: Partial<UnshieldProps> & { engine?: MockOptions; connect?: boolean } = {}) {
     const user = userEvent.setup();
-    const mock = createMockShieldedEngine({
+    const engine = createMockShieldedEngine({
       speed: Infinity,
       funds: [{ token: tkn.address, amount: parseUnits("10", 18) }],
       ...engineOptions,
     });
-    const engine = quote ? { ...mock, quote: quote(mock) } : mock;
     await engine.account.unlock("password");
     await engine.sync(1);
     const config = createTestConfig({ rpc: fakeChainRpc({}) });
@@ -199,13 +191,9 @@ describe("Unshield", () => {
   });
 
   it("asks before sending when the proof's fee is higher than the one shown", async () => {
+    const { user, engine, firstSubmit } = await setup();
     // The price shown is half the fee the proof then commits to.
-    const { user, engine, firstSubmit } = await setup({
-      quote: (mock) => async (draft) => {
-        const { fee } = await mock.quote(draft);
-        return { fee: fee / 2n, received: draft.amount - fee / 2n };
-      },
-    });
+    engine.simulate.staleQuotes();
     const submit = vi.spyOn(engine, "submit");
     await user.type(amount(), "4");
     await user.type(recipient(), RECIPIENT);
@@ -223,11 +211,8 @@ describe("Unshield", () => {
   });
 
   it("says why an amount can't be unshielded", async () => {
-    const { user } = await setup({
-      quote: () => async () => {
-        throw new Error("The most you can unshield at once is 3.");
-      },
-    });
+    const { user, engine } = await setup();
+    engine.simulate.failQuotes("The most you can unshield at once is 3.");
     await user.type(amount(), "4");
     await user.type(recipient(), RECIPIENT);
     expect(await button("Can't unshield this amount")).toBeDisabled();
