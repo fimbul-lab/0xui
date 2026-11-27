@@ -202,7 +202,7 @@ export function Unshield({
 }: UnshieldProps) {
   const engine = useShieldedEngine();
   const account = useShieldedAccount();
-  const connection = useConnection();
+  const walletAddress = useConnection().address;
   const onChain = tokens.filter((t) => t.chainId === chainId);
 
   const [token, setToken] = useState<Token | undefined>(defaultToken ?? onChain[0]);
@@ -234,13 +234,16 @@ export function Unshield({
 
   const flow = useUnshieldFlow({
     onSubmitted: (hash, operation) => {
-      const from = started.current!;
-      setSent({ hash, label: `Unshield ${from.amountText} ${from.token.symbol}` });
+      const from = started.current;
+      if (from) {
+        setSent({ hash, label: `Unshield ${from.amountText} ${from.token.symbol}` });
+      }
       setAmountText("");
       onSubmitted?.(hash, operation.draft);
     },
   });
-  const running = flow.active !== undefined;
+  const { active } = flow;
+  const running = active !== undefined;
   const shown = started.current;
 
   const form = unshieldFormAction({
@@ -251,10 +254,11 @@ export function Unshield({
     symbol: token?.symbol,
   });
   const action =
-    form.ready && quote
+    // Ready means nothing is missing: the token, the priced amount and the recipient are in.
+    form.ready && quote && token && priced && recipient
       ? () => {
-          started.current = { amountText, token: token! };
-          flow.start({ kind: "unshield", ...priced!, recipient: recipient! }, quote);
+          started.current = { amountText, token };
+          flow.start({ kind: "unshield", ...priced, recipient }, quote);
         }
       : undefined;
   // What a person confirms before an agent's press starts the unshield.
@@ -313,12 +317,12 @@ export function Unshield({
                 <span>{account.status === "unlocked" ? "Scanning…" : "Locked"}</span>
               )}
             </span>
-            {token && Boolean(spendable) && (
+            {token && spendable !== undefined && spendable > 0n && (
               <Button
                 variant="ghost"
                 size="xs"
                 className="px-1 text-xs text-primary"
-                onClick={() => setAmountText(formatUnits(spendable!, token.decimals))}
+                onClick={() => setAmountText(formatUnits(spendable, token.decimals))}
               >
                 Max
               </Button>
@@ -337,12 +341,12 @@ export function Unshield({
             }}
             onResolve={(state) => setRecipient(state.address)}
           />
-          {connection.address && !recipientText && (
+          {walletAddress && !recipientText && (
             <Button
               variant="ghost"
               size="xs"
               className="self-start px-1 text-xs"
-              onClick={() => setRecipientText(connection.address!)}
+              onClick={() => setRecipientText(walletAddress)}
             >
               Use my wallet
             </Button>
@@ -351,8 +355,8 @@ export function Unshield({
       </div>
 
       <UnshieldQuoteRows
-        quote={flow.review?.quote ?? (running ? flow.active!.expected : quote)}
-        amount={running ? flow.active!.draft.amount : priced?.amount}
+        quote={flow.review?.quote ?? (active ? active.expected : quote)}
+        amount={active ? active.draft.amount : priced?.amount}
         token={running ? shown?.token : token}
         // Space is held for the quote, so nothing below shifts as it arrives.
         className={cn("transition-opacity duration-200", !running && !quote && "opacity-50")}

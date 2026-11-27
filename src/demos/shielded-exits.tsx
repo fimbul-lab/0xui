@@ -17,7 +17,7 @@ export const Default = shieldedDemo(
             tokens={[demoWeth]}
             // On a real chain the engine sees the exit by scanning. The mock is told.
             onConfirmed={() => {
-              const [exit] = engine.getExits!(1) ?? [];
+              const [exit] = engine.getExits?.(1) ?? [];
               if (exit) {
                 void engine.simulate.exit(exit.id);
               }

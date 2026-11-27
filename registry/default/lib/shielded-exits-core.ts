@@ -3,7 +3,7 @@ import type { Config } from "@wagmi/core";
 import { formatUnits } from "viem";
 import type { Address, Hash } from "viem";
 import { createStore } from "@/lib/0xui-store";
-import { errorCode, isUserRejection, truncateAddress } from "@/lib/0xui-utils";
+import { errorCode, errorMessage, isUserRejection, truncateAddress } from "@/lib/0xui-utils";
 import type { ErrorCode } from "@/lib/0xui-utils";
 import type { ProofPhase } from "@/lib/proof-progress-core";
 import type { ShieldedClient } from "@/lib/shielded-client";
@@ -122,7 +122,10 @@ export function createShieldedExitFlow(
       phase: "proving",
     });
     try {
-      const prepared = await engine.prepareExit!(chainId, exit.id, {
+      if (!engine.prepareExit) {
+        throw new Error("This engine can't exit funds.");
+      }
+      const prepared = await engine.prepareExit(chainId, exit.id, {
         signal: run.signal,
         onStage: (stage) => {
           if (current === run) {
@@ -167,7 +170,7 @@ export function createShieldedExitFlow(
       store.set({
         phase: "error",
         problem: {
-          message: (error as { shortMessage?: string }).shortMessage ?? error.message,
+          message: errorMessage(error),
           code: errorCode("error", error),
           proof: false,
         },
@@ -229,6 +232,12 @@ export function shieldedExitBlocker({
   return undefined;
 }
 
+/** The open exit's button label, and what pressing it does, if anything. */
+export type ShieldedExitAction = {
+  label: string;
+  action?: "connect" | "switch-chain" | "prepare" | "send";
+};
+
 /**
  * The open exit's button: its label and what a click does. A blocker comes
  * first, then where the exit is.
@@ -243,7 +252,7 @@ export function shieldedExitAction({
   phase: ShieldedExitPhase;
   prepared: boolean;
   switching: boolean;
-}): { label: string; action?: "connect" | "switch-chain" | "prepare" | "send" } {
+}): ShieldedExitAction {
   if (blocker) {
     if (blocker.action === "switch-chain" && switching) {
       return { label: "Switching network…" };
