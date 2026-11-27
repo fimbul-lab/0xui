@@ -62,7 +62,10 @@ const sampleToken = (symbol: string, n: number): Token => ({
   symbol,
   decimals: 18,
 });
-const sample: { position: Position<Token>; pool: RemovePool } = {
+/** What the block draws: the position and its pool. */
+type Loaded = { position: Position<Token>; pool: RemovePool };
+
+const sample: Loaded = {
   position: {
     tokenId: 100_000n,
     token0: sampleToken("ETH", 1),
@@ -214,7 +217,9 @@ function RemoveLiquidityView({
       <section className="flex flex-col gap-3 rounded-lg bg-muted/40 p-3">
         <Slider
           value={percent}
-          onValueChange={(value) => setPercent(Array.isArray(value) ? value[0]! : value)}
+          onValueChange={(value) =>
+            setPercent(Array.isArray(value) ? (value[0] ?? percent) : value)
+          }
           min={0}
           max={100}
           step={1}

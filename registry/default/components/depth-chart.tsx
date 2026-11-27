@@ -81,7 +81,11 @@ export function DepthChart({
       return;
     }
     setWidth(el.clientWidth);
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) {
+        setWidth(entry.contentRect.width);
+      }
+    });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -103,17 +107,24 @@ export function DepthChart({
 
   // Without bins the curve stays flat; a short curve means the pool runs dry.
   const edge = useMemo(() => getDepthCurve(bins, currentPrice), [bins, currentPrice]);
-  const maxValue = Math.max(1e-12, samples.asks.at(-1)!.value, samples.bids.at(-1)!.value);
+  const maxValue = Math.max(
+    1e-12,
+    samples.asks.at(-1)?.value ?? 0,
+    samples.bids.at(-1)?.value ?? 0,
+  );
   const yTicks = niceTicks(maxValue);
-  const top = yTicks.at(-1)!;
+  // niceTicks always ends at or above `maxValue`.
+  const top = yTicks.at(-1) ?? maxValue;
   const padLeft = 44;
   const plotW = Math.max(0, width - padLeft);
   const x = (percent: number) => padLeft + ((percent + span) / (2 * span)) * plotW;
   const y = (value: number) => height - (value / top) * (height - 8);
   const path = (side: Array<DepthReading>) =>
     side.map((r, i) => `${i ? "L" : "M"}${x(r.percent)},${y(r.value)}`).join("");
-  const area = (side: Array<DepthReading>) =>
-    `${path(side)}L${x(side.at(-1)!.percent)},${height}L${x(0)},${height}Z`;
+  const area = (side: Array<DepthReading>) => {
+    const last = side.at(-1);
+    return last ? `${path(side)}L${x(last.percent)},${height}L${x(0)},${height}Z` : "";
+  };
 
   const down = readDepth(bins, currentPrice, -level, opts);
   const up = readDepth(bins, currentPrice, level, opts);
@@ -181,8 +192,10 @@ export function DepthChart({
       <div ref={ref} className="relative w-full select-none" style={{ height: height + 20 }}>
         {(loading || width === 0) && <SkeletonBox width="100%" height={height} radius={8} />}
         {!loading && width > 0 && (
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a chart, not a widget: keys only read depth into the live region, so `group` stays its honest role
           <div
             role="group"
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus is how arrow keys reach the depth readings
             tabIndex={0}
             aria-roledescription="chart"
             aria-label={`Market depth within ±${span}% of ${formatPrice(shownPrice, { locale })} ${quote.symbol} per ${base.symbol}. Use arrow keys to read depth at a price.`}

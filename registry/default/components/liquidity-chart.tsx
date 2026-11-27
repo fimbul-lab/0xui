@@ -36,7 +36,11 @@ function useElementWidth<T extends HTMLElement>() {
       return;
     }
     setWidth(el.clientWidth);
-    const observer = new ResizeObserver(([entry]) => setWidth(entry!.contentRect.width));
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) {
+        setWidth(entry.contentRect.width);
+      }
+    });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -216,8 +220,10 @@ export function LiquidityChart({
         {!loading && width > 0 && (
           <>
             {/* A chart, not a widget: focus it and arrow keys read each bar into the live region. */}
+            {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- keys only read bars aloud, so `group` stays its honest role */}
             <div
               role="group"
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus is how arrow keys reach the bars
               tabIndex={0}
               aria-roledescription="chart"
               aria-label={`Liquidity by price, ${unit}. Current price ${formatPrice(price(pool.tick), { locale })}. Use arrow keys to read each bar.`}
@@ -397,6 +403,15 @@ type HandleProps = {
   locale?: string;
 };
 
+/** Pointer x relative to the plot the dragged band sits in. */
+function localX(event: ReactPointerEvent<HTMLElement>) {
+  const plot = event.currentTarget.parentElement;
+  if (!plot) {
+    throw new Error("The range band must be rendered inside the chart.");
+  }
+  return event.clientX - plot.getBoundingClientRect().left;
+}
+
 /**
  * The range's two handles as a ui-sdk range slider laid over the plot, plus
  * a draggable band between them. Arrows move one tick spacing, Page Up/Down
@@ -420,13 +435,10 @@ function RangeHandles({
   locale,
 }: HandleProps) {
   const slider = rangeSlider(range, lower, upper, tickSpacing, invert);
-  const edges: Array<keyof TickRange> = invert
-    ? ["tickUpper", "tickLower"]
-    : ["tickLower", "tickUpper"];
+  const edges = invert
+    ? (["tickUpper", "tickLower"] as const)
+    : (["tickLower", "tickUpper"] as const);
   const band = useRef<{ startTick: number; range: TickRange } | null>(null);
-
-  const localX = (event: ReactPointerEvent<HTMLElement>) =>
-    event.clientX - event.currentTarget.parentElement!.getBoundingClientRect().left;
 
   const bandLeft = Math.max(0, Math.min(x(range.tickLower), x(range.tickUpper)));
   const bandRight = Math.min(width, Math.max(x(range.tickLower), x(range.tickUpper)));
@@ -464,15 +476,9 @@ function RangeHandles({
         minStepsBetweenThumbs={1}
         format={(value) => `${formatPrice(price(slider.tickOf(value)), { locale })} ${unit}`}
         onValueChange={(value, details) => {
-          const thumb = details.thumb ?? 0;
-          const edge = edges[thumb]!;
+          const thumb = details.thumb === 1 ? 1 : 0;
           onRangeChange(
-            moveRangeEdge(
-              range,
-              edge,
-              slider.tickOf((value as Array<number>)[thumb]!),
-              tickSpacing,
-            ),
+            moveRangeEdge(range, edges[thumb], slider.tickOf(value[thumb]), tickSpacing),
           );
         }}
         className="pointer-events-none absolute inset-x-0 top-0"

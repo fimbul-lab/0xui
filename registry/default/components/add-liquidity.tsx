@@ -32,6 +32,7 @@ import type {
   MintTransaction,
 } from "@/lib/add-liquidity-core";
 import type { LiquidityBin, PoolState, TickRange } from "@/lib/concentrated-liquidity";
+import { errorMessage } from "@/lib/0xui-utils";
 import { formatFee } from "@/lib/fee-tier-core";
 import { defaultRange as startingRange } from "@/lib/price-range-core";
 import { v3Mint, withSlippage } from "@/lib/v3-position-manager";
@@ -155,6 +156,11 @@ export function AddLiquidity({ pool, className, ...props }: AddLiquidityProps) {
   );
 }
 
+/** The token's contract, or undefined for the native coin. */
+function erc20(token: Token) {
+  return isNativeToken(token) ? undefined : token.address;
+}
+
 function AddLiquidityView({
   token0,
   token1,
@@ -195,7 +201,6 @@ function AddLiquidityView({
   const { amount0, amount1 } = deposit;
 
   // Balances for both sides: the typed side and the computed one.
-  const erc20 = (token: Token) => (isNativeToken(token) ? undefined : token.address);
   const balance0 = useTokenBalance({ token: erc20(token0), chainId: token0.chainId }).value;
   const balance1 = useTokenBalance({ token: erc20(token1), chainId: token1.chainId }).value;
   const short = shortToken([token0, amount0, balance0], [token1, amount1, balance1]);
@@ -345,7 +350,7 @@ function AddLiquidityView({
 
       {tx.error && (
         <p role="alert" className="text-sm text-destructive">
-          {(tx.error as { shortMessage?: string }).shortMessage ?? tx.error.message}
+          {errorMessage(tx.error)}
         </p>
       )}
 

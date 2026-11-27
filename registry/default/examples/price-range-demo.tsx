@@ -1,5 +1,11 @@
+import { useState } from "react";
 import { PriceRange } from "@/components/price-range";
-import { getLiquidityBins, priceToTick, ticksFromPositions } from "@/lib/concentrated-liquidity";
+import {
+  getLiquidityBins,
+  priceToTick,
+  rangeAroundTick,
+  ticksFromPositions,
+} from "@/lib/concentrated-liquidity";
 
 const ETH = { symbol: "ETH" };
 const USDC = { symbol: "USDC" };
@@ -22,6 +28,8 @@ const pool = { tick, liquidity, tickSpacing: 10, decimals0: 18, decimals1: 6 };
 const bins = getLiquidityBins(pool, ticks, { bins: 300 });
 
 export default function PriceRangeDemo() {
+  // ±10%, the same range PriceRange starts at on its own.
+  const [range, setRange] = useState(() => rangeAroundTick(pool.tick, 10, pool.tickSpacing));
   return (
     <div className="w-full max-w-xl">
       <PriceRange
@@ -29,7 +37,8 @@ export default function PriceRangeDemo() {
         bins={bins}
         token0={ETH}
         token1={USDC}
-        onValueChange={(range) => console.log(range)}
+        value={range}
+        onValueChange={setRange}
       />
     </div>
   );

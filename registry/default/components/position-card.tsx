@@ -36,7 +36,10 @@ const sampleToken = (symbol: string, n: number): Token => ({
   symbol,
   decimals: 18,
 });
-const sample: { position: Position<Token>; pool: CardPool } = {
+/** What the card draws: the position and its pool. */
+type Loaded = { position: Position<Token>; pool: CardPool };
+
+const sample: Loaded = {
   position: {
     tokenId: 100_000n,
     token0: sampleToken("ETH", 1),
