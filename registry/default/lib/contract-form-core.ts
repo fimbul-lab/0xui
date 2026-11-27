@@ -16,6 +16,7 @@ function intBounds(type: string) {
 }
 
 /** Turn an already-parsed JSON value into the shape viem expects for `param`. */
+// oxlint-disable-next-line quality/no-unknown-returns -- an ABI value can be any shape; viem's encoder checks it
 function coerce(param: AbiParameter, value: unknown): unknown {
   const [, itemType, length] = param.type.match(/^(.*)\[(\d*)\]$/) ?? [];
   if (itemType !== undefined) {

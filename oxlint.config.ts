@@ -23,14 +23,6 @@ export default defineConfig({
     typeAware: true,
   },
   rules: {
-    // Temporarily off while adopting @cloudflare/oxlint-config. Each gets its own
-    // commit: fixed and turned on, or kept off with the reason.
-    "quality/no-array-filter-map": "off",
-    "quality/no-known-value-widening": "off",
-    "quality/no-object-parameters": "off",
-    "quality/no-unknown-returns": "off",
-    "quality/no-unsafe-dictionary-type": "off",
-    "typescript/no-unsafe-type-assertion": "off",
     // Stores and cores are closures that never use `this`.
     "typescript/unbound-method": "off",
     // `[...listeners]` snapshots a set before calling listeners that may unsubscribe.
@@ -74,6 +66,13 @@ export default defineConfig({
         "vitest/require-to-throw-message": "off",
         // A helper sits in the test or describe that uses it, next to its only callers.
         "unicorn/consistent-function-scoping": "off",
+        // Like the preset's other no-unsafe-* exemptions for tests: fixtures are
+        // partial objects, and the test helpers fake JSON boundaries (JSON-RPC,
+        // EIP-5792 capabilities, WebMCP) where `unknown` is the honest type.
+        "typescript/no-unsafe-type-assertion": "off",
+        "quality/no-object-parameters": "off",
+        "quality/no-unknown-returns": "off",
+        "quality/no-unsafe-dictionary-type": "off",
       },
     },
     {

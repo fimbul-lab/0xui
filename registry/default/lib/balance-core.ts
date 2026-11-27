@@ -26,6 +26,7 @@ export type TokenBalanceQueryOptions = {
   queryKey: ReadonlyArray<unknown>;
   // Methods, so each read's own queryFn and select fit: their parameters are
   // checked both ways, where a function property would need `any`.
+  // oxlint-disable-next-line quality/no-unknown-returns -- each read returns its own data, which `select` turns into a TokenBalance
   queryFn(context: unknown): unknown;
   select(data: unknown): TokenBalance;
   enabled: boolean;

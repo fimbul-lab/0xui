@@ -30,6 +30,7 @@ export type AgentTool = {
     /** The result holds text other people wrote, like a token's symbol. */
     untrustedContentHint?: boolean;
   };
+  // oxlint-disable-next-line quality/no-unknown-returns, quality/no-unsafe-dictionary-type -- a tool takes and returns the model's JSON
   execute: (input: Record<string, unknown>) => Promise<unknown>;
 };
 
@@ -141,6 +142,7 @@ export function pageAgentTools(agent: Agent): Array<AgentTool> {
         name === "act"
           ? { readOnlyHint: false, consequentialHint: true, untrustedContentHint: true }
           : { readOnlyHint: true, untrustedContentHint: true },
+      // oxlint-disable-next-line quality/no-unknown-returns, typescript/no-unsafe-type-assertion -- each page tool takes its own input; ui-sdk checks it
       execute: async (input) => (agent[name] as (input: unknown) => unknown)(input),
     };
   });

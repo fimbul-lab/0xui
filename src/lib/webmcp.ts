@@ -248,7 +248,7 @@ const isModelContext = (value: unknown): value is ModelContext =>
   typeof value.registerTool === "function";
 
 /** The WebMCP `modelContext` on a document or navigator, if the browser has one. */
-function modelContextOf(target: object | undefined) {
+function modelContextOf(target: Document | Navigator | undefined) {
   const context: unknown = target && "modelContext" in target ? target.modelContext : undefined;
   return isModelContext(context) ? context : undefined;
 }

@@ -259,13 +259,15 @@ export function transactionSimulationQueryOptions(
 ) {
   const on = enabled && Boolean(account);
   const options = contract
-    ? simulateContractQueryOptions(config, {
+    ? // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wagmi types these options by ABI, and this request is only known at runtime
+      simulateContractQueryOptions(config, {
         ...contract,
         chainId,
         account,
         query: { enabled: on, retry: false },
       } as never)
     : {
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wagmi types these options by ABI, and this request is only known at runtime
         ...callQueryOptions(config, {
           ...transaction,
           chainId,
@@ -275,6 +277,7 @@ export function transactionSimulationQueryOptions(
         enabled: on && Boolean(transaction),
       };
   // Query keys hold bigints (values, amounts), which TanStack's default hash can't serialize.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wagmi types these options by ABI, and this request is only known at runtime
   return { ...(options as ReturnType<typeof callQueryOptions>), queryKeyHashFn: hashFn };
 }
 

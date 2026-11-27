@@ -18,6 +18,7 @@ export type TokenInfo = {
   /** Keys into the list's `tags`. */
   tags?: Array<string>;
   /** List-specific data, e.g. Uniswap's `bridgeInfo` (the same token on other chains). */
+  // oxlint-disable-next-line quality/no-unsafe-dictionary-type -- the token list format allows any JSON here
   extensions?: {
     bridgeInfo?: Record<string, { tokenAddress: Address }>;
     [key: string]: unknown;

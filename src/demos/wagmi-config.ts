@@ -301,6 +301,7 @@ function demoWallet() {
               }
               return demoSigner.signTypedData(parsed);
             }
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- viem types request per method; this forwards any method as is
             return provider.request(args as never);
           },
         };
@@ -330,6 +331,7 @@ function demoTransport(chain: Chain) {
           return direct;
         }
         if (to.toLowerCase() === chain.contracts?.multicall3?.address.toLowerCase()) {
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- viem types request per method; this forwards any method as is
           return patchMulticall(data, () => rpc.request({ method, params } as never));
         }
       }
@@ -375,6 +377,7 @@ function demoTransport(chain: Chain) {
           type: "0x2",
         };
       }
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- viem types request per method; this forwards any method as is
       return rpc.request({ method, params } as never);
     },
   });
@@ -385,6 +388,7 @@ const chains = [mainnet, sepolia, base, unichain, sonic, berachain, pulsechain, 
 export const demoConfig = createConfig({
   chains,
   connectors: [demoWallet(), injected()],
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.fromEntries loses the chain id keys
   transports: Object.fromEntries(chains.map((chain) => [chain.id, demoTransport(chain)])) as Record<
     (typeof chains)[number]["id"],
     ReturnType<typeof demoTransport>

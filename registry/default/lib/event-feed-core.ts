@@ -8,6 +8,7 @@ import { truncateAddress } from "@/lib/0xui-utils";
 
 export type FeedEvent = Log & {
   eventName?: string;
+  // oxlint-disable-next-line quality/no-unsafe-dictionary-type -- decoded args depend on the ABI you pass
   args?: Record<string, unknown> | ReadonlyArray<unknown>;
 };
 
@@ -17,6 +18,7 @@ export type EventFeedFilter = {
   /** Event to follow. Omit for every event in the ABI. */
   eventName?: string;
   /** Indexed-argument filter, e.g. `{ to: myAddress }`. */
+  // oxlint-disable-next-line quality/no-unsafe-dictionary-type -- decoded args depend on the ABI you pass
   args?: Record<string, unknown>;
   chainId?: number;
 };
