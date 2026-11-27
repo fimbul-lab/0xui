@@ -442,6 +442,12 @@ describe("exits", () => {
     await expect(engine.prepareExit!(1, "nope", { onStage() {} })).rejects.toThrow(
       "no longer there",
     );
+    // An exit is a proof, so it fails on demand like one.
+    engine.simulate.failNextProof("Out of memory");
+    await expect(engine.prepareExit!(1, exits[0]!.id, { onStage() {} })).rejects.toThrow(
+      "Out of memory",
+    );
+    await expect(engine.prepareExit!(1, exits[0]!.id, { onStage() {} })).resolves.toBeDefined();
 
     await engine.simulate.exit(exits[0]!.id);
     expect(engine.getExits!(1)).toEqual([]);
@@ -469,6 +475,26 @@ describe("prove", () => {
       "Not enough spendable balance.",
     );
     await expect(engine.quote({ ...draft, amount: 0n })).rejects.toThrow("Enter an amount.");
+  });
+
+  it("can refuse every quote until told to stop", async () => {
+    const engine = await unlocked({ funds });
+    engine.simulate.failQuotes("The most you can unshield at once is 3.");
+    await expect(engine.quote(draft)).rejects.toThrow("The most you can unshield at once is 3.");
+    await expect(engine.quote(draft)).rejects.toThrow("The most you can unshield at once is 3.");
+    engine.simulate.failQuotes(false);
+    await expect(engine.quote(draft)).resolves.toBeDefined();
+  });
+
+  it("can quote half the fee that the proof then commits to", async () => {
+    const engine = await unlocked({ funds: [{ token: weth, amount: 100_000n }] });
+    const big = { ...draft, amount: 40_000n };
+    engine.simulate.staleQuotes();
+    expect(await engine.quote(big)).toEqual({ fee: 50n, received: 39_950n });
+    const operation = await engine.prove(big, { onStage() {} });
+    expect(operation.quote).toEqual({ fee: 100n, received: 39_900n });
+    engine.simulate.staleQuotes(false);
+    expect(await engine.quote(big)).toEqual(operation.quote);
   });
 
   it("submits a proved unshield once, and spends the funds", async () => {

@@ -11,7 +11,6 @@ import {
   testAccounts,
 } from "../../../test/wagmi";
 import { MOCK_SHIELD_CONTRACT, createMockShieldedEngine } from "../lib/mock-shielded-engine";
-import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
 import type { ShieldedExit } from "../lib/shielded-engine";
 import { ShieldedExits, shieldedExitBlocker } from "./shielded-exits";
 import { ShieldedProvider } from "./shielded-provider";
@@ -53,35 +52,18 @@ describe("ShieldedExits", () => {
   const button = (name: string | RegExp) =>
     screen.findByRole("button", { name }, { timeout: 5000 });
 
-  /** `failFirstProof` makes the first exit proof fail with that message, as one that ran out of memory would. */
   async function setup({
     depositor = testAccounts[0],
     connect = true,
-    failFirstProof,
-  }: { depositor?: Address; connect?: boolean; failFirstProof?: string } = {}) {
+  }: { depositor?: Address; connect?: boolean } = {}) {
     const user = userEvent.setup();
-    const mock = createMockShieldedEngine({
+    const engine = createMockShieldedEngine({
       speed: Infinity,
       funds: [
         { token: tkn.address, amount: parseUnits("3", 18), state: "restricted", depositor },
         { token: tkn.address, amount: parseUnits("10", 18) },
       ],
     });
-    let failure = failFirstProof;
-    const engine: MockShieldedEngine = {
-      ...mock,
-      async prepareExit(...args) {
-        const message = failure;
-        failure = undefined;
-        if (message !== undefined) {
-          throw new Error(message);
-        }
-        if (!mock.prepareExit) {
-          throw new Error("The mock engine has no exits.");
-        }
-        return mock.prepareExit(...args);
-      },
-    };
     await engine.account.unlock("password");
     await engine.sync(1);
     const sends: Array<{ to: string }> = [];
@@ -175,7 +157,8 @@ describe("ShieldedExits", () => {
   });
 
   it("shows a failed proof and tries again", async () => {
-    const { user } = await setup({ failFirstProof: "Out of memory" });
+    const { user, engine } = await setup();
+    engine.simulate.failNextProof("Out of memory");
     await user.click(await button("Exit publicly"));
     await user.click(await button("Prepare exit"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Out of memory");

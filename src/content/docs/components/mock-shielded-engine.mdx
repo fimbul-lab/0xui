@@ -86,11 +86,13 @@ Measured against the Railgun SDK on Sepolia, except where marked as a guess.
 | `addFunds({ token, amount, state })`         | Puts funds straight into any state.                                                                                         |
 | `exit(id)`                                   | A restricted note went back to its depositor. Use the `id` from `getExits`.                                                 |
 | `failNextSync(message?)`                     | The next scan stops a third of the way in with an error.                                                                    |
-| `failNextProof(message?)`                    | The next proof fails while proving.                                                                                         |
+| `failNextProof(message?)`                    | The next proof, for an unshield or an exit, fails while proving.                                                            |
 | `failNextRetry(message?)`                    | The next `retryProofs` rejects.                                                                                             |
 | `failNextImport(message?)`                   | The next `account.import` rejects, as for a phrase that fails its checksum.                                                 |
 | `failNextShield(message?)`                   | The next `prepareShield` rejects before asking for a signature, as for a token the protocol can't shield.                   |
 | `keepIncomplete(keep?)`                      | While on, `retryProofs` finishes but changes nothing.                                                                       |
+| `failQuotes(message?)`                       | While on, every `quote` rejects, as for an amount over the relayer's limit. `failQuotes(false)` turns it off.               |
+| `staleQuotes(stale?)`                        | While on, `quote` shows half the fee a proof then commits to, as when the relayer's fee goes up in between.                 |
 
 `engine.quote` and `engine.submit` work too: `submit` on a proved unshield does what `simulate.unshield` does and resolves with a made-up hash.
 

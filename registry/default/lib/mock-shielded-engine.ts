@@ -137,7 +137,7 @@ export type MockSimulate = {
   exit(id: string, chainId?: number): Promise<void>;
   /** The next scan of the chain stops a third of the way in with an error. */
   failNextSync(message?: string, chainId?: number): void;
-  /** The next proof fails while proving. */
+  /** The next proof, for an unshield or an exit, fails while proving. */
   failNextProof(message?: string): void;
   /** The next `retryProofs` call rejects. */
   failNextRetry(message?: string): void;
@@ -147,6 +147,16 @@ export type MockSimulate = {
   failNextShield(message?: string): void;
   /** While on, `retryProofs` finishes but the funds stay `incomplete`. */
   keepIncomplete(keep?: boolean): void;
+  /**
+   * While on, every `quote` rejects with `message`, as for an amount over the
+   * relayer's limit. `failQuotes(false)` turns it off.
+   */
+  failQuotes(message?: string | false): void;
+  /**
+   * While on, `quote` shows half the fee that a proof then commits to, as when
+   * the relayer's fee goes up between the quote and the proof.
+   */
+  staleQuotes(stale?: boolean): void;
 };
 
 export type MockShieldedEngine = ShieldedEngine & { simulate: MockSimulate };
@@ -318,6 +328,8 @@ export function createMockShieldedEngine({
   let nextRetryFailure: string | undefined;
   let nextImportFailure: string | undefined;
   let nextShieldFailure: string | undefined;
+  let quoteFailure: string | undefined;
+  let quotesStale = false;
 
   const chainStates = new Map<number, ChainState>();
   function chainOf(chainId: number) {
@@ -743,7 +755,10 @@ export function createMockShieldedEngine({
           throw new Error("Not enough spendable balance.");
         }
       }
-      const fee = feeOn(draft.amount);
+      if (quoteFailure !== undefined) {
+        throw new Error(quoteFailure);
+      }
+      const fee = quotesStale ? feeOn(draft.amount) / 2n : feeOn(draft.amount);
       return { fee, received: draft.amount - fee };
     },
 
@@ -774,11 +789,16 @@ export function createMockShieldedEngine({
       if (!chainOf(chainId).notes.some((note) => exitIds.get(note) === id)) {
         throw new Error("These funds are no longer there to exit. Scan again.");
       }
+      const failure = nextProofFailure;
+      nextProofFailure = undefined;
       onStage("loading-circuits");
       await wait(circuitsLoaded ? timings.loadCircuits / 20 : timings.loadCircuits, signal);
       circuitsLoaded = true;
       onStage("proving");
       await wait(timings.prove, signal);
+      if (failure !== undefined) {
+        throw new Error(failure);
+      }
       onStage("verifying");
       await wait(timings.verify, signal);
       if (started !== session) {
@@ -838,6 +858,12 @@ export function createMockShieldedEngine({
       },
       keepIncomplete(keep = true) {
         keepIncomplete = keep;
+      },
+      failQuotes(message = "The relayer can't take this amount.") {
+        quoteFailure = message === false ? undefined : message;
+      },
+      staleQuotes(stale = true) {
+        quotesStale = stale;
       },
     },
   };
