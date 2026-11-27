@@ -4,10 +4,14 @@ import {
   generateMerkleProof,
   getCommitment,
 } from "@0xbow/privacy-pools-core-sdk";
+import type { CommitmentProof, WithdrawalProof } from "@0xbow/privacy-pools-core-sdk";
+import { http, HttpResponse } from "msw";
+import type { JsonBodyType } from "msw";
 import { poseidon1, poseidon3 } from "poseidon-lite";
 import { decodeFunctionData, encodeAbiParameters, parseAbi, parseUnits } from "viem";
 import type { Address, Hash } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { server } from "../../../test/msw";
 import {
   PRIVACY_POOLS_NATIVE,
   createPrivacyPoolsEngine,
@@ -28,7 +32,10 @@ const ENTRYPOINT: Address = "0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB";
 const USDC: Address = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 const USDC_POOL: Address = "0x0b062Fe33c4f1592D8EA63f9a0177FcA44374C0f";
 const ETH_POOL: Address = "0x644d5A2554d36e27509254F32ccfeBe8cd58861f";
-const SCOPES: Record<string, bigint> = { [USDC_POOL]: 111n, [ETH_POOL]: 222n };
+const SCOPES = new Map<string, bigint>([
+  [USDC_POOL, 111n],
+  [ETH_POOL, 222n],
+]);
 const DEPOSITOR: Address = "0x1111111111111111111111111111111111111111";
 const RECIPIENT: Address = "0x2222222222222222222222222222222222222222";
 const FEE_RECEIVER: Address = "0x3333333333333333333333333333333333333333";
@@ -52,6 +59,12 @@ type Log = {
   transactionHash: Hash;
   logIndex: number;
 };
+
+/** What the relayer answers a relay request with. */
+type RelayerAnswer = { success?: boolean; txHash?: string; error?: string; message?: string };
+
+/** Each fake chain serves its ASP and relayer at hosts of its own. */
+let chainCount = 0;
 
 /** A chain small enough to hold in a test: a head, some logs, and the Entrypoint's answers. */
 function fakeChain() {
@@ -83,7 +96,7 @@ function fakeChain() {
       recipient: undefined as Address | undefined,
       quotes: [] as Array<{ recipient?: string; amount: string }>,
       requests: [] as Array<Record<string, any>>,
-      answer: { success: true, txHash: `0x${"ab".repeat(32)}` } as Record<string, unknown>,
+      answer: { success: true, txHash: `0x${"ab".repeat(32)}` } as RelayerAnswer,
       /** HTTP status of the answer to a relay request. */
       status: 200,
       /** Runs when a relay request arrives, e.g. to mine the withdrawal. */
@@ -116,7 +129,7 @@ function fakeChain() {
           : [USDC_POOL, parseUnits("1", 6), 50n, 100n];
       }
       if (functionName === "SCOPE") {
-        return SCOPES[address];
+        return SCOPES.get(address);
       }
       if (functionName === "decimals") {
         return 6;
@@ -132,15 +145,18 @@ function fakeChain() {
     },
   };
 
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+  const json = (body: JsonBodyType, status = 200) => HttpResponse.json(body, { status });
 
-  const fetchAsp: typeof fetch = async (url, init) => {
-    const path = String(url);
-    if (path.includes("/relayer/details")) {
-      return json({ minWithdrawAmount: state.relayer.minimum.toString() });
-    }
-    if (path.endsWith("/relayer/quote")) {
-      const body = JSON.parse(init!.body as string) as { recipient?: Address; amount: string };
+  // The ASP and the relayer, at hosts of this chain's own.
+  const host = `chain-${++chainCount}.test`;
+  const aspUrl = `https://asp.${host}`;
+  const relayerUrl = `https://relayer.${host}`;
+  server.use(
+    http.get(`${relayerUrl}/relayer/details`, () =>
+      json({ minWithdrawAmount: state.relayer.minimum.toString() }),
+    ),
+    http.post(`${relayerUrl}/relayer/quote`, async ({ request }) => {
+      const body = (await request.json()) as { recipient?: Address; amount: string };
       state.relayer.quotes.push(body);
       return json({
         feeBPS: state.relayer.feeBps.toString(),
@@ -153,14 +169,14 @@ function fakeChain() {
           signedRelayerCommitment: "0x51",
         },
       });
-    }
-    if (path.endsWith("/relayer/request")) {
-      state.relayer.requests.push(JSON.parse(init!.body as string));
+    }),
+    http.post(`${relayerUrl}/relayer/request`, async ({ request }) => {
+      state.relayer.requests.push((await request.json()) as Record<string, any>);
       state.relayer.onRequest?.();
       return json(state.relayer.answer, state.relayer.status);
-    }
-    if (path.endsWith("/deposits-by-label")) {
-      const labels = (init!.headers as Record<string, string>)["X-Labels"]!.split(",");
+    }),
+    http.get(`${aspUrl}/:chainId/public/deposits-by-label`, ({ request }) => {
+      const labels = (request.headers.get("X-Labels") ?? "").split(",");
       state.labelQueries.push(...labels);
       return json(
         labels.map((label) => ({
@@ -168,13 +184,15 @@ function fakeChain() {
           reviewStatus: state.declined.includes(label) ? "declined" : "pending",
         })),
       );
-    }
-    const scope = (init!.headers as Record<string, string>)["X-Pool-Scope"]!;
-    return json(
-      { aspLeaves: state.approved.get(scope) ?? [], stateTreeLeaves: state.stateLeaves },
-      state.aspStatus,
-    );
-  };
+    }),
+    http.get(`${aspUrl}/:chainId/public/mt-leaves`, ({ request }) => {
+      const scope = request.headers.get("X-Pool-Scope") ?? "";
+      return json(
+        { aspLeaves: state.approved.get(scope) ?? [], stateTreeLeaves: state.stateLeaves },
+        state.aspStatus,
+      );
+    }),
+  );
 
   let count = 0;
   /** Mine a deposit: the fee is already taken out of `value`, as the pool reports it. */
@@ -185,7 +203,7 @@ function fakeChain() {
     label: bigint,
     block = state.head,
   ) {
-    const transactionHash = `0x${(++count).toString(16).padStart(64, "0")}`;
+    const transactionHash: Hash = `0x${(++count).toString(16).padStart(64, "0")}`;
     // The commitment the pool computes: value, label and precommitment hashed together.
     const commitment = poseidon3([value, label, precommitment]);
     state.stateLeaves.push(commitment.toString());
@@ -206,7 +224,7 @@ function fakeChain() {
     return transactionHash;
   }
 
-  return { state, client, fetchAsp, deposit };
+  return { state, client, aspUrl, relayerUrl, deposit };
 }
 
 function memory(): PrivacyPoolsStorage & { items: Map<string, string> } {
@@ -230,8 +248,8 @@ function setup(
       [CHAIN]: {
         rpcUrl: "http://unused.test",
         entrypoint: ENTRYPOINT,
-        aspUrl: "https://asp.test",
-        relayerUrl: "https://relayer.test",
+        aspUrl: chain.aspUrl,
+        relayerUrl: chain.relayerUrl,
         pools: [
           { asset: USDC, deploymentBlock: 100n },
           { asset: PRIVACY_POOLS_NATIVE, deploymentBlock: 100n },
@@ -242,7 +260,6 @@ function setup(
     storage,
     pollInterval: 0,
     client: () => chain.client,
-    fetch: chain.fetchAsp,
     circuitsUrl: "https://circuits.test/",
   });
   return { engine, storage, ...chain };
@@ -267,6 +284,81 @@ function precommitmentOf(data: `0x${string}`) {
 
 const shieldUsdc = (engine: ShieldedEngine, amount = parseUnits("100", 6)) =>
   engine.prepareShield({ chainId: CHAIN, token: USDC, amount }, { sign: async () => "0x" });
+
+const FAKE_PROOF: WithdrawalProof = {
+  proof: {
+    pi_a: ["1", "2"],
+    pi_b: [["3", "4"]],
+    pi_c: ["5", "6"],
+    protocol: "groth16",
+    curve: "bn128",
+  },
+  publicSignals: ["7", "8"],
+};
+
+const EXIT_PROOF: CommitmentProof = {
+  proof: {
+    pi_a: ["1", "2", "1"],
+    pi_b: [
+      ["3", "4"],
+      ["5", "6"],
+      ["1", "0"],
+    ],
+    pi_c: ["7", "8", "1"],
+    protocol: "groth16",
+    curve: "bn128",
+  },
+  publicSignals: ["11", "12", "13", "14"],
+};
+
+type ProveWithdrawal = PrivacyPoolSDK["proveWithdrawal"];
+
+/**
+ * Stand in for the SDK's prover and its 24 MB of circuits. Everything around
+ * the proof is real. Set what the next proof does on the object returned.
+ */
+function fakeProver() {
+  const prover = {
+    /** Circuit downloads, and the error the next one fails with. */
+    loads: 0,
+    loadError: undefined as Error | undefined,
+    /** What each withdrawal proof was asked to prove, and what it does. */
+    withdrawals: [] as Array<Parameters<ProveWithdrawal>>,
+    proveWithdrawal: (async () => FAKE_PROOF) as ProveWithdrawal,
+    /** What each exit proof was asked to prove. */
+    commitments: [] as Array<Parameters<PrivacyPoolSDK["proveCommitment"]>>,
+    /** Whether proofs verify. */
+    verified: true,
+  };
+  // oxlint-disable-next-line landmines/no-test-doubles -- the circuits are 24 MB; the prover is the one thing faked
+  vi.spyOn(Circuits.prototype, "initArtifacts").mockImplementation(async () => {
+    prover.loads++;
+    const error = prover.loadError;
+    prover.loadError = undefined;
+    if (error) {
+      throw error;
+    }
+  });
+  // oxlint-disable-next-line landmines/no-test-doubles -- a real proof needs the 24 MB circuits
+  vi.spyOn(PrivacyPoolSDK.prototype, "proveWithdrawal").mockImplementation((...args) => {
+    prover.withdrawals.push(args);
+    return prover.proveWithdrawal(...args);
+  });
+  // oxlint-disable-next-line landmines/no-test-doubles -- a fake proof can't pass the real verifier
+  vi.spyOn(PrivacyPoolSDK.prototype, "verifyWithdrawal").mockImplementation(
+    async () => prover.verified,
+  );
+  // oxlint-disable-next-line landmines/no-test-doubles -- a real proof needs the 24 MB circuits
+  vi.spyOn(PrivacyPoolSDK.prototype, "proveCommitment").mockImplementation(async (...args) => {
+    prover.commitments.push(args);
+    return EXIT_PROOF;
+  });
+  // oxlint-disable-next-line landmines/no-test-doubles -- a fake proof can't pass the real verifier
+  vi.spyOn(PrivacyPoolSDK.prototype, "verifyCommitment").mockImplementation(
+    async () => prover.verified,
+  );
+  return prover;
+}
 
 describe("account", () => {
   it("creates an account and returns a 12-word phrase once", async () => {
@@ -667,27 +759,6 @@ describe("scan", () => {
 describe("unshield", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  const FAKE_PROOF = {
-    proof: {
-      pi_a: ["1", "2"],
-      pi_b: [["3", "4"]],
-      pi_c: ["5", "6"],
-      protocol: "groth16",
-      curve: "bn128",
-    },
-    publicSignals: ["7", "8"],
-  };
-
-  /** Stand in for the 24 MB of circuits. Everything around the proof is real. */
-  function fakeProver() {
-    const load = vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
-    const prove = vi
-      .spyOn(PrivacyPoolSDK.prototype, "proveWithdrawal")
-      .mockResolvedValue(FAKE_PROOF);
-    const verify = vi.spyOn(PrivacyPoolSDK.prototype, "verifyWithdrawal").mockResolvedValue(true);
-    return { load, prove, verify };
-  }
-
   type Context = Awaited<ReturnType<typeof unlocked>>;
 
   /** Shield USDC and have the ASP approve it. `value` is what the pool holds, after the fee. */
@@ -781,18 +852,18 @@ describe("unshield", () => {
     expect(context.state.relayer.quotes.at(-1)?.recipient).toBe(RECIPIENT);
 
     // The smallest deposit that covers the amount is spent.
-    const [source, input] = prover.prove.mock.calls[0]!;
+    const [source, input] = prover.withdrawals[0]!;
     expect(source).toMatchObject({ label: 8n, value: parseUnits("60", 6) });
     expect(input.withdrawalAmount).toBe(parseUnits("50", 6));
     expect(input.stateTreeDepth).toBe(32n);
     expect(input.aspMerkleProof.root).toBe(generateMerkleProof([7n, 8n], 8n).root);
     expect(input.stateMerkleProof.siblings).toHaveLength(32);
     expect(input.context).toBeGreaterThan(0n);
-    expect(prover.load).toHaveBeenCalledTimes(1);
+    expect(prover.loads).toBe(1);
 
     // Circuits are loaded once.
     await prove(context.engine, parseUnits("50", 6));
-    expect(prover.load).toHaveBeenCalledTimes(1);
+    expect(prover.loads).toBe(1);
   });
 
   it("stops when the relayer's instructions pay someone else", async () => {
@@ -803,7 +874,7 @@ describe("unshield", () => {
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow(
       "does not match this unshield",
     );
-    expect(prover.prove).not.toHaveBeenCalled();
+    expect(prover.withdrawals).toEqual([]);
   });
 
   it("stops when the approval list on chain is not the one the ASP serves", async () => {
@@ -819,16 +890,19 @@ describe("unshield", () => {
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow(
       "The ASP's records are behind the chain.",
     );
-    expect(prover.prove).not.toHaveBeenCalled();
+    expect(prover.withdrawals).toEqual([]);
   });
 
   it("rejects a proof that does not verify or could not be made", async () => {
     const context = await unlocked();
     const prover = fakeProver();
     await fund(context, parseUnits("100", 6), 7n);
-    prover.verify.mockResolvedValueOnce(false);
+    prover.verified = false;
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow("did not verify");
-    prover.prove.mockRejectedValueOnce(new Error("Proof generation failed"));
+    prover.verified = true;
+    prover.proveWithdrawal = async () => {
+      throw new Error("Proof generation failed");
+    };
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow(
       "Proof generation failed",
     );
@@ -838,17 +912,17 @@ describe("unshield", () => {
     const context = await unlocked();
     const prover = fakeProver();
     await fund(context, parseUnits("100", 6), 7n);
-    prover.load.mockRejectedValueOnce(new Error("offline"));
+    prover.loadError = new Error("offline");
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow("offline");
     await expect(prove(context.engine, parseUnits("50", 6))).resolves.toBeDefined();
-    expect(prover.load).toHaveBeenCalledTimes(2);
+    expect(prover.loads).toBe(2);
   });
 
   it("aborts with the signal's reason", async () => {
     const context = await unlocked();
     const prover = fakeProver();
     await fund(context, parseUnits("100", 6), 7n);
-    prover.prove.mockReturnValue(new Promise(() => {}));
+    prover.proveWithdrawal = () => new Promise(() => {});
     const controller = new AbortController();
     const running = context.engine.prove(draftOf(parseUnits("50", 6)), {
       onStage: (stage) => stage === "proving" && controller.abort(new Error("cancelled")),
@@ -887,7 +961,7 @@ describe("unshield", () => {
     );
 
     // Mined: 60 stays behind as a new commitment under the same label.
-    const [source, input] = prover.prove.mock.calls[0]!;
+    const [source, input] = prover.withdrawals[0]!;
     const change = getCommitment(parseUnits("60", 6), 7n, input.newNullifier, input.newSecret);
     state.head += 1n;
     state.logs.push({
@@ -909,7 +983,7 @@ describe("unshield", () => {
 
     // The change can be spent next.
     await prove(engine, parseUnits("60", 6));
-    expect(prover.prove.mock.calls[1]![0]).toMatchObject({ hash: change.hash });
+    expect(prover.withdrawals[1]?.[0]).toMatchObject({ hash: change.hash });
   });
 
   it("submits a proof once", async () => {
@@ -935,7 +1009,7 @@ describe("unshield", () => {
     await fund(context, parseUnits("100", 6), 7n);
 
     // The proof's second public signal is the nullifier hash the pool reports as spent.
-    prover.prove.mockImplementation(async (source, input) => {
+    prover.proveWithdrawal = async (source, input) => {
       const spent = poseidon1([(source as { nullifier: bigint }).nullifier]);
       state.relayer.onRequest = () => {
         const change = getCommitment(parseUnits("60", 6), 7n, input.newNullifier, input.newSecret);
@@ -955,7 +1029,7 @@ describe("unshield", () => {
         });
       };
       return { ...FAKE_PROOF, publicSignals: ["7", spent.toString()] };
-    });
+    };
     state.relayer.status = 504;
     state.relayer.answer = {};
 
@@ -974,7 +1048,9 @@ describe("unshield", () => {
       context.state.relayer.answer = {};
       const operation = await prove(context.engine, parseUnits("40", 6));
 
-      const result = context.engine.submit(operation).catch((error: Error) => error.message);
+      const result = context.engine
+        .submit(operation)
+        .catch((error: unknown) => (error instanceof Error ? error.message : String(error)));
       await vi.advanceTimersByTimeAsync(120_000);
       expect(await result).toContain("It may still arrive");
       // Unknown outcome: not spendable again until a scan settles it or time passes.
@@ -1041,15 +1117,14 @@ describe("unshield", () => {
           [CHAIN]: {
             rpcUrl: "http://unused.test",
             entrypoint: ENTRYPOINT,
-            aspUrl: "https://asp.test",
-            relayerUrl: "https://relayer.test",
+            aspUrl: chain.aspUrl,
+            relayerUrl: chain.relayerUrl,
             pools: [{ asset: USDC, deploymentBlock: 100n }],
           },
         },
         storage: memory(),
         pollInterval: 0,
         client: () => chain.client,
-        fetch: chain.fetchAsp,
         circuitsUrl: process.env.PP_CIRCUITS_URL,
       });
       await engine.account.import(PHRASE, "password");
@@ -1077,6 +1152,7 @@ describe("unshield", () => {
       expect(args[0].pubSignals[2]).toBe(parseUnits("30", 6));
       expect(args[0].pubSignals[3]).toBe(9n);
     },
+    // oxlint-disable-next-line landmines/no-flake-masking -- opt-in run of the real circuits: two real proofs take tens of seconds
     120_000,
   );
 
@@ -1087,14 +1163,13 @@ describe("unshield", () => {
         [CHAIN]: {
           rpcUrl: "http://unused.test",
           entrypoint: ENTRYPOINT,
-          aspUrl: "https://asp.test",
+          aspUrl: chain.aspUrl,
           pools: [{ asset: USDC, deploymentBlock: 100n }],
         },
       },
       storage: memory(),
       pollInterval: 0,
       client: () => chain.client,
-      fetch: chain.fetchAsp,
     });
     await expect(engine.quote(draftOf(parseUnits("1", 6)))).rejects.toThrow("it has no relayer");
   });
@@ -1102,28 +1177,6 @@ describe("unshield", () => {
 
 describe("exit", () => {
   afterEach(() => vi.restoreAllMocks());
-
-  const EXIT_PROOF = {
-    proof: {
-      pi_a: ["1", "2", "1"],
-      pi_b: [
-        ["3", "4"],
-        ["5", "6"],
-        ["1", "0"],
-      ],
-      pi_c: ["7", "8", "1"],
-    },
-    publicSignals: ["11", "12", "13", "14"],
-  };
-
-  function fakeProver() {
-    vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
-    const prove = vi
-      .spyOn(PrivacyPoolSDK.prototype, "proveCommitment")
-      .mockResolvedValue(EXIT_PROOF as never);
-    const verify = vi.spyOn(PrivacyPoolSDK.prototype, "verifyCommitment").mockResolvedValue(true);
-    return { prove, verify };
-  }
 
   type Context = Awaited<ReturnType<typeof unlocked>>;
 
@@ -1188,7 +1241,7 @@ describe("exit", () => {
       onStage: (stage) => stages.push(stage),
     });
     expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
-    expect(prover.prove.mock.calls[0]!.slice(0, 2)).toEqual([parseUnits("100", 6), 7n]);
+    expect(prover.commitments[0]?.slice(0, 2)).toEqual([parseUnits("100", 6), 7n]);
 
     expect(transaction.to).toBe(USDC_POOL);
     expect(transaction.value).toBe(0n);
@@ -1204,7 +1257,7 @@ describe("exit", () => {
       pubSignals: [11n, 12n, 13n, 14n],
     });
 
-    prover.verify.mockResolvedValueOnce(false);
+    prover.verified = false;
     await expect(context.engine.prepareExit!(CHAIN, "111:7", { onStage() {} })).rejects.toThrow(
       "did not verify",
     );
@@ -1240,12 +1293,7 @@ describe("exit", () => {
 
   it("does not offer an exit for funds already handed to the relayer", async () => {
     const context = await unlocked();
-    vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
-    vi.spyOn(PrivacyPoolSDK.prototype, "proveWithdrawal").mockResolvedValue({
-      proof: { pi_a: [], pi_b: [], pi_c: [] },
-      publicSignals: [],
-    } as never);
-    vi.spyOn(PrivacyPoolSDK.prototype, "verifyWithdrawal").mockResolvedValue(true);
+    fakeProver();
     await depositUsdc(context, parseUnits("100", 6), 7n, true);
     const operation = await context.engine.prove(
       {
