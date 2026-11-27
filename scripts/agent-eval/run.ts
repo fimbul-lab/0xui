@@ -5,7 +5,6 @@ import { spawn } from "node:child_process";
 import { createReadStream, existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { requireAll, tasks } from "./tasks.ts";
@@ -156,7 +155,11 @@ function serveRegistry(): Promise<{ url: string; close: () => void }> {
   });
   return new Promise((ok) => {
     server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address() as AddressInfo;
+      const address = server.address();
+      if (typeof address !== "object" || address === null) {
+        throw new Error("The registry server isn't listening on a TCP port.");
+      }
+      const { port } = address;
       ok({ url: `http://localhost:${port}/r/{name}.json`, close: () => server.close() });
     });
   });

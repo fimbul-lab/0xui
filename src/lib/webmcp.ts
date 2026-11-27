@@ -225,17 +225,39 @@ export function docsTools({
   ];
 }
 
+/** Pagefind's module, checked for the one function the search tool calls. */
+const isPagefind = (module: unknown): module is Pagefind =>
+  typeof module === "object" &&
+  module !== null &&
+  "search" in module &&
+  typeof module.search === "function";
+
 async function loadPagefind() {
   const url = "/pagefind/pagefind.js";
-  return (await import(/* @vite-ignore */ url)) as Pagefind;
+  const module: unknown = await import(/* @vite-ignore */ url);
+  if (!isPagefind(module)) {
+    throw new Error(`${url} isn't Pagefind's search module.`);
+  }
+  return module;
+}
+
+const isModelContext = (value: unknown): value is ModelContext =>
+  typeof value === "object" &&
+  value !== null &&
+  "registerTool" in value &&
+  typeof value.registerTool === "function";
+
+/** The WebMCP `modelContext` on a document or navigator, if the browser has one. */
+function modelContextOf(target: object | undefined) {
+  const context: unknown = target && "modelContext" in target ? target.modelContext : undefined;
+  return isModelContext(context) ? context : undefined;
 }
 
 /** Registers the docs tools with the browser. Does nothing without WebMCP. */
 export function registerDocsTools(options?: DocsToolsOptions) {
-  const scope = globalThis as { document?: { modelContext?: ModelContext } };
   const context =
-    scope.document?.modelContext ??
-    (globalThis as { navigator?: { modelContext?: ModelContext } }).navigator?.modelContext;
+    modelContextOf(typeof document === "undefined" ? undefined : document) ??
+    modelContextOf(typeof navigator === "undefined" ? undefined : navigator);
   const controller = new AbortController();
   if (!context) {
     return () => {};

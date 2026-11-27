@@ -6,6 +6,7 @@ import {
   multicall3Abi,
   erc20Abi,
   http,
+  isHex,
   keccak256,
   toHex,
 } from "viem";
@@ -68,6 +69,44 @@ type DemoTx = {
 const demoTxs = new Map<Hex, DemoTx>();
 
 const isMined = (tx: DemoTx) => Date.now() - tx.sentAt >= MINE_AFTER_MS;
+
+/** The JSON-RPC param at `index`, checked to be hex. */
+function hexParam(params: unknown, index: number): Hex {
+  const value: unknown = Array.isArray(params) ? params[index] : undefined;
+  if (!isHex(value)) {
+    throw new Error(`Expected hex at params[${index}].`);
+  }
+  return value;
+}
+
+/** A call or transaction object from JSON-RPC params: `to`, and the optional fields as hex. */
+function parseCall(call: unknown) {
+  if (typeof call !== "object" || call === null || !("to" in call) || !isHex(call.to)) {
+    throw new Error("Expected a call with a `to` address.");
+  }
+  return {
+    to: call.to,
+    from: "from" in call && isHex(call.from) ? call.from : undefined,
+    value: "value" in call && isHex(call.value) ? call.value : undefined,
+    data: "data" in call && isHex(call.data) ? call.data : undefined,
+  };
+}
+
+/** The `from` and `calls` of wallet_sendCalls's params. */
+function parseSendCalls(params: unknown) {
+  const request: unknown = Array.isArray(params) ? params[0] : undefined;
+  if (
+    typeof request !== "object" ||
+    request === null ||
+    !("from" in request) ||
+    !isHex(request.from) ||
+    !("calls" in request) ||
+    !Array.isArray(request.calls)
+  ) {
+    throw new Error("wallet_sendCalls needs `from` and `calls`.");
+  }
+  return { from: request.from, calls: request.calls.map(parseCall) };
+}
 
 function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }) {
   const hash = keccak256(toHex(`${tx.from}${tx.to}${Date.now()}${Math.random()}`));
@@ -203,8 +242,11 @@ function demoWallet() {
           ...provider,
           async request(args: { method: string; params?: unknown }) {
             if (args.method === "eth_sendTransaction") {
-              const [tx] = args.params as [{ from: Hex; to: Hex; value?: Hex; data?: Hex }];
-              return sendDemoTransaction(tx);
+              const tx = parseCall(Array.isArray(args.params) ? args.params[0] : undefined);
+              if (!tx.from) {
+                throw new Error("eth_sendTransaction needs a `from` address.");
+              }
+              return sendDemoTransaction({ ...tx, from: tx.from });
             }
             if (args.method === "wallet_getCapabilities") {
               // Atomic batching everywhere, like a smart account would offer.
@@ -216,16 +258,14 @@ function demoWallet() {
               );
             }
             if (args.method === "wallet_sendCalls") {
-              const [{ from, calls }] = args.params as [
-                { from: Hex; calls: Array<{ to: Hex; data?: Hex; value?: Hex }> },
-              ];
-              const hashes = calls.map((call) => sendDemoTransaction({ from, ...call }));
+              const { from, calls } = parseSendCalls(args.params);
+              const hashes = calls.map((call) => sendDemoTransaction({ ...call, from }));
               const id = keccak256(toHex(hashes.join("")));
               demoBatches.set(id, hashes);
               return { id };
             }
             if (args.method === "wallet_getCallsStatus") {
-              const [id] = args.params as [Hex];
+              const id = hexParam(args.params, 0);
               const txs = (demoBatches.get(id) ?? []).flatMap((hash) => demoTxs.get(hash) ?? []);
               const mined = txs.length > 0 && txs.every(isMined);
               return {
@@ -247,11 +287,14 @@ function demoWallet() {
               };
             }
             if (args.method === "personal_sign") {
-              const [message] = args.params as [Hex];
+              const message = hexParam(args.params, 0);
               return demoSigner.signMessage({ message: { raw: message } });
             }
             if (args.method === "eth_signTypedData_v4") {
-              const [, typedData] = args.params as [Hex, string];
+              const typedData: unknown = Array.isArray(args.params) ? args.params[1] : undefined;
+              if (typeof typedData !== "string") {
+                throw new Error("eth_signTypedData_v4 needs the typed data as JSON.");
+              }
               const parsed: unknown = JSON.parse(typedData);
               if (!isTypedData(parsed)) {
                 throw new Error("eth_signTypedData_v4 needs EIP-712 typed data.");
@@ -274,14 +317,14 @@ function demoTransport(chain: Chain) {
   const rpc = http()({ chain, retryCount: 1 });
   return custom({
     async request({ method, params }: { method: string; params?: unknown }) {
-      const hash = (params as [Hex] | undefined)?.[0];
-      const tx = typeof hash === "string" ? demoTxs.get(hash) : undefined;
+      const hash: unknown = Array.isArray(params) ? params[0] : undefined;
+      const tx = isHex(hash) ? demoTxs.get(hash) : undefined;
 
       if (method === "eth_estimateGas") {
         return "0x5208";
       }
       if (method === "eth_call") {
-        const [{ to, data }] = params as [{ to: Hex; data: Hex }];
+        const { to, data = "0x" } = parseCall(Array.isArray(params) ? params[0] : undefined);
         const direct = demoAllowanceResult(to, data);
         if (direct) {
           return direct;
