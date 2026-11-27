@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { mixerPoolLabel } from "./mixer-engine";
-import type { MixerStage } from "./mixer-engine";
+import type { MixerStage, MixerWithdrawal } from "./mixer-engine";
 import { MOCK_MIXER_POOLS, MOCK_NOTE_PREFIX, createMockMixerEngine } from "./mock-mixer-engine";
 
 const RECIPIENT = "0x9999999999999999999999999999999999999999";
@@ -105,7 +105,7 @@ describe("mock mixer engine", () => {
     expect(withdrawal.transaction.to).toBe(small.address);
     // Nothing on the withdrawal points back at the deposit.
     expect(
-      JSON.stringify(withdrawal, (_, v) => (typeof v === "bigint" ? `${v}` : v)),
+      JSON.stringify(withdrawal, (_, v: unknown) => (typeof v === "bigint" ? `${v}` : v)),
     ).not.toContain(commitment.slice(2));
 
     engine.simulate.withdrawn(withdrawal);
@@ -126,10 +126,14 @@ describe("mock mixer engine", () => {
         { note, recipient: RECIPIENT, via: "wallet" },
         { onStage: (stage) => stages.push(stage), signal: run.signal },
       );
-      const failed = expect(proof).rejects.toMatchObject({ name: "AbortError" });
+      // Caught now, so the rejection is handled while the timers run.
+      const failed = proof.then(
+        () => undefined,
+        (error: unknown) => error,
+      );
       await vi.advanceTimersByTimeAsync(6000);
       run.abort();
-      await failed;
+      expect(await failed).toMatchObject({ name: "AbortError" });
       expect(stages).toEqual(["syncing", "loading-circuits"]);
     } finally {
       vi.useRealTimers();
@@ -137,8 +141,14 @@ describe("mock mixer engine", () => {
   });
 
   it("relays a withdrawal once, and only one made for a relayer", async () => {
-    const relay = vi.fn(() => `0x${"cd".repeat(32)}` as const);
-    const engine = createMockMixerEngine({ speed: Infinity, relay });
+    const relays: Array<MixerWithdrawal> = [];
+    const engine = createMockMixerEngine({
+      speed: Infinity,
+      relay: (withdrawal) => {
+        relays.push(withdrawal);
+        return `0x${"cd".repeat(32)}`;
+      },
+    });
     const { note, commitment } = await engine.createNote(small);
     engine.simulate.deposit(commitment);
 
@@ -149,7 +159,7 @@ describe("mock mixer engine", () => {
     engine.simulate.failNextRelay();
     await expect(engine.relay(relayed)).rejects.toThrow("refused");
     expect(await engine.relay(relayed)).toEqual({ hash: `0x${"cd".repeat(32)}` });
-    expect(relay).toHaveBeenCalledTimes(1);
+    expect(relays).toHaveLength(1);
     await expect(engine.relay(relayed)).rejects.toThrow("already sent");
   });
 

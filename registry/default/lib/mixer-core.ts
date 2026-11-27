@@ -12,7 +12,7 @@ import { getCapabilitiesQueryOptions, hashFn, readContractQueryOptions } from "@
 import { encodeFunctionData, erc20Abi, formatUnits } from "viem";
 import type { Address, Hash, Hex } from "viem";
 import { createStore } from "@/lib/0xui-store";
-import { errorCode, isUserRejection } from "@/lib/0xui-utils";
+import { errorCode, errorMessage, isUserRejection } from "@/lib/0xui-utils";
 import type { ErrorCode } from "@/lib/0xui-utils";
 import { requiresAllowanceReset } from "@/lib/approve-button-core";
 import { MIXER_STAGES, mixerPoolLabel } from "@/lib/mixer-engine";
@@ -32,8 +32,6 @@ import { proofStageMeta } from "@/lib/proof-progress-core";
 import type { ProofStepState } from "@/lib/proof-progress-core";
 
 const toError = (cause: unknown) => (cause instanceof Error ? cause : new Error(String(cause)));
-const messageOf = (error: Error) =>
-  (error as { shortMessage?: string }).shortMessage ?? error.message;
 
 export type MixerProblem = { message: string; code?: ErrorCode };
 
@@ -155,6 +153,17 @@ export type MixerDeposited = { pool: MixerPool; commitment: Hex };
 /** The steps of a deposit. `leftover`: an old allowance below the amount, which a batch clears first. */
 export type MixerDepositPlan = { steps: Array<MixerDepositStep>; leftover: boolean };
 
+/** The `atomic.status` an EIP-5792 wallet reports for a chain, if any. */
+function atomicStatus(capabilities: unknown) {
+  if (typeof capabilities !== "object" || capabilities === null || !("atomic" in capabilities)) {
+    return undefined;
+  }
+  const { atomic } = capabilities;
+  return typeof atomic === "object" && atomic !== null && "status" in atomic
+    ? atomic.status
+    : undefined;
+}
+
 /**
  * Plan the wallet prompts for a pool. Undefined until the allowance of an
  * ERC-20 pool is known. Only an "supported" atomic status counts: "ready"
@@ -173,13 +182,13 @@ export function planMixerDeposit({
   if (!pool || (pool.token && allowance === undefined)) {
     return undefined;
   }
-  const atomic =
-    (capabilities as { atomic?: { status?: string } } | undefined)?.atomic?.status === "supported";
+  const { token } = pool;
   return {
     steps: mixerDepositSteps({
-      needsApproval: Boolean(pool.token) && allowance! < pool.denomination,
-      needsReset: Boolean(allowance) && requiresAllowanceReset(pool.chainId, pool.token!),
-      atomic,
+      needsApproval: Boolean(token) && allowance !== undefined && allowance < pool.denomination,
+      needsReset:
+        Boolean(allowance) && token !== undefined && requiresAllowanceReset(pool.chainId, token),
+      atomic: atomicStatus(capabilities) === "supported",
     }),
     leftover: Boolean(allowance),
   };
@@ -195,7 +204,7 @@ export function mixerAllowanceQueryOptions(
       address: pool?.token,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [owner!, pool?.address as Address],
+      args: owner && pool ? [owner, pool.address] : undefined,
       chainId: pool?.chainId,
       query: { enabled: Boolean(pool?.token && owner) },
     }),
@@ -233,6 +242,12 @@ export function mixerDepositCopy(step: MixerDepositStep, pool: MixerPool) {
   }[step];
 }
 
+/** The deposit form's button label, and what pressing it does, if anything. */
+export type MixerDepositAction = {
+  label: string;
+  action?: "connect" | "switch-chain" | "begin" | "send";
+};
+
 /**
  * The deposit form's button: its label and what a click does. Order: pool,
  * wallet, balance, note, backup, then the wallet steps.
@@ -259,7 +274,7 @@ export function mixerDepositAction({
   busy: boolean;
   /** The step waiting for a click. Undefined until the allowance is known. */
   step: MixerDepositStep | undefined;
-}): { label: string; action?: "connect" | "switch-chain" | "begin" | "send" } {
+}): MixerDepositAction {
   if (!pool) {
     return { label: "Select an amount" };
   }
@@ -363,7 +378,9 @@ export function createMixerDeposit(
 ) {
   // Bumped whenever the flow is left. Work from an older run stops when it notices.
   let run = 0;
-  const store = createStore<MixerDepositState>(depositIdle, () => () => void run++);
+  const store = createStore<MixerDepositState>(depositIdle, () => () => {
+    run++;
+  });
 
   const leave = () => {
     run++;
@@ -398,23 +415,28 @@ export function createMixerDeposit(
   const perform = async (planned: MixerDepositPlan | undefined) => {
     const { note, saved, frozen, index, stepPhase } = store.get();
     const plan = frozen ?? planned;
-    if (!note || !saved || !plan || stepPhase !== "ready") {
+    const kind = plan?.steps[index];
+    if (!note || !saved || !plan || kind === undefined || stepPhase !== "ready") {
       return;
     }
     const id = ++run;
     const live = () => run === id;
     const { pool: into, commitment } = note;
     const { chainId } = into;
-    const kind = plan.steps[index]!;
 
-    const approval = (value: bigint): MixerCall => ({
-      to: into.token!,
-      data: encodeFunctionData({
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [into.address, value],
-      }),
-    });
+    const approval = (value: bigint): MixerCall => {
+      if (!into.token) {
+        throw new Error("This pool takes the native token, so there is nothing to approve.");
+      }
+      return {
+        to: into.token,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [into.address, value],
+        }),
+      };
+    };
 
     store.set({ frozen: plan, problem: undefined, stepPhase: "wallet" });
     try {
@@ -427,9 +449,11 @@ export function createMixerDeposit(
         if (live()) {
           store.set({ stepPhase: "pending" });
         }
-        const receipt = await getPublicClient(config, { chainId })!.waitForTransactionReceipt({
-          hash: sent,
-        });
+        const client = getPublicClient(config, { chainId });
+        if (!client) {
+          throw new Error(`Chain ${chainId} is not in the wagmi config.`);
+        }
+        const receipt = await client.waitForTransactionReceipt({ hash: sent });
         if (receipt.status === "reverted") {
           throw new Error("The approval reverted. Nothing changed except the gas fee.");
         }
@@ -477,7 +501,7 @@ export function createMixerDeposit(
         stepPhase: "ready",
         problem: isUserRejection(error)
           ? { kind: "cancelled", message: "Cancelled in wallet." }
-          : { kind: "error", message: messageOf(error), code: errorCode("error", error) },
+          : { kind: "error", message: errorMessage(error), code: errorCode("error", error) },
       });
     }
   };
@@ -536,7 +560,7 @@ export function createMixerNoteLookup(engine: MixerEngine, { debounce = 300 } = 
     }
     const current = new AbortController();
     lookup = current;
-    timer = setTimeout(async () => {
+    const read = async () => {
       try {
         const note = await engine.parseNote(trimmed);
         if (current.signal.aborted) {
@@ -559,7 +583,8 @@ export function createMixerNoteLookup(engine: MixerEngine, { debounce = 300 } = 
           error: toError(error),
         }));
       }
-    }, debounce);
+    };
+    timer = setTimeout(() => void read(), debounce);
   };
 
   return {
@@ -605,7 +630,8 @@ export function mixerQuoteQueryOptions(
 ) {
   return {
     queryKey: ["0xui", "mixer-quote", engine.id, pool?.chainId, pool?.address, via],
-    queryFn: () => engine.quote(pool!, via),
+    queryFn: () =>
+      pool ? engine.quote(pool, via) : Promise.reject(new Error("Nothing to quote yet.")),
     enabled: Boolean(pool),
     staleTime: 30_000,
     retry: false,
@@ -682,7 +708,7 @@ export function createMixerWithdraw(
     const error = toError(cause);
     store.set({
       phase: "error",
-      problem: { message: messageOf(error), code: errorCode("error", error), proof },
+      problem: { message: errorMessage(error), code: errorCode("error", error), proof },
     });
   };
 
@@ -806,6 +832,12 @@ export function createMixerWithdraw(
 
 export type MixerWithdrawController = ReturnType<typeof createMixerWithdraw>;
 
+/** The withdraw form's button label before a withdrawal starts, and what pressing it does. */
+export type MixerWithdrawAction = {
+  label: string;
+  action?: "refresh" | "connect" | "switch-chain" | "start";
+};
+
 /**
  * The withdraw form's button before a withdrawal starts. Order matches how
  * people get there: note, deposit, recipient, wallet, quote.
@@ -834,7 +866,7 @@ export function mixerWithdrawAction({
   switching: boolean;
   quoteFailed: boolean;
   quote: MixerQuote | undefined;
-}): { label: string; action?: "refresh" | "connect" | "switch-chain" | "start" } {
+}): MixerWithdrawAction {
   if (!text.trim()) {
     return { label: "Paste your note" };
   }
@@ -871,6 +903,12 @@ export function mixerWithdrawAction({
   return { label: `Withdraw ${mixerPoolLabel(note.pool)}`, action: "start" };
 }
 
+/** The button's label while a withdrawal runs, and what pressing it does. */
+export type MixerWithdrawRunningAction = {
+  label: string;
+  action?: "retry" | "confirm" | "send" | "connect" | "switch-chain";
+};
+
 /** The button while a withdrawal runs: its label and what a click does. */
 export function mixerWithdrawRunningAction({
   phase,
@@ -881,7 +919,7 @@ export function mixerWithdrawRunningAction({
 }: Pick<MixerWithdrawState, "phase" | "withdrawal" | "problem"> & {
   walletBlocker: ReturnType<typeof mixerWalletBlocker>;
   switching: boolean;
-}): { label: string; action?: "retry" | "confirm" | "send" | "connect" | "switch-chain" } {
+}): MixerWithdrawRunningAction {
   if (phase === "syncing" || phase === "proving") {
     return { label: "Generating proof…" };
   }
@@ -958,18 +996,22 @@ export function mixerStepStates(
   const done =
     phase === "review" || phase === "ready" || phase === "wallet" || phase === "submitting";
   const reached = stage ? MIXER_STAGES.indexOf(stage) : -1;
-  const states = {} as Record<MixerStage, ProofStepState>;
-  MIXER_STAGES.forEach((name, index) => {
-    states[name] =
-      done || (!proofFailed && phase === "error") || index < reached
-        ? "done"
-        : index > reached || phase === "cancelled" || phase === "idle"
-          ? "todo"
-          : phase === "error"
-            ? "failed"
-            : "active";
-  });
-  return states;
+  const state = (name: MixerStage): ProofStepState => {
+    const index = MIXER_STAGES.indexOf(name);
+    return done || (!proofFailed && phase === "error") || index < reached
+      ? "done"
+      : index > reached || phase === "cancelled" || phase === "idle"
+        ? "todo"
+        : phase === "error"
+          ? "failed"
+          : "active";
+  };
+  return {
+    syncing: state("syncing"),
+    "loading-circuits": state("loading-circuits"),
+    proving: state("proving"),
+    verifying: state("verifying"),
+  };
 }
 
 /** Default label and hint for each stage of a withdrawal proof. */

@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { decodeFunctionData, getAddress, hexToBytes, toHex } from "viem";
 import type { Address, Hex } from "viem";
-import { describe, expect, it, vi } from "vitest";
-import type { MixerStage } from "./mixer-engine";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { MixerStage, MixerWithdrawal } from "./mixer-engine";
 import {
   TORNADO_ABI,
   createTornadoEngine,
@@ -94,11 +94,16 @@ function fakeChain({ head = 2000n } = {}) {
 
 function memoryCache() {
   const store = new Map<string, string>();
+  const written = Promise.withResolvers<void>();
   const cache: TornadoCache = {
     get: async (key) => store.get(key),
-    set: async (key, value) => void store.set(key, value),
+    set: async (key, value) => {
+      store.set(key, value);
+      written.resolve();
+    },
   };
-  return { store, cache };
+  /** Resolves once the engine first writes to the cache. */
+  return { store, cache, written: written.promise };
 }
 
 function setup({
@@ -228,12 +233,13 @@ describe("tornado engine: deposits", () => {
   });
 
   it("keeps final deposits between page loads", async () => {
-    const { store, cache } = memoryCache();
+    const { store, cache, written } = memoryCache();
     const first = setup({ cache });
     first.chain.deposit(COMMITMENT, 1200n);
     first.chain.deposit(leaf(9), 1995n);
     await first.engine.getDeposit(NOTE);
-    await vi.waitFor(() => expect(store.size).toBe(1));
+    await written;
+    expect(store.size).toBe(1);
     // The deposit in the last 64 blocks is not final yet, so it is not kept.
     expect(JSON.parse([...store.values()][0]!)).toEqual({
       syncedTo: "1936",
@@ -380,80 +386,96 @@ describe("tornado engine: withdraw", () => {
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(chain.logRequests).toHaveLength(0);
   });
+});
 
-  // Needs the 33 MB of circuit files: TORNADO_CIRCUITS_DIR=/path bun run test tornado-engine
-  const dir = process.env.TORNADO_CIRCUITS_DIR;
-  it.skipIf(!dir)(
-    "proves a withdrawal the pool's call accepts, and relays it once",
-    async () => {
-      const send = vi.fn(async () => `0x${"ef".repeat(32)}` as const);
-      const relayer: TornadoRelayer = {
-        address: async () => RELAYER,
-        quote: async () => 10n ** 15n,
-        send,
-      };
-      const { chain, engine } = setup({
-        relayer,
-        circuitsUrl: "https://files.example/",
-        fetch: (async (url: string) =>
-          new Response(await readFile(`${dir}/${url.split("/").pop()}`))) as typeof fetch,
-      });
-      chain.deposit(leaf(1), 1100n);
-      chain.deposit(COMMITMENT, 1200n);
-      chain.deposit(leaf(2), 1300n);
-
-      const stages: Array<MixerStage> = [];
-      const withdrawal = await engine.prove(
-        { ...draft, via: "relayer" },
-        { onStage: (stage) => stages.push(stage) },
-      );
-      expect(stages).toEqual(["syncing", "loading-circuits", "proving", "verifying"]);
-      expect(withdrawal.quote).toEqual({ fee: 10n ** 15n, received: 99n * 10n ** 15n });
-
-      const { functionName, args } = decodeFunctionData({
-        abi: TORNADO_ABI,
-        data: withdrawal.transaction.data,
-      });
-      expect(functionName).toBe("withdraw");
-      const [proof, root, nullifierHash, recipient, paid, fee, refund] = args as unknown as [
-        Hex,
-        Hex,
-        Hex,
-        Address,
-        Address,
-        bigint,
-        bigint,
-      ];
-      expect(proof).toHaveLength(2 + 512);
-      const { root: expected } = await tornadoMerklePath([1n, BigInt(COMMITMENT), 2n], 1);
-      expect(root).toBe(toHex(expected, { size: 32 }));
-      expect([recipient, paid, fee, refund]).toEqual([
-        RECIPIENT,
-        getAddress(RELAYER),
-        10n ** 15n,
-        0n,
-      ]);
-      // The pool was asked to check exactly this call.
-      expect(chain.calls).toEqual([withdrawal.transaction.data]);
-      // Nothing on the withdrawal points back at the deposit.
-      const text = JSON.stringify(withdrawal, (_, v) => (typeof v === "bigint" ? `${v}` : v));
-      expect(text).not.toContain(COMMITMENT.slice(2));
-
-      send.mockRejectedValueOnce(new Error("The relayer is busy."));
-      await expect(engine.relay(withdrawal)).rejects.toThrow("busy");
-      expect(await engine.relay(withdrawal)).toEqual({ hash: `0x${"ef".repeat(32)}` });
-      expect(send).toHaveBeenLastCalledWith({
-        pool,
-        proof,
-        args: [root, nullifierHash, recipient, paid, fee, refund],
-      });
-      await expect(engine.relay(withdrawal)).rejects.toThrow("already sent");
-
-      chain.refuse = "execution reverted: Invalid withdraw proof";
-      await expect(engine.prove(draft, { onStage: () => {} })).rejects.toThrow(
-        "The pool refused the proof: execution reverted: Invalid withdraw proof",
-      );
+// Needs the 33 MB of circuit files: TORNADO_CIRCUITS_DIR=/path bun run test tornado-engine
+const dir = process.env.TORNADO_CIRCUITS_DIR;
+describe.skipIf(!dir)("tornado engine: withdraw with the circuit files", () => {
+  const hash = `0x${"ef".repeat(32)}` as const;
+  /** What the relayer was asked to send. It refuses the first request. */
+  const sent: Array<Parameters<TornadoRelayer["send"]>[0]> = [];
+  const relayer: TornadoRelayer = {
+    address: async () => RELAYER,
+    quote: async () => 10n ** 15n,
+    send: async (request) => {
+      sent.push(request);
+      if (sent.length === 1) {
+        throw new Error("The relayer is busy.");
+      }
+      return hash;
     },
-    300_000,
-  );
+  };
+  const { chain, engine } = setup({
+    relayer,
+    circuitsUrl: "https://files.example/",
+    fetch: (async (url: string) =>
+      new Response(await readFile(`${dir}/${url.split("/").pop()}`))) as typeof fetch,
+  });
+  chain.deposit(leaf(1), 1100n);
+  chain.deposit(COMMITMENT, 1200n);
+  chain.deposit(leaf(2), 1300n);
+
+  const stages: Array<MixerStage> = [];
+  let withdrawal: MixerWithdrawal;
+  let checked: Array<Hex>;
+  let refused: unknown;
+  // Proving takes most of a minute, and the circuit files load only once.
+  beforeAll(async () => {
+    withdrawal = await engine.prove(
+      { note: NOTE, recipient: RECIPIENT, via: "relayer" },
+      { onStage: (stage) => stages.push(stage) },
+    );
+    checked = [...chain.calls];
+    chain.refuse = "execution reverted: Invalid withdraw proof";
+    refused = await engine
+      .prove({ note: NOTE, recipient: RECIPIENT, via: "wallet" }, { onStage: () => {} })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+  }, 300_000);
+
+  it("proves a withdrawal the pool's call accepts, and relays it once", async () => {
+    expect(stages).toEqual(["syncing", "loading-circuits", "proving", "verifying"]);
+    expect(withdrawal.quote).toEqual({ fee: 10n ** 15n, received: 99n * 10n ** 15n });
+
+    const call = decodeFunctionData({ abi: TORNADO_ABI, data: withdrawal.transaction.data });
+    if (call.functionName !== "withdraw") {
+      throw new Error(`Expected a withdraw call, got ${call.functionName}.`);
+    }
+    const [proof, root, nullifierHash, recipient, paid, fee, refund] = call.args;
+    expect(proof).toHaveLength(2 + 512);
+    const { root: expected } = await tornadoMerklePath([1n, BigInt(COMMITMENT), 2n], 1);
+    expect(root).toBe(toHex(expected, { size: 32 }));
+    expect([recipient, paid, fee, refund]).toEqual([
+      RECIPIENT,
+      getAddress(RELAYER),
+      10n ** 15n,
+      0n,
+    ]);
+    // The pool was asked to check exactly this call.
+    expect(checked).toEqual([withdrawal.transaction.data]);
+    // Nothing on the withdrawal points back at the deposit.
+    const text = JSON.stringify(withdrawal, (_, v: unknown) =>
+      typeof v === "bigint" ? `${v}` : v,
+    );
+    expect(text).not.toContain(COMMITMENT.slice(2));
+
+    await expect(engine.relay(withdrawal)).rejects.toThrow("busy");
+    expect(await engine.relay(withdrawal)).toEqual({ hash });
+    expect(sent.at(-1)).toEqual({
+      pool,
+      proof,
+      args: [root, nullifierHash, recipient, paid, fee, refund],
+    });
+    await expect(engine.relay(withdrawal)).rejects.toThrow("already sent");
+  });
+
+  it("says when the pool refuses the proof", () => {
+    expect(refused).toMatchObject({
+      message: expect.stringContaining(
+        "The pool refused the proof: execution reverted: Invalid withdraw proof",
+      ),
+    });
+  });
 });

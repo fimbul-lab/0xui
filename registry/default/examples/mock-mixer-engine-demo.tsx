@@ -9,7 +9,11 @@ export default function MockMixerEngineDemo() {
   const [note, setNote] = useState<string>();
 
   const deposit = async () => {
-    const made = await engine.createNote(engine.pools[0]!);
+    const [pool] = engine.pools;
+    if (!pool) {
+      return;
+    }
+    const made = await engine.createNote(pool);
     // A real engine reads the deposit from the chain. The mock is told.
     engine.simulate.deposit(made.commitment);
     engine.simulate.crowd(made.pool, 40);

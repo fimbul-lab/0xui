@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import { connectMock, createTestConfig, fakeChainRpc } from "../../../test/wagmi";
 import {
@@ -16,6 +16,8 @@ import {
   mixerWithdrawRunningAction,
   planMixerDeposit,
 } from "./mixer-core";
+import type { MixerDeposited } from "./mixer-core";
+import type { MixerWithdrawal } from "./mixer-engine";
 import { MOCK_MIXER_POOLS, createMockMixerEngine } from "./mock-mixer-engine";
 
 const RECIPIENT: Address = "0x9999999999999999999999999999999999999999";
@@ -25,6 +27,17 @@ const erc20 = {
   token: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" as Address,
   symbol: "TKN",
 };
+
+/** An `onSubmitted` that keeps every call, and resolves `first` with the first one. */
+function submissions<T>() {
+  const calls: Array<[Hash, T]> = [];
+  const first = Promise.withResolvers<[Hash, T]>();
+  const onSubmitted = (hash: Hash, value: T) => {
+    calls.push([hash, value]);
+    first.resolve([hash, value]);
+  };
+  return { calls, first: first.promise, onSubmitted };
+}
 
 function chain() {
   const sends: Array<{ to: string }> = [];
@@ -47,8 +60,8 @@ describe("createMixerDeposit", () => {
     const engine = createMockMixerEngine({ speed: Infinity });
     const { config, sends } = chain();
     await connectMock(config);
-    const onSubmitted = vi.fn();
-    const deposit = createMixerDeposit(config, engine, { onSubmitted });
+    const submitted = submissions<MixerDeposited>();
+    const deposit = createMixerDeposit(config, engine, { onSubmitted: submitted.onSubmitted });
     const stop = deposit.subscribe(() => {});
     const plan = planMixerDeposit({ pool: native, allowance: undefined, capabilities: undefined });
 
@@ -62,11 +75,12 @@ describe("createMixerDeposit", () => {
 
     deposit.setSaved(true);
     deposit.send(plan);
-    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    const call = await submitted.first;
+    expect(submitted.calls).toHaveLength(1);
     // The callback gets the commitment, never the note.
-    expect(onSubmitted.mock.calls[0]![1]).toEqual({ pool: native, commitment: note.commitment });
+    expect(call[1]).toEqual({ pool: native, commitment: note.commitment });
     expect(
-      JSON.stringify(onSubmitted.mock.calls[0], (_, v) => (typeof v === "bigint" ? `${v}` : v)),
+      JSON.stringify(call, (_, v: unknown) => (typeof v === "bigint" ? `${v}` : v)),
     ).not.toContain(note.note);
     expect(sends).toHaveLength(1);
     expect(deposit.get().note).toBeUndefined();
@@ -191,23 +205,34 @@ describe("createMixerWithdraw", () => {
     const engine = createMockMixerEngine({ speed: Infinity });
     const { note, commitment } = await engine.createNote(native);
     engine.simulate.deposit(commitment);
-    const onSubmitted = vi.fn();
-    const withdraw = createMixerWithdraw(chain().config, engine, { onSubmitted });
+    const submitted = submissions<MixerWithdrawal>();
+    const withdraw = createMixerWithdraw(chain().config, engine, {
+      onSubmitted: submitted.onSubmitted,
+    });
     const stop = withdraw.subscribe(() => {});
     const expected = await engine.quote(native, "relayer");
 
     withdraw.start({ note, recipient: RECIPIENT, via: "relayer" }, expected);
-    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    await submitted.first;
+    expect(submitted.calls).toHaveLength(1);
     expect(withdraw.get().active).toBeUndefined();
     expect(withdraw.get().phase).toBe("idle");
     stop();
   });
 
   it("stops in review when the relayer's fee went up", async () => {
-    const engine = createMockMixerEngine({ speed: Infinity });
+    const relays: Array<MixerWithdrawal> = [];
+    const relayed = Promise.withResolvers<void>();
+    const engine = createMockMixerEngine({
+      speed: Infinity,
+      relay: (withdrawal) => {
+        relays.push(withdrawal);
+        relayed.resolve();
+        return `0x${"cd".repeat(32)}`;
+      },
+    });
     const { note, commitment } = await engine.createNote(native);
     engine.simulate.deposit(commitment);
-    const relay = vi.spyOn(engine, "relay");
     const withdraw = createMixerWithdraw(chain().config, engine);
     const stop = withdraw.subscribe(() => {});
     const expected = await engine.quote(native, "relayer");
@@ -217,9 +242,10 @@ describe("createMixerWithdraw", () => {
       { ...expected, fee: expected.fee - 1n },
     );
     await vi.waitFor(() => expect(withdraw.get().phase).toBe("review"));
-    expect(relay).not.toHaveBeenCalled();
+    expect(relays).toHaveLength(0);
     withdraw.confirm();
-    await vi.waitFor(() => expect(relay).toHaveBeenCalledTimes(1));
+    await relayed.promise;
+    expect(relays).toHaveLength(1);
     stop();
   });
 });
