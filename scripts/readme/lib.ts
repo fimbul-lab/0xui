@@ -193,10 +193,7 @@ export function text(str: string, o: TextOptions = {}): string {
 }
 
 /** Several runs on one baseline, each with its own style. Returns the end x. */
-export function runs(
-  parts: Array<[string, TextOptions?]>,
-  o: TextOptions & { gap?: number } = {},
-): { svg: string; width: number } {
+export function runs(parts: Array<[string, TextOptions?]>, o: TextOptions & { gap?: number } = {}) {
   let x = o.x ?? 0;
   const start = x;
   let svg = "";

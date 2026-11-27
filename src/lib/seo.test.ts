@@ -57,9 +57,7 @@ describe("ogImage", () => {
 
 describe("breadcrumbJsonLd", () => {
   const names = (id: string, title: string) =>
-    (breadcrumbJsonLd(id, title).itemListElement as Array<{ name: string; item: string }>).map(
-      (step) => [step.name, step.item],
-    );
+    breadcrumbJsonLd(id, title).itemListElement.map((step) => [step.name, step.item]);
 
   it("goes through the section overview", () => {
     expect(names("components/balance", "Balance")).toEqual([
@@ -86,7 +84,7 @@ describe("breadcrumbJsonLd", () => {
 
 describe("siteJsonLd", () => {
   it("describes the site, its publisher and the repository", () => {
-    const graph = siteJsonLd("About.")["@graph"] as Array<{ "@type": string }>;
+    const graph = siteJsonLd("About.")["@graph"];
     expect(graph.map((node) => node["@type"])).toEqual([
       "WebSite",
       "Organization",

@@ -102,8 +102,8 @@ function demoAllowanceResult(token: Hex, data: Hex) {
  * Reads are batched through Multicall3. Forward the batch to the real
  * chain, then overwrite allowance results that a demo approve changed.
  */
-async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
-  const result = (await forward()) as Hex;
+async function patchMulticall(data: Hex, forward: () => Promise<Hex>) {
+  const result = await forward();
   let calls: ReadonlyArray<{ target: Hex; callData: Hex }>;
   try {
     const decoded = decodeFunctionData({ abi: multicall3Abi, data });

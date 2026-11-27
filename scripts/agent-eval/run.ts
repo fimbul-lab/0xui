@@ -13,8 +13,29 @@ import type { Task } from "./tasks.ts";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject;
+type JsonObject = { [key: string]: JsonValue };
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+  if (typeof value === "object") {
+    return Object.values(value).every(isJsonValue);
+  }
+  return false;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && isJsonValue(value);
+}
 
 type Options = {
   tasks: Array<string>;
@@ -165,7 +186,7 @@ async function scaffold(work: string, registryUrl: string) {
   const app = join(work, "app");
   const configPath = join(app, "components.json");
   const config: unknown = JSON.parse(await readFile(configPath, "utf8"));
-  if (!isRecord(config)) {
+  if (!isJsonObject(config)) {
     throw new Error(`${configPath} is not a JSON object.`);
   }
   config.registries = { "@0xui": registryUrl };
@@ -206,7 +227,7 @@ type Transcript = {
   finalMessage?: string;
 };
 
-type ContentBlock = { type: string; id?: string; name?: string; input?: Record<string, unknown> };
+type ContentBlock = { type: string; id?: string; name?: string; input?: JsonObject };
 
 function summarizeTool(b: ContentBlock) {
   const i = b.input ?? {};
@@ -215,29 +236,29 @@ function summarizeTool(b: ContentBlock) {
 }
 
 /** One line of `claude -p --output-format stream-json`, or undefined when it isn't an object. */
-function parseEvent(line: string): Record<string, unknown> | undefined {
+function parseEvent(line: string): JsonObject | undefined {
   try {
     const value: unknown = JSON.parse(line);
-    return isRecord(value) ? value : undefined;
+    return isJsonObject(value) ? value : undefined;
   } catch {
     return undefined;
   }
 }
 
 /** The content blocks of an assistant event's message. */
-function contentBlocks(ev: Record<string, unknown>): Array<ContentBlock> {
+function contentBlocks(ev: JsonObject): Array<ContentBlock> {
   const message = ev.message;
-  if (!isRecord(message) || !Array.isArray(message.content)) {
+  if (!isJsonObject(message) || !Array.isArray(message.content)) {
     return [];
   }
   return message.content.flatMap((block: unknown) =>
-    isRecord(block) && typeof block.type === "string"
+    isJsonObject(block) && typeof block.type === "string"
       ? [
           {
             type: block.type,
             id: typeof block.id === "string" ? block.id : undefined,
             name: typeof block.name === "string" ? block.name : undefined,
-            input: isRecord(block.input) ? block.input : undefined,
+            input: isJsonObject(block.input) ? block.input : undefined,
           },
         ]
       : [],
@@ -307,20 +328,22 @@ type Registry = Map<string, Array<string>>; // item name -> file paths relative 
 async function loadRegistry(): Promise<Registry> {
   // The source manifest: the built index leaves out the unlisted items.
   const index: unknown = JSON.parse(await readFile(join(ROOT, "registry.json"), "utf8"));
-  if (!isRecord(index) || !Array.isArray(index.items)) {
+  if (!isJsonObject(index) || !Array.isArray(index.items)) {
     throw new Error("registry.json has no items.");
   }
   const items: Array<unknown> = index.items;
   const reg: Registry = new Map();
   for (const item of items) {
-    if (!isRecord(item) || typeof item.name !== "string") {
+    if (!isJsonObject(item) || typeof item.name !== "string") {
       continue;
     }
     const files: Array<unknown> = Array.isArray(item.files) ? item.files : [];
     reg.set(
       item.name,
       files.flatMap((f) =>
-        isRecord(f) && typeof f.path === "string" ? [f.path.replace(/^registry\/[^/]+\//, "")] : [],
+        isJsonObject(f) && typeof f.path === "string"
+          ? [f.path.replace(/^registry\/[^/]+\//, "")]
+          : [],
       ),
     );
   }
@@ -571,19 +594,20 @@ function summary(results: Array<Result>, o: Options) {
     return `| ${r.task} | ${yn(r.pass)} | ${yn(c.build.pass)} | ${yn(c.items.pass)} | ${yn(c.forbid.pass)} | ${yn(c.required.pass)} | ${r.agent.skillUsed ? "yes" : "no"} | ${r.agent.toolCalls} | ${r.agent.turns ?? "–"} | ${money(r.agent.costUsd)} | ${mins(r.agent.wallMs)} |`;
   });
   const passed = results.filter((r) => r.pass).length;
-  const failures = results
-    .filter((r) => !r.pass)
-    .map((r) => {
-      const bad = Object.entries(r.checks)
-        .filter(([, c]) => !c.pass)
-        .map(([k, c]) => `- ${k}: ${k === "build" ? "see build.log" : c.detail}`);
-      const agentNote = r.agent.timedOut
-        ? ["- agent timed out"]
-        : r.agent.exitCode !== 0
-          ? [`- agent exited ${r.agent.exitCode}`]
-          : [];
-      return [`### ${r.task}`, ...agentNote, ...bad].join("\n");
-    });
+  const failures = results.flatMap((r) => {
+    if (r.pass) {
+      return [];
+    }
+    const bad = Object.entries(r.checks)
+      .filter(([, c]) => !c.pass)
+      .map(([k, c]) => `- ${k}: ${k === "build" ? "see build.log" : c.detail}`);
+    const agentNote = r.agent.timedOut
+      ? ["- agent timed out"]
+      : r.agent.exitCode !== 0
+        ? [`- agent exited ${r.agent.exitCode}`]
+        : [];
+    return [[`### ${r.task}`, ...agentNote, ...bad].join("\n")];
+  });
   return [
     `## 0xui agent eval: ${passed}/${results.length} passed`,
     "",

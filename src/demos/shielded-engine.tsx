@@ -11,7 +11,7 @@ import type { ShieldedDemoProps } from "./shielded-demo";
 
 const weth = demoWeth.address;
 
-const act = (label: string, run: () => unknown) => (
+const act = <Result,>(label: string, run: () => Result) => (
   <Button
     variant="outline"
     size="sm"
