@@ -7,7 +7,7 @@
 // Native ETH: the manager only holds WETH. Deposits send ETH as value and
 // add `refundETH`. Withdrawals collect to the manager itself, then
 // `unwrapWETH9` the WETH side and `sweepToken` the other side to the user.
-import { encodeFunctionData, parseAbi, zeroAddress } from "viem";
+import { encodeFunctionData, isAddress, parseAbi, zeroAddress } from "viem";
 import type { Address, Hex } from "viem";
 
 /** Anything with an address and decimals: a token list `Token` fits. */
@@ -18,6 +18,14 @@ export type PositionTransaction = { to: Address; data: Hex; value?: bigint };
 export const NATIVE_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 const isNative = (token: TokenLike) => token.address.toLowerCase() === NATIVE_ADDRESS.toLowerCase();
 const MAX_UINT128 = 2n ** 128n - 1n;
+
+/** A token's address, checked before it goes into calldata. */
+function tokenAddress(token: TokenLike): Address {
+  if (!isAddress(token.address, { strict: false })) {
+    throw new Error(`${token.symbol} has an invalid address: ${token.address}`);
+  }
+  return token.address;
+}
 
 export const positionManagerAbi = parseAbi([
   "function mint((address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, address recipient, uint256 deadline) params) payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
@@ -42,7 +50,7 @@ export function deadlineIn(seconds: number) {
 
 function poolAddress(token: TokenLike, weth: Address | undefined) {
   if (!isNative(token)) {
-    return token.address as Address;
+    return tokenAddress(token);
   }
   if (!weth) {
     throw new Error(`Pass \`weth\` to use native ${token.symbol}.`);
@@ -51,8 +59,9 @@ function poolAddress(token: TokenLike, weth: Address | undefined) {
 }
 
 function multicall(to: Address, calls: Array<Hex>, value?: bigint): PositionTransaction {
-  if (calls.length === 1) {
-    return value ? { to, data: calls[0], value } : { to, data: calls[0] };
+  const [only, ...rest] = calls;
+  if (only !== undefined && rest.length === 0) {
+    return value ? { to, data: only, value } : { to, data: only };
   }
   const data = encodeFunctionData({
     abi: positionManagerAbi,
@@ -114,7 +123,7 @@ function collectCalls({
     encodeFunctionData({
       abi: positionManagerAbi,
       functionName: "sweepToken",
-      args: [other.address as Address, otherMin, recipient],
+      args: [tokenAddress(other), otherMin, recipient],
     }),
   ];
 }

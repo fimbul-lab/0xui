@@ -63,16 +63,17 @@ export function getDepositAmounts({
       ? getDependentAmount({ sqrtPriceX96, ...range, amount: typedAmount, token: typed.side })
       : undefined;
 
-  const text = {
-    [typed.side]: typedText,
-    [other]: dependent ? formatUnits(dependent, tokens[other].decimals) : "",
-  };
-  const amount = { [typed.side]: typedAmount ?? 0n, [other]: dependent ?? 0n };
+  const dependentText = dependent ? formatUnits(dependent, tokens[other].decimals) : "";
+  const pair = <T>(typedValue: T, otherValue: T): Record<DepositSide, T> =>
+    typed.side === "token0"
+      ? { token0: typedValue, token1: otherValue }
+      : { token0: otherValue, token1: typedValue };
+  const amount = pair(typedAmount ?? 0n, dependent ?? 0n);
   return {
     mode,
-    text: text as Record<DepositSide, string>,
-    amount0: amount.token0!,
-    amount1: amount.token1!,
+    text: pair(typedText, dependentText),
+    amount0: amount.token0,
+    amount1: amount.token1,
   };
 }
 
@@ -164,11 +165,16 @@ export function mintTransactionQueryOptions<
       request?.amount1Min.toString(),
       request?.recipient,
     ] as const,
-    queryFn: () =>
-      getTransaction({
-        ...request!,
+    queryFn: () => {
+      // `enabled` keeps the query from running without a request.
+      if (!request) {
+        throw new Error("No mint request to build a transaction for.");
+      }
+      return getTransaction({
+        ...request,
         deadline: BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds),
-      }),
+      });
+    },
     enabled: Boolean(request),
     staleTime: half,
     refetchInterval: half,
@@ -245,10 +251,11 @@ export function addLiquidityConfirmText({
   if (isFullRange(range.tickLower, range.tickUpper, pool.tickSpacing)) {
     return `${deposit} over the full price range${on}`;
   }
-  const [a, b] = [
+  const edges = [
     displayPrice(range.tickLower, pool, invert),
     displayPrice(range.tickUpper, pool, invert),
-  ].sort((m, n) => m - n);
-  const between = `${formatPrice(a!, { locale })} and ${formatPrice(b!, { locale })} ${priceUnit(token0, token1, invert)}`;
+  ];
+  const [a, b] = [Math.min(...edges), Math.max(...edges)];
+  const between = `${formatPrice(a, { locale })} and ${formatPrice(b, { locale })} ${priceUnit(token0, token1, invert)}`;
   return `${deposit} between ${between}${on}`;
 }

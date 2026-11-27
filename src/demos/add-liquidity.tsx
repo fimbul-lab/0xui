@@ -20,8 +20,9 @@ const pools = {
   500: demoUsdcEthPool,
   3000: createDemoPool({ price: 1 / 3150, decimals0: 6, decimals1: 18, tickSpacing: 60, seed: 11 }),
 };
+const isPoolFee = (fee: number): fee is keyof typeof pools => fee in pools;
 const tiers: Array<FeeTier> = defaultFeeTiers
-  .filter((tier) => tier.fee in pools)
+  .filter((tier) => isPoolFee(tier.fee))
   .map((tier) => ({ ...tier, share: tier.fee === 500 ? 0.74 : 0.26 }));
 
 export const Default = demo(() => {
@@ -38,7 +39,11 @@ export const Default = demo(() => {
         bins={loaded ? bins : undefined}
         fee={fee}
         feeTiers={tiers}
-        onFeeChange={(tier) => setFee(tier.fee as keyof typeof pools)}
+        onFeeChange={(tier) => {
+          if (isPoolFee(tier.fee)) {
+            setFee(tier.fee);
+          }
+        }}
         getTransaction={getTransaction}
         spender={positionManager}
         defaultInvert

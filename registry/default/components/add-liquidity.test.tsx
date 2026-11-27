@@ -79,16 +79,22 @@ describe("v3Mint", () => {
     expect(tx.value).toBe(10n ** 18n);
     const outer = decodeFunctionData({ abi, data: tx.data });
     expect(outer.functionName).toBe("multicall");
-    const [mint, refund] = (outer.args as [Array<Hex>])[0].map((data) =>
-      decodeFunctionData({ abi, data }),
-    );
-    expect(refund.functionName).toBe("refundETH");
-    expect(mint.functionName).toBe("mint");
-    const params = (mint.args as unknown as [Record<string, unknown>])[0];
-    expect(params.token1).toBe(weth);
-    expect(params.fee).toBe(500);
-    expect(params.tickLower).toBe(range.tickLower);
-    expect(params.amount0Min).toBe(2985n * 10n ** 6n);
+    if (outer.functionName !== "multicall") {
+      throw new Error(`Expected a multicall, got ${outer.functionName}`);
+    }
+    const [mint, refund] = outer.args[0].map((data) => decodeFunctionData({ abi, data }));
+    expect(refund).toMatchObject({ functionName: "refundETH" });
+    expect(mint).toMatchObject({
+      functionName: "mint",
+      args: [
+        {
+          token1: weth,
+          fee: 500,
+          tickLower: range.tickLower,
+          amount0Min: 2985n * 10n ** 6n,
+        },
+      ],
+    });
   });
 
   it("sends a plain mint for two ERC-20s", () => {
@@ -167,8 +173,8 @@ describe("AddLiquidity", () => {
     );
     await userEvent.click(button);
     await waitFor(() => expect(sent).toHaveLength(1));
-    expect(sent[0].to.toLowerCase()).toBe(positionManager.toLowerCase());
-    expect(BigInt(sent[0].value!)).toBe(10n ** 18n);
+    expect(sent[0]!.to.toLowerCase()).toBe(positionManager.toLowerCase());
+    expect(BigInt(sent[0]!.value!)).toBe(10n ** 18n);
   });
 
   it("locks the side a single-sided range doesn't take", async () => {

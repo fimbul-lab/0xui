@@ -29,12 +29,15 @@ export const slippageWarningText: Record<SlippageWarning, string> = {
   high: "High slippage: a bot could trade ahead of you and take the difference.",
 };
 
+/** A typed custom percent, read by `parseSlippageInput`. */
+export type SlippageInput = { text?: string; bps?: number };
+
 /**
  * Read a typed custom percent. `text` is undefined when the keystroke should
  * be refused (more than two digits either side of the point); `bps` is set
  * when the text is a usable setting, above 0 and at most 50%.
  */
-export function parseSlippageInput(raw: string): { text?: string; bps?: number } {
+export function parseSlippageInput(raw: string): SlippageInput {
   const text = raw.replace(",", ".");
   if (!/^\d{0,2}(\.\d{0,2})?$/.test(text)) {
     return {};

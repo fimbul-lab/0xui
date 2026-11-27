@@ -371,7 +371,7 @@ export function rangeAroundTick(
   percent: number,
   tickSpacing: number,
   { invert = false }: { invert?: boolean } = {},
-): { tickLower: number; tickUpper: number } {
+): TickRange {
   // Symmetric in the displayed price: mirror the ticks, build, mirror back.
   if (invert) {
     const r = rangeAroundTick(-currentTick, percent, tickSpacing);
@@ -411,8 +411,7 @@ export function ticksFromPositions(
     }
   }
   const ticks: Array<TickData> = [...net]
-    .filter(([, n]) => n !== 0n)
-    .map(([tick, liquidityNet]) => ({ tick, liquidityNet }))
+    .flatMap(([tick, liquidityNet]) => (liquidityNet === 0n ? [] : [{ tick, liquidityNet }]))
     .sort((a, b) => a.tick - b.tick);
   return { ticks, liquidity };
 }
@@ -437,7 +436,7 @@ export function getLiquidityBins(
   for (const t of ticks) {
     net.set(t.tick, (net.get(t.tick) ?? 0n) + t.liquidityNet);
   }
-  const sortedTicks = [...net.keys()].sort((a, b) => a - b);
+  const sortedNet = [...net].sort(([a], [b]) => a - b);
 
   const start = Math.floor(pool.tick / step) * step;
   const sqrtCurrent = Math.sqrt(Math.pow(1.0001, pool.tick));
@@ -447,12 +446,12 @@ export function getLiquidityBins(
   // Sum of liquidityNet for initialized ticks in (from, to].
   const netBetween = (from: number, to: number) => {
     let sum = 0n;
-    for (const tick of sortedTicks) {
+    for (const [tick, liquidityNet] of sortedNet) {
       if (tick > to) {
         break;
       }
       if (tick > from) {
-        sum += net.get(tick)!;
+        sum += liquidityNet;
       }
     }
     return sum;
@@ -542,8 +541,7 @@ export function getDepthCurve(bins: ReadonlyArray<LiquidityBin>, currentPrice: n
     });
   }
   let amount1 = 0;
-  for (let i = bins.length - 1; i >= 0; i--) {
-    const bin = bins[i];
+  for (const bin of [...bins].reverse()) {
     if (bin.amount1 <= 0) {
       continue;
     }
