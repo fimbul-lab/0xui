@@ -187,14 +187,25 @@ describe("MixerWithdrawForm", () => {
     connect = false,
     crowd = 0,
     engineOptions = {},
+    quotedFeeBps,
   }: {
     deposited?: boolean;
     connect?: boolean;
     crowd?: number;
     engineOptions?: Parameters<typeof createMockMixerEngine>[0];
+    /** The relayer's fee in quotes, before the one it charges by the time the proof is made. */
+    quotedFeeBps?: number;
   } = {}) {
     const user = userEvent.setup();
     const engine = createMockMixerEngine({ speed: Infinity, ...engineOptions });
+    // Quotes from an engine with the quoted fee; everything else from `engine`.
+    const shown =
+      quotedFeeBps === undefined
+        ? engine
+        : {
+            ...engine,
+            quote: createMockMixerEngine({ ...engineOptions, relayerFeeBps: quotedFeeBps }).quote,
+          };
     const { note, commitment } = await engine.createNote(small);
     if (deposited) {
       engine.simulate.deposit(commitment);
@@ -204,7 +215,7 @@ describe("MixerWithdrawForm", () => {
     }
     const { config, sends } = chainWith();
     const onSubmitted = vi.fn();
-    renderWithWagmi(<MixerWithdrawForm engine={engine} onSubmitted={onSubmitted} />, { config });
+    renderWithWagmi(<MixerWithdrawForm engine={shown} onSubmitted={onSubmitted} />, { config });
     if (connect) {
       await act(() => connectMock(config));
     }
@@ -274,26 +285,23 @@ describe("MixerWithdrawForm", () => {
     expect(withdrawal).toMatchObject({ recipient: RECIPIENT, via: "relayer" });
     // Nothing handed out links the withdrawal to its deposit.
     expect(
-      JSON.stringify(withdrawal, (_, v) => (typeof v === "bigint" ? `${v}` : v)),
+      JSON.stringify(withdrawal, (_, v: unknown) => (typeof v === "bigint" ? `${v}` : v)),
     ).not.toContain(commitment.slice(2));
     expect(screen.getByLabelText("Note")).toHaveValue("");
     expect(root()).toHaveAttribute("data-phase", "idle");
   });
 
   it("asks before sending when the relayer's fee went up", async () => {
-    const { user, engine, onSubmitted, paste, enterRecipient } = await setup({ crowd: 50 });
+    // The fee doubles between the quote on screen and the proof.
+    const { user, onSubmitted, paste, enterRecipient } = await setup({
+      crowd: 50,
+      engineOptions: { relayerFeeBps: 60 },
+      quotedFeeBps: 30,
+    });
     await paste();
     await enterRecipient();
     const start = await button("Withdraw 0.1 ETH");
-    // The fee doubles between the quote on screen and the proof.
-    const prove = engine.prove.bind(engine);
-    vi.spyOn(engine, "prove").mockImplementation(async (draft, options) => {
-      const proved = await prove(draft, options);
-      return {
-        ...proved,
-        quote: { fee: proved.quote.fee * 2n, received: proved.quote.received - proved.quote.fee },
-      };
-    });
+    expect(root()).toHaveTextContent(/Relayer fee\s*0\.0003\s*ETH/);
     await user.click(start);
 
     const confirm = await button("Withdraw at the new fee");
