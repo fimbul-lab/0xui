@@ -59,12 +59,12 @@ const { name, checksummed, isLoading } = useAddressName(address);
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `address` | `Address` | — | Address to show. Any casing works. |
-| `ens` | `boolean` | `true` | Resolve and show the ENS name. |
-| `name` | `string` | — | Name to show instead. Skips the ENS lookup. |
-| `variant` | `"inline" \| "pill"` | `"inline"` | Inline text or a bordered chip. |
-| `copyable` | `boolean` | `true` | Show a copy button. |
-| `explorer` | `boolean` | `false` | Link to the address on the current chain's explorer. |
-| `truncate` | `{ start?: number; end?: number }` | `{ start: 6, end: 4 }` | Characters kept when truncating. |
+| Prop       | Type                               | Default                | Description                                          |
+| ---------- | ---------------------------------- | ---------------------- | ---------------------------------------------------- |
+| `address`  | `Address`                          | —                      | Address to show. Any casing works.                   |
+| `ens`      | `boolean`                          | `true`                 | Resolve and show the ENS name.                       |
+| `name`     | `string`                           | —                      | Name to show instead. Skips the ENS lookup.          |
+| `variant`  | `"inline" \| "pill"`               | `"inline"`             | Inline text or a bordered chip.                      |
+| `copyable` | `boolean`                          | `true`                 | Show a copy button.                                  |
+| `explorer` | `boolean`                          | `false`                | Link to the address on the current chain's explorer. |
+| `truncate` | `{ start?: number; end?: number }` | `{ start: 6, end: 4 }` | Characters kept when truncating.                     |

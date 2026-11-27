@@ -11,10 +11,10 @@
 // Prices are always "token1 per token0" in human units unless a function
 // says otherwise. Flip with `invert` at the edge (UI), never in the math.
 
-export const MIN_TICK = -887272;
-export const MAX_TICK = 887272;
-export const MIN_SQRT_RATIO = 4295128739n;
-export const MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342n;
+export const MIN_TICK = -887_272;
+export const MAX_TICK = 887_272;
+export const MIN_SQRT_RATIO = 4_295_128_739n;
+export const MAX_SQRT_RATIO = 1_461_446_703_485_210_103_287_273_052_203_988_822_378_723_970_342n;
 export const Q96 = 2n ** 96n;
 
 const LOG_BASE = Math.log(1.0001);
@@ -25,7 +25,7 @@ export const FEE_TIERS = [
   { fee: 100, tickSpacing: 1 },
   { fee: 500, tickSpacing: 10 },
   { fee: 3000, tickSpacing: 60 },
-  { fee: 10000, tickSpacing: 200 },
+  { fee: 10_000, tickSpacing: 200 },
 ] as const;
 
 /** Pool state the components need. Read it from the pool's `slot0` and `liquidity`, or your indexer. */
@@ -77,8 +77,12 @@ export function tickToPrice(tick: number, decimals0: number, decimals1: number) 
 
 /** The tick at or below a human price (token1 per token0). */
 export function priceToTick(price: number, decimals0: number, decimals1: number) {
-  if (!(price > 0)) return MIN_TICK;
-  if (!Number.isFinite(price)) return MAX_TICK;
+  if (!(price > 0)) {
+    return MIN_TICK;
+  }
+  if (!Number.isFinite(price)) {
+    return MAX_TICK;
+  }
   const raw = price / Math.pow(10, decimals0 - decimals1);
   // Nudge by a hair so an exact tick price doesn't floor to the tick below.
   const tick = Math.floor(Math.log(raw) / LOG_BASE + 1e-9);
@@ -121,8 +125,12 @@ export function isFullRange(tickLower: number, tickUpper: number, tickSpacing: n
 
 /** Format a price for labels: 6 significant digits, compact above a billion, 0 and ∞ at the full-range ends. */
 export function formatPrice(price: number, { locale }: { locale?: string } = {}) {
-  if (!Number.isFinite(price)) return "∞";
-  if (price === 0) return "0";
+  if (!Number.isFinite(price)) {
+    return "∞";
+  }
+  if (price === 0) {
+    return "0";
+  }
   const abs = Math.abs(price);
   if (abs < 1e-8 || abs >= 1e15) {
     return price.toExponential(3).replace("e+", "e");
@@ -138,25 +146,25 @@ export function formatPrice(price: number, { locale }: { locale?: string } = {})
 /* ------------------------------------------------------------------------ */
 
 const TICK_RATIOS: ReadonlyArray<readonly [number, bigint]> = [
-  [0x2, 0xfff97272373d413259a46990580e213an],
-  [0x4, 0xfff2e50f5f656932ef12357cf3c7fdccn],
-  [0x8, 0xffe5caca7e10e4e61c3624eaa0941cd0n],
-  [0x10, 0xffcb9843d60f6159c9db58835c926644n],
-  [0x20, 0xff973b41fa98c081472e6896dfb254c0n],
-  [0x40, 0xff2ea16466c96a3843ec78b326b52861n],
-  [0x80, 0xfe5dee046a99a2a811c461f1969c3053n],
-  [0x100, 0xfcbe86c7900a88aedcffc83b479aa3a4n],
-  [0x200, 0xf987a7253ac413176f2b074cf7815e54n],
-  [0x400, 0xf3392b0822b70005940c7a398e4b70f3n],
-  [0x800, 0xe7159475a2c29b7443b29c7fa6e889d9n],
-  [0x1000, 0xd097f3bdfd2022b8845ad8f792aa5825n],
-  [0x2000, 0xa9f746462d870fdf8a65dc1f90e061e5n],
-  [0x4000, 0x70d869a156d2a1b890bb3df62baf32f7n],
-  [0x8000, 0x31be135f97d08fd981231505542fcfa6n],
-  [0x10000, 0x9aa508b5b7a84e1c677de54f3e99bc9n],
-  [0x20000, 0x5d6af8dedb81196699c329225ee604n],
-  [0x40000, 0x2216e584f5fa1ea926041bedfe98n],
-  [0x80000, 0x48a170391f7dc42444e8fa2n],
+  [0x2, 0xff_f9_72_72_37_3d_41_32_59_a4_69_90_58_0e_21_3an],
+  [0x4, 0xff_f2_e5_0f_5f_65_69_32_ef_12_35_7c_f3_c7_fd_ccn],
+  [0x8, 0xff_e5_ca_ca_7e_10_e4_e6_1c_36_24_ea_a0_94_1c_d0n],
+  [0x10, 0xff_cb_98_43_d6_0f_61_59_c9_db_58_83_5c_92_66_44n],
+  [0x20, 0xff_97_3b_41_fa_98_c0_81_47_2e_68_96_df_b2_54_c0n],
+  [0x40, 0xff_2e_a1_64_66_c9_6a_38_43_ec_78_b3_26_b5_28_61n],
+  [0x80, 0xfe_5d_ee_04_6a_99_a2_a8_11_c4_61_f1_96_9c_30_53n],
+  [0x1_00, 0xfc_be_86_c7_90_0a_88_ae_dc_ff_c8_3b_47_9a_a3_a4n],
+  [0x2_00, 0xf9_87_a7_25_3a_c4_13_17_6f_2b_07_4c_f7_81_5e_54n],
+  [0x4_00, 0xf3_39_2b_08_22_b7_00_05_94_0c_7a_39_8e_4b_70_f3n],
+  [0x8_00, 0xe7_15_94_75_a2_c2_9b_74_43_b2_9c_7f_a6_e8_89_d9n],
+  [0x10_00, 0xd0_97_f3_bd_fd_20_22_b8_84_5a_d8_f7_92_aa_58_25n],
+  [0x20_00, 0xa9_f7_46_46_2d_87_0f_df_8a_65_dc_1f_90_e0_61_e5n],
+  [0x40_00, 0x70_d8_69_a1_56_d2_a1_b8_90_bb_3d_f6_2b_af_32_f7n],
+  [0x80_00, 0x31_be_13_5f_97_d0_8f_d9_81_23_15_05_54_2f_cf_a6n],
+  [0x1_00_00, 0x9_aa_50_8b_5b_7a_84_e1_c6_77_de_54_f3_e9_9b_c9n],
+  [0x2_00_00, 0x5d_6a_f8_de_db_81_19_66_99_c3_29_22_5e_e6_04n],
+  [0x4_00_00, 0x22_16_e5_84_f5_fa_1e_a9_26_04_1b_ed_fe_98n],
+  [0x8_00_00, 0x4_8a_17_03_91_f7_dc_42_44_4e_8f_a2n],
 ];
 
 /** Exact `sqrt(1.0001^tick) * 2^96`, the same value the pool contract uses. */
@@ -167,12 +175,16 @@ export function getSqrtRatioAtTick(tick: number) {
   const absTick = Math.abs(tick);
   let ratio =
     absTick & 0x1
-      ? 0xfffcb933bd6fad37aa2d162d1a594001n
-      : 0x100000000000000000000000000000000n;
+      ? 0xff_fc_b9_33_bd_6f_ad_37_aa_2d_16_2d_1a_59_40_01n
+      : 0x1_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00n;
   for (const [bit, factor] of TICK_RATIOS) {
-    if (absTick & bit) ratio = (ratio * factor) >> 128n;
+    if (absTick & bit) {
+      ratio = (ratio * factor) >> 128n;
+    }
   }
-  if (tick > 0) ratio = MAX_UINT256 / ratio;
+  if (tick > 0) {
+    ratio = MAX_UINT256 / ratio;
+  }
   // Q128.128 to Q64.96, rounding up.
   return (ratio >> 32n) + (ratio % (1n << 32n) === 0n ? 0n : 1n);
 }
@@ -210,11 +222,15 @@ export function getAmountsForLiquidity(
   sqrtPrice: bigint,
   sqrtA: bigint,
   sqrtB: bigint,
-  liquidity: bigint
+  liquidity: bigint,
 ) {
   const [lo, hi] = sorted(sqrtA, sqrtB);
-  if (sqrtPrice <= lo) return { amount0: getAmount0ForLiquidity(lo, hi, liquidity), amount1: 0n };
-  if (sqrtPrice >= hi) return { amount0: 0n, amount1: getAmount1ForLiquidity(lo, hi, liquidity) };
+  if (sqrtPrice <= lo) {
+    return { amount0: getAmount0ForLiquidity(lo, hi, liquidity), amount1: 0n };
+  }
+  if (sqrtPrice >= hi) {
+    return { amount0: 0n, amount1: getAmount1ForLiquidity(lo, hi, liquidity) };
+  }
   return {
     amount0: getAmount0ForLiquidity(sqrtPrice, hi, liquidity),
     amount1: getAmount1ForLiquidity(lo, sqrtPrice, liquidity),
@@ -227,11 +243,15 @@ export function getLiquidityForAmounts(
   sqrtA: bigint,
   sqrtB: bigint,
   amount0: bigint,
-  amount1: bigint
+  amount1: bigint,
 ) {
   const [lo, hi] = sorted(sqrtA, sqrtB);
-  if (sqrtPrice <= lo) return getLiquidityForAmount0(lo, hi, amount0);
-  if (sqrtPrice >= hi) return getLiquidityForAmount1(lo, hi, amount1);
+  if (sqrtPrice <= lo) {
+    return getLiquidityForAmount0(lo, hi, amount0);
+  }
+  if (sqrtPrice >= hi) {
+    return getLiquidityForAmount1(lo, hi, amount1);
+  }
   const l0 = getLiquidityForAmount0(sqrtPrice, hi, amount0);
   const l1 = getLiquidityForAmount1(lo, sqrtPrice, amount1);
   return l0 < l1 ? l0 : l1;
@@ -249,9 +269,17 @@ export function getLiquidityForAmounts(
  */
 export type DepositMode = "both" | "token0" | "token1";
 
-export function getDepositMode(currentTick: number, tickLower: number, tickUpper: number): DepositMode {
-  if (currentTick < tickLower) return "token0";
-  if (currentTick >= tickUpper) return "token1";
+export function getDepositMode(
+  currentTick: number,
+  tickLower: number,
+  tickUpper: number,
+): DepositMode {
+  if (currentTick < tickLower) {
+    return "token0";
+  }
+  if (currentTick >= tickUpper) {
+    return "token1";
+  }
   return "both";
 }
 
@@ -265,9 +293,11 @@ export function getRangeStatus(
   currentTick: number,
   tickLower: number,
   tickUpper: number,
-  liquidity?: bigint
+  liquidity?: bigint,
 ): RangeStatus {
-  if (liquidity === 0n) return "closed";
+  if (liquidity === 0n) {
+    return "closed";
+  }
   return currentTick >= tickLower && currentTick < tickUpper ? "in-range" : "out-of-range";
 }
 
@@ -293,8 +323,12 @@ export function getDependentAmount({
 }): bigint | undefined {
   const sqrtA = getSqrtRatioAtTick(tickLower);
   const sqrtB = getSqrtRatioAtTick(tickUpper);
-  if (sqrtPriceX96 <= sqrtA) return token === "token0" ? 0n : undefined;
-  if (sqrtPriceX96 >= sqrtB) return token === "token1" ? 0n : undefined;
+  if (sqrtPriceX96 <= sqrtA) {
+    return token === "token0" ? 0n : undefined;
+  }
+  if (sqrtPriceX96 >= sqrtB) {
+    return token === "token1" ? 0n : undefined;
+  }
   if (token === "token0") {
     const liquidity = getLiquidityForAmount0(sqrtPriceX96, sqrtB, amount);
     return getAmount1ForLiquidity(sqrtA, sqrtPriceX96, liquidity);
@@ -307,18 +341,22 @@ export function getDependentAmount({
 export function priceRangeToTicks(
   minPrice: number,
   maxPrice: number,
-  { tickSpacing, decimals0, decimals1 }: Pick<PoolState, "tickSpacing" | "decimals0" | "decimals1">
+  { tickSpacing, decimals0, decimals1 }: Pick<PoolState, "tickSpacing" | "decimals0" | "decimals1">,
 ) {
   const { min, max } = usableTickBounds(tickSpacing);
   const lo = Math.min(minPrice, maxPrice);
   const hi = Math.max(minPrice, maxPrice);
-  let tickLower = lo <= 0 ? min : nearestUsableTick(priceToTick(lo, decimals0, decimals1), tickSpacing);
+  let tickLower =
+    lo <= 0 ? min : nearestUsableTick(priceToTick(lo, decimals0, decimals1), tickSpacing);
   let tickUpper = !Number.isFinite(hi)
     ? max
     : nearestUsableTick(priceToTick(hi, decimals0, decimals1), tickSpacing);
   if (tickUpper <= tickLower) {
-    if (tickLower + tickSpacing <= max) tickUpper = tickLower + tickSpacing;
-    else tickLower = tickUpper - tickSpacing;
+    if (tickLower + tickSpacing <= max) {
+      tickUpper = tickLower + tickSpacing;
+    } else {
+      tickLower = tickUpper - tickSpacing;
+    }
   }
   return { tickLower, tickUpper };
 }
@@ -332,8 +370,8 @@ export function rangeAroundTick(
   currentTick: number,
   percent: number,
   tickSpacing: number,
-  { invert = false }: { invert?: boolean } = {}
-): { tickLower: number; tickUpper: number } {
+  { invert = false }: { invert?: boolean } = {},
+): TickRange {
   // Symmetric in the displayed price: mirror the ticks, build, mirror back.
   if (invert) {
     const r = rangeAroundTick(-currentTick, percent, tickSpacing);
@@ -361,18 +399,19 @@ export function rangeAroundTick(
  */
 export function ticksFromPositions(
   positions: ReadonlyArray<{ tickLower: number; tickUpper: number; liquidity: bigint }>,
-  currentTick: number
+  currentTick: number,
 ) {
   const net = new Map<number, bigint>();
   let liquidity = 0n;
   for (const p of positions) {
     net.set(p.tickLower, (net.get(p.tickLower) ?? 0n) + p.liquidity);
     net.set(p.tickUpper, (net.get(p.tickUpper) ?? 0n) - p.liquidity);
-    if (currentTick >= p.tickLower && currentTick < p.tickUpper) liquidity += p.liquidity;
+    if (currentTick >= p.tickLower && currentTick < p.tickUpper) {
+      liquidity += p.liquidity;
+    }
   }
-  const ticks: TickData[] = [...net]
-    .filter(([, n]) => n !== 0n)
-    .map(([tick, liquidityNet]) => ({ tick, liquidityNet }))
+  const ticks: Array<TickData> = [...net]
+    .flatMap(([tick, liquidityNet]) => (liquidityNet === 0n ? [] : [{ tick, liquidityNet }]))
     .sort((a, b) => a.tick - b.tick);
   return { ticks, liquidity };
 }
@@ -385,14 +424,19 @@ export function ticksFromPositions(
  */
 export function getLiquidityBins(
   pool: PoolState,
-  ticks: readonly TickData[],
-  { bins = 100, binSize = pool.tickSpacing }: { bins?: number; binSize?: number } = {}
-): LiquidityBin[] {
+  ticks: ReadonlyArray<TickData>,
+  { bins = 100, binSize = pool.tickSpacing }: { bins?: number; binSize?: number } = {},
+): Array<LiquidityBin> {
   const { min, max } = usableTickBounds(pool.tickSpacing);
-  const step = Math.max(pool.tickSpacing, Math.round(binSize / pool.tickSpacing) * pool.tickSpacing);
+  const step = Math.max(
+    pool.tickSpacing,
+    Math.round(binSize / pool.tickSpacing) * pool.tickSpacing,
+  );
   const net = new Map<number, bigint>();
-  for (const t of ticks) net.set(t.tick, (net.get(t.tick) ?? 0n) + t.liquidityNet);
-  const sortedTicks = [...net.keys()].sort((a, b) => a - b);
+  for (const t of ticks) {
+    net.set(t.tick, (net.get(t.tick) ?? 0n) + t.liquidityNet);
+  }
+  const sortedNet = [...net].sort(([a], [b]) => a - b);
 
   const start = Math.floor(pool.tick / step) * step;
   const sqrtCurrent = Math.sqrt(Math.pow(1.0001, pool.tick));
@@ -402,9 +446,13 @@ export function getLiquidityBins(
   // Sum of liquidityNet for initialized ticks in (from, to].
   const netBetween = (from: number, to: number) => {
     let sum = 0n;
-    for (const tick of sortedTicks) {
-      if (tick > to) break;
-      if (tick > from) sum += net.get(tick)!;
+    for (const [tick, liquidityNet] of sortedNet) {
+      if (tick > to) {
+        break;
+      }
+      if (tick > from) {
+        sum += liquidityNet;
+      }
     }
     return sum;
   };
@@ -434,7 +482,7 @@ export function getLiquidityBins(
   // Liquidity inside a bin wider than the spacing can change part-way; take
   // the value at its lower edge, so bins line up with initialized ticks.
   const atStart = pool.liquidity - netBetween(start, pool.tick);
-  const result: LiquidityBin[] = [make(start, atStart)];
+  const result: Array<LiquidityBin> = [make(start, atStart)];
 
   let liquidity = atStart;
   for (let i = 1, lower = start + step; i <= bins && lower + step <= max; i++, lower += step) {
@@ -469,23 +517,42 @@ export type DepthPoint = {
  * sellers take). Both sides are valued in token1 at the current price so
  * they share one axis.
  */
-export function getDepthCurve(bins: readonly LiquidityBin[], currentPrice: number) {
-  const asks: DepthPoint[] = [{ price: currentPrice, percent: 0, amount0: 0, amount1: 0, value: 0 }];
-  const bids: DepthPoint[] = [{ price: currentPrice, percent: 0, amount0: 0, amount1: 0, value: 0 }];
+export function getDepthCurve(bins: ReadonlyArray<LiquidityBin>, currentPrice: number) {
+  const asks: Array<DepthPoint> = [
+    { price: currentPrice, percent: 0, amount0: 0, amount1: 0, value: 0 },
+  ];
+  const bids: Array<DepthPoint> = [
+    { price: currentPrice, percent: 0, amount0: 0, amount1: 0, value: 0 },
+  ];
   const pct = (price: number) => (price / currentPrice - 1) * 100;
 
   let amount0 = 0;
   for (const bin of bins) {
-    if (bin.amount0 <= 0) continue;
+    if (bin.amount0 <= 0) {
+      continue;
+    }
     amount0 += bin.amount0;
-    asks.push({ price: bin.priceUpper, percent: pct(bin.priceUpper), amount0, amount1: 0, value: amount0 * currentPrice });
+    asks.push({
+      price: bin.priceUpper,
+      percent: pct(bin.priceUpper),
+      amount0,
+      amount1: 0,
+      value: amount0 * currentPrice,
+    });
   }
   let amount1 = 0;
-  for (let i = bins.length - 1; i >= 0; i--) {
-    const bin = bins[i];
-    if (bin.amount1 <= 0) continue;
+  for (const bin of [...bins].reverse()) {
+    if (bin.amount1 <= 0) {
+      continue;
+    }
     amount1 += bin.amount1;
-    bids.push({ price: bin.priceLower, percent: pct(bin.priceLower), amount0: 0, amount1, value: amount1 });
+    bids.push({
+      price: bin.priceLower,
+      percent: pct(bin.priceLower),
+      amount0: 0,
+      amount1,
+      value: amount1,
+    });
   }
   return { asks, bids };
 }
@@ -496,9 +563,9 @@ export function getDepthCurve(bins: readonly LiquidityBin[], currentPrice: numbe
  * `percent`. Interpolates inside the bin the cut falls in.
  */
 export function getMarketDepth(
-  bins: readonly LiquidityBin[],
+  bins: ReadonlyArray<LiquidityBin>,
   currentPrice: number,
-  percent: number
+  percent: number,
 ) {
   const upPrice = currentPrice * (1 + percent / 100);
   const downPrice = currentPrice * (1 - percent / 100);
@@ -507,11 +574,17 @@ export function getMarketDepth(
   for (const bin of bins) {
     if (bin.amount0 > 0) {
       const lo = Math.max(bin.priceLower, currentPrice);
-      if (lo < upPrice) amount0 += bin.amount0 * shareOfBin(lo, bin.priceUpper, Math.min(upPrice, bin.priceUpper), "0");
+      if (lo < upPrice) {
+        amount0 +=
+          bin.amount0 * shareOfBin(lo, bin.priceUpper, Math.min(upPrice, bin.priceUpper), "0");
+      }
     }
     if (bin.amount1 > 0) {
       const hi = Math.min(bin.priceUpper, currentPrice);
-      if (hi > downPrice) amount1 += bin.amount1 * shareOfBin(bin.priceLower, hi, Math.max(downPrice, bin.priceLower), "1");
+      if (hi > downPrice) {
+        amount1 +=
+          bin.amount1 * shareOfBin(bin.priceLower, hi, Math.max(downPrice, bin.priceLower), "1");
+      }
     }
   }
   return {
@@ -529,7 +602,9 @@ export function getMarketDepth(
 // Share of a bin's token amount between its near edge and `cut`, using the
 // constant-liquidity curve: token0 ∝ 1/√p, token1 ∝ √p.
 function shareOfBin(lo: number, hi: number, cut: number, side: "0" | "1") {
-  if (hi <= lo) return 0;
+  if (hi <= lo) {
+    return 0;
+  }
   if (side === "0") {
     const total = 1 / Math.sqrt(lo) - 1 / Math.sqrt(hi);
     return total > 0 ? (1 / Math.sqrt(lo) - 1 / Math.sqrt(cut)) / total : 0;
@@ -554,7 +629,11 @@ export function priceUnit(token0: { symbol: string }, token1: { symbol: string }
 }
 
 /** Price at a tick in the displayed direction. */
-export function displayPrice(tick: number, pool: Pick<PoolState, "decimals0" | "decimals1">, invert = false) {
+export function displayPrice(
+  tick: number,
+  pool: Pick<PoolState, "decimals0" | "decimals1">,
+  invert = false,
+) {
   const price = tickToPrice(tick, pool.decimals0, pool.decimals1);
   return invert ? 1 / price : price;
 }
@@ -563,7 +642,12 @@ export function displayPrice(tick: number, pool: Pick<PoolState, "decimals0" | "
  * Move one edge of a range to `tick`, snapped to the spacing and kept one
  * spacing away from the other edge and inside the usable ticks.
  */
-export function moveRangeEdge(range: TickRange, edge: "tickLower" | "tickUpper", tick: number, tickSpacing: number): TickRange {
+export function moveRangeEdge(
+  range: TickRange,
+  edge: "tickLower" | "tickUpper",
+  tick: number,
+  tickSpacing: number,
+): TickRange {
   const { min, max } = usableTickBounds(tickSpacing);
   const t = Math.max(min, Math.min(max, Math.round(tick / tickSpacing) * tickSpacing));
   return edge === "tickLower"
@@ -572,7 +656,11 @@ export function moveRangeEdge(range: TickRange, edge: "tickLower" | "tickUpper",
 }
 
 /** Slide a whole range by `shift` ticks (snapped), or undefined when it would leave the usable ticks. */
-export function shiftRange(range: TickRange, shift: number, tickSpacing: number): TickRange | undefined {
+export function shiftRange(
+  range: TickRange,
+  shift: number,
+  tickSpacing: number,
+): TickRange | undefined {
   const { min, max } = usableTickBounds(tickSpacing);
   const s = Math.round(shift / tickSpacing) * tickSpacing;
   const next = { tickLower: range.tickLower + s, tickUpper: range.tickUpper + s };
@@ -606,12 +694,12 @@ export type Position<T = { symbol: string; decimals: number }> = {
 export function getPositionAmounts(
   position: Pick<Position, "tickLower" | "tickUpper" | "liquidity">,
   pool: Pick<PoolState, "tick" | "sqrtPriceX96">,
-  { liquidity = position.liquidity }: { liquidity?: bigint } = {}
+  { liquidity = position.liquidity }: { liquidity?: bigint } = {},
 ) {
   return getAmountsForLiquidity(
     pool.sqrtPriceX96 ?? getSqrtRatioAtTick(pool.tick),
     getSqrtRatioAtTick(position.tickLower),
     getSqrtRatioAtTick(position.tickUpper),
-    liquidity
+    liquidity,
   );
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { priceToTick, rangeAroundTick, tickToPrice, usableTickBounds } from "@/lib/concentrated-liquidity";
+import {
+  priceToTick,
+  rangeAroundTick,
+  tickToPrice,
+  usableTickBounds,
+} from "@/lib/concentrated-liquidity";
 import {
   activePreset,
   defaultRange,
@@ -27,7 +32,10 @@ describe("price-range-core", () => {
     expect(edgeTick("min")).toBe("tickLower");
     expect(edgeTick("min", true)).toBe("tickUpper");
     const range = rangeAroundTick(tick, 10, 10);
-    expect(stepRangeEdge(range, "min", 1, pool, true)).toEqual({ ...range, tickUpper: range.tickUpper - 10 });
+    expect(stepRangeEdge(range, "min", 1, pool, true)).toEqual({
+      ...range,
+      tickUpper: range.tickUpper - 10,
+    });
   });
 
   it("sets an edge from a typed price, snapped", () => {
@@ -42,13 +50,21 @@ describe("price-range-core", () => {
     const presets = defaultRangePresets(10);
     expect(activePreset(presets, presetRange(presets[1]!, pool), pool)?.label).toBe("±5%");
     const { min, max } = usableTickBounds(10);
-    expect(activePreset(presets, { tickLower: min, tickUpper: max }, pool)?.label).toBe("Full range");
-    expect(activePreset(presets, { tickLower: tick - 30, tickUpper: tick + 70 }, pool)).toBeUndefined();
+    expect(activePreset(presets, { tickLower: min, tickUpper: max }, pool)?.label).toBe(
+      "Full range",
+    );
+    expect(
+      activePreset(presets, { tickLower: tick - 30, tickUpper: tick + 70 }, pool),
+    ).toBeUndefined();
   });
 
   it("reads a full range as 0 to ∞", () => {
     const { min, max } = usableTickBounds(10);
-    expect(getPriceRangeState({ tickLower: min, tickUpper: max }, pool)).toMatchObject({ isFullRange: true, min: 0, max: Infinity });
+    expect(getPriceRangeState({ tickLower: min, tickUpper: max }, pool)).toMatchObject({
+      isFullRange: true,
+      min: 0,
+      max: Infinity,
+    });
   });
 
   it("parses typed prices in either decimal style", () => {

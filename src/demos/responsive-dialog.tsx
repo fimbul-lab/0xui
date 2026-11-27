@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ResponsiveDialog, type ResponsiveDialogMode } from "@/components/responsive-dialog";
+import { ResponsiveDialog } from "@/components/responsive-dialog";
+import type { ResponsiveDialogMode } from "@/components/responsive-dialog";
 import { Button } from "@/components/primitives/button";
 import { demo } from "./demo";
 

@@ -1,24 +1,31 @@
 import { act, render, renderHook, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import type { ReactElement, ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { parseEther, parseUnits } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  MOCK_TIMINGS,
-  createMockShieldedEngine,
-  type MockShieldedEngine,
-} from "../lib/mock-shielded-engine";
+import { MOCK_TIMINGS, createMockShieldedEngine } from "../lib/mock-shielded-engine";
+import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
 import type { ShieldedSync } from "../lib/shielded-engine";
 import { PrivacyBadge } from "./privacy-badge";
 import { ProofProgress, proofStepStates, useProof } from "./proof-progress";
 import { ShieldedAddress, truncateShieldedAddress } from "./shielded-address";
 import { ShieldedBalance, useShieldedBalance } from "./shielded-balance";
 import { ShieldedProvider, useShieldedAccount, useShieldedEngine } from "./shielded-provider";
-import { ShieldedSyncStatus, advanceSync, type ShieldedSyncView } from "./shielded-sync-status";
+import { ShieldedSyncStatus, advanceSync } from "./shielded-sync-status";
+import type { ShieldedSyncView } from "./shielded-sync-status";
 
-const weth = { address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", decimals: 18 } as const;
-const usdc = { address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", symbol: "USDC", decimals: 6 } as const;
+const weth = {
+  address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  symbol: "WETH",
+  decimals: 18,
+} as const;
+const usdc = {
+  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  symbol: "USDC",
+  decimals: 6,
+} as const;
 const recipient = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 
 type MockOptions = Parameters<typeof createMockShieldedEngine>[0];
@@ -53,7 +60,13 @@ const wrapperFor = (engine: MockShieldedEngine) =>
 const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
 
 /** Let work the engine scheduled for "later" run, and React catch up. */
-const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve)));
+const settle = () =>
+  act(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve);
+      }),
+  );
 
 const click = (element: HTMLElement) =>
   act(async () => {
@@ -64,9 +77,7 @@ afterEach(() => vi.useRealTimers());
 
 describe("ShieldedProvider", () => {
   it("fails loudly without a provider", () => {
-    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(() => renderHook(() => useShieldedEngine())).toThrow("inside <ShieldedProvider>");
-    error.mockRestore();
   });
 
   it("follows the account as it unlocks and locks", async () => {
@@ -91,7 +102,7 @@ describe("ShieldedProvider", () => {
     const html = renderToString(
       <ShieldedProvider engine={engine}>
         <Probe />
-      </ShieldedProvider>
+      </ShieldedProvider>,
     );
     expect(html).toBe("none:null");
   });
@@ -109,12 +120,12 @@ describe("ShieldedAddress", () => {
   });
 
   it("copies the full address", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    // Gives jsdom an in-memory clipboard.
+    userEvent.setup();
     render(<ShieldedAddress address={address} />);
 
     await click(screen.getByRole("button", { name: "Copy private address" }));
-    expect(writeText).toHaveBeenCalledWith(address);
+    expect(await navigator.clipboard.readText()).toBe(address);
     expect(screen.getByRole("status")).toHaveTextContent("Copied");
   });
 
@@ -126,7 +137,7 @@ describe("ShieldedAddress", () => {
 
   it("truncates to the requested lengths and leaves short strings alone", () => {
     expect(truncateShieldedAddress(address, { start: 5, end: 4 })).toBe(
-      `${address.slice(0, 5)}…${address.slice(-4)}`
+      `${address.slice(0, 5)}…${address.slice(-4)}`,
     );
     expect(truncateShieldedAddress("0zk1short")).toBe("0zk1short");
   });
@@ -138,7 +149,7 @@ describe("PrivacyBadge", () => {
       <>
         <PrivacyBadge privacy="private" />
         <PrivacyBadge privacy="public" />
-      </>
+      </>,
     );
     const priv = screen.getByText("Private").closest("[data-slot=privacy-badge]")!;
     const pub = screen.getByText("Public").closest("[data-slot=privacy-badge]")!;
@@ -157,7 +168,7 @@ describe("PrivacyBadge", () => {
     const { container } = render(
       <PrivacyBadge privacy="public" icon={false}>
         Public exit
-      </PrivacyBadge>
+      </PrivacyBadge>,
     );
     expect(screen.getByText("Public exit")).toBeInTheDocument();
     expect(container.querySelector("svg")).not.toBeInTheDocument();
@@ -179,7 +190,7 @@ describe("ShieldedBalance", () => {
     const { container } = renderShielded(<ShieldedBalance token={weth} chainId={1} />, engine);
 
     void engine.account.unlock("password");
-    await advance(MOCK_TIMINGS.unlock + 1_000);
+    await advance(MOCK_TIMINGS.unlock + 1000);
     const root = container.querySelector("[data-slot=shielded-balance]")!;
     expect(root).toHaveAttribute("data-phase", "loading");
     expect(screen.getByText("Loading private balance")).toBeInTheDocument();
@@ -215,7 +226,9 @@ describe("ShieldedBalance", () => {
     ]);
     expect(within(rows[0]!).getByText("0.5")).toBeInTheDocument();
     expect(within(rows[2]!).getByText("0.125")).toBeInTheDocument();
-    expect(within(rows[3]!).getByText(/only go back to the address they came from/)).toBeInTheDocument();
+    expect(
+      within(rows[3]!).getByText(/only go back to the address they came from/),
+    ).toBeInTheDocument();
     // Only the incomplete row has an action.
     expect(screen.getAllByRole("button")).toHaveLength(1);
     // Protocol vocabulary stays in the engine.
@@ -296,7 +309,10 @@ describe("ShieldedBalance", () => {
     await engine.account.unlock("password");
     await engine.sync(1);
     const { container } = renderShielded(<ShieldedBalance token={weth} chainId={1} />, engine);
-    expect(container.querySelector("[data-slot=shielded-balance]")).toHaveAttribute("data-phase", "error");
+    expect(container.querySelector("[data-slot=shielded-balance]")).toHaveAttribute(
+      "data-phase",
+      "error",
+    );
     expect(screen.getByText("Couldn't load private balance")).toBeInTheDocument();
   });
 
@@ -323,7 +339,7 @@ describe("ShieldedBalance", () => {
     function Probe() {
       const { phase, spendable, total, amounts } = useShieldedBalance({
         // Any casing matches.
-        token: weth.address.toLowerCase() as `0x${string}`,
+        token: `0x${weth.address.slice(2).toLowerCase()}`,
         chainId: 1,
       });
       return <>{`${phase} ${typeof spendable} ${spendable} ${total} ${amounts?.pending}`}</>;
@@ -340,10 +356,12 @@ describe("advanceSync", () => {
     progress,
   });
 
-  const run = (states: ShieldedSync[], from?: ShieldedSyncView) => {
-    const views: ShieldedSyncView[] = [];
+  const run = (states: Array<ShieldedSync>, from?: ShieldedSyncView) => {
+    const views: Array<ShieldedSyncView> = [];
     let view = from;
-    for (const state of states) views.push((view = advanceSync(view, state)));
+    for (const state of states) {
+      views.push((view = advanceSync(view, state)));
+    }
     return views;
   };
 
@@ -398,16 +416,16 @@ describe("ShieldedSyncStatus", () => {
     const engine = createMockShieldedEngine();
     const { container } = renderShielded(<ShieldedSyncStatus chainId={1} />, engine);
 
-    const raw: number[] = [];
+    const raw: Array<number> = [];
     engine.subscribe("sync", () => raw.push(engine.getSync(1).progress));
     void engine.account.unlock("password");
     await advance(MOCK_TIMINGS.unlock);
 
-    const shown: number[] = [];
+    const shown: Array<number> = [];
     const labels = new Set<string>();
     while (engine.getSync(1).status === "syncing") {
       shown.push(bar());
-      labels.add(screen.getByRole("status").textContent!);
+      labels.add(screen.getByRole("status").textContent);
       await advance(500);
     }
 
@@ -428,7 +446,7 @@ describe("ShieldedSyncStatus", () => {
     const engine = createMockShieldedEngine();
     renderShielded(<ShieldedSyncStatus chainId={1} />, engine);
     void engine.account.unlock("password");
-    await advance(MOCK_TIMINGS.unlock + 2_000);
+    await advance(MOCK_TIMINGS.unlock + 2000);
     expect(screen.getByText(/Step 1 of 2/)).toBeInTheDocument();
     await advance(MOCK_TIMINGS.firstScan * 0.85);
     expect(screen.getByText(/Step 2 of 2/)).toBeInTheDocument();
@@ -478,7 +496,7 @@ describe("ShieldedSyncStatus", () => {
     const engine = createMockShieldedEngine();
     renderShielded(<ShieldedSyncStatus chainId={1} variant="inline" />, engine);
     void engine.account.unlock("password");
-    await advance(MOCK_TIMINGS.unlock + 5_000);
+    await advance(MOCK_TIMINGS.unlock + 5000);
     expect(screen.getByRole("status")).toHaveTextContent(/^Finding your funds \d+%$/);
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
@@ -507,13 +525,24 @@ describe("ProofProgress", () => {
       proving: "active",
       verifying: "todo",
     });
-    expect(proofStepStates("error", "proving")).toMatchObject({ proving: "failed", verifying: "todo" });
-    expect(proofStepStates("cancelled", "verifying")).toMatchObject({ proving: "done", verifying: "todo" });
-    expect(proofStepStates("done")).toMatchObject({ "loading-circuits": "done", verifying: "done" });
+    expect(proofStepStates("error", "proving")).toMatchObject({
+      proving: "failed",
+      verifying: "todo",
+    });
+    expect(proofStepStates("cancelled", "verifying")).toMatchObject({
+      proving: "done",
+      verifying: "todo",
+    });
+    expect(proofStepStates("done")).toMatchObject({
+      "loading-circuits": "done",
+      verifying: "done",
+    });
   });
 
   it("shows stages and a hint for the running one, never a percentage", () => {
-    const { container } = render(<ProofProgress phase="loading-circuits">Unshield 0.5 WETH</ProofProgress>);
+    const { container } = render(
+      <ProofProgress phase="loading-circuits">Unshield 0.5 WETH</ProofProgress>,
+    );
     expect(container.firstChild).toHaveAttribute("data-phase", "loading-circuits");
     expect(screen.getByRole("status")).toHaveTextContent("Generating proof");
     expect(screen.getByText("Unshield 0.5 WETH")).toBeInTheDocument();
@@ -525,7 +554,14 @@ describe("ProofProgress", () => {
 
   it("shows the error and offers another try", async () => {
     const onRetry = vi.fn();
-    render(<ProofProgress phase="error" stage="proving" error={new Error("Out of memory")} onRetry={onRetry} />);
+    render(
+      <ProofProgress
+        phase="error"
+        stage="proving"
+        error={new Error("Out of memory")}
+        onRetry={onRetry}
+      />,
+    );
     expect(screen.getByRole("status")).toHaveTextContent("Couldn't generate proof");
     expect(screen.getByRole("alert")).toHaveTextContent("Out of memory");
     expect(stepStates()).toEqual(["done", "failed", "todo"]);
@@ -552,8 +588,12 @@ describe("ProofProgress", () => {
       const proof = useProof({ onProved, onError });
       return (
         <>
-          <button onClick={() => void proof.prove(draft)}>Prove</button>
-          <button onClick={proof.reset}>Reset</button>
+          <button type="button" onClick={() => void proof.prove(draft)}>
+            Prove
+          </button>
+          <button type="button" onClick={proof.reset}>
+            Reset
+          </button>
           <ProofProgress
             phase={proof.phase}
             stage={proof.stage}
@@ -633,7 +673,7 @@ describe("ProofProgress", () => {
       renderShielded(<Prover onProved={onProved} />, engine);
 
       await click(screen.getByRole("button", { name: "Prove" }));
-      await advance(1_000);
+      await advance(1000);
       await click(screen.getByRole("button", { name: "Reset" }));
       expect(phase()).toBe("idle");
 
@@ -658,8 +698,10 @@ describe("ProofProgress", () => {
 
 describe("Agents", () => {
   const agent = createAgent();
-  const onPage = () => agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
-  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) => act(() => agent.act({ steps }));
+  const onPage = () =>
+    agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+  const run = (steps: Array<{ ref: string; action: string; args?: Array<unknown> }>) =>
+    act(() => agent.act({ steps }));
 
   it("names every control apart on one page, and runs the free ones", async () => {
     const engine = await unlockedEngine({
@@ -677,13 +719,21 @@ describe("Agents", () => {
         <ProofProgress phase="error" stage="proving" error="Out of memory" onRetry={onRetry} />
         <ProofProgress phase="proving" onCancel={onCancel} />
       </>,
-      engine
+      engine,
     );
 
     const components = onPage();
-    for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    for (const e of components) {
+      expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    }
     const labels = components.map((e) => e.label!);
-    for (const label of ["Retry sync", "Retry proofs", "Copy private address", "Cancel proof", "Try again to generate the proof"]) {
+    for (const label of [
+      "Retry sync",
+      "Retry proofs",
+      "Copy private address",
+      "Cancel proof",
+      "Try again to generate the proof",
+    ]) {
       expect(labels, `${label} is missing from the snapshot`).toContain(label);
     }
     expect(collisions(labels)).toEqual([]);
@@ -703,14 +753,16 @@ describe("Agents", () => {
 });
 
 /** Pairs of labels where every word of one is in the other, which a step can't tell apart by name. */
-function collisions(labels: readonly string[]) {
+function collisions(labels: ReadonlyArray<string>) {
   const words = (label: string) => new Set(label.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
-  const found: string[] = [];
+  const found: Array<string> = [];
   labels.forEach((a, i) =>
     labels.forEach((b, j) => {
       const wb = words(b);
-      if (i !== j && [...words(a)].every((w) => wb.has(w))) found.push(`${a} / ${b}`);
-    })
+      if (i !== j && [...words(a)].every((w) => wb.has(w))) {
+        found.push(`${a} / ${b}`);
+      }
+    }),
   );
   return found;
 }

@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { getLiquidityBins, priceToTick, tickToPrice, ticksFromPositions } from "@/lib/concentrated-liquidity";
-import { nextDepthReading, niceTicks, readDepth, sampleDepth, signedPercent } from "@/lib/depth-chart-core";
+import {
+  getLiquidityBins,
+  priceToTick,
+  tickToPrice,
+  ticksFromPositions,
+} from "@/lib/concentrated-liquidity";
+import {
+  nextDepthReading,
+  niceTicks,
+  readDepth,
+  sampleDepth,
+  signedPercent,
+} from "@/lib/depth-chart-core";
 import { defaultFeeTier, defaultFeeTiers, feeTierBadge, formatFee } from "@/lib/fee-tier-core";
 import { getRangeBar } from "@/lib/range-indicator-core";
 import { formatSlippage, parseSlippageInput, slippageWarning } from "@/lib/slippage-core";
@@ -35,19 +46,46 @@ describe("slippage-core", () => {
 describe("range-indicator-core", () => {
   const pool = { tick: 0, tickSpacing: 10, decimals0: 18, decimals1: 18 };
   it("places the range and the price on the bar", () => {
-    const bar = getRangeBar({ tickLower: -300, tickUpper: 300, pool, token0: ETH, token1: USDC, locale: "en-US" });
-    expect(bar).toMatchObject({ status: "in-range", full: false, marker: 50, unit: "USDC per ETH" });
+    const bar = getRangeBar({
+      tickLower: -300,
+      tickUpper: 300,
+      pool,
+      token0: ETH,
+      token1: USDC,
+      locale: "en-US",
+    });
+    expect(bar).toMatchObject({
+      status: "in-range",
+      full: false,
+      marker: 50,
+      unit: "USDC per ETH",
+    });
     expect(bar.right - bar.left).toBeCloseTo(60);
     expect(bar.label).toMatch(/^In range\. Range .+ to .+ USDC per ETH, current price 1\.$/);
-    const closed = getRangeBar({ tickLower: 100, tickUpper: 300, pool, liquidity: 0n, token0: ETH, token1: USDC, invert: true });
+    const closed = getRangeBar({
+      tickLower: 100,
+      tickUpper: 300,
+      pool,
+      liquidity: 0n,
+      token0: ETH,
+      token1: USDC,
+      invert: true,
+    });
     expect(closed).toMatchObject({ status: "closed", unit: "ETH per USDC" });
   });
 });
 
 describe("depth-chart-core", () => {
   const tick = priceToTick(3000, 18, 6);
-  const { ticks, liquidity } = ticksFromPositions([{ tickLower: tick - 2000, tickUpper: tick + 2000, liquidity: 10n ** 17n }], tick);
-  const bins = getLiquidityBins({ tick, liquidity, tickSpacing: 10, decimals0: 18, decimals1: 6 }, ticks, { bins: 200 });
+  const { ticks, liquidity } = ticksFromPositions(
+    [{ tickLower: tick - 2000, tickUpper: tick + 2000, liquidity: 10n ** 17n }],
+    tick,
+  );
+  const bins = getLiquidityBins(
+    { tick, liquidity, tickSpacing: 10, decimals0: 18, decimals1: 6 },
+    ticks,
+    { bins: 200 },
+  );
   const price = tickToPrice(tick, 18, 6);
 
   it("samples both sides out to the window", () => {
@@ -56,7 +94,9 @@ describe("depth-chart-core", () => {
     expect(asks[10]!.percent).toBe(10);
     expect(bids[10]!.symbol).toBe("USDC");
     expect(asks[10]!.amount).toBeGreaterThan(asks[1]!.amount);
-    expect(readDepth(bins, price, 2, { token0: ETH, token1: USDC, invert: true }).symbol).toBe("USDC");
+    expect(readDepth(bins, price, 2, { token0: ETH, token1: USDC, invert: true }).symbol).toBe(
+      "USDC",
+    );
   });
 
   it("reads with the keyboard and labels moves", () => {

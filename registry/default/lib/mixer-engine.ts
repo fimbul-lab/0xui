@@ -1,5 +1,6 @@
 // Docs: https://0xui.io/components/mixer-engine.md
-import { formatUnits, type Address, type Hash, type Hex } from "viem";
+import { formatUnits } from "viem";
+import type { Address, Hash, Hex } from "viem";
 import type { ProofStage } from "@/lib/shielded-engine";
 
 /**
@@ -83,7 +84,7 @@ export const MIXER_STAGES = [
   "loading-circuits",
   "proving",
   "verifying",
-] as const satisfies readonly MixerStage[];
+] as const satisfies ReadonlyArray<MixerStage>;
 
 /** A withdrawal with its proof made. The proof is bound to the recipient and the fee. */
 export type MixerWithdrawal = {
@@ -107,7 +108,7 @@ export interface MixerEngine {
   /** Stable name, e.g. "tornado". Used in query keys. */
   readonly id: string;
   /** The pools this engine knows. */
-  readonly pools: readonly MixerPool[];
+  readonly pools: ReadonlyArray<MixerPool>;
 
   /** Make a new note for `pool`, from fresh randomness. Sends nothing. */
   createNote(pool: MixerPool): Promise<MixerNote>;

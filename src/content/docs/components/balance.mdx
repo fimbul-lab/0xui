@@ -52,22 +52,22 @@ Call `refetch()` after a transaction to update right away.
 
 ## States
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `idle` | Nothing: no address and no wallet connected. |
-| `loading` | Skeleton the height of the text, "Loading balance" for screen readers. |
-| `ready` | The formatted balance. |
-| `error` | "—", with "Couldn't load balance" on hover. |
+| `data-phase` | What the user sees                                                     |
+| ------------ | ---------------------------------------------------------------------- |
+| `idle`       | Nothing: no address and no wallet connected.                           |
+| `loading`    | Skeleton the height of the text, "Loading balance" for screen readers. |
+| `ready`      | The formatted balance.                                                 |
+| `error`      | "—", with "Couldn't load balance" on hover.                            |
 
 ## Props
 
 Also accepts the [Token Amount](/components/token-amount/) formatting props: `maxDecimals`, `compact`, `price`, `currency` and `locale`. The amount morphs when it changes. Pass `animate={false}` to turn that off.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `address` | `Address` | connected account | Whose balance. |
-| `token` | `Address` | — | ERC-20 contract. Omit for native. |
-| `chainId` | `number` | current chain | Chain to read. |
-| `symbol` | `string` | from chain | Override the symbol. |
-| `refreshInterval` | `number \| false` | `15000` | Refetch interval in ms. |
-| `enabled` | `boolean` | `true` | Set to `false` to skip reading, e.g. until a token is chosen. |
+| Prop              | Type              | Default           | Description                                                   |
+| ----------------- | ----------------- | ----------------- | ------------------------------------------------------------- |
+| `address`         | `Address`         | connected account | Whose balance.                                                |
+| `token`           | `Address`         | —                 | ERC-20 contract. Omit for native.                             |
+| `chainId`         | `number`          | current chain     | Chain to read.                                                |
+| `symbol`          | `string`          | from chain        | Override the symbol.                                          |
+| `refreshInterval` | `number \| false` | `15000`           | Refetch interval in ms.                                       |
+| `enabled`         | `boolean`         | `true`            | Set to `false` to skip reading, e.g. until a token is chosen. |

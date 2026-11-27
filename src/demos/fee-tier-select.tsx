@@ -15,7 +15,8 @@ export const WithShares = demo(() => {
   const loaded = usePretendLoad();
   return (
     <div className="w-full max-w-2xl">
-      <FeeTierSelect locale="en-US"
+      <FeeTierSelect
+        locale="en-US"
         loading={!loaded}
         defaultValue={500}
         tiers={defaultFeeTiers.map((tier, i) => ({

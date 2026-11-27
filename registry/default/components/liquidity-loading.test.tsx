@@ -14,12 +14,31 @@ import { RemoveLiquidity } from "./remove-liquidity";
 
 const ETH = { symbol: "ETH" };
 const USDC = { symbol: "USDC" };
-const usdc = { chainId: 1, address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", name: "USD Coin", symbol: "USDC", decimals: 6 } as const;
-const eth = { chainId: 1, address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", name: "Ether", symbol: "ETH", decimals: 18 } as const;
+const usdc = {
+  chainId: 1,
+  address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  name: "USD Coin",
+  symbol: "USDC",
+  decimals: 6,
+} as const;
+const eth = {
+  chainId: 1,
+  address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+  name: "Ether",
+  symbol: "ETH",
+  decimals: 18,
+} as const;
 const positionManager = "0xC36442b4a4522E871399CD717aBDD847Ab11FE88";
 const weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const tick = priceToTick(3000, 18, 6);
-const pool = { tick, sqrtPriceX96: getSqrtRatioAtTick(tick), liquidity: 0n, tickSpacing: 10, decimals0: 18, decimals1: 6 };
+const pool = {
+  tick,
+  sqrtPriceX96: getSqrtRatioAtTick(tick),
+  liquidity: 0n,
+  tickSpacing: 10,
+  decimals0: 18,
+  decimals1: 6,
+};
 
 describe("loading skeletons", () => {
   it("charts show a skeleton until bins arrive", () => {
@@ -41,7 +60,10 @@ describe("loading skeletons", () => {
     expect(screen.getByText("Loading pool")).toBeInTheDocument();
 
     render(<FeeTierSelect loading />);
-    expect(document.querySelector("[data-slot=fee-tier-select]")).toHaveAttribute("aria-busy", "true");
+    expect(document.querySelector("[data-slot=fee-tier-select]")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    );
   });
 
   it("blocks show a skeleton until their data arrives", () => {
@@ -49,10 +71,16 @@ describe("loading skeletons", () => {
     renderWithWagmi(
       <>
         <PositionCard />
-        <AddLiquidity token0={usdc} token1={eth} getTransaction={v3Mint({ positionManager, weth })} spender={positionManager} fee={500} />
+        <AddLiquidity
+          token0={usdc}
+          token1={eth}
+          getTransaction={v3Mint({ positionManager, weth })}
+          spender={positionManager}
+          fee={500}
+        />
         <RemoveLiquidity getTransaction={v3Remove({ positionManager, weth })} />
       </>,
-      { config }
+      { config },
     );
     expect(screen.getAllByText("Loading position")).toHaveLength(2);
     expect(screen.getByText("Loading pool")).toBeInTheDocument();

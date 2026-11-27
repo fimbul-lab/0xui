@@ -30,7 +30,7 @@ describe("createConnectWallet", () => {
   it("connects without any framework", async () => {
     const config = createTestConfig();
     const controller = createConnectWallet(config);
-    const phases: string[] = [];
+    const phases: Array<string> = [];
     const stop = controller.subscribe(() => phases.push(controller.get().phase));
     const [wallet] = controller.get().wallets;
 

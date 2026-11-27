@@ -26,7 +26,8 @@ const git = (/** @type {string[]} */ ...args) =>
 function commitDates() {
   /** @type {Map<string, string>} */
   const dates = new Map();
-  let log = "";
+  /** @type {string} */
+  let log;
   try {
     const shallow = () => git("rev-parse", "--is-shallow-repository").trim() === "true";
     if (shallow()) {
@@ -35,7 +36,9 @@ function commitDates() {
       } catch {
         // Checked below.
       }
-      if (shallow()) return dates;
+      if (shallow()) {
+        return dates;
+      }
     }
     log = git("log", "--format=@%cI", "--name-only");
   } catch {
@@ -43,15 +46,18 @@ function commitDates() {
   }
   let date = "";
   for (const line of log.split("\n")) {
-    if (line.startsWith("@")) date = line.slice(1);
-    else if (line && !dates.has(line)) dates.set(line, date);
+    if (line.startsWith("@")) {
+      date = line.slice(1);
+    } else if (line && !dates.has(line)) {
+      dates.set(line, date);
+    }
   }
   return dates;
 }
 
 /** Docs id of a page URL, like `components/balance`. The landing page is `index`. */
 const idOf = (/** @type {string} */ url) =>
-  new URL(url).pathname.replace(/^\/|\/$/g, "") || "index";
+  new URL(url).pathname.replaceAll(/^\/|\/$/g, "") || "index";
 
 export function sitemapOptions() {
   const dates = commitDates();

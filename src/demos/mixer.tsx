@@ -10,10 +10,10 @@ import { demoAccounts, sendDemoTransaction } from "./wagmi-config";
 export const Default = demo(function MixerDemo() {
   const [engine] = useState(() =>
     createMockMixerEngine({
-      timings: { sync: 2_500, loadCircuits: 2_000, prove: 4_000 },
+      timings: { sync: 2500, loadCircuits: 2000, prove: 4000 },
       // A real relayer sends a real transaction. This one is made up, and the demo chain mines it.
       relay: (withdrawal) =>
-        sendDemoTransaction({ from: demoAccounts[1]!, to: withdrawal.recipient }),
+        sendDemoTransaction({ from: demoAccounts[1], to: withdrawal.recipient }),
     }),
   );
   return (
@@ -21,10 +21,10 @@ export const Default = demo(function MixerDemo() {
       <Mixer
         engine={engine}
         // On a real chain the engine reads the deposit and the withdrawal. The mock is told.
-        onDeposited={(_, { commitment }) => {
+        onDeposited={(_, { pool, commitment }) => {
           engine.simulate.deposit(commitment);
           // Other people keep depositing, so the crowd is not empty.
-          engine.simulate.crowd(engine.pools[0]!, 37);
+          engine.simulate.crowd(pool, 37);
         }}
         onWithdrawn={(_, withdrawal) => engine.simulate.withdrawn(withdrawal)}
       />

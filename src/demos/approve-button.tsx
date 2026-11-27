@@ -9,12 +9,7 @@ import { demo } from "./demo";
 const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af";
 
 export const Default = demo(() => (
-  <ApproveButton
-    token={demoUsdc}
-    spender={router}
-    amount={parseUnits("100", 6)}
-    chainId={1}
-  >
+  <ApproveButton token={demoUsdc} spender={router} amount={parseUnits("100", 6)} chainId={1}>
     <TransactionButton chainId={1} transaction={{ to: demoAccounts[1] }}>
       Swap 100 USDC
     </TransactionButton>

@@ -41,7 +41,11 @@ Pass `share` to show how much of the pair's liquidity sits in each tier, the way
 
 ```tsx
 <FeeTierSelect
-  tiers={defaultFeeTiers.map((tier) => ({ ...tier, share: tvlShare[tier.fee], exists: tier.fee in tvlShare }))}
+  tiers={defaultFeeTiers.map((tier) => ({
+    ...tier,
+    share: tvlShare[tier.fee],
+    exists: tier.fee in tvlShare,
+  }))}
 />
 ```
 
@@ -51,11 +55,11 @@ The defaults are Uniswap v3's tiers. Other DEXes use other fees and spacings (Pa
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `value` / `defaultValue` | `number` | `3000` | Fee in hundredths of a bip. |
-| `onValueChange` | `(tier: FeeTier) => void` | — | Called with the picked tier. |
-| `tiers` | `FeeTier[]` | Uniswap v3 tiers | `{ fee, tickSpacing, description?, share?, exists? }`. |
-| `loading` | `boolean` | `false` | Shares are loading. Skeleton badges, `aria-busy`. |
-| `label` | `ReactNode` | `"Fee tier"` | Group label. |
-| `locale` | `string` | runtime locale | Number formatting locale. |
+| Prop                     | Type                      | Default          | Description                                            |
+| ------------------------ | ------------------------- | ---------------- | ------------------------------------------------------ |
+| `value` / `defaultValue` | `number`                  | `3000`           | Fee in hundredths of a bip.                            |
+| `onValueChange`          | `(tier: FeeTier) => void` | —                | Called with the picked tier.                           |
+| `tiers`                  | `FeeTier[]`               | Uniswap v3 tiers | `{ fee, tickSpacing, description?, share?, exists? }`. |
+| `loading`                | `boolean`                 | `false`          | Shares are loading. Skeleton badges, `aria-busy`.      |
+| `label`                  | `ReactNode`               | `"Fee tier"`     | Group label.                                           |
+| `locale`                 | `string`                  | runtime locale   | Number formatting locale.                              |

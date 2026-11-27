@@ -1,26 +1,27 @@
 // Docs: https://0xui.io/components/mock-mixer-engine.md
-import { encodeAbiParameters, formatUnits, keccak256, toHex, type Hash, type Hex } from "viem";
-import {
-  sameMixerPool,
-  type MixerDeposit,
-  type MixerEngine,
-  type MixerNote,
-  type MixerPool,
-  type MixerQuote,
-  type MixerStage,
-  type MixerWithdrawal,
+import { encodeAbiParameters, formatUnits, keccak256, toHex } from "viem";
+import type { Hash, Hex } from "viem";
+import { sameMixerPool } from "@/lib/mixer-engine";
+import type {
+  MixerDeposit,
+  MixerEngine,
+  MixerNote,
+  MixerPool,
+  MixerQuote,
+  MixerStage,
+  MixerWithdrawal,
 } from "@/lib/mixer-engine";
 
 /** How long things take, in ms, before `speed` is applied. Guesses, not measurements. */
 export const MOCK_MIXER_TIMINGS = {
   /** Reading the pool's deposit history. First proof per pool only; later ones take a tenth. */
-  sync: 5_000,
+  sync: 5000,
   /** Downloading the circuit files. First proof only; later proofs take a twentieth. */
-  loadCircuits: 4_000,
+  loadCircuits: 4000,
   /** Generating the proof. */
-  prove: 8_000,
+  prove: 8000,
   /** Verifying the proof. */
-  verify: 1_000,
+  verify: 1000,
   /** Looking a note up on chain. */
   lookup: 600,
 };
@@ -28,16 +29,18 @@ export const MOCK_MIXER_TIMINGS = {
 export type MockMixerTimings = typeof MOCK_MIXER_TIMINGS;
 
 /** The mock's pools: 0.1, 1 and 10 ETH on Ethereum. No contract lives at these addresses. */
-export const MOCK_MIXER_POOLS: readonly MixerPool[] = [
-  ["0x00000000000000000000000000000000000a1ce1", 10n ** 17n],
-  ["0x00000000000000000000000000000000000a1ce2", 10n ** 18n],
-  ["0x00000000000000000000000000000000000a1ce3", 10n ** 19n],
-].map(([address, denomination]) => ({
+export const MOCK_MIXER_POOLS: ReadonlyArray<MixerPool> = (
+  [
+    ["0x00000000000000000000000000000000000a1ce1", 10n ** 17n],
+    ["0x00000000000000000000000000000000000a1ce2", 10n ** 18n],
+    ["0x00000000000000000000000000000000000a1ce3", 10n ** 19n],
+  ] as const
+).map(([address, denomination]) => ({
   chainId: 1,
-  address: address as `0x${string}`,
+  address,
   symbol: "ETH",
   decimals: 18,
-  denomination: denomination as bigint,
+  denomination,
 }));
 
 /** What a mock note starts with. A real protocol's note never does. */
@@ -52,7 +55,7 @@ export type MockMixerEngineOptions = {
   /** Override single delays, in ms. */
   timings?: Partial<MockMixerTimings>;
   /** Defaults to MOCK_MIXER_POOLS. */
-  pools?: readonly MixerPool[];
+  pools?: ReadonlyArray<MixerPool>;
   /** Deposits each pool already holds, so a new one has a crowd behind it. */
   existingDeposits?: number;
   /** The relayer's cut, in basis points. Pass false for an engine with no relayer. */
@@ -87,6 +90,10 @@ export type MockMixerSimulate = {
 export type MockMixerEngine = MixerEngine & { simulate: MockMixerSimulate };
 
 const aborted = () => new DOMException("The proof was cancelled.", "AbortError");
+const poolKey = (pool: MixerPool) => `${pool.chainId}:${pool.address.toLowerCase()}`;
+
+/** Failures the mock was asked for, each with its message, until they happen. */
+type MockFailures = { proof?: string; sync?: string; relay?: string };
 
 /**
  * A mixer engine that lives in memory. Notes are random, proofs are waits,
@@ -96,14 +103,15 @@ export function createMockMixerEngine({
   speed = 1,
   timings: overrides,
   pools = MOCK_MIXER_POOLS,
-  existingDeposits = 1_200,
+  existingDeposits = 1200,
   relayerFeeBps = 30,
   relay,
 }: MockMixerEngineOptions = {}): MockMixerEngine {
-  if (!(speed > 0)) throw new RangeError("speed must be greater than 0.");
+  if (!(speed > 0)) {
+    throw new RangeError("speed must be greater than 0.");
+  }
   const timings = { ...MOCK_MIXER_TIMINGS, ...overrides };
 
-  const poolKey = (pool: MixerPool) => `${pool.chainId}:${pool.address.toLowerCase()}`;
   /** Deposits in each pool so far. */
   const counts = new Map(pools.map((pool) => [poolKey(pool), existingDeposits]));
   const deposits = new Map<Hex, { pool: MixerPool; index: number; timestamp: number }>();
@@ -115,12 +123,16 @@ export function createMockMixerEngine({
   const synced = new Set<string>();
   let circuitsLoaded = false;
   let nextId = 0;
-  const failures: { proof?: string; sync?: string; relay?: string } = {};
+  const failures: MockFailures = {};
 
   const sleep = (ms: number, signal?: AbortSignal) => {
-    if (signal?.aborted) return Promise.reject(aborted());
+    if (signal?.aborted) {
+      return Promise.reject(aborted());
+    }
     const delay = ms / speed;
-    if (!(delay > 0)) return Promise.resolve();
+    if (!(delay > 0)) {
+      return Promise.resolve();
+    }
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         signal?.removeEventListener("abort", stop);
@@ -137,39 +149,47 @@ export function createMockMixerEngine({
   const known = (pool: MixerPool) => pools.find((candidate) => sameMixerPool(candidate, pool));
 
   const read = (text: string): MixerNote => {
-    const match = /^mock-note-([a-z0-9]+)-([0-9.]+)-(\d+)-(0x[0-9a-f]{124})$/.exec(text.trim());
-    if (!match) {
+    const match = /^mock-note-([a-z0-9]+)-([0-9.]+)-(\d+)-0x([0-9a-f]{124})$/.exec(text.trim());
+    const [note, symbol, amount, chainId, secret] = match ?? [];
+    if (!note || !symbol || !amount || !chainId || !secret) {
       throw new Error(
         text.trim() ? "This is not a note. Paste the whole text you saved." : "Paste your note.",
       );
     }
-    const [note, symbol, amount, chainId, secret] = match;
     const pool = pools.find(
       (candidate) =>
         candidate.chainId === Number(chainId) &&
         candidate.symbol.toLowerCase() === symbol &&
         formatUnits(candidate.denomination, candidate.decimals) === amount,
     );
-    if (!pool) throw new Error(`This note is for a pool that is not offered here.`);
-    const commitment = keccak256(secret as Hex);
+    if (!pool) {
+      throw new Error(`This note is for a pool that is not offered here.`);
+    }
+    const commitment = keccak256(`0x${secret}`);
     made.set(commitment, pool);
-    return { note: note!, pool, commitment };
+    return { note, pool, commitment };
   };
 
   const quoteFor = (pool: MixerPool, via: "wallet" | "relayer"): MixerQuote => {
-    if (via === "wallet") return { fee: 0n, received: pool.denomination };
-    if (relayerFeeBps === false) throw new Error("No relayer is set up for this pool.");
+    if (via === "wallet") {
+      return { fee: 0n, received: pool.denomination };
+    }
+    if (relayerFeeBps === false) {
+      throw new Error("No relayer is set up for this pool.");
+    }
     const fee = (pool.denomination * BigInt(relayerFeeBps)) / 10_000n;
     return { fee, received: pool.denomination - fee };
   };
 
   const lookup = (commitment: Hex): MixerDeposit => {
     const deposit = deposits.get(commitment);
-    if (!deposit) return { state: "missing" };
+    if (!deposit) {
+      return { state: "missing" };
+    }
     return {
       state: spent.has(commitment) ? "withdrawn" : "deposited",
       timestamp: deposit.timestamp,
-      depositsSince: counts.get(poolKey(deposit.pool))! - deposit.index - 1,
+      depositsSince: (counts.get(poolKey(deposit.pool)) ?? 0) - deposit.index - 1,
     };
   };
 
@@ -180,7 +200,9 @@ export function createMockMixerEngine({
 
     async createNote(pool) {
       const target = known(pool);
-      if (!target) throw new Error("This pool is not offered here.");
+      if (!target) {
+        throw new Error("This pool is not offered here.");
+      }
       const secret = toHex(crypto.getRandomValues(new Uint8Array(62)));
       const amount = formatUnits(target.denomination, target.decimals);
       return read(
@@ -215,7 +237,9 @@ export function createMockMixerEngine({
       const { pool, commitment } = read(draft.note);
       const quote = quoteFor(pool, draft.via);
       const stage = async (name: MixerStage, ms: number) => {
-        if (signal?.aborted) throw aborted();
+        if (signal?.aborted) {
+          throw aborted();
+        }
         onStage(name);
         await sleep(ms, signal);
       };
@@ -229,8 +253,12 @@ export function createMockMixerEngine({
       }
       synced.add(key);
       const deposit = lookup(commitment);
-      if (deposit.state === "missing") throw new Error("No deposit was found for this note.");
-      if (deposit.state === "withdrawn") throw new Error("This note was already withdrawn.");
+      if (deposit.state === "missing") {
+        throw new Error("No deposit was found for this note.");
+      }
+      if (deposit.state === "withdrawn") {
+        throw new Error("This note was already withdrawn.");
+      }
 
       await stage(
         "loading-circuits",
@@ -244,7 +272,9 @@ export function createMockMixerEngine({
         throw new Error(message);
       }
       await stage("verifying", timings.verify);
-      if (signal?.aborted) throw aborted();
+      if (signal?.aborted) {
+        throw aborted();
+      }
 
       const id = `mock-withdrawal-${++nextId}`;
       proofs.set(id, { commitment, relayed: false });
@@ -269,13 +299,17 @@ export function createMockMixerEngine({
       if (!proof || withdrawal.via !== "relayer") {
         throw new Error("This withdrawal was not made for a relayer.");
       }
-      if (proof.relayed) throw new Error("This withdrawal was already sent.");
+      if (proof.relayed) {
+        throw new Error("This withdrawal was already sent.");
+      }
       if (failures.relay) {
         const message = failures.relay;
         failures.relay = undefined;
         throw new Error(message);
       }
-      if (spent.has(proof.commitment)) throw new Error("This note was already withdrawn.");
+      if (spent.has(proof.commitment)) {
+        throw new Error("This note was already withdrawn.");
+      }
       proof.relayed = true;
       const hash = relay
         ? await relay(withdrawal)
@@ -286,12 +320,17 @@ export function createMockMixerEngine({
 
     simulate: {
       deposit(commitment) {
-        if (deposits.has(commitment)) return false;
-        const pool = made.get(commitment) ?? pools[0]!;
+        if (deposits.has(commitment)) {
+          return false;
+        }
+        const pool = made.get(commitment) ?? pools[0];
+        if (!pool) {
+          throw new Error("This engine has no pools.");
+        }
         const key = poolKey(pool);
         const index = counts.get(key) ?? 0;
         counts.set(key, index + 1);
-        deposits.set(commitment, { pool, index, timestamp: Math.floor(Date.now() / 1_000) });
+        deposits.set(commitment, { pool, index, timestamp: Math.floor(Date.now() / 1000) });
         return true;
       },
       crowd(pool, more) {
@@ -300,7 +339,9 @@ export function createMockMixerEngine({
       },
       withdrawn(withdrawal) {
         const proof = proofs.get(withdrawal.id);
-        if (proof) spent.add(proof.commitment);
+        if (proof) {
+          spent.add(proof.commitment);
+        }
       },
       failNextProof(message = "The prover ran out of memory.") {
         failures.proof = message;

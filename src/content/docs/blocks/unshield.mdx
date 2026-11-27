@@ -20,7 +20,9 @@ The demo's private account is already unlocked and holds some WETH and USDC. Not
 </Preview>
 
 <Aside type="caution" title="Preview">
-  This demo runs on the [mock engine](/components/mock-shielded-engine/). With the [Privacy Pools engine](/components/privacy-pools-engine/) the same block withdraws from the real Privacy Pools contracts, through a relayer.
+  This demo runs on the [mock engine](/components/mock-shielded-engine/). With the [Privacy Pools
+  engine](/components/privacy-pools-engine/) the same block withdraws from the real Privacy Pools
+  contracts, through a relayer.
 </Aside>
 
 It is built from [Token Input](/components/token-input/), [Address Input](/components/address-input/), [Proof Progress](/components/proof-progress/) and [Transaction Status](/components/transaction-status/), on a [shielded engine](/components/shielded-engine/).
@@ -61,7 +63,8 @@ Details that matter:
 - **The balance follows the chain.** When the transaction is mined the block asks the engine to scan, which is the only way a private balance changes.
 
 <Aside title="The recipient is public">
-  The recipient and the amount are visible on chain. Sending to the wallet that shielded the funds links the two. The block does not stop that: "Use my wallet" is a convenience, not advice.
+  The recipient and the amount are visible on chain. Sending to the wallet that shielded the funds
+  links the two. The block does not stop that: "Use my wallet" is a convenience, not advice.
 </Aside>
 
 ## With the mock engine
@@ -76,28 +79,28 @@ createMockShieldedEngine({ relay: (operation) => someMinedHash });
 
 The form's button always names the blocker:
 
-| Situation | Button |
-| --- | --- |
-| No private account | Create a private account first |
-| Account locked | Unlock your private account |
-| No amount | Enter an amount |
-| First scan not finished | Scanning private balance… |
-| Amount above the spendable balance | Insufficient private WETH |
-| No valid recipient | Enter a recipient |
-| Quote loading | Fetching quote… |
-| Quote failed | Can't unshield this amount, plus the reason |
-| Ready | Unshield WETH |
+| Situation                          | Button                                      |
+| ---------------------------------- | ------------------------------------------- |
+| No private account                 | Create a private account first              |
+| Account locked                     | Unlock your private account                 |
+| No amount                          | Enter an amount                             |
+| First scan not finished            | Scanning private balance…                   |
+| Amount above the spendable balance | Insufficient private WETH                   |
+| No valid recipient                 | Enter a recipient                           |
+| Quote loading                      | Fetching quote…                             |
+| Quote failed                       | Can't unshield this amount, plus the reason |
+| Ready                              | Unshield WETH                               |
 
 `data-phase` on the root:
 
-| `data-phase` | Meaning |
-| --- | --- |
-| `idle` | On the form. |
-| `proving` | The proof is being made. |
-| `review` | The proof is ready at a higher fee. Waiting for a yes. |
-| `submitting` | The proof is being sent. |
-| `cancelled` | The proof was cancelled. |
-| `error` | The proof or the send failed, with the reason shown. |
+| `data-phase` | Meaning                                                |
+| ------------ | ------------------------------------------------------ |
+| `idle`       | On the form.                                           |
+| `proving`    | The proof is being made.                               |
+| `review`     | The proof is ready at a higher fee. Waiting for a yes. |
+| `submitting` | The proof is being sent.                               |
+| `cancelled`  | The proof was cancelled.                               |
+| `error`      | The proof or the send failed, with the reason shown.   |
 
 After sending, [Transaction Status](/components/transaction-status/) carries its own `data-phase`.
 
@@ -121,14 +124,14 @@ flow.leave(); // back to the form
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `tokens` | `Token[]` | — | Tokens to offer. |
-| `chainId` | `number` | — | Chain to unshield on. Required. |
-| `defaultToken` | `Token` | first on `chainId` | Initially selected token. |
-| `popular` | `string[]` | — | Symbols or addresses for quick picks. |
-| `prices` | `TokenPrices` | — | For the fiat line. |
-| `onSubmitted` | `(hash, draft) => void` | — | The transaction was broadcast. |
-| `onConfirmed` | `(hash) => void` | — | The transaction was mined. The engine is already scanning. |
-| `title` | `ReactNode` | `"Unshield"` | Heading. `null` hides it. |
-| `className` | `string` | — | |
+| Prop           | Type                    | Default            | Description                                                |
+| -------------- | ----------------------- | ------------------ | ---------------------------------------------------------- |
+| `tokens`       | `Token[]`               | —                  | Tokens to offer.                                           |
+| `chainId`      | `number`                | —                  | Chain to unshield on. Required.                            |
+| `defaultToken` | `Token`                 | first on `chainId` | Initially selected token.                                  |
+| `popular`      | `string[]`              | —                  | Symbols or addresses for quick picks.                      |
+| `prices`       | `TokenPrices`           | —                  | For the fiat line.                                         |
+| `onSubmitted`  | `(hash, draft) => void` | —                  | The transaction was broadcast.                             |
+| `onConfirmed`  | `(hash) => void`        | —                  | The transaction was mined. The engine is already scanning. |
+| `title`        | `ReactNode`             | `"Unshield"`       | Heading. `null` hides it.                                  |
+| `className`    | `string`                | —                  |                                                            |

@@ -1,17 +1,17 @@
 import { createStore } from "@/lib/0xui-store";
-import {
-  PROOF_STAGES,
-  type PrivateDraft,
-  type ProofStage,
-  type ProvedOperation,
-  type ShieldedEngine,
+import { PROOF_STAGES } from "@/lib/shielded-engine";
+import type {
+  PrivateDraft,
+  ProofStage,
+  ProvedOperation,
+  ShieldedEngine,
 } from "@/lib/shielded-engine";
 
 /** While a proof runs, the phase is the stage it is in. */
 export type ProofPhase = "idle" | ProofStage | "done" | "cancelled" | "error";
 
 export const isProofStage = (phase: ProofPhase): phase is ProofStage =>
-  (PROOF_STAGES as readonly string[]).includes(phase);
+  (PROOF_STAGES as ReadonlyArray<string>).includes(phase);
 
 export type ProofState = {
   phase: ProofPhase;
@@ -40,7 +40,12 @@ export type Prover = {
   reset(): void;
 };
 
-const idle: ProofState = { phase: "idle", stage: undefined, operation: undefined, error: undefined };
+const idle: ProofState = {
+  phase: "idle",
+  stage: undefined,
+  operation: undefined,
+  error: undefined,
+};
 
 /**
  * Generate a proof with the engine and follow it stage by stage. There is no
@@ -51,8 +56,7 @@ export function createProver(engine: ShieldedEngine, callbacks: ProofCallbacks =
   // The run in progress. A newer run or a reset replaces or aborts it.
   let current: AbortController | undefined;
 
-  const stopped = () =>
-    store.set((s) => ({ ...idle, phase: "cancelled", stage: s.stage }));
+  const stopped = () => store.set((s) => ({ ...idle, phase: "cancelled", stage: s.stage }));
 
   return {
     get: store.get,
@@ -68,10 +72,14 @@ export function createProver(engine: ShieldedEngine, callbacks: ProofCallbacks =
         const operation = await engine.prove(draft, {
           signal: run.signal,
           onStage: (stage) => {
-            if (isCurrent() && !run.signal.aborted) store.set({ phase: stage, stage });
+            if (isCurrent() && !run.signal.aborted) {
+              store.set({ phase: stage, stage });
+            }
           },
         });
-        if (!isCurrent()) return undefined;
+        if (!isCurrent()) {
+          return undefined;
+        }
         if (run.signal.aborted) {
           stopped();
           return undefined;
@@ -79,13 +87,15 @@ export function createProver(engine: ShieldedEngine, callbacks: ProofCallbacks =
         store.set({ ...idle, phase: "done", operation });
         callbacks.onProved?.(operation);
         return operation;
-      } catch (cause) {
-        if (!isCurrent()) return undefined;
+      } catch (error_) {
+        if (!isCurrent()) {
+          return undefined;
+        }
         if (run.signal.aborted) {
           stopped();
           return undefined;
         }
-        const error = cause instanceof Error ? cause : new Error(String(cause));
+        const error = error_ instanceof Error ? error_ : new Error(String(error_));
         store.set((s) => ({ ...idle, phase: "error", stage: s.stage, error }));
         callbacks.onError?.(error);
         return undefined;
@@ -133,16 +143,19 @@ export function proofStepStates(
 ): Record<ProofStage, ProofStepState> {
   const reached = isProofStage(phase) ? phase : stage;
   const reachedIndex = reached ? PROOF_STAGES.indexOf(reached) : -1;
-  const states = {} as Record<ProofStage, ProofStepState>;
-  PROOF_STAGES.forEach((name, index) => {
-    states[name] =
-      phase === "done" || index < reachedIndex
-        ? "done"
-        : index > reachedIndex || phase === "idle" || phase === "cancelled"
-          ? "todo"
-          : phase === "error"
-            ? "failed"
-            : "active";
-  });
-  return states;
+  const stateOf = (name: ProofStage): ProofStepState => {
+    const index = PROOF_STAGES.indexOf(name);
+    return phase === "done" || index < reachedIndex
+      ? "done"
+      : index > reachedIndex || phase === "idle" || phase === "cancelled"
+        ? "todo"
+        : phase === "error"
+          ? "failed"
+          : "active";
+  };
+  return {
+    "loading-circuits": stateOf("loading-circuits"),
+    proving: stateOf("proving"),
+    verifying: stateOf("verifying"),
+  };
 }

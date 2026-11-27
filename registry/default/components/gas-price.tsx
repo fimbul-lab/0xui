@@ -5,7 +5,8 @@ import type { ComponentType } from "react";
 import { SkeletonBox } from "skullet/react";
 import { useChainId, useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
-import { formatGasPrice, gasPriceQueryOptions, gasTone, type GasTone } from "@/lib/gas-price-core";
+import { formatGasPrice, gasPriceQueryOptions, gasTone } from "@/lib/gas-price-core";
+import type { GasTone } from "@/lib/gas-price-core";
 import { cn } from "@/lib/utils";
 
 export { formatGasPrice, gasTone, type GasTone };
@@ -40,7 +41,7 @@ export function useGasPriceInfo({
   const config = useConfig();
   const currentChainId = useChainId();
   const { data, isError, isPending } = useQuery(
-    gasPriceQueryOptions(config, { chainId: chainId ?? currentChainId, refreshInterval })
+    gasPriceQueryOptions(config, { chainId: chainId ?? currentChainId, refreshInterval }),
   );
   return {
     gasPrice: data,
@@ -79,7 +80,7 @@ export function GasPrice({
       className={cn(
         "inline-flex items-center gap-1.5 text-sm tabular-nums text-muted-foreground",
         tone && toneClass[tone],
-        className
+        className,
       )}
     >
       {Icon && <Icon aria-hidden className="size-3.5 shrink-0" />}

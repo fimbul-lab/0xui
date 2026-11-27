@@ -1,6 +1,8 @@
 import type { Config } from "@wagmi/core";
 import { getBalanceQueryOptions, readContractsQueryOptions } from "@wagmi/core/query";
-import { erc20Abi, type Address } from "viem";
+import type { GetBalanceData } from "@wagmi/core/query";
+import { erc20Abi } from "viem";
+import type { Address } from "viem";
 
 export type BalancePhase = "idle" | "loading" | "ready" | "error";
 
@@ -21,9 +23,12 @@ export type TokenBalanceParameters = {
 
 /** TanStack query options whose data is a `TokenBalance`, whichever read backs them. */
 export type TokenBalanceQueryOptions = {
-  queryKey: readonly unknown[];
-  queryFn: (context: any) => unknown;
-  select: (data: any) => TokenBalance;
+  queryKey: ReadonlyArray<unknown>;
+  // Methods, so each read's own queryFn and select fit: their parameters are
+  // checked both ways, where a function property would need `any`.
+  // oxlint-disable-next-line quality/no-unknown-returns -- each read returns its own data, which `select` turns into a TokenBalance
+  queryFn(context: unknown): unknown;
+  select(data: unknown): TokenBalance;
   enabled: boolean;
   refetchInterval: number | false;
 };
@@ -43,14 +48,20 @@ export function tokenBalanceQueryOptions(
       ...getBalanceQueryOptions(config, { address, chainId }),
       enabled: on,
       refetchInterval: refreshInterval,
-      select: ({ value, decimals, symbol }) => ({ value, decimals, symbol }),
+      select: ({ value, decimals, symbol }: GetBalanceData) => ({ value, decimals, symbol }),
     };
   }
   return {
     ...readContractsQueryOptions(config, {
       allowFailure: false,
       contracts: [
-        { address: token, abi: erc20Abi, functionName: "balanceOf", args: [address!], chainId },
+        {
+          address: token,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: address ? [address] : undefined,
+          chainId,
+        },
         { address: token, abi: erc20Abi, functionName: "decimals", chainId },
         { address: token, abi: erc20Abi, functionName: "symbol", chainId },
       ],

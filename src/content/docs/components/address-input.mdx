@@ -59,26 +59,26 @@ The format is Railgun's: `0zk`, 127 characters, bech32m. `isShieldedAddress` in 
 
 `data-phase` on the root holds the current state.
 
-| Phase | Meaning |
-| --- | --- |
-| `empty` | Nothing typed. |
-| `incomplete` | Not a full address or name yet. Reported after blur. |
-| `resolving` | Looking up an ENS name. |
-| `valid` | `state.address` is set. For names, the resolved address is shown under the field. For addresses, the ENS name is shown. |
-| `invalid` | Bad checksum, too long, or not a valid name. Reported after blur. |
-| `not-found` | The name has no address. Reported right away. |
+| Phase        | Meaning                                                                                                                 |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `empty`      | Nothing typed.                                                                                                          |
+| `incomplete` | Not a full address or name yet. Reported after blur.                                                                    |
+| `resolving`  | Looking up an ENS name.                                                                                                 |
+| `valid`      | `state.address` is set. For names, the resolved address is shown under the field. For addresses, the ENS name is shown. |
+| `invalid`    | Bad checksum, too long, or not a valid name. Reported after blur.                                                       |
+| `not-found`  | The name has no address. Reported right away.                                                                           |
 
 ## Props
 
 Also accepts ui-sdk `Input` props. The input sits in a ui-sdk `Field`, so the line under it describes it and errors mark it invalid.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `value` | `string` | — | Text in the field. |
-| `onValueChange` | `(value) => void` | — | Called on every change. |
-| `onResolve` | `(state) => void` | — | Called when validation settles on a new result. |
-| `label` | `string` | `"Recipient"` | Accessible label. The field is named "Recipient address" and the paste button "Paste into Recipient", so two address fields on a page stay apart for screen readers and browser agents. |
-| `showPaste` | `boolean` | `true` | Paste button while empty. |
-| `shielded` | `boolean` | `false` | Also accept private `0zk…` addresses. |
+| Prop            | Type              | Default       | Description                                                                                                                                                                             |
+| --------------- | ----------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `value`         | `string`          | —             | Text in the field.                                                                                                                                                                      |
+| `onValueChange` | `(value) => void` | —             | Called on every change.                                                                                                                                                                 |
+| `onResolve`     | `(state) => void` | —             | Called when validation settles on a new result.                                                                                                                                         |
+| `label`         | `string`          | `"Recipient"` | Accessible label. The field is named "Recipient address" and the paste button "Paste into Recipient", so two address fields on a page stay apart for screen readers and browser agents. |
+| `showPaste`     | `boolean`         | `true`        | Paste button while empty.                                                                                                                                                               |
+| `shielded`      | `boolean`         | `false`       | Also accept private `0zk…` addresses.                                                                                                                                                   |
 
 Headless: `useAddressInput(value, { shielded })` returns the same state. The rules behind it are in `lib/address-input-core.ts`, with no React: `parseAddressInput`, `addressInputState` and `ensAddressQueryOptions`.

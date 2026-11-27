@@ -4,7 +4,8 @@ import { Field, FieldLabel } from "@ui-sdk/react/field";
 import { Input } from "@ui-sdk/react/input";
 import { Textarea } from "@ui-sdk/react/textarea";
 import { CheckIcon, Loader2Icon, LockIcon } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { PrivacyBadge } from "@/components/privacy-badge";
 import { Button } from "@/components/primitives/button";
@@ -18,11 +19,17 @@ import {
   passwordBlocker,
   phraseBlocker,
   phraseWords,
-  type ShieldedAccountPhase,
 } from "@/lib/shielded-account-core";
+import type { ShieldedAccountPhase } from "@/lib/shielded-account-core";
 import { cn } from "@/lib/utils";
 
-export { MIN_PASSWORD_LENGTH, passwordBlocker, phraseBlocker, phraseWords, type ShieldedAccountPhase };
+export {
+  MIN_PASSWORD_LENGTH,
+  passwordBlocker,
+  phraseBlocker,
+  phraseWords,
+  type ShieldedAccountPhase,
+};
 
 /**
  * Create, import, unlock and lock the private account. The engine keeps the
@@ -93,7 +100,9 @@ function SubmitButton({
 }
 
 function FormError({ error }: { error: Error | undefined }) {
-  if (!error) return null;
+  if (!error) {
+    return null;
+  }
   return (
     <p role="alert" className="text-sm text-destructive">
       {error.message}
@@ -129,7 +138,9 @@ export function ShieldedAccountCreateForm({
       className={cn("flex flex-col gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (!blocker && !busy) onCreate(password);
+        if (!blocker && !busy) {
+          onCreate(password);
+        }
       }}
     >
       {/* "New password", not "Password": a label inside another ("Confirm
@@ -190,7 +201,9 @@ export function ShieldedAccountImportForm({
       className={cn("flex flex-col gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (!blocker && !busy) onImport(phraseWords(phrase).join(" "), password);
+        if (!blocker && !busy) {
+          onImport(phraseWords(phrase).join(" "), password);
+        }
       }}
     >
       {/* An agent may paste the phrase in, but never read it back. */}
@@ -263,7 +276,9 @@ export function ShieldedAccountUnlockForm({
       className={cn("flex flex-col gap-3", className)}
       onSubmit={(event) => {
         event.preventDefault();
-        if (password && !busy) onUnlock(password);
+        if (password && !busy) {
+          onUnlock(password);
+        }
       }}
     >
       <TextField
@@ -323,7 +338,7 @@ export function RecoveryPhrase({ mnemonic, onConfirm, className }: RecoveryPhras
           aria-hidden={!revealed || undefined}
           className={cn(
             "grid grid-cols-2 gap-x-4 gap-y-1.5 font-mono sm:grid-cols-3",
-            !revealed && "blur-sm select-none"
+            !revealed && "blur-sm select-none",
           )}
         >
           {words.map((word, index) => (
@@ -380,7 +395,11 @@ export type ShieldedAccountSummaryProps = {
 };
 
 /** The unlocked account in one line: a private badge, its address if it has one, and a lock button. */
-export function ShieldedAccountSummary({ address, onLock, className }: ShieldedAccountSummaryProps) {
+export function ShieldedAccountSummary({
+  address,
+  onLock,
+  className,
+}: ShieldedAccountSummaryProps) {
   return (
     <div className={cn("flex items-center justify-between gap-2 text-sm", className)}>
       <span className="flex min-w-0 items-center gap-2">
@@ -431,15 +450,21 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
   };
 
   useEffect(() => {
-    if (phase === "unlocked") onUnlocked?.(address);
+    if (phase === "unlocked") {
+      onUnlocked?.(address);
+    }
     // Only reaching "unlocked" should fire the callback.
   }, [phase]);
 
   // The account lives in the browser. Render nothing on the server, so a
   // locked account never flashes the "create" form while hydrating.
-  if (!mounted) return null;
+  if (!mounted) {
+    return null;
+  }
 
-  if (phase === "unlocked" && children !== undefined) return <>{children}</>;
+  if (phase === "unlocked" && children !== undefined) {
+    return <>{children}</>;
+  }
 
   const importing = phase === "importing" || (phase === "none" && mode === "import");
 
@@ -452,14 +477,16 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
       {phase === "unlocked" ? (
         <ShieldedAccountSummary address={address} onLock={account.lock} />
       ) : phase === "backup" ? (
-        <RecoveryPhrase mnemonic={account.mnemonic!} onConfirm={account.confirmBackup} />
+        account.mnemonic && (
+          <RecoveryPhrase mnemonic={account.mnemonic} onConfirm={account.confirmBackup} />
+        )
       ) : phase === "locked" || phase === "unlocking" ? (
         <>
           <Heading title="Unlock your private account">
             It is stored encrypted on this device.
           </Heading>
           <ShieldedAccountUnlockForm
-            onUnlock={account.unlock}
+            onUnlock={(password) => void account.unlock(password)}
             busy={phase === "unlocking"}
             error={error}
           />
@@ -470,7 +497,7 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
             Enter its recovery phrase and choose a password for this device.
           </Heading>
           <ShieldedAccountImportForm
-            onImport={account.importAccount}
+            onImport={(phrase, password) => void account.importAccount(phrase, password)}
             busy={phase === "importing"}
             error={error}
           />
@@ -484,7 +511,7 @@ export function ShieldedAccount({ children, onUnlocked, className }: ShieldedAcc
             It holds your shielded balance and is separate from your wallet.
           </Heading>
           <ShieldedAccountCreateForm
-            onCreate={account.create}
+            onCreate={(password) => void account.create(password)}
             busy={phase === "creating"}
             error={error}
           />

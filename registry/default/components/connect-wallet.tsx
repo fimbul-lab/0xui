@@ -1,8 +1,10 @@
 // Docs: https://0xui.io/components/connect-wallet.md
 import { WalletIcon } from "@web3icons/react/dynamic";
 import { ChevronRightIcon, Loader2Icon } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
-import { useConfig, type Connector } from "wagmi";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { useConfig } from "wagmi";
+import type { Connector } from "wagmi";
 import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
 import { Button } from "@/components/primitives/button";
@@ -14,8 +16,9 @@ import {
   DialogTitle,
 } from "@/components/primitives/dialog";
 import { useStore } from "@/hooks/use-store";
-import { errorCode } from "@/lib/0xui-utils";
-import { createConnectWallet, type ConnectPhase, type WalletOption } from "@/lib/connect-wallet-core";
+import { errorCode, errorMessage } from "@/lib/0xui-utils";
+import { createConnectWallet } from "@/lib/connect-wallet-core";
+import type { ConnectPhase, WalletOption } from "@/lib/connect-wallet-core";
 import { cn } from "@/lib/utils";
 
 export type { ConnectPhase, WalletOption };
@@ -47,7 +50,9 @@ export function useConnectWallet({
 
   const connect = async (wallet: WalletOption) => {
     const connected = await controller.connect(wallet);
-    if (connected) onConnect?.(wallet.connector);
+    if (connected) {
+      onConnect?.(wallet.connector);
+    }
     return connected;
   };
 
@@ -140,7 +145,7 @@ export function ConnectWalletDialog({
                   wallet={wallet}
                   pending={wallet.id === pendingId}
                   disabled={phase === "connecting"}
-                  onSelect={() => connect(wallet)}
+                  onSelect={() => void connect(wallet)}
                 />
               </li>
             ))}
@@ -165,7 +170,7 @@ export function ConnectWalletDialog({
         </div>
         {phase === "error" && error && (
           <p role="alert" className="text-sm text-destructive">
-            {(error as { shortMessage?: string }).shortMessage ?? error.message}
+            {errorMessage(error)}
           </p>
         )}
 

@@ -1,10 +1,5 @@
-import {
-  formatPrice,
-  usableTickBounds,
-  type LiquidityBin,
-  type PairToken,
-  type TickRange,
-} from "@/lib/concentrated-liquidity";
+import { formatPrice, usableTickBounds } from "@/lib/concentrated-liquidity";
+import type { LiquidityBin, PairToken, TickRange } from "@/lib/concentrated-liquidity";
 
 export type { PairToken, TickRange };
 
@@ -22,9 +17,17 @@ export const liquidityColors = {
 export const ZOOM_STEP = 1.6;
 
 /** Ticks the chart spans when every bin is in view. */
-export function chartExtent(bins: readonly LiquidityBin[], currentTick: number, tickSpacing: number) {
-  if (!bins.length) return { lower: currentTick - 100 * tickSpacing, upper: currentTick + 100 * tickSpacing };
-  return { lower: bins[0]!.tickLower, upper: bins[bins.length - 1]!.tickUpper };
+export function chartExtent(
+  bins: ReadonlyArray<LiquidityBin>,
+  currentTick: number,
+  tickSpacing: number,
+) {
+  const first = bins[0];
+  const last = bins.at(-1);
+  if (!first || !last) {
+    return { lower: currentTick - 100 * tickSpacing, upper: currentTick + 100 * tickSpacing };
+  }
+  return { lower: first.tickLower, upper: last.tickUpper };
 }
 
 /**
@@ -39,7 +42,7 @@ export function chartViewport({
   range,
   zoom,
 }: {
-  bins: readonly LiquidityBin[];
+  bins: ReadonlyArray<LiquidityBin>;
   currentTick: number;
   tickSpacing: number;
   range?: TickRange;
@@ -56,7 +59,8 @@ export function chartViewport({
     range && !full && range.tickUpper - range.tickLower < span
       ? (range.tickLower + range.tickUpper) / 2
       : currentTick;
-  const [lower, upper] = zoom === 1 ? [extent.lower, extent.upper] : [center - span / 2, center + span / 2];
+  const [lower, upper] =
+    zoom === 1 ? [extent.lower, extent.upper] : [center - span / 2, center + span / 2];
   return {
     lower,
     upper,
@@ -78,20 +82,25 @@ export type Bar = {
 
 /** Bins in the window, merged so every bar is at least `minWidth` px wide. */
 export function toBars(
-  bins: readonly LiquidityBin[],
+  bins: ReadonlyArray<LiquidityBin>,
   lower: number,
   upper: number,
   width: number,
   minWidth = 3,
-): Bar[] {
+): Array<Bar> {
   const visible = bins.filter((b) => b.tickUpper > lower && b.tickLower < upper);
   const perBar = Math.max(1, Math.ceil(visible.length / Math.max(1, Math.floor(width / minWidth))));
-  const bars: Bar[] = [];
+  const bars: Array<Bar> = [];
   for (let i = 0; i < visible.length; i += perBar) {
     const group = visible.slice(i, i + perBar);
+    const first = group[0];
+    const last = group.at(-1);
+    if (!first || !last) {
+      continue;
+    }
     bars.push({
-      tickLower: group[0]!.tickLower,
-      tickUpper: group[group.length - 1]!.tickUpper,
+      tickLower: first.tickLower,
+      tickUpper: last.tickUpper,
       // Average, so merged bars stay on the same scale as single ones.
       liquidity: group.reduce((s, b) => s + Number(b.liquidity), 0) / group.length,
       amount0: group.reduce((s, b) => s + b.amount0, 0),
@@ -105,7 +114,9 @@ export function toBars(
 /** SVG path for a bar with rounded top corners, square at the baseline. */
 export function barPath(x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.max(0, Math.min(r, w / 2, h));
-  if (radius === 0) return `M${x},${y + h}V${y}H${x + w}V${y + h}Z`;
+  if (radius === 0) {
+    return `M${x},${y + h}V${y}H${x + w}V${y + h}Z`;
+  }
   return `M${x},${y + h}V${y + radius}Q${x},${y} ${x + radius},${y}H${x + w - radius}Q${x + w},${y} ${x + w},${y + radius}V${y + h}Z`;
 }
 
@@ -126,16 +137,23 @@ export function describeBar(
     token1,
     unit,
     locale,
-  }: { price: (tick: number) => number; token0: PairToken; token1: PairToken; unit: string; locale?: string },
+  }: {
+    price: (tick: number) => number;
+    token0: PairToken;
+    token1: PairToken;
+    unit: string;
+    locale?: string;
+  },
 ) {
-  const [a, b] = [price(bar.tickLower), price(bar.tickUpper)].sort((m, n) => m - n);
+  const edges = [price(bar.tickLower), price(bar.tickUpper)];
+  const [a, b] = [Math.min(...edges), Math.max(...edges)];
   const amounts = [
     bar.amount0 > 0 && `${compactAmount(bar.amount0, locale)} ${token0.symbol}`,
     bar.amount1 > 0 && `${compactAmount(bar.amount1, locale)} ${token1.symbol}`,
   ].filter((line): line is string => Boolean(line));
   return {
     amounts: amounts.length ? amounts : ["No liquidity"],
-    range: `${formatPrice(a!, { locale })} – ${formatPrice(b!, { locale })} ${unit}`,
+    range: `${formatPrice(a, { locale })} – ${formatPrice(b, { locale })} ${unit}`,
   };
 }
 
@@ -143,25 +161,36 @@ export function describeBar(
  * The bar a key moves the reading to, or undefined for other keys.
  * Left and right follow the screen, so they flip with an inverted axis.
  */
-export function nextBar(key: string, bars: readonly Bar[], active: number | undefined, invert = false) {
-  if (!bars.length) return undefined;
+export function nextBar(
+  key: string,
+  bars: ReadonlyArray<Bar>,
+  active: number | undefined,
+  invert = false,
+) {
+  if (!bars.length) {
+    return undefined;
+  }
   const current = bars.findIndex((b) => b.isCurrent);
   const from = active ?? (current === -1 ? 0 : current);
   const dir = invert ? -1 : 1;
-  const next: Record<string, number> = {
-    ArrowRight: from + dir,
-    ArrowLeft: from - dir,
-    Home: invert ? bars.length - 1 : 0,
-    End: invert ? 0 : bars.length - 1,
-  };
-  if (!(key in next)) return undefined;
-  return Math.max(0, Math.min(bars.length - 1, next[key]!));
+  const next = new Map([
+    ["ArrowRight", from + dir],
+    ["ArrowLeft", from - dir],
+    ["Home", invert ? bars.length - 1 : 0],
+    ["End", invert ? 0 : bars.length - 1],
+  ]).get(key);
+  if (next === undefined) {
+    return undefined;
+  }
+  return Math.max(0, Math.min(bars.length - 1, next));
 }
 
 /** "+4.88%", "−100%" or "∞" from the price at an edge against the current one. */
 export function formatPriceChange(price: number, current: number) {
   const change = (price / current - 1) * 100;
-  if (!Number.isFinite(change) || Math.abs(change) > 9999) return change > 0 ? "∞" : "−100%";
+  if (!Number.isFinite(change) || Math.abs(change) > 9999) {
+    return change > 0 ? "∞" : "−100%";
+  }
   const sign = change > 0 ? "+" : change < 0 ? "−" : "";
   return `${sign}${Math.abs(change).toFixed(Math.abs(change) < 10 ? 2 : 1)}%`;
 }
@@ -172,12 +201,20 @@ export function formatPriceChange(price: number, current: number) {
  * slider values are negated ticks. `min` and `max` snap inward to the
  * spacing, and a thumb outside the window sits on its edge.
  */
-export function rangeSlider(range: TickRange, lower: number, upper: number, tickSpacing: number, invert = false) {
+export function rangeSlider(
+  range: TickRange,
+  lower: number,
+  upper: number,
+  tickSpacing: number,
+  invert = false,
+) {
   const lo = Math.ceil(lower / tickSpacing) * tickSpacing;
   const hi = Math.floor(upper / tickSpacing) * tickSpacing;
   const [min, max] = invert ? [0 - hi, 0 - lo] : [lo, hi];
   const toValue = (tick: number) => (invert ? 0 - tick : tick);
-  const [left, right] = invert ? [range.tickUpper, range.tickLower] : [range.tickLower, range.tickUpper];
+  const [left, right] = invert
+    ? [range.tickUpper, range.tickLower]
+    : [range.tickLower, range.tickUpper];
   const clamp = (v: number) => Math.max(min, Math.min(max, v));
   return {
     min,
@@ -186,6 +223,9 @@ export function rangeSlider(range: TickRange, lower: number, upper: number, tick
     /** The tick a slider value stands for. */
     tickOf: toValue,
     /** Whether each thumb's real tick is outside the window. */
-    offscreen: [toValue(left) !== clamp(toValue(left)), toValue(right) !== clamp(toValue(right))] as const,
+    offscreen: [
+      toValue(left) !== clamp(toValue(left)),
+      toValue(right) !== clamp(toValue(right)),
+    ] as const,
   };
 }

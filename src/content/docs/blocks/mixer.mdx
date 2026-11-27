@@ -20,7 +20,9 @@ This block is both halves. Connect the Demo Wallet, deposit, keep the note, then
 </Preview>
 
 <Aside type="caution" title="Preview">
-  This demo runs on the [mock engine](/components/mock-mixer-engine/). With the [Tornado engine](/components/tornado-engine/) the same block deposits into and withdraws from classic Tornado Cash pools. That engine has had no security review: use test networks.
+  This demo runs on the [mock engine](/components/mock-mixer-engine/). With the [Tornado
+  engine](/components/tornado-engine/) the same block deposits into and withdraws from classic
+  Tornado Cash pools. That engine has had no security review: use test networks.
 </Aside>
 
 It is built from [Note Backup](/components/note-backup/), [Address Input](/components/address-input/), [Proof Progress](/components/proof-progress/) and [Transaction Status](/components/transaction-status/), on a [mixer engine](/components/mixer-engine/).
@@ -64,10 +66,10 @@ Details that matter:
 4. **Proof.** The pool's deposits are read, then the proof is made in the tab, stage by stage, with a cancel.
 5. **Send.** A relayer withdrawal goes out at once. A wallet withdrawal waits for a second click, because a wallet prompt has to come straight from one.
 
-| Sent by | Wallet needed | Cost | What shows on chain |
-| --- | --- | --- | --- |
-| A relayer | No | The relayer's fee, taken from the amount | The relayer and the recipient |
-| My wallet | Yes, on the pool's chain | Gas, paid by the wallet | That wallet and the recipient |
+| Sent by   | Wallet needed            | Cost                                     | What shows on chain           |
+| --------- | ------------------------ | ---------------------------------------- | ----------------------------- |
+| A relayer | No                       | The relayer's fee, taken from the amount | The relayer and the recipient |
+| My wallet | Yes, on the pool's chain | Gas, paid by the wallet                  | That wallet and the recipient |
 
 Details that matter:
 
@@ -77,60 +79,62 @@ Details that matter:
 - **The note leaves the field** once the withdrawal is sent. It is worth nothing after that.
 
 <Aside title="Privacy is the user's to keep">
-  The block can't see who is behind an address. Withdrawing to the address that deposited, or sending the withdrawal from a wallet linked to it, connects the two in public. So does withdrawing minutes after depositing into a quiet pool.
+  The block can't see who is behind an address. Withdrawing to the address that deposited, or
+  sending the withdrawal from a wallet linked to it, connects the two in public. So does withdrawing
+  minutes after depositing into a quiet pool.
 </Aside>
 
 ## States
 
 The deposit button names the blocker:
 
-| Situation | Button |
-| --- | --- |
-| No wallet | Connect wallet |
-| Wrong network | Switch to Ethereum |
-| Balance below the amount | Insufficient ETH |
-| Ready to start | Create note |
-| Note not confirmed as saved | Save your note first |
-| Ready | Deposit 0.1 ETH, or Approve USDC first |
+| Situation                   | Button                                 |
+| --------------------------- | -------------------------------------- |
+| No wallet                   | Connect wallet                         |
+| Wrong network               | Switch to Ethereum                     |
+| Balance below the amount    | Insufficient ETH                       |
+| Ready to start              | Create note                            |
+| Note not confirmed as saved | Save your note first                   |
+| Ready                       | Deposit 0.1 ETH, or Approve USDC first |
 
 And the withdraw button:
 
-| Situation | Button |
-| --- | --- |
-| Nothing pasted | Paste your note |
-| Not a note | Not a valid note, plus the reason |
-| Looking the deposit up | Checking note… |
-| No deposit on chain | No deposit found |
-| Already withdrawn | Already withdrawn |
-| No valid recipient | Enter a recipient |
-| Wallet sends, none connected | Connect wallet |
-| Ready | Withdraw 0.1 ETH |
+| Situation                    | Button                            |
+| ---------------------------- | --------------------------------- |
+| Nothing pasted               | Paste your note                   |
+| Not a note                   | Not a valid note, plus the reason |
+| Looking the deposit up       | Checking note…                    |
+| No deposit on chain          | No deposit found                  |
+| Already withdrawn            | Already withdrawn                 |
+| No valid recipient           | Enter a recipient                 |
+| Wallet sends, none connected | Connect wallet                    |
+| Ready                        | Withdraw 0.1 ETH                  |
 
 `data-phase` on `[data-slot=mixer-deposit]`:
 
-| `data-phase` | Meaning |
-| --- | --- |
-| `idle` | On the form. |
-| `creating` | The note is being made. |
-| `backup` | The note is on screen. Nothing was sent. |
-| `wallet` | A wallet prompt is open. |
-| `pending` | An approval or a batch is being mined. |
-| `cancelled` | The prompt was dismissed. |
-| `error` | A step failed, with the reason shown. |
+| `data-phase` | Meaning                                  |
+| ------------ | ---------------------------------------- |
+| `idle`       | On the form.                             |
+| `creating`   | The note is being made.                  |
+| `backup`     | The note is on screen. Nothing was sent. |
+| `wallet`     | A wallet prompt is open.                 |
+| `pending`    | An approval or a batch is being mined.   |
+| `cancelled`  | The prompt was dismissed.                |
+| `error`      | A step failed, with the reason shown.    |
 
 `data-phase` on `[data-slot=mixer-withdraw]`:
 
-| `data-phase` | Meaning |
-| --- | --- |
-| `idle` | On the form. |
-| `syncing` | The pool's deposits are being read. |
-| `proving` | The proof is being made. |
-| `review` | The proof is ready at a higher fee. Waiting for a yes. |
-| `ready` | The proof is ready. The wallet step waits for a click. |
-| `wallet` | The wallet prompt is open. |
-| `submitting` | The withdrawal is on its way to the relayer. |
-| `cancelled` | The proof was cancelled, or the prompt dismissed. |
-| `error` | The proof or the send failed, with the reason shown. |
+| `data-phase` | Meaning                                                |
+| ------------ | ------------------------------------------------------ |
+| `idle`       | On the form.                                           |
+| `syncing`    | The pool's deposits are being read.                    |
+| `proving`    | The proof is being made.                               |
+| `review`     | The proof is ready at a higher fee. Waiting for a yes. |
+| `ready`      | The proof is ready. The wallet step waits for a click. |
+| `wallet`     | The wallet prompt is open.                             |
+| `submitting` | The withdrawal is on its way to the relayer.           |
+| `cancelled`  | The proof was cancelled, or the prompt dismissed.      |
+| `error`      | The proof or the send failed, with the reason shown.   |
 
 ## Build your own
 
@@ -164,13 +168,13 @@ withdraw.send(); // via: "wallet" only
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `engine` | `MixerEngine` | — | The mixer to use. Required. |
-| `chainId` | `number` | chain of the first pool | Chain to deposit on. A withdrawal follows its note. |
-| `defaultPool` | `MixerPool` | first on `chainId` | Initially picked amount. |
-| `defaultTab` | `"deposit" \| "withdraw"` | `"deposit"` | The tab shown first. |
-| `onDeposited` | `(hash, { pool, commitment }) => void` | — | The deposit was sent. Never gets the note. |
-| `onWithdrawn` | `(hash, withdrawal) => void` | — | The withdrawal was broadcast. |
-| `title` | `ReactNode` | `"Mixer"` | Heading. `null` hides it. |
-| `className` | `string` | — | |
+| Prop          | Type                                   | Default                 | Description                                         |
+| ------------- | -------------------------------------- | ----------------------- | --------------------------------------------------- |
+| `engine`      | `MixerEngine`                          | —                       | The mixer to use. Required.                         |
+| `chainId`     | `number`                               | chain of the first pool | Chain to deposit on. A withdrawal follows its note. |
+| `defaultPool` | `MixerPool`                            | first on `chainId`      | Initially picked amount.                            |
+| `defaultTab`  | `"deposit" \| "withdraw"`              | `"deposit"`             | The tab shown first.                                |
+| `onDeposited` | `(hash, { pool, commitment }) => void` | —                       | The deposit was sent. Never gets the note.          |
+| `onWithdrawn` | `(hash, withdrawal) => void`           | —                       | The withdrawal was broadcast.                       |
+| `title`       | `ReactNode`                            | `"Mixer"`               | Heading. `null` hides it.                           |
+| `className`   | `string`                               | —                       |                                                     |

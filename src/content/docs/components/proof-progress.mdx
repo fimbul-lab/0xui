@@ -102,24 +102,24 @@ const { phase, stage, operation, error, isProving, prove, cancel, reset } = useP
 
 ## States
 
-| `data-phase` | Heading | Steps |
-| --- | --- | --- |
-| `idle` | Proof not started | All waiting. |
-| `loading-circuits` | Generating proof | Loading circuits is running. The first proof downloads them. |
-| `proving` | Generating proof | Computing proof is running. |
-| `verifying` | Generating proof | Verifying proof is running. |
-| `done` | Proof ready | All done. |
-| `cancelled` | Proof cancelled | Steps before `stage` are done. Quiet, not an error. |
-| `error` | Couldn't generate proof | The step in `stage` is marked failed, with the reason below. |
+| `data-phase`       | Heading                 | Steps                                                        |
+| ------------------ | ----------------------- | ------------------------------------------------------------ |
+| `idle`             | Proof not started       | All waiting.                                                 |
+| `loading-circuits` | Generating proof        | Loading circuits is running. The first proof downloads them. |
+| `proving`          | Generating proof        | Computing proof is running.                                  |
+| `verifying`        | Generating proof        | Verifying proof is running.                                  |
+| `done`             | Proof ready             | All done.                                                    |
+| `cancelled`        | Proof cancelled         | Steps before `stage` are done. Quiet, not an error.          |
+| `error`            | Couldn't generate proof | The step in `stage` is marked failed, with the reason below. |
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `phase` | `ProofPhase` | — | Where the proof is. |
-| `stage` | `ProofStage` | — | The stage a failed or cancelled proof stopped in. |
-| `error` | `Error \| string` | — | Shown when `phase` is `error`. |
-| `onCancel` | `() => void` | — | Shows **Cancel** while the proof runs. |
-| `onRetry` | `() => void` | — | Shows **Try again** after an error or a cancel. |
-| `title` | `ReactNode` | per phase | Heading override. |
-| `children` | `ReactNode` | — | What is being proved. |
+| Prop       | Type              | Default   | Description                                       |
+| ---------- | ----------------- | --------- | ------------------------------------------------- |
+| `phase`    | `ProofPhase`      | —         | Where the proof is.                               |
+| `stage`    | `ProofStage`      | —         | The stage a failed or cancelled proof stopped in. |
+| `error`    | `Error \| string` | —         | Shown when `phase` is `error`.                    |
+| `onCancel` | `() => void`      | —         | Shows **Cancel** while the proof runs.            |
+| `onRetry`  | `() => void`      | —         | Shows **Try again** after an error or a cancel.   |
+| `title`    | `ReactNode`       | per phase | Heading override.                                 |
+| `children` | `ReactNode`       | —         | What is being proved.                             |

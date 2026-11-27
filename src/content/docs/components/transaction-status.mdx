@@ -34,8 +34,12 @@ Pair it with [Transaction Button](/components/transaction-button/) through `onSu
 ```tsx
 const [hash, setHash] = useState<Hash>();
 
-<TransactionButton transaction={tx} onSubmitted={setHash} hideStatus>Send</TransactionButton>
-{hash && <TransactionStatus hash={hash}>Send 0.01 ETH</TransactionStatus>}
+<TransactionButton transaction={tx} onSubmitted={setHash} hideStatus>
+  Send
+</TransactionButton>;
+{
+  hash && <TransactionStatus hash={hash}>Send 0.01 ETH</TransactionStatus>;
+}
 ```
 
 ### More confirmations
@@ -56,21 +60,21 @@ const { phase, receipt, confirmations, required } = useTransactionStatus({ hash 
 
 ## States
 
-| `data-phase` | Heading |
-| --- | --- |
-| `pending` | Transaction pending |
+| `data-phase` | Heading                                            |
+| ------------ | -------------------------------------------------- |
+| `pending`    | Transaction pending                                |
 | `confirming` | Confirming (mined, waiting for more confirmations) |
-| `confirmed` | Transaction confirmed |
-| `reverted` | Transaction reverted |
-| `error` | Couldn't track transaction |
+| `confirmed`  | Transaction confirmed                              |
+| `reverted`   | Transaction reverted                               |
+| `error`      | Couldn't track transaction                         |
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `hash` | `Hash` | — | Transaction to follow. |
-| `chainId` | `number` | current chain | Chain it was sent on. |
-| `confirmations` | `number` | `1` | Required confirmations. |
-| `title` | `ReactNode` | per phase | Heading override. |
-| `children` | `ReactNode` | — | What the transaction does. |
-| `onConfirmed` | `(receipt) => void` | — | Called once on confirmation. |
+| Prop            | Type                | Default       | Description                  |
+| --------------- | ------------------- | ------------- | ---------------------------- |
+| `hash`          | `Hash`              | —             | Transaction to follow.       |
+| `chainId`       | `number`            | current chain | Chain it was sent on.        |
+| `confirmations` | `number`            | `1`           | Required confirmations.      |
+| `title`         | `ReactNode`         | per phase     | Heading override.            |
+| `children`      | `ReactNode`         | —             | What the transaction does.   |
+| `onConfirmed`   | `(receipt) => void` | —             | Called once on confirmation. |

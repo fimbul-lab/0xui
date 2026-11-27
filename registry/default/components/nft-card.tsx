@@ -69,7 +69,14 @@ export type NftCardProps = {
  * Arweave and inline `data:` metadata, with a skeleton while loading and a
  * placeholder when the image can't load.
  */
-export function NftCard({ contract, tokenId, chainId, gateway, showAttributes = false, className }: NftCardProps) {
+export function NftCard({
+  contract,
+  tokenId,
+  chainId,
+  gateway,
+  showAttributes = false,
+  className,
+}: NftCardProps) {
   const nft = useNft({ contract, tokenId, chainId, gateway });
   const [imageFailed, setImageFailed] = useState(false);
   const title = nft.metadata?.name ?? `#${tokenId}`;
@@ -107,10 +114,12 @@ export function NftCard({ contract, tokenId, chainId, gateway, showAttributes = 
           )}
         </div>
         <div className="flex flex-col gap-0.5 p-3">
-          <h3 className="truncate text-sm font-semibold">{phase === "loading" ? "Sample token name" : title}</h3>
+          <h3 className="truncate text-sm font-semibold">
+            {phase === "loading" ? "Sample token name" : title}
+          </h3>
           <p className="truncate text-xs text-muted-foreground">
-            {phase === "loading" ? "Sample collection" : (nft.collection ?? "Unknown collection")} · #
-            {tokenId.toString()}
+            {phase === "loading" ? "Sample collection" : (nft.collection ?? "Unknown collection")} ·
+            #{tokenId.toString()}
           </p>
           {showAttributes && nft.metadata?.attributes && nft.metadata.attributes.length > 0 && (
             <dl className="mt-2 flex flex-wrap gap-1.5">

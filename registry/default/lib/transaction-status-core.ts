@@ -1,4 +1,5 @@
-import { getPublicClient, type Config } from "@wagmi/core";
+import { getPublicClient } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import { getTransactionConfirmationsQueryOptions, hashFn } from "@wagmi/core/query";
 import type { Hash, TransactionReceipt } from "viem";
 
@@ -19,9 +20,14 @@ type TxTarget = { hash: Hash | undefined; chainId: number | undefined };
  * a reverted transaction resolves with its receipt (`status: "reverted"`)
  * instead of throwing, so the UI can show it.
  */
-export function waitForMinedReceipt(config: Config, { hash, chainId }: { hash: Hash; chainId?: number }) {
+export function waitForMinedReceipt(
+  config: Config,
+  { hash, chainId }: { hash: Hash; chainId?: number },
+) {
   const client = getPublicClient(config, { chainId });
-  if (!client) return Promise.reject(new Error(`Chain ${chainId} is not in the wagmi config.`));
+  if (!client) {
+    return Promise.reject(new Error(`Chain ${chainId} is not in the wagmi config.`));
+  }
   return client.waitForTransactionReceipt({ hash });
 }
 
@@ -29,7 +35,10 @@ export function waitForMinedReceipt(config: Config, { hash, chainId }: { hash: H
 export function minedReceiptQueryOptions(config: Config, { hash, chainId }: TxTarget) {
   return {
     queryKey: ["0xui", "mined-receipt", chainId, hash] as const,
-    queryFn: () => waitForMinedReceipt(config, { hash: hash!, chainId }),
+    queryFn: () =>
+      hash
+        ? waitForMinedReceipt(config, { hash, chainId })
+        : Promise.reject(new Error("No transaction hash to wait for.")),
     enabled: Boolean(hash && getPublicClient(config, { chainId })),
     staleTime: Infinity,
     retry: false,
@@ -45,7 +54,7 @@ export function transactionConfirmationsQueryOptions(
     ...getTransactionConfirmationsQueryOptions(config, {
       hash,
       chainId,
-      query: { enabled, refetchInterval: 4_000 },
+      query: { enabled, refetchInterval: 4000 },
     }),
     queryKeyHashFn: hashFn,
   };
@@ -85,7 +94,7 @@ export function transactionSteps({
   confirmations,
   required,
 }: ReturnType<typeof transactionStatus> & { receipt: TransactionReceipt | undefined }) {
-  const steps: TransactionStep[] = [
+  const steps: Array<TransactionStep> = [
     { id: "submitted", label: "Submitted", state: "done" },
     {
       id: "included",

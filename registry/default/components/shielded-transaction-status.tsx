@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/shielded-transaction-status.md
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { Hash } from "viem";
 import { useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
@@ -18,8 +19,8 @@ import {
   shieldedTxSteps,
   spendableAt as standbyEnd,
   standbyBlockQueryOptions,
-  type ShieldedTxStatusPhase,
 } from "@/lib/shielded-transaction-status-core";
+import type { ShieldedTxStatusPhase } from "@/lib/shielded-transaction-status-core";
 import { cn } from "@/lib/utils";
 
 export { formatWait, shieldedStatusText, type ShieldedTxStatusPhase };
@@ -28,12 +29,14 @@ export { formatWait, shieldedStatusText, type ShieldedTxStatusPhase };
 function useSecondsUntil(target: number | undefined) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (target === undefined) return;
+    if (target === undefined) {
+      return;
+    }
     setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [target]);
-  return target === undefined ? undefined : Math.max(0, Math.ceil((target - now) / 1_000));
+  return target === undefined ? undefined : Math.max(0, Math.ceil((target - now) / 1000));
 }
 
 export type UseShieldedTransactionStatusParameters = {
@@ -62,21 +65,23 @@ export function useShieldedTransactionStatus({
   const transaction = useShieldedState(
     "balances",
     (e) => e.getTransaction(chainId, hash),
-    undefined
+    undefined,
   );
 
   // The engine only learns about a public transaction by scanning. Ask for a
   // scan as soon as it is mined, instead of waiting for the engine's next one.
   const nudged = useRef<Hash>(undefined);
   useEffect(() => {
-    if (mined?.status !== "success" || nudged.current === hash) return;
+    if (mined?.status !== "success" || nudged.current === hash) {
+      return;
+    }
     nudged.current = hash;
     void engine.sync(chainId);
   }, [mined, hash, chainId, engine]);
 
   // The standby period runs from the block the transaction was mined in.
   const block = useQuery(
-    standbyBlockQueryOptions(config, { chainId, blockNumber: mined?.blockNumber, standby })
+    standbyBlockQueryOptions(config, { chainId, blockNumber: mined?.blockNumber, standby }),
   );
   const spendableAt = standbyEnd(block.data?.timestamp, standby);
 
@@ -189,7 +194,7 @@ export function ShieldedTransactionStatus({
             "font-medium",
             phase === "spendable" && "text-emerald-600 dark:text-emerald-400",
             (phase === "reverted" || phase === "error" || phase === "restricted") &&
-              "text-destructive"
+              "text-destructive",
           )}
         >
           {title ?? shieldedTxHeadings[phase]}
@@ -221,8 +226,7 @@ export function ShieldedTransactionStatus({
 
       {phase === "restricted" && (
         <p role="alert" className="text-destructive">
-          These funds can't be spent privately. They can only go back to the address they came
-          from.
+          These funds can't be spent privately. They can only go back to the address they came from.
         </p>
       )}
       {phase === "reverted" && (

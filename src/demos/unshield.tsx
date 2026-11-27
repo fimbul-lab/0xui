@@ -38,6 +38,6 @@ export const Default = shieldedDemo(
       { token: demoShieldedUsdc.address, amount: parseUnits("2400", 6) },
     ],
     // A real relayer sends a real transaction. This one is made up, and the demo chain mines it.
-    relay: ({ draft }) => sendDemoTransaction({ from: demoAccounts[1]!, to: draft.recipient }),
-  }
+    relay: ({ draft }) => sendDemoTransaction({ from: demoAccounts[1], to: draft.recipient }),
+  },
 );

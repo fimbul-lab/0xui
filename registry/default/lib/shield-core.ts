@@ -7,14 +7,15 @@ import {
   switchChain,
   waitForCallsStatus,
   watchConnection,
-  type Config,
-  type Connector,
 } from "@wagmi/core";
+import type { Config, Connector } from "@wagmi/core";
 import { getCapabilitiesQueryOptions, hashFn, readContractQueryOptions } from "@wagmi/core/query";
-import { encodeFunctionData, erc20Abi, formatUnits, type Address, type Hash } from "viem";
+import { encodeFunctionData, erc20Abi, formatUnits } from "viem";
+import type { Address, Hash } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { requiresAllowanceReset } from "@/lib/approve-button-core";
-import { errorCode, isUserRejection, type ErrorCode } from "@/lib/0xui-utils";
+import { errorCode, errorMessage, isUserRejection } from "@/lib/0xui-utils";
+import type { ErrorCode } from "@/lib/0xui-utils";
 import type {
   PreparedShield,
   PublicCall,
@@ -66,8 +67,8 @@ export function shieldSteps({
   needsApproval: boolean;
   needsReset: boolean;
   atomic: boolean;
-}): ShieldStepKind[] {
-  const send: ShieldStepKind[] = !needsApproval
+}): Array<ShieldStepKind> {
+  const send: Array<ShieldStepKind> = !needsApproval
     ? ["shield"]
     : atomic
       ? ["batch"]
@@ -128,7 +129,11 @@ export function shieldStepCopy(kind: ShieldStepKind, symbol: string) {
 /** The label of a running step's button: its call to action, or what the wallet is doing. */
 export function shieldStepLabel(kind: ShieldStepKind, phase: ShieldStepPhase, symbol: string) {
   const copy = shieldStepCopy(kind, symbol);
-  return phase === "wallet" ? copy.wallet : phase === "pending" ? (copy.pending ?? "Pending…") : copy.cta;
+  return phase === "wallet"
+    ? copy.wallet
+    : phase === "pending"
+      ? (copy.pending ?? "Pending…")
+      : copy.cta;
 }
 
 const stepWords: Record<ShieldStepKind, string> = {
@@ -140,8 +145,10 @@ const stepWords: Record<ShieldStepKind, string> = {
 };
 
 /** "Two wallet prompts: sign, approve and shield together." */
-export function describeShieldSteps(steps: readonly ShieldStepKind[]) {
-  if (steps.length === 1) return "One wallet prompt.";
+export function describeShieldSteps(steps: ReadonlyArray<ShieldStepKind>) {
+  if (steps.length === 1) {
+    return "One wallet prompt.";
+  }
   const count = ["", "", "Two", "Three", "Four"][steps.length] ?? String(steps.length);
   return `${count} wallet prompts: ${steps.map((kind) => stepWords[kind]).join(", ")}.`;
 }
@@ -164,7 +171,7 @@ export function shieldConfirmText({
   amount: bigint;
   token: ShieldTokenLabel;
   quote: Pick<ShieldQuote, "fee" | "received">;
-  steps: readonly ShieldStepKind[];
+  steps: ReadonlyArray<ShieldStepKind>;
   chainName?: string;
 }) {
   const units = (raw: bigint) => `${formatUnits(raw, token.decimals)} ${token.symbol}`;
@@ -176,7 +183,10 @@ export function shieldConfirmText({
 }
 
 /** What a person confirms before an agent opens the wallet for one step of a running shield. */
-export function shieldStepConfirmText(kind: ShieldStepKind, { amount, token }: { amount: bigint; token: ShieldTokenLabel }) {
+export function shieldStepConfirmText(
+  kind: ShieldStepKind,
+  { amount, token }: { amount: bigint; token: ShieldTokenLabel },
+) {
   const copy = shieldStepCopy(kind, token.symbol);
   return `${copy.title} in your wallet, to shield ${formatUnits(amount, token.decimals)} ${token.symbol}. ${copy.hint}`;
 }
@@ -199,18 +209,32 @@ export function shieldBlocker({
   /** The engine takes native currency as it is, so there is nothing to wrap. */
   shieldsNative?: boolean;
 }) {
-  if (accountStatus === "none") return "Create a private account first";
-  if (accountStatus === "locked") return "Unlock your private account";
-  if (!token) return "Select a token";
-  if (isNativeToken(token) && !shieldsNative) return `Wrap ${token.symbol} to shield it`;
-  if (!amount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${token.symbol} balance`;
+  if (accountStatus === "none") {
+    return "Create a private account first";
+  }
+  if (accountStatus === "locked") {
+    return "Unlock your private account";
+  }
+  if (!token) {
+    return "Select a token";
+  }
+  if (isNativeToken(token) && !shieldsNative) {
+    return `Wrap ${token.symbol} to shield it`;
+  }
+  if (!amount) {
+    return "Enter an amount";
+  }
+  if (insufficient) {
+    return `Insufficient ${token.symbol} balance`;
+  }
   return undefined;
 }
 
 /** A fee as a share of the amount: "0.25%". */
 export function formatFeePercent(fee: bigint, amount: bigint) {
-  if (amount === 0n) return "0%";
+  if (amount === 0n) {
+    return "0%";
+  }
   return `${Number((fee * 10_000n) / amount) / 100}%`;
 }
 
@@ -218,11 +242,19 @@ export function formatFeePercent(fee: bigint, amount: bigint) {
 export function shieldQuoteQueryOptions(
   engine: ShieldedEngine,
   draft: ShieldDraft | undefined,
-  { enabled = true }: { enabled?: boolean } = {}
+  { enabled = true }: { enabled?: boolean } = {},
 ) {
   return {
-    queryKey: ["0xui", "shield-quote", engine.id, draft?.chainId, draft?.token, draft?.amount.toString()],
-    queryFn: () => engine.quoteShield(draft!),
+    queryKey: [
+      "0xui",
+      "shield-quote",
+      engine.id,
+      draft?.chainId,
+      draft?.token,
+      draft?.amount.toString(),
+    ],
+    queryFn: () =>
+      draft ? engine.quoteShield(draft) : Promise.reject(new Error("Nothing to quote yet.")),
     enabled: Boolean(enabled && draft && draft.amount > 0n),
     staleTime: 30_000,
     retry: false,
@@ -232,14 +264,18 @@ export function shieldQuoteQueryOptions(
 /** How much `spender` may move of the draft's token. Disabled until all three are known. */
 export function shieldAllowanceQueryOptions(
   config: Config,
-  { draft, owner, spender }: { draft: ShieldDraft | undefined; owner: Address | undefined; spender: Address | undefined }
+  {
+    draft,
+    owner,
+    spender,
+  }: { draft: ShieldDraft | undefined; owner: Address | undefined; spender: Address | undefined },
 ) {
   return {
     ...readContractQueryOptions(config, {
       address: draft?.token,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [owner!, spender!],
+      args: owner && spender ? [owner, spender] : undefined,
       chainId: draft?.chainId,
       query: { enabled: Boolean(draft && spender && owner) },
     }),
@@ -255,12 +291,28 @@ export function walletCapabilitiesQueryOptions(
     account,
     connector,
     enabled = true,
-  }: { chainId: number | undefined; account: Address | undefined; connector: Connector | undefined; enabled?: boolean }
+  }: {
+    chainId: number | undefined;
+    account: Address | undefined;
+    connector: Connector | undefined;
+    enabled?: boolean;
+  },
 ) {
   return {
     ...getCapabilitiesQueryOptions(config, { chainId, account, connector, query: { enabled } }),
     queryKeyHashFn: hashFn,
   };
+}
+
+/** The `atomic.status` an EIP-5792 wallet reports for a chain, if any. */
+function atomicStatus(capabilities: unknown) {
+  if (typeof capabilities !== "object" || capabilities === null || !("atomic" in capabilities)) {
+    return undefined;
+  }
+  const { atomic } = capabilities;
+  return typeof atomic === "object" && atomic !== null && "status" in atomic
+    ? atomic.status
+    : undefined;
 }
 
 /**
@@ -269,12 +321,12 @@ export function walletCapabilitiesQueryOptions(
  * without atomicity could approve and then fail to shield. Neither counts.
  */
 export function isAtomic(capabilities: unknown) {
-  return (capabilities as { atomic?: { status?: string } } | undefined)?.atomic?.status === "supported";
+  return atomicStatus(capabilities) === "supported";
 }
 
 /** The wallet steps of a shield, frozen when it starts. */
 export type ShieldPlan = {
-  steps: ShieldStepKind[];
+  steps: Array<ShieldStepKind>;
   /** The spender already has an allowance below the amount. A batch clears it first, at no extra prompt. */
   leftover: boolean;
 };
@@ -295,12 +347,16 @@ export function planShield({
   allowance: bigint | undefined;
   atomic: boolean;
 }): ShieldPlan | undefined {
-  if (!draft || !quote) return undefined;
-  if (quote.spender && allowance === undefined) return undefined;
+  if (!draft || !quote) {
+    return undefined;
+  }
+  if (quote.spender && allowance === undefined) {
+    return undefined;
+  }
   return {
     steps: shieldSteps({
       needsSignature: quote.needsSignature,
-      needsApproval: Boolean(quote.spender) && allowance! < draft.amount,
+      needsApproval: Boolean(quote.spender) && allowance !== undefined && allowance < draft.amount,
       needsReset: Boolean(allowance) && requiresAllowanceReset(draft.chainId, draft.token),
       atomic,
     }),
@@ -362,8 +418,14 @@ const phaseOf: Record<ShieldStepKind, ShieldPhase> = {
 };
 
 /** The form's phase: the running step's, or why the last step stopped. */
-export function shieldPhase({ problem, active, index }: Pick<ShieldFlowState, "problem" | "active" | "index">): ShieldPhase {
-  if (problem) return problem.kind;
+export function shieldPhase({
+  problem,
+  active,
+  index,
+}: Pick<ShieldFlowState, "problem" | "active" | "index">): ShieldPhase {
+  if (problem) {
+    return problem.kind;
+  }
   const step = active?.steps[index];
   return step ? phaseOf[step] : "idle";
 }
@@ -373,18 +435,18 @@ export function shieldStepStates({
   active,
   index,
   stepPhase,
-}: Pick<ShieldFlowState, "active" | "index" | "stepPhase">) {
+}: Pick<ShieldFlowState, "active" | "index" | "stepPhase">): Array<{
+  kind: ShieldStepKind;
+  state: ShieldStepState;
+}> {
   return (active?.steps ?? []).map((kind, i) => ({
     kind,
-    state: (i < index
-      ? "done"
-      : i > index
-        ? "todo"
-        : stepPhase === "ready"
-          ? "ready"
-          : "active") as ShieldStepState,
+    state: i < index ? "done" : i > index ? "todo" : stepPhase === "ready" ? "ready" : "active",
   }));
 }
+
+/** The form button's label, and what pressing it does, if anything. */
+export type ShieldFormAction = { label: string; action?: "connect" | "switch" | "start" };
 
 /**
  * What the form's button does before a shield starts, and its label. It
@@ -410,16 +472,24 @@ export function shieldFormAction({
   quoting: boolean;
   planned: boolean;
   symbol: string | undefined;
-}): { label: string; action?: "connect" | "switch" | "start" } {
-  if (!connected) return { label: "Connect wallet", action: "connect" };
-  if (blocker) return { label: blocker };
+}): ShieldFormAction {
+  if (!connected) {
+    return { label: "Connect wallet", action: "connect" };
+  }
+  if (blocker) {
+    return { label: blocker };
+  }
   if (wrongChain) {
     return switching
       ? { label: "Switching network…" }
       : { label: `Switch to ${chainName}`, action: "switch" };
   }
-  if (quoteFailed) return { label: "Can't shield this amount" };
-  if (quoting || !planned) return { label: "Fetching quote…" };
+  if (quoteFailed) {
+    return { label: "Can't shield this amount" };
+  }
+  if (quoting || !planned) {
+    return { label: "Fetching quote…" };
+  }
   return { label: `Shield ${symbol}`, action: "start" };
 }
 
@@ -445,7 +515,7 @@ function readWallet(config: Config) {
 export function createShieldFlow(
   config: Config,
   engine: ShieldedEngine,
-  { onSubmitted }: ShieldFlowOptions = {}
+  { onSubmitted }: ShieldFlowOptions = {},
 ): ShieldFlow {
   const store = createStore<ShieldFlowState>(
     {
@@ -459,7 +529,7 @@ export function createShieldFlow(
     (store) => {
       store.set(readWallet(config));
       return watchConnection(config, { onChange: () => store.set(readWallet(config)) });
-    }
+    },
   );
 
   let prepared: PreparedShield | undefined;
@@ -472,17 +542,29 @@ export function createShieldFlow(
     const live = () => run === id;
     const { draft, quote } = flow;
     const { chainId, token, amount } = draft;
-    const kind = flow.steps[at]!;
+    const kind = flow.steps[at];
+    if (kind === undefined) {
+      return;
+    }
 
     // Built once per flow. If the engine needs a signature, this is where the wallet asks.
     const prepare = async () =>
       (prepared ??= await engine.prepareShield(draft, {
         sign: (message) => signMessage(config, { message }),
       }));
-    const approval = (value: bigint): PublicCall => ({
-      to: token,
-      data: encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [quote.spender!, value] }),
-    });
+    const approval = (value: bigint): PublicCall => {
+      if (!quote.spender) {
+        throw new Error("This shield has no spender to approve.");
+      }
+      return {
+        to: token,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [quote.spender, value],
+        }),
+      };
+    };
 
     store.set({ problem: undefined, stepPhase: "wallet" });
     try {
@@ -494,10 +576,14 @@ export function createShieldFlow(
           chainId,
           ...approval(kind === "reset" ? 0n : amount),
         });
-        if (live()) store.set({ stepPhase: "pending" });
-        const receipt = await getPublicClient(config, { chainId })!.waitForTransactionReceipt({
-          hash: sent,
-        });
+        if (live()) {
+          store.set({ stepPhase: "pending" });
+        }
+        const client = getPublicClient(config, { chainId });
+        if (!client) {
+          throw new Error(`Chain ${chainId} is not in the wagmi config.`);
+        }
+        const receipt = await client.waitForTransactionReceipt({ hash: sent });
         if (receipt.status === "reverted") {
           throw new Error("The approval reverted. Nothing changed except the gas fee.");
         }
@@ -510,7 +596,9 @@ export function createShieldFlow(
           chainId,
           calls: [...(flow.leftover ? [approval(0n)] : []), approval(amount), transaction],
         });
-        if (live()) store.set({ stepPhase: "pending" });
+        if (live()) {
+          store.set({ stepPhase: "pending" });
+        }
         const result = await waitForCallsStatus(config, { id: batch.id });
         const receipts = result.receipts ?? [];
         // The shield is the last call. A wallet can call a batch done while a
@@ -520,7 +608,9 @@ export function createShieldFlow(
           throw new Error("The batch reverted. Nothing was approved or shielded.");
         }
       }
-      if (!live()) return;
+      if (!live()) {
+        return;
+      }
 
       if (hash) {
         prepared = undefined;
@@ -529,16 +619,18 @@ export function createShieldFlow(
       } else {
         store.set({ index: at + 1, stepPhase: "ready" });
       }
-    } catch (cause) {
-      if (!live()) return;
-      const error = toError(cause);
+    } catch (error_) {
+      if (!live()) {
+        return;
+      }
+      const error = toError(error_);
       store.set({
         stepPhase: "ready",
         problem: isUserRejection(error)
           ? { kind: "cancelled" }
           : {
               kind: "error",
-              message: (error as { shortMessage?: string }).shortMessage ?? error.message,
+              message: errorMessage(error),
               code: errorCode("error", error),
             },
       });
@@ -555,7 +647,9 @@ export function createShieldFlow(
     },
     act() {
       const { active, stepPhase, index } = store.get();
-      if (active && stepPhase === "ready") void perform(active, index);
+      if (active && stepPhase === "ready") {
+        void perform(active, index);
+      }
     },
     leave() {
       run++;

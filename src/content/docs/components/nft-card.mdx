@@ -45,11 +45,11 @@ import { NftCard } from "@/components/nft-card";
 
 ## States
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `loading` | A skeleton measured from the card's own layout. |
-| `ready` | Image, name, collection and id. |
-| `not-found` | "Token not found": no `tokenURI`/`uri`, so it's not an NFT or doesn't exist. |
+| `data-phase`     | What the user sees                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `loading`        | A skeleton measured from the card's own layout.                                                                     |
+| `ready`          | Image, name, collection and id.                                                                                     |
+| `not-found`      | "Token not found": no `tokenURI`/`uri`, so it's not an NFT or doesn't exist.                                        |
 | `metadata-error` | "Metadata unavailable": the token exists, but its metadata host failed. Usually a rate-limited public IPFS gateway. |
 
 Helpers: `useNft`, `fetchNftMetadata`, `resolveUri` and `expandTokenUri` (ERC-1155 `{id}` substitution). For other frameworks, `nftTokenQueryOptions(config, { contract, tokenId })` and `nftMetadataQueryOptions({ uri })` from `@/lib/nft-card` work with any TanStack Query adapter.

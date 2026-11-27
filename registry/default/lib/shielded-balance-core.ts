@@ -1,10 +1,10 @@
 import type { Address } from "viem";
 import { createStore } from "@/lib/0xui-store";
-import {
-  SHIELDED_BALANCE_STATES,
-  type ShieldedBalanceState,
-  type ShieldedEngine,
-  type ShieldedTokenBalance,
+import { SHIELDED_BALANCE_STATES } from "@/lib/shielded-engine";
+import type {
+  ShieldedBalanceState,
+  ShieldedEngine,
+  ShieldedTokenBalance,
 } from "@/lib/shielded-engine";
 
 export type ShieldedBalancePhase = "idle" | "loading" | "ready" | "error";
@@ -16,7 +16,7 @@ export type ShieldedBalancesState = {
   phase: ShieldedBalancePhase;
   chainId: number;
   /** One entry per token held. Undefined until the first scan finishes. */
-  balances: readonly ShieldedTokenBalance[] | undefined;
+  balances: ReadonlyArray<ShieldedTokenBalance> | undefined;
   /** A scan is running and the balances shown may be about to change. */
   isUpdating: boolean;
   retryPhase: ShieldedRetryPhase;
@@ -70,10 +70,10 @@ export function createShieldedBalances(engine: ShieldedEngine, chainId: number):
       const update = () => store.set(readBalances(engine, chainId));
       update();
       const stops = (["account", "balances", "sync"] as const).map((event) =>
-        engine.subscribe(event, update)
+        engine.subscribe(event, update),
       );
       return () => stops.forEach((stop) => stop());
-    }
+    },
   );
 
   return {
@@ -103,10 +103,8 @@ const NO_FUNDS: ShieldedTokenBalance["amounts"] = {
 };
 
 /** One token's amounts from a balances snapshot, any address casing. A token not held is all zeros. */
-export function tokenAmounts(balances: readonly ShieldedTokenBalance[], token: Address) {
-  return (
-    balances.find((b) => b.token.toLowerCase() === token.toLowerCase())?.amounts ?? NO_FUNDS
-  );
+export function tokenAmounts(balances: ReadonlyArray<ShieldedTokenBalance>, token: Address) {
+  return balances.find((b) => b.token.toLowerCase() === token.toLowerCase())?.amounts ?? NO_FUNDS;
 }
 
 /** Sum of a token's private balance across every state. */
@@ -134,6 +132,7 @@ export const shieldedBalanceMeta: Record<
   },
   restricted: {
     label: "Restricted",
-    description: "Can't be spent privately. These funds can only go back to the address they came from.",
+    description:
+      "Can't be spent privately. These funds can only go back to the address they came from.",
   },
 };

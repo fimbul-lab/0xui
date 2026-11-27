@@ -49,11 +49,11 @@ Symbol keys (`{ USDC: 1 }`) also work and are handy for demos, but a symbol is w
 
 Wallets collect junk: airdropped tokens that advertise a "claim" site, copies of real tokens, and worthless dust. Portfolio hides a holding when, checked in this order:
 
-| Reason | Shown as | Rule |
-| --- | --- | --- |
-| `spam` | "Likely spam" | `isSpam(token)` is true. Defaults to `looksLikeSpam`. |
-| `unpriced` | "No price" | No price for the token. Turn off with `hideUnpriced={false}`. |
-| `dust` | "Under $0.50" | Worth less than `minValue` (default `0.5`). |
+| Reason     | Shown as      | Rule                                                          |
+| ---------- | ------------- | ------------------------------------------------------------- |
+| `spam`     | "Likely spam" | `isSpam(token)` is true. Defaults to `looksLikeSpam`.         |
+| `unpriced` | "No price"    | No price for the token. Turn off with `hideUnpriced={false}`. |
+| `dust`     | "Under $0.50" | Worth less than `minValue` (default `0.5`).                   |
 
 Hidden rows are left out of the total, and listed with their reason under a collapsed "Hidden tokens (N)" so a false positive costs a click, not a missing balance. Spam rows show the symbol's letters instead of the token's logo. The chain's native currency is never hidden.
 
@@ -69,7 +69,9 @@ For wallet-grade filtering, check tokens against a scanning service, or rules in
 const { data: flagged = new Set<string>() } = useQuery({
   queryKey: ["spam", chainId, address],
   queryFn: async () => {
-    const addresses: string[] = await fetch(`/api/spam/${chainId}/${address}`).then((r) => r.json());
+    const addresses: string[] = await fetch(`/api/spam/${chainId}/${address}`).then((r) =>
+      r.json(),
+    );
     return new Set(addresses.map((a) => a.toLowerCase()));
   },
 });
@@ -89,6 +91,7 @@ Over RPC, a portfolio costs one balance read per token, per user, per chain. We 
 ```tsx
 <Portfolio tokens={tokens} address={address} balances={balancesFromYourIndex} prices={prices} />
 ```
+
 </Aside>
 
 ## Tokens from your indexer
@@ -99,7 +102,13 @@ Over RPC, a portfolio costs one balance read per token, per user, per chain. We 
 <Portfolio
   tokens={tokens}
   holdings={rows.map((row) => ({
-    token: { chainId: 1, address: row.token, symbol: row.symbol, name: row.name, decimals: row.decimals },
+    token: {
+      chainId: 1,
+      address: row.token,
+      symbol: row.symbol,
+      name: row.name,
+      decimals: row.decimals,
+    },
     balance: BigInt(row.balance),
   }))}
   prices={prices}
@@ -122,33 +131,33 @@ Set `showUnlisted` to show them as normal rows instead. The spam, price and dust
 
 ## States
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `idle` | "Connect a wallet to see its tokens." |
-| `loading` | A skeleton measured from the rows themselves when they are known, from three sample rows otherwise. |
-| `ready` | Total and rows, and "Hidden tokens (N)" when some are hidden. |
-| `empty` | "No tokens from this list in this wallet." |
-| `error` | Couldn't load balances. |
+| `data-phase` | What the user sees                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| `idle`       | "Connect a wallet to see its tokens."                                                               |
+| `loading`    | A skeleton measured from the rows themselves when they are known, from three sample rows otherwise. |
+| `ready`      | Total and rows, and "Hidden tokens (N)" when some are hidden.                                       |
+| `empty`      | "No tokens from this list in this wallet."                                                          |
+| `error`      | Couldn't load balances.                                                                             |
 
 Each row has `data-hidden` set to its reason when it's hidden.
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `tokens` | `Token[]` | `[]` | Tokens to check. With `holdings`, the allowlist. |
-| `prices` | `Record<string, number>` | — | Prices by `chainId:address`, address or symbol. |
-| `address` | `Address` | connected | Whose holdings. |
-| `chainId` | `number` | current | Chain to read. |
-| `hideZero` | `boolean` | `true` | Hide empty balances. |
-| `isSpam` | `(token) => boolean` | `looksLikeSpam` | Flags scam tokens. |
-| `hideUnpriced` | `boolean` | `true` | Hide tokens without a price. |
-| `minValue` | `number` | `0.5` | Hide holdings worth less than this. |
-| `currency` | `string` | `"USD"` | Currency for values. |
-| `locale` | `string` | runtime locale | Locale for amounts and values. Set it when rendering on a server, so server and browser agree. |
-| `balances` | `Record<address, bigint>` | — | Balances from your own source. Skips RPC reads. |
-| `holdings` | `{ token, balance }[]` | — | Holdings from your own source, with each token's metadata. Skips RPC reads. |
-| `showUnlisted` | `boolean` | `false` | Show `holdings` that aren't on `tokens`. |
-| `isLoading` | `boolean` | `false` | Your own `balances` or `holdings` are still loading. Shows the skeleton and skips RPC reads. |
-| `pageSize` | `number` | `10` | Rows per page, with "Show more". |
-| `title` | `ReactNode` | `"Portfolio"` | Heading. `null` hides it. |
+| Prop           | Type                      | Default         | Description                                                                                    |
+| -------------- | ------------------------- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `tokens`       | `Token[]`                 | `[]`            | Tokens to check. With `holdings`, the allowlist.                                               |
+| `prices`       | `Record<string, number>`  | —               | Prices by `chainId:address`, address or symbol.                                                |
+| `address`      | `Address`                 | connected       | Whose holdings.                                                                                |
+| `chainId`      | `number`                  | current         | Chain to read.                                                                                 |
+| `hideZero`     | `boolean`                 | `true`          | Hide empty balances.                                                                           |
+| `isSpam`       | `(token) => boolean`      | `looksLikeSpam` | Flags scam tokens.                                                                             |
+| `hideUnpriced` | `boolean`                 | `true`          | Hide tokens without a price.                                                                   |
+| `minValue`     | `number`                  | `0.5`           | Hide holdings worth less than this.                                                            |
+| `currency`     | `string`                  | `"USD"`         | Currency for values.                                                                           |
+| `locale`       | `string`                  | runtime locale  | Locale for amounts and values. Set it when rendering on a server, so server and browser agree. |
+| `balances`     | `Record<address, bigint>` | —               | Balances from your own source. Skips RPC reads.                                                |
+| `holdings`     | `{ token, balance }[]`    | —               | Holdings from your own source, with each token's metadata. Skips RPC reads.                    |
+| `showUnlisted` | `boolean`                 | `false`         | Show `holdings` that aren't on `tokens`.                                                       |
+| `isLoading`    | `boolean`                 | `false`         | Your own `balances` or `holdings` are still loading. Shows the skeleton and skips RPC reads.   |
+| `pageSize`     | `number`                  | `10`            | Rows per page, with "Show more".                                                               |
+| `title`        | `ReactNode`               | `"Portfolio"`   | Heading. `null` hides it.                                                                      |

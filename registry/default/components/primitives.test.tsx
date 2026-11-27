@@ -1,7 +1,9 @@
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { parseUnits } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { emulateMedia } from "../../../test/media";
 import { createTestConfig, renderWithWagmi } from "../../../test/wagmi";
 import { Address } from "./address";
 import { AddressAvatar, addressGradient } from "./address-avatar";
@@ -11,41 +13,36 @@ import { CopyButton, copyLabel } from "./copy-button";
 import { ExplorerLink } from "./explorer-link";
 import { GasPrice, formatGasPrice, gasTone } from "./gas-price";
 import { MorphText } from "./morph-text";
-import { ResponsiveDialog, type ResponsiveDialogProps } from "./responsive-dialog";
+import { ResponsiveDialog } from "./responsive-dialog";
+import type { ResponsiveDialogProps } from "./responsive-dialog";
 import { TokenAmount, formatFiat } from "./token-amount";
 import { TokenIcon } from "./token-icon";
 
 const vitalik = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
 
 afterEach(() => {
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 describe("CopyButton", () => {
   it("copies, confirms, and announces", async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    // Gives jsdom an in-memory clipboard.
+    userEvent.setup();
     const onCopy = vi.fn();
-    renderWithWagmi(
-      <CopyButton value="0xabc" label="Copy address" onCopy={onCopy} />
-    );
+    renderWithWagmi(<CopyButton value="0xabc" label="Copy address" onCopy={onCopy} />);
 
-    // Not userEvent: it replaces navigator.clipboard with its own stub.
     await act(async () => {
       screen.getByRole("button", { name: "Copy address" }).click();
     });
 
-    expect(writeText).toHaveBeenCalledWith("0xabc");
+    expect(await navigator.clipboard.readText()).toBe("0xabc");
     expect(onCopy).toHaveBeenCalledWith("0xabc");
     expect(screen.getByRole("status")).toHaveTextContent("Copied");
     expect(screen.getByRole("button")).toHaveAttribute("data-copied");
   });
 
-  it("does not report a copy the clipboard refused", async () => {
-    vi.stubGlobal("navigator", {
-      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
-    });
+  it("does not report a copy without a clipboard", async () => {
+    expect(navigator.clipboard).toBeUndefined();
     const onCopy = vi.fn();
     renderWithWagmi(<CopyButton value="0xabc" onCopy={onCopy} />);
 
@@ -69,13 +66,13 @@ describe("ExplorerLink", () => {
 
   it("uses chainId when given", () => {
     renderWithWagmi(
-      <ExplorerLink address={vitalik} chainId={11155111}>
+      <ExplorerLink address={vitalik} chainId={11_155_111}>
         Sepolia
-      </ExplorerLink>
+      </ExplorerLink>,
     );
     expect(screen.getByRole("link", { name: /sepolia/i })).toHaveAttribute(
       "href",
-      `https://sepolia.etherscan.io/address/${vitalik}`
+      `https://sepolia.etherscan.io/address/${vitalik}`,
     );
   });
 
@@ -83,7 +80,7 @@ describe("ExplorerLink", () => {
     renderWithWagmi(
       <ExplorerLink block={1n} chainId={999}>
         Block 1
-      </ExplorerLink>
+      </ExplorerLink>,
     );
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.getByText("Block 1")).toBeInTheDocument();
@@ -92,14 +89,12 @@ describe("ExplorerLink", () => {
 
 describe("Address", () => {
   it("shows the checksummed, truncated address with the full one for screen readers", () => {
-    const lowercase = vitalik.toLowerCase() as `0x${string}`;
+    const lowercase: `0x${string}` = `0x${vitalik.slice(2).toLowerCase()}`;
     renderWithWagmi(<Address address={lowercase} ens={false} />);
     expect(screen.getByText("0xd8dA…6045")).toBeInTheDocument();
     expect(screen.getByText(vitalik)).toHaveClass("sr-only");
     // Named for its address, so several Address components stay apart.
-    expect(
-      screen.getByRole("button", { name: "Copy address 0xd8dA…6045" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy address 0xd8dA…6045" })).toBeInTheDocument();
   });
 
   it("prefers a given name", () => {
@@ -117,7 +112,7 @@ describe("Address", () => {
     renderWithWagmi(<Address address={vitalik} ens={false} explorer />);
     expect(screen.getByRole("link")).toHaveAttribute(
       "href",
-      `https://etherscan.io/address/${vitalik}`
+      `https://etherscan.io/address/${vitalik}`,
     );
   });
 });
@@ -126,13 +121,13 @@ describe("AddressAvatar", () => {
   it("derives a stable gradient per address", () => {
     expect(addressGradient(vitalik)).toBe(addressGradient(vitalik.toLowerCase()));
     expect(addressGradient(vitalik)).not.toBe(
-      addressGradient("0x71C7656EC7ab88b098defB751B7401B5f6d8976F")
+      addressGradient("0x71C7656EC7ab88b098defB751B7401B5f6d8976F"),
     );
   });
 
   it("renders the gradient fallback without ENS", () => {
     const { container } = renderWithWagmi(
-      <AddressAvatar address={vitalik} ens={false} size={32} />
+      <AddressAvatar address={vitalik} ens={false} size={32} />,
     );
     const root = container.querySelector('[data-slot="avatar"]');
     expect(root).toHaveStyle({ width: "32px", height: "32px" });
@@ -142,12 +137,12 @@ describe("AddressAvatar", () => {
 
 describe("ChainBadge", () => {
   it("names the chain from the wagmi config", () => {
-    renderWithWagmi(<ChainBadge chainId={11155111} />);
+    renderWithWagmi(<ChainBadge chainId={11_155_111} />);
     expect(screen.getByText("Sepolia")).toBeInTheDocument();
   });
 
   it("falls back for unknown chains and keeps the label accessible when icon-only", () => {
-    renderWithWagmi(<ChainBadge chainId={424242} iconOnly />);
+    renderWithWagmi(<ChainBadge chainId={424_242} iconOnly />);
     expect(screen.getByText("Chain 424242")).toHaveClass("sr-only");
   });
 });
@@ -169,7 +164,7 @@ describe("TokenAmount", () => {
         decimals={6}
         symbol="USDC"
         locale="en-US"
-      />
+      />,
     );
     const amount = screen.getByTitle("1234.567891 USDC");
     // A real space between amount and symbol for screen readers and agents.
@@ -178,20 +173,15 @@ describe("TokenAmount", () => {
 
   it("shows a fiat value when given a price", () => {
     renderWithWagmi(
-      <TokenAmount
-        value={parseUnits("2", 18)}
-        decimals={18}
-        price={3000}
-        locale="en-US"
-      />
+      <TokenAmount value={parseUnits("2", 18)} decimals={18} price={3000} locale="en-US" />,
     );
     expect(screen.getByText("$6,000.00")).toBeInTheDocument();
   });
 
   it("formats fiat in other currencies", () => {
-    expect(
-      formatFiat(parseUnits("1.5", 6), 6, 2, { currency: "EUR", locale: "de-DE" })
-    ).toBe("3,00\u00a0€");
+    expect(formatFiat(parseUnits("1.5", 6), 6, 2, { currency: "EUR", locale: "de-DE" })).toBe(
+      "3,00\u00a0€",
+    );
   });
 });
 
@@ -226,10 +216,9 @@ describe("GasPrice", () => {
 
   it("shows the price with its tone", async () => {
     const config = createTestConfig({ rpc: { eth_gasPrice: "0xba43b7400" } });
-    renderWithWagmi(
-      <GasPrice refreshInterval={false} thresholds={{ low: 5, high: 30 }} />,
-      { config }
-    );
+    renderWithWagmi(<GasPrice refreshInterval={false} thresholds={{ low: 5, high: 30 }} />, {
+      config,
+    });
     const price = await screen.findByText(/50 gwei/);
     expect(price.closest("[data-tone]")).toHaveAttribute("data-tone", "high");
   });
@@ -260,7 +249,7 @@ describe("MorphText", () => {
     render(
       <MorphText>
         <strong>Swap</strong>
-      </MorphText>
+      </MorphText>,
     );
     expect(screen.getByText("Swap").tagName).toBe("STRONG");
   });
@@ -291,19 +280,14 @@ describe("ResponsiveDialog", () => {
 
   it("presents as a sheet in drawer mode", async () => {
     render(dialog({ mode: "drawer" }));
-    expect(await screen.findByRole("dialog", { name: "Slippage" })).toHaveAttribute("data-presentation", "sheet");
+    expect(await screen.findByRole("dialog", { name: "Slippage" })).toHaveAttribute(
+      "data-presentation",
+      "sheet",
+    );
   });
 
   it("follows drawerQuery in auto mode", async () => {
-    vi.spyOn(window, "matchMedia").mockImplementation(
-      (query) =>
-        ({
-          matches: query === "(max-width: 767px)",
-          media: query,
-          addEventListener: () => {},
-          removeEventListener: () => {},
-        }) as unknown as MediaQueryList
-    );
+    emulateMedia({ width: 390 });
     render(dialog({ drawerQuery: "(max-width: 767px)" }));
     expect(await screen.findByRole("dialog")).toHaveAttribute("data-presentation", "sheet");
   });
@@ -337,8 +321,7 @@ describe("agent", () => {
 
   it("tells several addresses' copy buttons apart, and copies one", async () => {
     const other = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F";
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    userEvent.setup();
     renderWithWagmi(
       <>
         <Address address={vitalik} ens={false} />
@@ -349,9 +332,11 @@ describe("agent", () => {
       "Copy address 0xd8dA…6045",
       "Copy address 0x71C7…976F",
     ]);
-    const result = await agent.act({ steps: [{ ref: "Copy address 0x71C7…976F", action: "press" }] });
+    const result = await agent.act({
+      steps: [{ ref: "Copy address 0x71C7…976F", action: "press" }],
+    });
     expect(result.ok, result.error?.message).toBe(true);
-    expect(writeText).toHaveBeenCalledWith(other);
+    expect(await navigator.clipboard.readText()).toBe(other);
   });
 
   it("adds no unnamed entries for display components", () => {
@@ -359,7 +344,7 @@ describe("agent", () => {
       <>
         <AddressAvatar address={vitalik} ens={false} />
         <ChainBadge chainId={1} />
-        <ChainBadge chainId={424242} chainIcon={false} />
+        <ChainBadge chainId={424_242} chainIcon={false} />
         <TokenIcon symbol="ZZZ" chainId={1} />
         <TokenIcon symbol="ZZZ" decorative />
         <TokenAmount value={parseUnits("1.5", 6)} decimals={6} symbol="USDC" />
@@ -367,7 +352,9 @@ describe("agent", () => {
         <GasPrice refreshInterval={false} />
         <MorphText>Text</MorphText>
       </>,
-      { config: createTestConfig({ rpc: { eth_blockNumber: "0x10", eth_gasPrice: "0x3b9aca00" } }) },
+      {
+        config: createTestConfig({ rpc: { eth_blockNumber: "0x10", eth_gasPrice: "0x3b9aca00" } }),
+      },
     );
     expect(onPage()).toEqual([]);
     // Decorative where its symbol is written next to it, an image otherwise.
@@ -389,7 +376,9 @@ describe("agent", () => {
     );
     const labels = onPage().map((entry) => entry.label);
     expect(labels.sort()).toEqual(["Close slippage settings", "Slippage"]);
-    const result = await agent.act({ steps: [{ ref: "Close slippage settings", action: "press" }] });
+    const result = await agent.act({
+      steps: [{ ref: "Close slippage settings", action: "press" }],
+    });
     expect(result.ok, result.error?.message).toBe(true);
     expect(onOpenChange).toHaveBeenCalledWith(false, expect.anything());
   });

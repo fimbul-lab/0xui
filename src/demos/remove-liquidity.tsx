@@ -12,7 +12,8 @@ export const Default = demo(() => {
   const loaded = usePretendLoad();
   return (
     <>
-      <RemoveLiquidity locale="en-US"
+      <RemoveLiquidity
+        locale="en-US"
         position={loaded ? inRangePosition : undefined}
         pool={loaded ? demoUsdcEthPool.pool : undefined}
         getTransaction={v3Remove({ positionManager, weth })}

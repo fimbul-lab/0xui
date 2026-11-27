@@ -1,13 +1,9 @@
 import type { Config } from "@wagmi/core";
 import { getBalanceQueryOptions, hashFn, readContractsQueryOptions } from "@wagmi/core/query";
-import { erc20Abi, formatUnits, type Address } from "viem";
-import {
-  NATIVE_TOKEN_ADDRESS,
-  getTokenPrice,
-  isNativeToken,
-  type TokenInfo,
-  type TokenPrices,
-} from "@/lib/token-list";
+import { erc20Abi, formatUnits } from "viem";
+import type { Address } from "viem";
+import { NATIVE_TOKEN_ADDRESS, getTokenPrice, isNativeToken } from "@/lib/token-list";
+import type { TokenInfo, TokenPrices } from "@/lib/token-list";
 
 /** A token's identity in lists, balances and recents: its lowercase address. */
 export const tokenKey = (token: Pick<TokenInfo, "address">) => token.address.toLowerCase();
@@ -16,21 +12,35 @@ export const tokenKey = (token: Pick<TokenInfo, "address">) => token.address.toL
  * Search tokens by symbol, name or exact address. Symbol prefix matches
  * rank first, then other symbol matches, then name matches.
  */
-export function filterTokens(tokens: readonly TokenInfo[], query: string) {
+export function filterTokens(tokens: ReadonlyArray<TokenInfo>, query: string) {
   const q = query.trim().toLowerCase();
-  if (!q) return [...tokens];
-  if (/^0x[0-9a-f]{40}$/.test(q)) return tokens.filter((t) => tokenKey(t) === q);
+  if (!q) {
+    return [...tokens];
+  }
+  if (/^0x[0-9a-f]{40}$/.test(q)) {
+    return tokens.filter((t) => tokenKey(t) === q);
+  }
   const rank = (t: TokenInfo) => {
     const symbol = t.symbol.toLowerCase();
-    if (symbol === q) return 0;
-    if (symbol.startsWith(q)) return 1;
-    if (symbol.includes(q)) return 2;
-    if (t.name.toLowerCase().includes(q)) return 3;
+    if (symbol === q) {
+      return 0;
+    }
+    if (symbol.startsWith(q)) {
+      return 1;
+    }
+    if (symbol.includes(q)) {
+      return 2;
+    }
+    if (t.name.toLowerCase().includes(q)) {
+      return 3;
+    }
     return -1;
   };
   return tokens
-    .map((token) => ({ token, rank: rank(token) }))
-    .filter((t) => t.rank >= 0)
+    .flatMap((token) => {
+      const tokenRank = rank(token);
+      return tokenRank >= 0 ? [{ token, rank: tokenRank }] : [];
+    })
     .sort((a, b) => a.rank - b.rank)
     .map((t) => t.token);
 }
@@ -41,7 +51,7 @@ export function filterTokens(tokens: readonly TokenInfo[], query: string) {
  * aren't compared: a billion airdropped tokens shouldn't outrank 2 ETH.
  */
 export function sortByHoldings(
-  tokens: readonly TokenInfo[],
+  tokens: ReadonlyArray<TokenInfo>,
   balances: ReadonlyMap<string, bigint>,
   prices: TokenPrices = {},
 ) {
@@ -62,7 +72,8 @@ export function sortByHoldings(
 
 /** Caller-supplied balances, keyed by lowercase address. */
 export function toBalanceMap(balances: ReadonlyMap<string, bigint> | Record<string, bigint>) {
-  const entries = balances instanceof Map ? [...balances] : Object.entries(balances);
+  // A map is iterable and a plain record is not, even across realms.
+  const entries = Symbol.iterator in balances ? [...balances] : Object.entries(balances);
   return new Map(entries.map(([address, value]) => [address.toLowerCase(), value]));
 }
 
@@ -73,7 +84,7 @@ export function toBalanceMap(balances: ReadonlyMap<string, bigint> | Record<stri
  */
 export function tokenBalancesQueryOptions(
   config: Config,
-  tokens: readonly TokenInfo[],
+  tokens: ReadonlyArray<TokenInfo>,
   { chainId, address, enabled = true }: { chainId?: number; address?: Address; enabled?: boolean },
 ) {
   const erc20 = tokens.filter((t) => !isNativeToken(t));
@@ -93,7 +104,7 @@ export function tokenBalancesQueryOptions(
           address: token.address,
           abi: erc20Abi,
           functionName: "balanceOf" as const,
-          args: [address!] as const,
+          args: [address] as const,
           chainId,
         })),
         query: { enabled: enabled && Boolean(address) && erc20.length > 0 },
@@ -105,16 +116,20 @@ export function tokenBalancesQueryOptions(
 
 /** One map of lowercase token address to balance, from the two balance queries. Failed reads are left out. */
 export function mergeTokenBalances(
-  tokens: readonly TokenInfo[],
+  tokens: ReadonlyArray<TokenInfo>,
   native: { value: bigint } | null | undefined,
-  erc20: readonly { status: "success" | "failure"; result?: unknown }[] | undefined,
+  erc20: ReadonlyArray<{ status: "success" | "failure"; result?: unknown }> | undefined,
 ) {
   const map = new Map<string, bigint>();
-  if (native) map.set(tokenKey({ address: NATIVE_TOKEN_ADDRESS }), native.value);
+  if (native) {
+    map.set(tokenKey({ address: NATIVE_TOKEN_ADDRESS }), native.value);
+  }
   const contracts = tokens.filter((t) => !isNativeToken(t));
   erc20?.forEach((result, i) => {
     const token = contracts[i];
-    if (token && result.status === "success") map.set(tokenKey(token), result.result as bigint);
+    if (token && result.status === "success" && typeof result.result === "bigint") {
+      map.set(tokenKey(token), result.result);
+    }
   });
   return map;
 }
@@ -124,15 +139,17 @@ export function mergeTokenBalances(
  * addresses), each found among `tokens` and listed once.
  */
 export function quickPickTokens(
-  tokens: readonly TokenInfo[],
-  recent: readonly string[],
-  popular: readonly string[],
+  tokens: ReadonlyArray<TokenInfo>,
+  recent: ReadonlyArray<string>,
+  popular: ReadonlyArray<string>,
 ) {
   const wanted = [...recent, ...popular.map((p) => p.toLowerCase())];
-  const picked: TokenInfo[] = [];
+  const picked: Array<TokenInfo> = [];
   for (const w of wanted) {
     const token = tokens.find((t) => tokenKey(t) === w || t.symbol.toLowerCase() === w);
-    if (token && !picked.includes(token)) picked.push(token);
+    if (token && !picked.includes(token)) {
+      picked.push(token);
+    }
   }
   return picked.slice(0, 6);
 }
@@ -141,9 +158,12 @@ const RECENT_LIMIT = 4;
 const recentKey = (chainId: number) => `0xui:recent-tokens:${chainId}`;
 
 /** Addresses of the tokens last picked on a chain, newest first. */
-export function readRecentTokens(chainId: number): string[] {
+export function readRecentTokens(chainId: number): Array<string> {
   try {
-    return JSON.parse(localStorage.getItem(recentKey(chainId)) ?? "[]");
+    const stored: unknown = JSON.parse(localStorage.getItem(recentKey(chainId)) ?? "[]");
+    return Array.isArray(stored)
+      ? stored.filter((item: unknown): item is string => typeof item === "string")
+      : [];
   } catch {
     return [];
   }

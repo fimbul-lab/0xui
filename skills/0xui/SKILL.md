@@ -32,28 +32,28 @@ An install is done when the item's own file exists, like `components/wallet-butt
 
 Prefer a block or component over hand-rolled wagmi calls: they already handle cancellation, wrong network and loading. When the design needs a different UI, import the component's hook and keep its logic.
 
-| Need | Item |
-| --- | --- |
-| Connect button for a header | `wallet-button` (wraps `connect-wallet` and `account`) |
-| Wallet picker or connected-account panel alone | `connect-wallet`, `account` |
-| Sign a message or typed data, SIWE | `sign-message` |
-| Switch chain, require a chain | `chain-selector`, `network-guard` |
-| Chain chip, live block, gas | `chain-badge`, `block-number`, `gas-price` |
-| Show an address or ENS name | `address`, `address-avatar`, `ens-profile`, `explorer-link` |
-| Enter an address or ENS name | `address-input` |
-| Show a balance or amount | `balance`, `token-amount`, `token-icon` |
-| Enter an amount, pick a token | `token-input` (amount, picker, fiat, Max), `amount-input`, `token-select` |
-| Add a token to the wallet, show an NFT | `add-token`, `nft-card` |
-| Send a transaction or contract call | `transaction-button` |
-| ERC-20 approval before an action | `approve-button` |
-| Several calls in one prompt (EIP-5792) | `batch-transaction` |
-| Follow a transaction | `transaction-status` (inline), `transaction-toast` (mount `Toaster` from `@/components/primitives/toast` once) |
-| Past transactions, contract events | `transaction-history`, `event-feed` |
-| Forms for any contract from its ABI | `contract-form` |
+| Need                                                                                                       | Item                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connect button for a header                                                                                | `wallet-button` (wraps `connect-wallet` and `account`)                                                                                                                                                |
+| Wallet picker or connected-account panel alone                                                             | `connect-wallet`, `account`                                                                                                                                                                           |
+| Sign a message or typed data, SIWE                                                                         | `sign-message`                                                                                                                                                                                        |
+| Switch chain, require a chain                                                                              | `chain-selector`, `network-guard`                                                                                                                                                                     |
+| Chain chip, live block, gas                                                                                | `chain-badge`, `block-number`, `gas-price`                                                                                                                                                            |
+| Show an address or ENS name                                                                                | `address`, `address-avatar`, `ens-profile`, `explorer-link`                                                                                                                                           |
+| Enter an address or ENS name                                                                               | `address-input`                                                                                                                                                                                       |
+| Show a balance or amount                                                                                   | `balance`, `token-amount`, `token-icon`                                                                                                                                                               |
+| Enter an amount, pick a token                                                                              | `token-input` (amount, picker, fiat, Max), `amount-input`, `token-select`                                                                                                                             |
+| Add a token to the wallet, show an NFT                                                                     | `add-token`, `nft-card`                                                                                                                                                                               |
+| Send a transaction or contract call                                                                        | `transaction-button`                                                                                                                                                                                  |
+| ERC-20 approval before an action                                                                           | `approve-button`                                                                                                                                                                                      |
+| Several calls in one prompt (EIP-5792)                                                                     | `batch-transaction`                                                                                                                                                                                   |
+| Follow a transaction                                                                                       | `transaction-status` (inline), `transaction-toast` (mount `Toaster` from `@/components/primitives/toast` once)                                                                                        |
+| Past transactions, contract events                                                                         | `transaction-history`, `event-feed`                                                                                                                                                                   |
+| Forms for any contract from its ABI                                                                        | `contract-form`                                                                                                                                                                                       |
 | Concentrated liquidity (Uniswap v3/v4 style): set a price range, pool depth, positions, fee tier, slippage | `price-range`, `position-card`, `liquidity-chart`, `depth-chart`, `range-indicator`, `fee-tier-select`, `slippage-input` (math in `concentrated-liquidity`, v3 transactions in `v3-position-manager`) |
-| Whole features | blocks: `swap`, `send`, `portfolio`, `add-liquidity`, `remove-liquidity` |
-| Building blocks | `copy-button`, `responsive-dialog`, `morph-text` |
-| Let AI agents use the app and read the wallet (ui-sdk bridge, WebMCP) | `agent-tools` |
+| Whole features                                                                                             | blocks: `swap`, `send`, `portfolio`, `add-liquidity`, `remove-liquidity`                                                                                                                              |
+| Building blocks                                                                                            | `copy-button`, `responsive-dialog`, `morph-text`                                                                                                                                                      |
+| Let AI agents use the app and read the wallet (ui-sdk bridge, WebMCP)                                      | `agent-tools`                                                                                                                                                                                         |
 
 Install several at once: `npx shadcn@latest add @0xui/wallet-button @0xui/balance --overwrite`. Dependencies between items install with them.
 

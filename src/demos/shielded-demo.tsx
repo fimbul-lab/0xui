@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentType } from "react";
 import { ShieldedProvider } from "@/components/shielded-provider";
 import type { ShieldedToken } from "@/components/shielded-balance";
-import {
-  createMockShieldedEngine,
-  type MockShieldedEngine,
-  type MockShieldedEngineOptions,
-} from "@/lib/mock-shielded-engine";
+import { createMockShieldedEngine } from "@/lib/mock-shielded-engine";
+import type { MockShieldedEngine, MockShieldedEngineOptions } from "@/lib/mock-shielded-engine";
 import { demo } from "./demo";
 
 export const demoWeth: ShieldedToken = {
@@ -21,7 +19,7 @@ export const demoShieldedUsdc: ShieldedToken = {
 };
 
 /** Skip most of the 40 s first scan, for demos that are about something else. */
-export const quickStart = { unlock: 300, firstScan: 3_000 };
+export const quickStart = { unlock: 300, firstScan: 3000 };
 
 export type ShieldedDemoProps = {
   /** This demo's own mock engine. */
@@ -47,7 +45,7 @@ export function shieldedDemo(
   }: MockShieldedEngineOptions & {
     unlock?: boolean;
     setup?: (engine: MockShieldedEngine) => void;
-  } = {}
+  } = {},
 ) {
   return demo(function ShieldedDemo() {
     const [run, setRun] = useState(0);
@@ -56,7 +54,9 @@ export function shieldedDemo(
 
     useEffect(() => {
       setup?.(engine);
-      if (unlock) void engine.account.unlock("password");
+      if (unlock) {
+        void engine.account.unlock("password");
+      }
       return () => engine.account.lock();
     }, [engine]);
 

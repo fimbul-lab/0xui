@@ -25,7 +25,17 @@ import { Button } from "@/components/primitives/button";
 import { v3Collect } from "@/lib/v3-position-manager";
 
 <PositionCard
-  position={{ tokenId, token0: usdc, token1: eth, fee: 500, tickLower, tickUpper, liquidity, fees0, fees1 }}
+  position={{
+    tokenId,
+    token0: usdc,
+    token1: eth,
+    fee: 500,
+    tickLower,
+    tickUpper,
+    liquidity,
+    fees0,
+    fees1,
+  }}
   pool={pool}
   prices={prices}
   invert
@@ -46,7 +56,9 @@ For Uniswap v3, read `positions(tokenId)` from the position manager. It returns 
 import { maxUint128 } from "viem";
 import { positionManagerAbi } from "@/lib/v3-position-manager";
 
-const { result: [fees0, fees1] } = await client.simulateContract({
+const {
+  result: [fees0, fees1],
+} = await client.simulateContract({
   address: positionManager,
   abi: positionManagerAbi,
   functionName: "collect",
@@ -69,14 +81,14 @@ The Collect fees button names its blocker ("No fees to collect"). For agents its
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `position` | `Position<Token>` | — | `{ tokenId, token0, token1, fee?, tickLower, tickUpper, liquidity, fees0?, fees1? }`. Leave out while loading. |
-| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. Leave out while loading. |
-| `prices` | `TokenPrices` | — | Fiat totals. |
-| `currency` | `string` | `"USD"` | ISO 4217 currency. |
-| `invert` | `boolean` | `false` | Quote the range in token0. |
-| `getCollectTransaction` | `(request) => tx` | — | Adds Collect fees. `v3Collect({ positionManager, weth })`. |
-| `onCollected` / `onSubmitted` | `(receipt)` / `(hash)` | — | Collect callbacks. |
-| `actions` | `ReactNode` | — | Extra footer buttons. |
-| `locale` | `string` | runtime locale | Number formatting locale. |
+| Prop                          | Type                                                         | Default        | Description                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------ | -------------- | -------------------------------------------------------------------------------------------------------------- |
+| `position`                    | `Position<Token>`                                            | —              | `{ tokenId, token0, token1, fee?, tickLower, tickUpper, liquidity, fees0?, fees1? }`. Leave out while loading. |
+| `pool`                        | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | —              | The position's pool. Leave out while loading.                                                                  |
+| `prices`                      | `TokenPrices`                                                | —              | Fiat totals.                                                                                                   |
+| `currency`                    | `string`                                                     | `"USD"`        | ISO 4217 currency.                                                                                             |
+| `invert`                      | `boolean`                                                    | `false`        | Quote the range in token0.                                                                                     |
+| `getCollectTransaction`       | `(request) => tx`                                            | —              | Adds Collect fees. `v3Collect({ positionManager, weth })`.                                                     |
+| `onCollected` / `onSubmitted` | `(receipt)` / `(hash)`                                       | —              | Collect callbacks.                                                                                             |
+| `actions`                     | `ReactNode`                                                  | —              | Extra footer buttons.                                                                                          |
+| `locale`                      | `string`                                                     | runtime locale | Number formatting locale.                                                                                      |

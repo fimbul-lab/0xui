@@ -6,7 +6,7 @@
   // www only redirects to the bare domain, in worker/index.ts.
   "routes": [
     { "pattern": "0xui.io", "custom_domain": true },
-    { "pattern": "www.0xui.io", "custom_domain": true }
+    { "pattern": "www.0xui.io", "custom_domain": true },
   ],
   "assets": {
     "directory": "./dist",
@@ -15,8 +15,8 @@
     "not_found_handling": "404-page",
     // Page routes only. Files (anything with a dot: /_astro/*, /r/*.json,
     // /llms.txt, *.md) skip the Worker.
-    "run_worker_first": ["/*", "!/*.*"]
+    "run_worker_first": ["/*", "!/*.*"],
   },
   // Branch builds run `wrangler preview`, which needs this block.
-  "previews": {}
+  "previews": {},
 }

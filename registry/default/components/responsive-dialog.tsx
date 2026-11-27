@@ -1,10 +1,6 @@
 // Docs: https://0xui.io/components/responsive-dialog.md
-import {
-  useCallback,
-  useSyncExternalStore,
-  type KeyboardEventHandler,
-  type ReactNode,
-} from "react";
+import { useCallback, useSyncExternalStore } from "react";
+import type { KeyboardEventHandler, ReactNode } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +16,9 @@ import {
 export function useMediaQuery(query: string) {
   const subscribe = useCallback(
     (onChange: () => void) => {
-      if (typeof window.matchMedia !== "function") return () => {};
+      if (typeof window.matchMedia !== "function") {
+        return () => {};
+      }
       const media = window.matchMedia(query);
       media.addEventListener("change", onChange);
       return () => media.removeEventListener("change", onChange);

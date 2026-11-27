@@ -45,18 +45,18 @@ Local history only knows what this browser recorded. For full history across dev
 ```tsx
 <TransactionHistory transactions={transactionsFromYourIndex} />
 ```
-</Aside>
 
+</Aside>
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `from` | `Address \| null` | connected | Filter by sender. `null` shows all. |
-| `transactions` | `HistoryEntry[]` | — | Transactions from your own source instead of this browser's. |
-| `pageSize` | `number` | `10` | Rows per page, with "Show more". |
-| `clearable` | `boolean` | `true` | Show a Clear button. |
-| `title` | `ReactNode` | `"Recent transactions"` | Heading. |
-| `locale` | `string` | runtime locale | Locale for the relative times. |
+| Prop           | Type              | Default                 | Description                                                  |
+| -------------- | ----------------- | ----------------------- | ------------------------------------------------------------ |
+| `from`         | `Address \| null` | connected               | Filter by sender. `null` shows all.                          |
+| `transactions` | `HistoryEntry[]`  | —                       | Transactions from your own source instead of this browser's. |
+| `pageSize`     | `number`          | `10`                    | Rows per page, with "Show more".                             |
+| `clearable`    | `boolean`         | `true`                  | Show a Clear button.                                         |
+| `title`        | `ReactNode`       | `"Recent transactions"` | Heading.                                                     |
+| `locale`       | `string`          | runtime locale          | Locale for the relative times.                               |
 
 Also exported: `useTransactionHistory`, `updateTransaction`, `clearTransactionHistory`. The store itself is framework-free: `transactionHistory.get()` and `transactionHistory.subscribe(listener)` from `@/lib/transaction-history`.

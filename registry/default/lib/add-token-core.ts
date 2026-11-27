@@ -1,4 +1,5 @@
-import { getConnection, watchAsset, watchConnection, type Config } from "@wagmi/core";
+import { getConnection, watchAsset, watchConnection } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Address } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
@@ -52,8 +53,8 @@ export function createTokenAdder(config: Config): TokenAdder {
         });
         store.set({ phase: added ? "added" : "cancelled" });
         return added;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
+      } catch (error_) {
+        const error = error_ instanceof Error ? error_ : new Error(String(error_));
         store.set({ error, phase: isUserRejection(error) ? "cancelled" : "error" });
         return false;
       }

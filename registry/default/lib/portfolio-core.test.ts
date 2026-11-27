@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { portfolioPhase, summarizePortfolio, normalizeBalances } from "./portfolio-core";
-import { NATIVE_TOKEN_ADDRESS, type TokenInfo } from "./token-list";
+import { NATIVE_TOKEN_ADDRESS } from "./token-list";
+import type { TokenInfo } from "./token-list";
 
 const token = (n: number, symbol: string, name = symbol): TokenInfo => ({
   chainId: 1,
@@ -9,7 +10,13 @@ const token = (n: number, symbol: string, name = symbol): TokenInfo => ({
   name,
   decimals: 0,
 });
-const eth: TokenInfo = { chainId: 1, address: NATIVE_TOKEN_ADDRESS, symbol: "ETH", name: "Ether", decimals: 18 };
+const eth: TokenInfo = {
+  chainId: 1,
+  address: NATIVE_TOKEN_ADDRESS,
+  symbol: "ETH",
+  name: "Ether",
+  decimals: 18,
+};
 
 describe("summarizePortfolio", () => {
   it("values, sorts and hides spam, unpriced tokens and dust", () => {
@@ -22,7 +29,9 @@ describe("summarizePortfolio", () => {
     const summary = summarizePortfolio({
       tokens,
       chainId: 1,
-      balances: normalizeBalances(Object.fromEntries(tokens.map((t) => [t.address.toUpperCase(), 10n]))),
+      balances: normalizeBalances(
+        Object.fromEntries(tokens.map((t) => [t.address.toUpperCase(), 10n])),
+      ),
       prices: { UNI: 10, DUST: 0.01, BIG: 50 },
     });
 
@@ -42,7 +51,13 @@ describe("summarizePortfolio", () => {
       { token: { ...listed, name: "From indexer" }, balance: 5n },
       { token: unlisted, balance: 5n },
     ];
-    const input = { tokens: [listed], chainId: 1, balances: new Map(), holdings, prices: { USDC: 1, NEW: 1 } };
+    const input = {
+      tokens: [listed],
+      chainId: 1,
+      balances: new Map(),
+      holdings,
+      prices: { USDC: 1, NEW: 1 },
+    };
 
     const hidden = summarizePortfolio(input);
     expect(hidden.rows[0]!.token.name).toBe("USD Coin");
@@ -51,7 +66,11 @@ describe("summarizePortfolio", () => {
   });
 
   it("always shows the native currency and counts unpriced rows", () => {
-    const summary = summarizePortfolio({ tokens: [eth], chainId: 1, balances: new Map([[eth.address.toLowerCase(), 1n]]) });
+    const summary = summarizePortfolio({
+      tokens: [eth],
+      chainId: 1,
+      balances: new Map([[eth.address.toLowerCase(), 1n]]),
+    });
     expect(summary).toMatchObject({ total: 0, unpriced: 1 });
     expect(summary.rows).toHaveLength(1);
   });

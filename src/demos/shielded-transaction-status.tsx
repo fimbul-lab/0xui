@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { parseEther, type Hash } from "viem";
+import { parseEther } from "viem";
+import type { Hash } from "viem";
 import { ShieldedTransactionStatus } from "@/components/shielded-transaction-status";
 import { TransactionButton } from "@/components/transaction-button";
 import { MOCK_SHIELD_CONTRACT } from "@/lib/mock-shielded-engine";
@@ -41,7 +42,7 @@ export const Default = shieldedDemo(
       </div>
     );
   },
-  { timings: { ...quickStart, standby: standby * 1_000 } }
+  { timings: { ...quickStart, standby: standby * 1000 } },
 );
 
 /** A shield the engine already knows about. This hash is not on any chain. */
@@ -68,7 +69,7 @@ export const Restricted = shieldedDemo(
       },
     ],
     timings: quickStart,
-  }
+  },
 );
 
 /** A shield the engine has found and is holding for the standby period. Not on any chain. */
@@ -96,5 +97,5 @@ export const Line = shieldedDemo(
       },
     ],
     timings: quickStart,
-  }
+  },
 );

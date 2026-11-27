@@ -1,4 +1,5 @@
-import { OverlayHost, type Overlays } from "@ui-sdk/react/overlays";
+import { OverlayHost } from "@ui-sdk/react/overlays";
+import type { Overlays } from "@ui-sdk/react/overlays";
 import {
   Toast,
   ToastAction,
@@ -7,10 +8,8 @@ import {
   ToastTitle,
   createToaster,
   toast,
-  type ToastRegionProps,
-  type ToastType,
-  type Toaster as ToasterQueue,
 } from "@ui-sdk/react/toast";
+import type { ToastRegionProps, ToastType } from "@ui-sdk/react/toast";
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -76,7 +75,7 @@ function renderToast(item: Parameters<NonNullable<ToastRegionProps["children"]>>
 
 export type ToasterProps = Omit<ToastRegionProps, "toaster" | "children"> & {
   /** A queue from `createToaster()`. Without one, it shows the shared `toast()` queue through `OverlayHost`. */
-  toaster?: ToasterQueue<any>;
+  toaster?: ToastRegionProps["toaster"];
   /** The overlay registry `OverlayHost` renders. Defaults to the shared one. */
   overlays?: Overlays;
 };
@@ -97,7 +96,9 @@ function Toaster({
     className: withClassName(regionClassName, className),
     children: renderToast,
   };
-  if (toaster) return <ToastRegion toaster={toaster} {...regionProps} />;
+  if (toaster) {
+    return <ToastRegion toaster={toaster} {...regionProps} />;
+  }
   return <OverlayHost overlays={overlays} toast={regionProps} />;
 }
 

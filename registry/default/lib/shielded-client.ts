@@ -38,7 +38,9 @@ export function createShieldedClient(engine: ShieldedEngine): ShieldedClient {
   const readAccount = () => {
     const status = engine.account.status();
     const address = engine.account.address();
-    if (status !== account.status || address !== account.address) account = { status, address };
+    if (status !== account.status || address !== account.address) {
+      account = { status, address };
+    }
     return account;
   };
 

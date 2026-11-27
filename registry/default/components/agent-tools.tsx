@@ -7,11 +7,13 @@ import {
   pageAgentTools,
   registerAgentTools,
   walletAgentTools,
-  type Agent,
-  type AgentConfirm,
-  type AgentTool,
-  type RegisterAgentToolsOptions,
-  type WalletAgentToolsOptions,
+} from "@/lib/agent-tools-core";
+import type {
+  Agent,
+  AgentConfirm,
+  AgentTool,
+  RegisterAgentToolsOptions,
+  WalletAgentToolsOptions,
 } from "@/lib/agent-tools-core";
 import {
   AlertDialog,
@@ -40,15 +42,17 @@ export {
 // One bridge and one place to ask per page, however many AgentTools render:
 // the first one mounted registers the tools and asks the person.
 type Instance = { confirm: () => AgentConfirm | false };
-let instances: Instance[] = [];
+let instances: Array<Instance> = [];
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
 };
-const setInstances = (next: Instance[]) => {
+const setInstances = (next: Array<Instance>) => {
   instances = next;
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 };
 
 /**
@@ -78,7 +82,7 @@ export function getAgent(): Agent {
 
 export type UseAgentToolsOptions = {
   /** Your own tools, registered next to the wallet tools. */
-  tools?: AgentTool[];
+  tools?: Array<AgentTool>;
   /** Set to false to register nothing, e.g. until the person opts in. */
   enabled?: boolean;
   /**
@@ -89,7 +93,7 @@ export type UseAgentToolsOptions = {
   confirm?: AgentConfirm | false;
 };
 
-const noTools: AgentTool[] = [];
+const noTools: Array<AgentTool> = [];
 
 /**
  * Registers ui-sdk's `snapshot`, `act` and `query` for the page and the
@@ -105,7 +109,7 @@ export function useAgentTools({
   const confirmRef = useRef(confirm);
   useEffect(() => {
     confirmRef.current = confirm;
-  });
+  }, [confirm]);
   const [instance] = useState<Instance>(() => ({ confirm: () => confirmRef.current }));
   const owner = useSyncExternalStore(
     subscribe,
@@ -120,7 +124,9 @@ export function useAgentTools({
 
   useEffect(() => {
     // Without WebMCP there is nothing to register, so don't start the bridge for it.
-    if (!owner || !enabled || !("modelContext" in document)) return;
+    if (!owner || !enabled || !("modelContext" in document)) {
+      return;
+    }
     return registerAgentTools([...walletAgentTools(config, { confirm: askPerson }), ...tools], {
       agent: getAgent(),
       allow: permissions.approved,
@@ -134,7 +140,9 @@ function createDialogConfirm() {
   let queue: Promise<unknown> = Promise.resolve();
   const confirm: AgentConfirm = (message, { signal }) => {
     const answer = queue.then(async () => {
-      if (signal.aborted) return false;
+      if (signal.aborted) {
+        return false;
+      }
       const result = await controller.open({ payload: message, signal });
       return result.returnValue === "confirm";
     });

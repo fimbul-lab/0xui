@@ -2,21 +2,22 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Skeleton, SkeletonBox } from "skullet/react";
 import { SegmentedControl, SegmentedControlItem } from "@/components/primitives/segmented-control";
-import { formatPrice, getDepthCurve, type LiquidityBin, type PairToken } from "@/lib/concentrated-liquidity";
+import { formatPrice, getDepthCurve } from "@/lib/concentrated-liquidity";
+import type { LiquidityBin, PairToken } from "@/lib/concentrated-liquidity";
 import {
   nextDepthReading,
   niceTicks,
   readDepth,
   sampleDepth,
   signedPercent as signed,
-  type DepthReading,
 } from "@/lib/depth-chart-core";
+import type { DepthReading } from "@/lib/depth-chart-core";
 import { compactAmount, liquidityColors } from "@/lib/liquidity-chart-core";
 import { cn } from "@/lib/utils";
 
 export { readDepth, sampleDepth, type DepthReading };
 
-const noBins: readonly LiquidityBin[] = [];
+const noBins: ReadonlyArray<LiquidityBin> = [];
 
 /** Sample reading the stat tiles are measured from while loading. */
 const standIn = (token: PairToken): DepthReading => ({
@@ -31,7 +32,7 @@ const compact = (value: number, locale?: string) => compactAmount(value, locale,
 
 export type DepthChartProps = {
   /** Bins from `getLiquidityBins`. Pass enough of them to cover `window`. Leave out while loading: shows a skeleton. */
-  bins?: readonly LiquidityBin[];
+  bins?: ReadonlyArray<LiquidityBin>;
   /** Current price, token1 per token0. Leave out while loading. */
   currentPrice?: number;
   token0: PairToken;
@@ -41,7 +42,7 @@ export type DepthChartProps = {
   /** Visible price move on each side, in percent. */
   window?: number;
   /** Window options shown as buttons. Pass `[]` to hide them. */
-  windows?: number[];
+  windows?: Array<number>;
   /** Depth levels shown above the chart and marked on it. */
   level?: number;
   height?: number;
@@ -76,9 +77,15 @@ export function DepthChart({
   const [width, setWidth] = useState(0);
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     setWidth(el.clientWidth);
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) {
+        setWidth(entry.contentRect.width);
+      }
+    });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -100,15 +107,24 @@ export function DepthChart({
 
   // Without bins the curve stays flat; a short curve means the pool runs dry.
   const edge = useMemo(() => getDepthCurve(bins, currentPrice), [bins, currentPrice]);
-  const maxValue = Math.max(1e-12, samples.asks.at(-1)!.value, samples.bids.at(-1)!.value);
+  const maxValue = Math.max(
+    1e-12,
+    samples.asks.at(-1)?.value ?? 0,
+    samples.bids.at(-1)?.value ?? 0,
+  );
   const yTicks = niceTicks(maxValue);
-  const top = yTicks.at(-1)!;
+  // niceTicks always ends at or above `maxValue`.
+  const top = yTicks.at(-1) ?? maxValue;
   const padLeft = 44;
   const plotW = Math.max(0, width - padLeft);
   const x = (percent: number) => padLeft + ((percent + span) / (2 * span)) * plotW;
   const y = (value: number) => height - (value / top) * (height - 8);
-  const path = (side: DepthReading[]) => side.map((r, i) => `${i ? "L" : "M"}${x(r.percent)},${y(r.value)}`).join("");
-  const area = (side: DepthReading[]) => `${path(side)}L${x(side.at(-1)!.percent)},${height}L${x(0)},${height}Z`;
+  const path = (side: Array<DepthReading>) =>
+    side.map((r, i) => `${i ? "L" : "M"}${x(r.percent)},${y(r.value)}`).join("");
+  const area = (side: Array<DepthReading>) => {
+    const last = side.at(-1);
+    return last ? `${path(side)}L${x(last.percent)},${height}L${x(0)},${height}Z` : "";
+  };
 
   const down = readDepth(bins, currentPrice, -level, opts);
   const up = readDepth(bins, currentPrice, level, opts);
@@ -116,13 +132,19 @@ export function DepthChart({
 
   const pointer = (clientX: number, rect: DOMRect) => {
     const px = clientX - rect.left;
-    if (px < padLeft) return setHover(undefined);
+    if (px < padLeft) {
+      return setHover(undefined);
+    }
     const percent = ((px - padLeft) / plotW) * 2 * span - span;
     setHover(Math.round(percent * 10) / 10);
   };
 
   return (
-    <div data-slot="depth-chart" data-loading={loading || undefined} className={cn("flex w-full flex-col gap-3 text-sm", className)} style={{
+    <div
+      data-slot="depth-chart"
+      data-loading={loading || undefined}
+      className={cn("flex w-full flex-col gap-3 text-sm", className)}
+      style={{
         // Bids hold the quote token, asks the base token; colors follow the token.
         ["--lp-bid" as string]: invert ? liquidityColors.token0 : liquidityColors.token1,
         ["--lp-ask" as string]: invert ? liquidityColors.token1 : liquidityColors.token0,
@@ -130,8 +152,20 @@ export function DepthChart({
     >
       <Skeleton loading={loading} label="Loading market depth">
         <div className="grid grid-cols-2 gap-2">
-          <DepthStat label={`Bids to ${signed(-level)}`} reading={loading ? standIn(quote) : down} quote={quote.symbol} color="var(--lp-bid)" locale={locale} />
-          <DepthStat label={`Asks to ${signed(level)}`} reading={loading ? standIn(base) : up} quote={quote.symbol} color="var(--lp-ask)" locale={locale} />
+          <DepthStat
+            label={`Bids to ${signed(-level)}`}
+            reading={loading ? standIn(quote) : down}
+            quote={quote.symbol}
+            color="var(--lp-bid)"
+            locale={locale}
+          />
+          <DepthStat
+            label={`Asks to ${signed(level)}`}
+            reading={loading ? standIn(base) : up}
+            quote={quote.symbol}
+            color="var(--lp-ask)"
+            locale={locale}
+          />
         </div>
       </Skeleton>
 
@@ -155,15 +189,13 @@ export function DepthChart({
         )}
       </div>
 
-      <div
-        ref={ref}
-        className="relative w-full select-none"
-        style={{ height: height + 20 }}
-      >
+      <div ref={ref} className="relative w-full select-none" style={{ height: height + 20 }}>
         {(loading || width === 0) && <SkeletonBox width="100%" height={height} radius={8} />}
         {!loading && width > 0 && (
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a chart, not a widget: keys only read depth into the live region, so `group` stays its honest role
           <div
             role="group"
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus is how arrow keys reach the depth readings
             tabIndex={0}
             aria-roledescription="chart"
             aria-label={`Market depth within ±${span}% of ${formatPrice(shownPrice, { locale })} ${quote.symbol} per ${base.symbol}. Use arrow keys to read depth at a price.`}
@@ -174,7 +206,9 @@ export function DepthChart({
             onBlur={() => setHover(undefined)}
             onKeyDown={(e) => {
               const next = nextDepthReading(e.key, hover, span);
-              if (next === undefined) return;
+              if (next === undefined) {
+                return;
+              }
               e.preventDefault();
               setHover(next);
             }}
@@ -182,24 +216,73 @@ export function DepthChart({
             <svg width={width} height={height} className="block overflow-visible" aria-hidden>
               {yTicks.map((t) => (
                 <g key={t}>
-                  <line x1={padLeft} x2={width} y1={y(t)} y2={y(t)} className="stroke-border" strokeWidth={1} />
-                  <text x={padLeft - 6} y={y(t)} dy="0.32em" textAnchor="end" className="fill-muted-foreground text-[10px] tabular-nums">
+                  <line
+                    x1={padLeft}
+                    x2={width}
+                    y1={y(t)}
+                    y2={y(t)}
+                    className="stroke-border"
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={padLeft - 6}
+                    y={y(t)}
+                    dy="0.32em"
+                    textAnchor="end"
+                    className="fill-muted-foreground text-[10px] tabular-nums"
+                  >
                     {compact(t, locale)}
                   </text>
                 </g>
               ))}
               <path d={area(samples.bids)} fill="var(--lp-bid)" fillOpacity={0.12} />
               <path d={area(samples.asks)} fill="var(--lp-ask)" fillOpacity={0.12} />
-              <path d={path(samples.bids)} fill="none" stroke="var(--lp-bid)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-              <path d={path(samples.asks)} fill="none" stroke="var(--lp-ask)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+              <path
+                d={path(samples.bids)}
+                fill="none"
+                stroke="var(--lp-bid)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              <path
+                d={path(samples.asks)}
+                fill="none"
+                stroke="var(--lp-ask)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
               {level < span &&
                 [-level, level].map((l) => (
-                  <line key={l} x1={x(l)} x2={x(l)} y1={0} y2={height} className="stroke-muted-foreground/40" strokeWidth={1} />
+                  <line
+                    key={l}
+                    x1={x(l)}
+                    x2={x(l)}
+                    y1={0}
+                    y2={height}
+                    className="stroke-muted-foreground/40"
+                    strokeWidth={1}
+                  />
                 ))}
-              <line x1={x(0)} x2={x(0)} y1={0} y2={height} className="stroke-foreground" strokeWidth={1} />
+              <line
+                x1={x(0)}
+                x2={x(0)}
+                y1={0}
+                y2={height}
+                className="stroke-foreground"
+                strokeWidth={1}
+              />
               {reading && (
                 <>
-                  <line x1={x(reading.percent)} x2={x(reading.percent)} y1={0} y2={height} className="stroke-foreground/50" strokeWidth={1} />
+                  <line
+                    x1={x(reading.percent)}
+                    x2={x(reading.percent)}
+                    y1={0}
+                    y2={height}
+                    className="stroke-foreground/50"
+                    strokeWidth={1}
+                  />
                   <circle
                     cx={x(reading.percent)}
                     cy={y(reading.value)}
@@ -226,16 +309,24 @@ export function DepthChart({
                   </div>
                 )}
                 <div className="mt-0.5 tabular-nums text-muted-foreground">
-                  {signed(reading.percent)} · {formatPrice(reading.price, { locale })} {quote.symbol}
+                  {signed(reading.percent)} · {formatPrice(reading.price, { locale })}{" "}
+                  {quote.symbol}
                 </div>
               </div>
             )}
 
-            <div className="absolute inset-x-0 text-[11px] text-muted-foreground tabular-nums" style={{ top: height + 4 }} aria-hidden>
+            <div
+              className="absolute inset-x-0 text-[11px] text-muted-foreground tabular-nums"
+              style={{ top: height + 4 }}
+              aria-hidden
+            >
               {[-span, -span / 2, 0, span / 2, span].map((p) => (
                 <span
                   key={p}
-                  className={cn("absolute", p === -span ? "" : p === span ? "-translate-x-full" : "-translate-x-1/2")}
+                  className={cn(
+                    "absolute",
+                    p === -span ? "" : p === span ? "-translate-x-full" : "-translate-x-1/2",
+                  )}
                   style={{ left: x(p) }}
                 >
                   {p === 0 ? formatPrice(shownPrice, { locale }) : signed(p)}
@@ -251,28 +342,30 @@ export function DepthChart({
         </p>
         {/* Reachable without hover: the full curve as a table. */}
         {!loading && (
-        <table className="sr-only">
-          <caption>Cumulative depth by price move</caption>
-          <thead>
-            <tr>
-              <th scope="col">Move</th>
-              <th scope="col">Amount</th>
-              <th scope="col">Value ({quote.symbol})</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[-span, -level, level, span].map((p) => {
-              const r = readDepth(bins, currentPrice, p, opts);
-              return (
-                <tr key={p}>
-                  <td>{signed(p)}</td>
-                  <td>{compact(r.amount, locale)} {r.symbol}</td>
-                  <td>{compact(r.value, locale)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+          <table className="sr-only">
+            <caption>Cumulative depth by price move</caption>
+            <thead>
+              <tr>
+                <th scope="col">Move</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Value ({quote.symbol})</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[-span, -level, level, span].map((p) => {
+                const r = readDepth(bins, currentPrice, p, opts);
+                return (
+                  <tr key={p}>
+                    <td>{signed(p)}</td>
+                    <td>
+                      {compact(r.amount, locale)} {r.symbol}
+                    </td>
+                    <td>{compact(r.value, locale)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
       </div>
       {!loading && edge.asks.length + edge.bids.length <= 2 && (
@@ -302,7 +395,8 @@ function DepthStat({
         {label}
       </span>
       <span className="text-lg font-semibold">
-        {compact(reading.amount, locale)} <span className="text-sm font-medium text-muted-foreground">{reading.symbol}</span>
+        {compact(reading.amount, locale)}{" "}
+        <span className="text-sm font-medium text-muted-foreground">{reading.symbol}</span>
       </span>
       {reading.symbol !== quote && (
         <span className="text-xs text-muted-foreground tabular-nums">

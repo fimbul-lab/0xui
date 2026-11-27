@@ -45,7 +45,10 @@ function TabsTab({ className, ...props }: ComponentProps<typeof TabsTabPrimitive
 
 function TabsPanel({ className, ...props }: ComponentProps<typeof TabsPanelPrimitive>) {
   return (
-    <TabsPanelPrimitive className={withClassName("flex-1 text-sm outline-none", className)} {...props} />
+    <TabsPanelPrimitive
+      className={withClassName("flex-1 text-sm outline-none", className)}
+      {...props}
+    />
   );
 }
 

@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/chain-badge.md
 import { NetworkIcon } from "@web3icons/react/dynamic";
-import { useEffect, useState, type ComponentProps, type ComponentType } from "react";
+import { useEffect, useState } from "react";
+import type { ComponentProps, ComponentType } from "react";
 import { SkeletonBox } from "skullet/react";
 import { useChains } from "wagmi";
 import { Avatar, AvatarFallback } from "@/components/primitives/avatar";
@@ -82,8 +83,7 @@ export function ChainBadge({
   ...props
 }: ChainBadgeProps) {
   const chains = useChains();
-  const label =
-    name ?? chains.find((c) => c.id === chainId)?.name ?? `Chain ${chainId}`;
+  const label = name ?? chains.find((c) => c.id === chainId)?.name ?? `Chain ${chainId}`;
   const Icon = chainIcon === false ? null : (chainIcon ?? ChainIcon);
 
   return (
@@ -93,7 +93,7 @@ export function ChainBadge({
         "inline-flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-0.5 text-sm",
         iconOnly && "p-0.5",
         !Icon && "pl-2.5",
-        className
+        className,
       )}
       {...props}
     >

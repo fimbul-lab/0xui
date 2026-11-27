@@ -8,12 +8,8 @@ import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
 import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
-import {
-  getPositionAmounts,
-  getRangeStatus,
-  type PoolState,
-  type Position,
-} from "@/lib/concentrated-liquidity";
+import { getPositionAmounts, getRangeStatus } from "@/lib/concentrated-liquidity";
+import type { PoolState, Position } from "@/lib/concentrated-liquidity";
 import { formatFee } from "@/lib/fee-tier-core";
 import { formatMoney, positionValue } from "@/lib/liquidity-utils";
 import { collectConfirmText } from "@/lib/position-card-core";
@@ -27,7 +23,10 @@ export type CollectTransaction = { to: Address; data?: Hex; value?: bigint };
 /** Build the collect-fees transaction. Use `v3Collect({ positionManager, weth })` for Uniswap v3. */
 export type GetCollectTransaction = (request: CollectRequest<Token>) => CollectTransaction;
 
-type CardPool = Pick<PoolState, "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1">;
+type CardPool = Pick<
+  PoolState,
+  "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1"
+>;
 
 /** Stand-ins the loading skeleton is measured from. */
 const sampleToken = (symbol: string, n: number): Token => ({
@@ -37,7 +36,10 @@ const sampleToken = (symbol: string, n: number): Token => ({
   symbol,
   decimals: 18,
 });
-const sample: { position: Position<Token>; pool: CardPool } = {
+/** What the card draws: the position and its pool. */
+type Loaded = { position: Position<Token>; pool: CardPool };
+
+const sample: Loaded = {
   position: {
     tokenId: 100_000n,
     token0: sampleToken("ETH", 1),
@@ -110,7 +112,12 @@ function PositionCardView({
   const amounts = getPositionAmounts(position, pool);
   const fees = { amount0: position.fees0 ?? 0n, amount1: position.fees1 ?? 0n };
   const hasFees = fees.amount0 > 0n || fees.amount1 > 0n;
-  const status = getRangeStatus(pool.tick, position.tickLower, position.tickUpper, position.liquidity);
+  const status = getRangeStatus(
+    pool.tick,
+    position.tickLower,
+    position.tickUpper,
+    position.liquidity,
+  );
   const money = (value: number | undefined) => formatMoney(value, currency, locale);
   const [base, quote] = invert ? [token1, token0] : [token0, token1];
 
@@ -118,21 +125,38 @@ function PositionCardView({
     <article
       data-slot="position-card"
       data-status={status}
-      className={cn("flex w-full flex-col gap-4 rounded-xl border bg-card p-4 text-card-foreground", className)}
+      className={cn(
+        "flex w-full flex-col gap-4 rounded-xl border bg-card p-4 text-card-foreground",
+        className,
+      )}
     >
       <header className="flex items-center gap-3">
         <span className="flex shrink-0 -space-x-2" aria-hidden>
-          <TokenIcon symbol={base.symbol} src={base.logoURI} size={28} className="rounded-full ring-2 ring-card" />
-          <TokenIcon symbol={quote.symbol} src={quote.logoURI} size={28} className="rounded-full ring-2 ring-card" />
+          <TokenIcon
+            symbol={base.symbol}
+            src={base.logoURI}
+            size={28}
+            className="rounded-full ring-2 ring-card"
+          />
+          <TokenIcon
+            symbol={quote.symbol}
+            src={quote.logoURI}
+            size={28}
+            className="rounded-full ring-2 ring-card"
+          />
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
           <h3 className="truncate font-semibold">
             {base.symbol} / {quote.symbol}
           </h3>
-          <span className="text-xs text-muted-foreground tabular-nums">Position #{position.tokenId.toString()}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            Position #{position.tokenId.toString()}
+          </span>
         </div>
         {position.fee !== undefined && (
-          <span className="rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">{formatFee(position.fee, locale)}</span>
+          <span className="rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+            {formatFee(position.fee, locale)}
+          </span>
         )}
       </header>
 
@@ -175,7 +199,12 @@ function PositionCardView({
               chainId={token0.chainId}
               transaction={
                 address && hasFees
-                  ? getCollectTransaction({ tokenId: position.tokenId, token0, token1, recipient: address })
+                  ? getCollectTransaction({
+                      tokenId: position.tokenId,
+                      token0,
+                      token1,
+                      recipient: address,
+                    })
                   : undefined
               }
               disabledReason={address && !hasFees ? "No fees to collect" : undefined}
@@ -210,7 +239,7 @@ function AmountsBlock({
 }: {
   label: string;
   total?: string;
-  rows: { token: Token; value: bigint }[];
+  rows: Array<{ token: Token; value: bigint }>;
   locale?: string;
 }) {
   return (

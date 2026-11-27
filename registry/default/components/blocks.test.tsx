@@ -11,8 +11,8 @@ import {
   parseEther,
   parseUnits,
   toHex,
-  type Address,
 } from "viem";
+import type { AbiParameter, Address } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -27,19 +27,29 @@ import {
 import { BatchTransaction } from "./batch-transaction";
 import { ContractForm, formatAbiValue, parseAbiInput } from "./contract-form";
 import { EnsProfile } from "./ens-profile";
-import { EventFeed, formatEventArg, type FeedEvent } from "./event-feed";
+import { EventFeed, formatEventArg } from "./event-feed";
+import type { FeedEvent } from "./event-feed";
 import { NftCard, expandTokenUri, resolveUri } from "./nft-card";
 import { Portfolio } from "./portfolio";
 import { Send, sendBlocker, sendRequest } from "./send";
-import { Swap, formatRate, type GetQuote } from "./swap";
-import { NATIVE_TOKEN_ADDRESS, type Token } from "./token-select";
+import { Swap, formatRate } from "./swap";
+import type { GetQuote } from "./swap";
+import { NATIVE_TOKEN_ADDRESS } from "./token-select";
+import type { Token } from "./token-select";
 import {
   TransactionHistory,
   clearTransactionHistory,
   recordTransaction,
 } from "./transaction-history";
+import type { HistoryEntry } from "./transaction-history";
 
-const eth: Token = { chainId: 1, address: NATIVE_TOKEN_ADDRESS, symbol: "ETH", name: "Ether", decimals: 18 };
+const eth: Token = {
+  chainId: 1,
+  address: NATIVE_TOKEN_ADDRESS,
+  symbol: "ETH",
+  name: "Ether",
+  decimals: 18,
+};
 const usdc: Token = {
   chainId: 1,
   address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -51,7 +61,10 @@ const recipient = testAccounts[1];
 const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af" as Address;
 
 const getQuote: GetQuote = async ({ sellToken, sellAmount }) => ({
-  buyAmount: sellToken.symbol === "ETH" ? (sellAmount * 3150n) / 10n ** 12n : (sellAmount * 10n ** 12n) / 3150n,
+  buyAmount:
+    sellToken.symbol === "ETH"
+      ? (sellAmount * 3150n) / 10n ** 12n
+      : (sellAmount * 10n ** 12n) / 3150n,
   transaction: { to: router, data: "0x1234", value: sellToken.symbol === "ETH" ? sellAmount : 0n },
   spender: sellToken.symbol === "ETH" ? undefined : router,
   priceImpact: 0.12,
@@ -60,14 +73,30 @@ const getQuote: GetQuote = async ({ sellToken, sellAmount }) => ({
 describe("Send", () => {
   it("names what's missing, in order", () => {
     const base = { recipient: undefined, token: usdc, amount: undefined };
-    expect(sendBlocker(base, { recipientPhase: "empty", insufficient: false })).toBe("Enter a recipient");
-    expect(sendBlocker(base, { recipientPhase: "resolving", insufficient: false })).toBe("Looking up name…");
-    expect(sendBlocker(base, { recipientPhase: "invalid", insufficient: false })).toBe("Enter a valid recipient");
-    expect(sendBlocker({ ...base, recipient }, { recipientPhase: "valid", insufficient: false })).toBe("Enter an amount");
+    expect(sendBlocker(base, { recipientPhase: "empty", insufficient: false })).toBe(
+      "Enter a recipient",
+    );
+    expect(sendBlocker(base, { recipientPhase: "resolving", insufficient: false })).toBe(
+      "Looking up name…",
+    );
+    expect(sendBlocker(base, { recipientPhase: "invalid", insufficient: false })).toBe(
+      "Enter a valid recipient",
+    );
     expect(
-      sendBlocker({ ...base, recipient, amount: 1n }, { recipientPhase: "valid", insufficient: true })
+      sendBlocker({ ...base, recipient }, { recipientPhase: "valid", insufficient: false }),
+    ).toBe("Enter an amount");
+    expect(
+      sendBlocker(
+        { ...base, recipient, amount: 1n },
+        { recipientPhase: "valid", insufficient: true },
+      ),
     ).toBe("Insufficient USDC balance");
-    expect(sendBlocker({ ...base, recipient, amount: 1n }, { recipientPhase: "valid", insufficient: false })).toBeUndefined();
+    expect(
+      sendBlocker(
+        { ...base, recipient, amount: 1n },
+        { recipientPhase: "valid", insufficient: false },
+      ),
+    ).toBeUndefined();
   });
 
   it("sends value for the native currency and calls transfer for ERC-20s", () => {
@@ -83,7 +112,7 @@ describe("Send", () => {
     const user = userEvent.setup();
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
@@ -103,9 +132,11 @@ describe("Send", () => {
 
     await user.click(await screen.findByRole("button", { name: "Send ETH" }));
 
-    expect(await screen.findByText("Transaction confirmed", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByText("Transaction confirmed", {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(sent).toHaveBeenCalledWith(
-      expect.objectContaining({ to: recipient, value: toHex(parseEther("0.25")) })
+      expect.objectContaining({ to: recipient, value: toHex(parseEther("0.25")) }),
     );
   });
 });
@@ -115,45 +146,70 @@ describe("Swap", () => {
     const sell = { token: eth, amount: parseEther("2") };
     const buy = { token: usdc, amount: parseUnits("6300", 6) };
     expect(formatRate(sell, buy, { locale: "en-US" })).toBe("1 ETH = 3,150 USDC");
-    expect(formatRate(sell, buy, { invert: true, locale: "en-US" })).toBe("1 USDC = 0.00031746 ETH");
+    expect(formatRate(sell, buy, { invert: true, locale: "en-US" })).toBe(
+      "1 USDC = 0.00031746 ETH",
+    );
   });
 
   it("quotes, shows the rate, and swaps", async () => {
     const user = userEvent.setup();
-    const quote = vi.fn(getQuote);
+    let quotes = 0;
+    const quote: GetQuote = (request) => {
+      quotes += 1;
+      return getQuote(request);
+    };
     const config = createTestConfig({
       rpc: { ...fakeChainRpc(), eth_getBalance: toHex(parseEther("5")) },
     });
-    renderWithWagmi(<Swap tokens={[eth, usdc]} defaultBuyToken={usdc} getQuote={quote} />, { config });
+    renderWithWagmi(<Swap tokens={[eth, usdc]} defaultBuyToken={usdc} getQuote={quote} />, {
+      config,
+    });
     await act(() => connectMock(config));
 
     expect(screen.getByRole("button", { name: "Enter an amount" })).toBeDisabled();
     await user.type(screen.getByRole("textbox", { name: /^You pay in / }), "2");
 
     expect(await screen.findByRole("textbox", { name: /^You receive / })).toHaveValue("");
-    await waitFor(() => expect(screen.getByRole("textbox", { name: /^You receive / })).toHaveValue("6300"));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: /^You receive / })).toHaveValue("6300"),
+    );
     expect(screen.getByText(/1 ETH = 3,150 USDC/)).toBeInTheDocument();
     expect(screen.getByText("Price impact 0.12%")).toBeInTheDocument();
-    expect(quote).toHaveBeenCalledTimes(1);
+    expect(quotes).toBe(1);
 
     await user.click(screen.getByRole("button", { name: "Swap" }));
     // "Done" shows even though the input clears on success.
-    expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: /^You pay in / })).toHaveValue("");
   });
 
   it("asks for approval when selling an ERC-20", async () => {
     const user = userEvent.setup();
     const config = createTestConfig({
-      rpc: { ...fakeChainRpc(), eth_call: erc20CallRpc({ balance: parseUnits("1000", 6), allowance: 0n, decimals: 6 }) },
+      rpc: {
+        ...fakeChainRpc(),
+        eth_call: erc20CallRpc({ balance: parseUnits("1000", 6), allowance: 0n, decimals: 6 }),
+      },
     });
-    renderWithWagmi(<Swap tokens={[eth, usdc]} defaultSellToken={usdc} defaultBuyToken={eth} getQuote={getQuote} />, {
-      config,
-    });
+    renderWithWagmi(
+      <Swap
+        tokens={[eth, usdc]}
+        defaultSellToken={usdc}
+        defaultBuyToken={eth}
+        getQuote={getQuote}
+      />,
+      {
+        config,
+      },
+    );
     await act(() => connectMock(config));
 
     await user.type(screen.getByRole("textbox", { name: /^You pay in / }), "100");
-    expect(await screen.findByRole("button", { name: "Approve USDC" }, { timeout: 3_000 })).toBeEnabled();
+    expect(
+      await screen.findByRole("button", { name: "Approve USDC" }, { timeout: 3000 }),
+    ).toBeEnabled();
   });
 
   it("flips the tokens", async () => {
@@ -175,7 +231,7 @@ describe("Swap", () => {
         defaultBuyToken={usdc}
         getQuote={() => Promise.reject(new Error("No liquidity for this pair"))}
       />,
-      { config }
+      { config },
     );
     await act(() => connectMock(config));
 
@@ -195,32 +251,43 @@ describe("BatchTransaction", () => {
     const user = userEvent.setup();
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: { ...chain, eth_sendTransaction: (p: unknown) => (sent(), send(p)) },
     });
-    const { container } = renderWithWagmi(<BatchTransaction calls={calls} chainId={1} />, { config });
+    const { container } = renderWithWagmi(<BatchTransaction calls={calls} chainId={1} />, {
+      config,
+    });
     await act(() => connectMock(config));
 
     expect(await screen.findByText("2 wallet prompts, one per step.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-    expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(sent).toHaveBeenCalledTimes(2);
-    expect(within(screen.getByRole("list", { name: "Steps" })).getAllByLabelText("Done")).toHaveLength(2);
+    expect(
+      within(screen.getByRole("list", { name: "Steps" })).getAllByLabelText("Done"),
+    ).toHaveLength(2);
     expect(container.querySelector("[data-atomic]")).toBeNull();
   });
 
   it("sends everything in one prompt in atomic mode", async () => {
     const user = userEvent.setup();
     const config = createTestConfig({ rpc: fakeChainRpc() });
-    const { container } = renderWithWagmi(<BatchTransaction calls={calls} chainId={1} mode="atomic" />, { config });
+    const { container } = renderWithWagmi(
+      <BatchTransaction calls={calls} chainId={1} mode="atomic" />,
+      { config },
+    );
     await act(() => connectMock(config));
 
     expect(await screen.findByText("One wallet prompt for all steps.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-    expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(container.querySelector("[data-atomic]")).not.toBeNull();
   });
 
@@ -244,7 +311,11 @@ describe("BatchTransaction", () => {
 });
 
 describe("parseAbiInput", () => {
-  const p = (type: string, extra = {}) => ({ type, name: "x", ...extra }) as never;
+  const p = (type: string, extra: Partial<AbiParameter> = {}): AbiParameter => ({
+    type,
+    name: "x",
+    ...extra,
+  });
 
   it("parses integers with range checks", () => {
     expect(parseAbiInput(p("uint256"), "1_000")).toEqual({ value: 1000n });
@@ -256,7 +327,9 @@ describe("parseAbiInput", () => {
 
   it("checksums addresses and catches typos", () => {
     expect(parseAbiInput(p("address"), recipient.toLowerCase())).toEqual({ value: recipient });
-    expect(parseAbiInput(p("address"), recipient.replace("C7656", "c7656")).error).toBe("Checksum doesn't match");
+    expect(parseAbiInput(p("address"), recipient.replace("C7656", "c7656")).error).toBe(
+      "Checksum doesn't match",
+    );
     expect(parseAbiInput(p("address"), "0x123").error).toBe("Not an address");
   });
 
@@ -270,7 +343,12 @@ describe("parseAbiInput", () => {
   it("parses arrays and tuples as JSON", () => {
     expect(parseAbiInput(p("uint256[]"), '["1", 2]')).toEqual({ value: [1n, 2n] });
     expect(parseAbiInput(p("uint256[2]"), "[1]").error).toBe("Expected 2 items");
-    const tuple = p("tuple", { components: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }] });
+    const tuple = p("tuple", {
+      components: [
+        { name: "to", type: "address" },
+        { name: "amount", type: "uint256" },
+      ],
+    });
     expect(parseAbiInput(tuple, `{ "to": "${recipient}", "amount": "5" }`)).toEqual({
       value: { to: recipient, amount: 5n },
     });
@@ -324,10 +402,7 @@ describe("Portfolio", () => {
         eth_call: erc20CallRpc({ balance: parseUnits("500", 6), decimals: 6 }),
       },
     });
-    renderWithWagmi(
-      <Portfolio tokens={[usdc, eth]} prices={{ ETH: 3000, USDC: 1 }} />,
-      { config }
-    );
+    renderWithWagmi(<Portfolio tokens={[usdc, eth]} prices={{ ETH: 3000, USDC: 1 }} />, { config });
     await act(() => connectMock(config));
 
     expect(await screen.findByText("$6,500.00")).toBeInTheDocument();
@@ -338,7 +413,7 @@ describe("Portfolio", () => {
 
   it("uses balances from your own source and pages the rows", async () => {
     const user = userEvent.setup();
-    const many: Token[] = Array.from({ length: 12 }, (_, i) => ({
+    const many: Array<Token> = Array.from({ length: 12 }, (_, i) => ({
       chainId: 1,
       address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
       symbol: `T${i}`,
@@ -353,7 +428,7 @@ describe("Portfolio", () => {
         balances={Object.fromEntries(many.map((t, i) => [t.address, BigInt(i + 1)]))}
         prices={Object.fromEntries(many.map((t) => [t.symbol, 1]))}
         pageSize={5}
-      />
+      />,
     );
 
     expect(await screen.findByText("$78.00")).toBeInTheDocument();
@@ -389,7 +464,7 @@ describe("Portfolio", () => {
         chainId={1}
         balances={Object.fromEntries(tokens.map((t) => [t.address, 10n]))}
         prices={{ [`1:${real.address}`]: 10, [fake.address]: 10, DUST: 0.01 }}
-      />
+      />,
     );
 
     // Total and the one row: the fake UNI, also worth $100, is left out.
@@ -400,7 +475,9 @@ describe("Portfolio", () => {
 
     await user.click(toggle);
     const hidden = within(screen.getByRole("list", { name: "Hidden holdings" }));
-    expect(hidden.getByText("Visit uni-claim.com to claim").closest("[role=listitem]")).toHaveTextContent("Likely spam");
+    expect(
+      hidden.getByText("Visit uni-claim.com to claim").closest("[role=listitem]"),
+    ).toHaveTextContent("Likely spam");
     expect(hidden.getAllByText("No price")).toHaveLength(2);
     expect(hidden.getByText("Under $0.50")).toBeInTheDocument();
   });
@@ -421,24 +498,30 @@ describe("Portfolio", () => {
     ];
     const prices = { [`1:${usdc.address}`]: 1, [`1:${unlisted.address}`]: 2 };
     const { unmount } = renderWithWagmi(
-      <Portfolio tokens={[usdc]} chainId={1} holdings={holdings} prices={prices} />
+      <Portfolio tokens={[usdc]} chainId={1} holdings={holdings} prices={prices} />,
     );
 
     expect(await screen.findAllByText("$50.00")).toHaveLength(2);
     expect(screen.getByText("USD Coin")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Hidden tokens (1)" }));
-    expect(screen.getByText("New Token").closest("[role=listitem]")).toHaveTextContent("Not on the token list");
+    expect(screen.getByText("New Token").closest("[role=listitem]")).toHaveTextContent(
+      "Not on the token list",
+    );
 
     unmount();
     renderWithWagmi(
-      <Portfolio tokens={[usdc]} chainId={1} holdings={holdings} prices={prices} showUnlisted />
+      <Portfolio tokens={[usdc]} chainId={1} holdings={holdings} prices={prices} showUnlisted />,
     );
     expect(await screen.findByText("$90.00")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Hidden tokens/ })).not.toBeInTheDocument();
   });
 
   it("takes your own spam verdicts and thresholds", async () => {
-    const flagged: Token = { ...usdc, address: "0x0000000000000000000000000000000000000bad", name: "USD Coin" };
+    const flagged: Token = {
+      ...usdc,
+      address: "0x0000000000000000000000000000000000000bad",
+      name: "USD Coin",
+    };
     renderWithWagmi(
       <Portfolio
         tokens={[usdc, flagged]}
@@ -447,7 +530,7 @@ describe("Portfolio", () => {
         prices={{ USDC: 1 }}
         isSpam={(t) => t.address === flagged.address}
         minValue={0}
-      />
+      />,
     );
 
     expect(await screen.findByRole("button", { name: "Hidden tokens (1)" })).toBeInTheDocument();
@@ -466,14 +549,16 @@ describe("TransactionHistory", () => {
 
   it("lists recorded transactions and tracks their status", async () => {
     const chain = fakeChainRpc();
-    (chain.eth_sendTransaction as (p: unknown) => unknown)([{ from: testAccounts[0], to: recipient }]);
-    renderWithWagmi(<TransactionHistory from={null} />, { config: createTestConfig({ rpc: chain }) });
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: recipient }]);
+    renderWithWagmi(<TransactionHistory from={null} />, {
+      config: createTestConfig({ rpc: chain }),
+    });
 
     expect(screen.getByText("Transactions you send will show up here.")).toBeInTheDocument();
     act(() => recordTransaction({ hash: fakeTxHash, chainId: 1, description: "Send 1 ETH" }));
 
     expect(await screen.findByText("Send 1 ETH")).toBeInTheDocument();
-    expect(await screen.findByText("Confirmed ·", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(await screen.findByText("Confirmed ·", {}, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it("shows only the connected account's transactions", async () => {
@@ -482,8 +567,20 @@ describe("TransactionHistory", () => {
     await act(() => connectMock(config));
 
     act(() => {
-      recordTransaction({ hash: `0x${"01".repeat(32)}`, chainId: 1, from: testAccounts[0], description: "Mine", status: "confirmed" });
-      recordTransaction({ hash: `0x${"02".repeat(32)}`, chainId: 1, from: recipient, description: "Theirs", status: "confirmed" });
+      recordTransaction({
+        hash: `0x${"01".repeat(32)}`,
+        chainId: 1,
+        from: testAccounts[0],
+        description: "Mine",
+        status: "confirmed",
+      });
+      recordTransaction({
+        hash: `0x${"02".repeat(32)}`,
+        chainId: 1,
+        from: recipient,
+        description: "Theirs",
+        status: "confirmed",
+      });
     });
 
     expect(await screen.findByText("Mine")).toBeInTheDocument();
@@ -492,19 +589,21 @@ describe("TransactionHistory", () => {
 
   it("renders transactions from your own source and pages them", async () => {
     const user = userEvent.setup();
-    const indexed = Array.from({ length: 4 }, (_, i) => ({
-      hash: `0x${String(i + 1).repeat(64)}` as `0x${string}`,
+    const indexed = Array.from({ length: 4 }, (_, i): HistoryEntry => ({
+      hash: `0x${String(i + 1).repeat(64)}`,
       chainId: 1,
       description: `Indexed ${i}`,
       submittedAt: Date.now() - i * 60_000,
-      status: "confirmed" as const,
+      status: "confirmed",
     }));
     renderWithWagmi(<TransactionHistory from={null} transactions={indexed} pageSize={3} />);
 
     expect(screen.getByText("Indexed 0")).toBeInTheDocument();
     expect(screen.queryByText("Indexed 3")).not.toBeInTheDocument();
     // Not the local store, so nothing to clear.
-    expect(screen.queryByRole("button", { name: "Clear transaction history" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Clear transaction history" }),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Show more transactions (1)" }));
     expect(screen.getByText("Indexed 3")).toBeInTheDocument();
   });
@@ -512,7 +611,9 @@ describe("TransactionHistory", () => {
   it("clears", async () => {
     const user = userEvent.setup();
     renderWithWagmi(<TransactionHistory from={null} />);
-    act(() => recordTransaction({ hash: fakeTxHash, chainId: 1, description: "Old", status: "confirmed" }));
+    act(() =>
+      recordTransaction({ hash: fakeTxHash, chainId: 1, description: "Old", status: "confirmed" }),
+    );
 
     await user.click(await screen.findByRole("button", { name: "Clear transaction history" }));
     expect(screen.queryByText("Old")).not.toBeInTheDocument();
@@ -526,7 +627,13 @@ describe("EnsProfile", () => {
       rpc: {
         eth_call: ensResolveRpc(
           { "vitalik.eth": vitalik },
-          { "vitalik.eth": { description: "mi pinxe lo crino tcati", "com.twitter": "VitalikButerin", url: "https://vitalik.ca" } }
+          {
+            "vitalik.eth": {
+              description: "mi pinxe lo crino tcati",
+              "com.twitter": "VitalikButerin",
+              url: "https://vitalik.ca",
+            },
+          },
         ),
       },
     });
@@ -534,8 +641,14 @@ describe("EnsProfile", () => {
 
     expect(await screen.findByRole("heading", { name: "vitalik.eth" })).toBeInTheDocument();
     expect(await screen.findByText("mi pinxe lo crino tcati")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /X:\s*@VitalikButerin/ })).toHaveAttribute("href", "https://x.com/VitalikButerin");
-    expect(screen.getByRole("link", { name: /Website:\s*vitalik\.ca/ })).toHaveAttribute("href", "https://vitalik.ca");
+    expect(screen.getByRole("link", { name: /X:\s*@VitalikButerin/ })).toHaveAttribute(
+      "href",
+      "https://x.com/VitalikButerin",
+    );
+    expect(screen.getByRole("link", { name: /Website:\s*vitalik\.ca/ })).toHaveAttribute(
+      "href",
+      "https://vitalik.ca",
+    );
     expect(screen.getByText("0xd8dA…6045")).toBeInTheDocument();
   });
 
@@ -562,13 +675,25 @@ describe("NftCard", () => {
   });
 
   it("renders metadata from an inline data URI", async () => {
-    const metadata = { name: "Ape #7", image: "ipfs://QmImage", attributes: [{ trait_type: "Fur", value: "Gold" }] };
+    const metadata = {
+      name: "Ape #7",
+      image: "ipfs://QmImage",
+      attributes: [{ trait_type: "Fur", value: "Gold" }],
+    };
     const uri = `data:application/json;base64,${Buffer.from(JSON.stringify(metadata)).toString("base64")}`;
     const config = createTestConfig({
       rpc: {
         eth_call: ([{ data }]: [{ data: string }]) => {
-          if (data.startsWith("0xc87b56dd")) return encodeFunctionResult({ abi: nftAbi, functionName: "tokenURI", result: uri });
-          if (data.startsWith("0x06fdde03")) return encodeFunctionResult({ abi: nftAbi, functionName: "name", result: "Bored Ape Yacht Club" });
+          if (data.startsWith("0xc87b56dd")) {
+            return encodeFunctionResult({ abi: nftAbi, functionName: "tokenURI", result: uri });
+          }
+          if (data.startsWith("0x06fdde03")) {
+            return encodeFunctionResult({
+              abi: nftAbi,
+              functionName: "name",
+              result: "Bored Ape Yacht Club",
+            });
+          }
           throw new Error("execution reverted");
         },
       },
@@ -577,7 +702,10 @@ describe("NftCard", () => {
 
     expect(await screen.findByRole("heading", { name: "Ape #7" })).toBeInTheDocument();
     expect(screen.getByText("Bored Ape Yacht Club · #7")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Ape #7" })).toHaveAttribute("src", "https://ipfs.io/ipfs/QmImage");
+    expect(screen.getByRole("img", { name: "Ape #7" })).toHaveAttribute(
+      "src",
+      "https://ipfs.io/ipfs/QmImage",
+    );
     expect(screen.getByText("Gold")).toBeInTheDocument();
   });
 
@@ -585,20 +713,36 @@ describe("NftCard", () => {
     const config = createTestConfig({
       rpc: {
         eth_call: ([{ data }]: [{ data: string }]) => {
-          if (data.startsWith("0xc87b56dd"))
-            return encodeFunctionResult({ abi: nftAbi, functionName: "tokenURI", result: "data:application/json,{broken" });
+          if (data.startsWith("0xc87b56dd")) {
+            return encodeFunctionResult({
+              abi: nftAbi,
+              functionName: "tokenURI",
+              result: "data:application/json,{broken",
+            });
+          }
           throw new Error("execution reverted");
         },
       },
     });
     const { container } = renderWithWagmi(<NftCard contract={nft} tokenId={1n} />, { config });
     // The metadata fetch retries once before giving up.
-    expect(await screen.findByText("Metadata unavailable", {}, { timeout: 5_000 })).toBeInTheDocument();
-    expect(container.querySelector('[data-slot="nft-card"]')).toHaveAttribute("data-phase", "metadata-error");
+    expect(
+      await screen.findByText("Metadata unavailable", {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="nft-card"]')).toHaveAttribute(
+      "data-phase",
+      "metadata-error",
+    );
   });
 
   it("says when the token doesn't exist", async () => {
-    const config = createTestConfig({ rpc: { eth_call: () => { throw new Error("execution reverted"); } } });
+    const config = createTestConfig({
+      rpc: {
+        eth_call: () => {
+          throw new Error("execution reverted");
+        },
+      },
+    });
     renderWithWagmi(<NftCard contract={nft} tokenId={1n} />, { config });
     expect(await screen.findByText("Token not found")).toBeInTheDocument();
   });
@@ -606,7 +750,7 @@ describe("NftCard", () => {
 
 describe("EventFeed", () => {
   it("formats event arguments", () => {
-    expect(formatEventArg(1234567n)).toBe("1,234,567");
+    expect(formatEventArg(1_234_567n)).toBe("1,234,567");
     expect(formatEventArg(recipient)).toBe("0x71C7…976F");
     expect(formatEventArg(true)).toBe("true");
   });
@@ -626,17 +770,37 @@ describe("EventFeed", () => {
       removed: false,
     };
     renderWithWagmi(
-      <EventFeed address={usdc.address} abi={erc20Abi} eventName="Transfer" initialEvents={[past]} />,
-      { config: createTestConfig({ rpc: { ...fakeChainRpc(), eth_newFilter: "0x1", eth_getFilterChanges: [], eth_uninstallFilter: true } }) }
+      <EventFeed
+        address={usdc.address}
+        abi={erc20Abi}
+        eventName="Transfer"
+        initialEvents={[past]}
+      />,
+      {
+        config: createTestConfig({
+          rpc: {
+            ...fakeChainRpc(),
+            eth_newFilter: "0x1",
+            eth_getFilterChanges: [],
+            eth_uninstallFilter: true,
+          },
+        }),
+      },
     );
     expect(within(screen.getByRole("log")).getByText("42")).toBeInTheDocument();
   });
 
   it("shows new events as they arrive", async () => {
-    const transfer = parseAbi(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
+    const transfer = parseAbi([
+      "event Transfer(address indexed from, address indexed to, uint256 value)",
+    ]);
     const log = {
       address: usdc.address,
-      topics: encodeEventTopics({ abi: transfer, eventName: "Transfer", args: { from: testAccounts[0], to: recipient } }),
+      topics: encodeEventTopics({
+        abi: transfer,
+        eventName: "Transfer",
+        args: { from: testAccounts[0], to: recipient },
+      }),
       data: encodeAbiParameters([{ type: "uint256" }], [5_000_000n]),
       blockNumber: "0x65",
       blockHash: `0x${"33".repeat(32)}`,
@@ -654,24 +818,31 @@ describe("EventFeed", () => {
         eth_getFilterChanges: () => (delivered ? [] : ((delivered = true), [log])),
       },
     });
-    renderWithWagmi(<EventFeed address={usdc.address} abi={erc20Abi} eventName="Transfer" />, { config });
+    renderWithWagmi(<EventFeed address={usdc.address} abi={erc20Abi} eventName="Transfer" />, {
+      config,
+    });
 
     expect(screen.getByText("Waiting for events…")).toBeInTheDocument();
     const feed = screen.getByRole("log");
-    expect(await within(feed).findByText("Transfer", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(await within(feed).findByText("Transfer", {}, { timeout: 5000 })).toBeInTheDocument();
     expect(within(feed).getByText("5,000,000")).toBeInTheDocument();
     expect(within(feed).getByText("0x71C7…976F")).toBeInTheDocument();
-    expect(within(feed).getByRole("link", { name: /#101/ })).toHaveAttribute("href", `https://etherscan.io/tx/${fakeTxHash}`);
+    expect(within(feed).getByRole("link", { name: /#101/ })).toHaveAttribute(
+      "href",
+      `https://etherscan.io/tx/${fakeTxHash}`,
+    );
   });
 });
 
 describe("Agents", () => {
   // One bridge for the file. A person approves only while `approve` is set.
   let approve = false;
-  const asked: string[] = [];
+  const asked: Array<string> = [];
   const agent = createAgent({
     allow: (step) => {
-      if (step.confirm) asked.push(step.confirm);
+      if (step.confirm) {
+        asked.push(step.confirm);
+      }
       return !step.confirm || approve;
     },
   });
@@ -680,28 +851,36 @@ describe("Agents", () => {
     asked.length = 0;
   });
 
-  const onPage = () => agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+  const onPage = () =>
+    agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
   const entry = (label: string) => onPage().find((e) => e.label === label);
-  const expectNamed = (labels: string[]) => {
+  const expectNamed = (labels: Array<string>) => {
     const components = onPage();
-    for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    for (const e of components) {
+      expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+    }
     const names = components.map((e) => e.label);
-    for (const label of labels) expect(names, `${label} is missing from the snapshot`).toContain(label);
+    for (const label of labels) {
+      expect(names, `${label} is missing from the snapshot`).toContain(label);
+    }
   };
   /** The value of the item named `text` in the list labelled `within`, as an agent finds it. */
   const pick = async (within: string, text: string) => {
     const found = await act(() => agent.query({ within, text }));
-    if ("error" in found) throw new Error(found.error);
+    if ("error" in found) {
+      throw new Error(found.error);
+    }
     const value = found[0]?.items?.[0]?.value;
     expect(value, `${text} isn't in ${within}`).toBeDefined();
     return value;
   };
-  const run = (steps: { ref: string; action: string; args?: unknown[] }[]) => act(() => agent.act({ steps }));
+  const run = (steps: Array<{ ref: string; action: string; args?: Array<unknown> }>) =>
+    act(() => agent.act({ steps }));
 
   it("sends: fills recipient, token and amount, and needs a person to press Send", async () => {
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
@@ -715,7 +894,12 @@ describe("Agents", () => {
     });
     renderWithWagmi(<Send tokens={[eth, usdc]} />, { config });
     await act(() => connectMock(config));
-    expectNamed(["Recipient address", "Paste into Recipient", "Amount in ETH", "Amount token: ETH, change"]);
+    expectNamed([
+      "Recipient address",
+      "Paste into Recipient",
+      "Amount in ETH",
+      "Amount token: ETH, change",
+    ]);
 
     let result = await run([
       { ref: "Recipient", action: "setValue", args: [recipient] },
@@ -726,7 +910,10 @@ describe("Agents", () => {
     const token = await pick("Search tokens", "USD Coin");
     result = await run([{ ref: "Search tokens", action: "run", args: [token] }]);
     expect(result.ok, result.error?.message).toBe(true);
-    expect(entry("Amount token: USDC, change"), "the picked token shows on the trigger").toBeDefined();
+    expect(
+      entry("Amount token: USDC, change"),
+      "the picked token shows on the trigger",
+    ).toBeDefined();
     expect(result.ok, result.error?.message).toBe(true);
     result = await run([{ ref: "Amount", action: "setValue", args: ["2.5"] }]);
     expect(result.ok, result.error?.message).toBe(true);
@@ -746,7 +933,10 @@ describe("Agents", () => {
     await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
     const tx = sent.mock.calls[0]![0] as { to: string; data: `0x${string}` };
     expect(tx.to).toBe(usdc.address);
-    expect(decodeFunctionData({ abi: erc20Abi, data: tx.data }).args).toEqual([recipient, parseUnits("2.5", 6)]);
+    expect(decodeFunctionData({ abi: erc20Abi, data: tx.data }).args).toEqual([
+      recipient,
+      parseUnits("2.5", 6),
+    ]);
   });
 
   it("swaps: fills the amount, picks the token, reads the rate, and needs a person to press Swap", async () => {
@@ -755,25 +945,33 @@ describe("Agents", () => {
     });
     renderWithWagmi(<Swap tokens={[eth, usdc]} getQuote={getQuote} />, { config });
     await act(() => connectMock(config));
-    expectNamed(["You pay in ETH", "You receive amount", "Switch tokens", "You receive token: Select token"]);
+    expectNamed([
+      "You pay in ETH",
+      "You receive amount",
+      "Switch tokens",
+      "You receive token: Select token",
+    ]);
 
     let result = await run([
       { ref: "You pay", action: "setValue", args: ["2"] },
       { ref: "Select token", action: "press" },
     ]);
     expect(result.ok, result.error?.message).toBe(true);
-    result = await run([{ ref: "Search tokens", action: "run", args: [await pick("Search tokens", "USD Coin")] }]);
+    result = await run([
+      { ref: "Search tokens", action: "run", args: [await pick("Search tokens", "USD Coin")] },
+    ]);
     expect(result.ok, result.error?.message).toBe(true);
 
-    const sentence = "Swaps 2 ETH from your wallet for about 6300 USDC on Ethereum (price impact 0.12%)";
-    await waitFor(() => expect(entry("Swap")?.confirm).toBe(sentence), { timeout: 3_000 });
+    const sentence =
+      "Swaps 2 ETH from your wallet for about 6300 USDC on Ethereum (price impact 0.12%)";
+    await waitFor(() => expect(entry("Swap")?.confirm).toBe(sentence), { timeout: 3000 });
     expect(entry("You receive in USDC")?.value).toBe("6300");
 
     // The rate is a button too, free to press.
     result = await run([{ ref: "Invert rate", action: "press" }]);
     expect(result.ok, result.error?.message).toBe(true);
     expect(onPage().find((e) => e.label?.startsWith("Invert rate"))?.label).toBe(
-      "Invert rate: 1 USDC = 0.00031746 ETH"
+      "Invert rate: 1 USDC = 0.00031746 ETH",
     );
 
     result = await run([{ ref: "Swap", action: "press" }]);
@@ -783,7 +981,9 @@ describe("Agents", () => {
     approve = true;
     result = await run([{ ref: "Swap", action: "press" }]);
     expect(result.ok, result.error?.message).toBe(true);
-    expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it("flips a swap's tokens", async () => {
@@ -806,7 +1006,7 @@ describe("Agents", () => {
     function setup() {
       const sent = vi.fn();
       const chain = fakeChainRpc();
-      const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+      const send = chain.eth_sendTransaction;
       const config = createTestConfig({
         rpc: {
           ...chain,
@@ -912,7 +1112,9 @@ describe("Agents", () => {
     approve = true;
     result = await run([{ ref: "Confirm", action: "press" }]);
     expect(result.ok, result.error?.message).toBe(true);
-    expect(await screen.findByRole("button", { name: "Done" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Done" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
   });
 
   it("reads holdings, transactions and events, and finds rows by their text", async () => {
@@ -930,8 +1132,20 @@ describe("Agents", () => {
       removed: false,
     };
     const history = [
-      { hash: `0x${"1".repeat(64)}` as const, chainId: 1, description: "Send 1 ETH", submittedAt: Date.now(), status: "confirmed" as const },
-      { hash: `0x${"2".repeat(64)}` as const, chainId: 1, description: "Approve USDC", submittedAt: Date.now(), status: "reverted" as const },
+      {
+        hash: `0x${"1".repeat(64)}` as const,
+        chainId: 1,
+        description: "Send 1 ETH",
+        submittedAt: Date.now(),
+        status: "confirmed" as const,
+      },
+      {
+        hash: `0x${"2".repeat(64)}` as const,
+        chainId: 1,
+        description: "Approve USDC",
+        submittedAt: Date.now(),
+        status: "reverted" as const,
+      },
     ];
     renderWithWagmi(
       <>
@@ -944,27 +1158,51 @@ describe("Agents", () => {
           locale="en-US"
         />
         <TransactionHistory from={null} transactions={history} />
-        <EventFeed address={usdc.address} abi={erc20Abi} eventName="Transfer" initialEvents={[past]} />
+        <EventFeed
+          address={usdc.address}
+          abi={erc20Abi}
+          eventName="Transfer"
+          initialEvents={[past]}
+        />
       </>,
-      { config: createTestConfig({ rpc: { ...fakeChainRpc(), eth_newFilter: "0x1", eth_getFilterChanges: [], eth_uninstallFilter: true } }) }
+      {
+        config: createTestConfig({
+          rpc: {
+            ...fakeChainRpc(),
+            eth_newFilter: "0x1",
+            eth_getFilterChanges: [],
+            eth_uninstallFilter: true,
+          },
+        }),
+      },
     );
     await screen.findByText("$6,500.00");
     expectNamed(["Token holdings", "Show more holdings (1)", "Recent transactions", "Live events"]);
 
     const rowsOf = async (text: string) => {
       const found = await act(() => agent.query({ text }));
-      if ("error" in found) throw new Error(found.error);
+      if ("error" in found) {
+        throw new Error(found.error);
+      }
       return found.flatMap((e) => (e.items ?? []).map((item) => `${e.label}: ${item.label}`));
     };
-    expect(await rowsOf("Ether")).toEqual([expect.stringMatching(/^Token holdings: Ether 2.*ETH \$6,000\.00$/)]);
+    expect(await rowsOf("Ether")).toEqual([
+      expect.stringMatching(/^Token holdings: Ether 2.*ETH \$6,000\.00$/),
+    ]);
     // Only the first page is on the page. The agent shows more, freely.
     expect(await rowsOf("USD Coin")).toEqual([]);
     const result = await run([{ ref: "Show more holdings", action: "press" }]);
     expect(result.ok, result.error?.message).toBe(true);
-    expect(await rowsOf("USD Coin")).toEqual([expect.stringMatching(/^Token holdings: USD Coin 500.*USDC \$500\.00$/)]);
+    expect(await rowsOf("USD Coin")).toEqual([
+      expect.stringMatching(/^Token holdings: USD Coin 500.*USDC \$500\.00$/),
+    ]);
 
-    expect(await rowsOf("Approve USDC")).toEqual([expect.stringMatching(/^Recent transactions: Approve USDC .* · Reverted View/)]);
-    expect(await rowsOf("Send 1 ETH")).toEqual([expect.stringMatching(/^Recent transactions: Send 1 ETH Confirmed · /)]);
+    expect(await rowsOf("Approve USDC")).toEqual([
+      expect.stringMatching(/^Recent transactions: Approve USDC .* · Reverted View/),
+    ]);
+    expect(await rowsOf("Send 1 ETH")).toEqual([
+      expect.stringMatching(/^Recent transactions: Send 1 ETH Confirmed · /),
+    ]);
     expect(await rowsOf("Transfer")).toEqual([
       expect.stringMatching(/^Live events: Transfer from 0xd8dA…6045 to 0x71C7…976F value 42 #99/),
     ]);
@@ -975,15 +1213,19 @@ describe("Agents", () => {
  * Pairs of labels where every word of one is in the other, which a bridge
  * step can't tell apart by name ("Amount" and "Max amount").
  */
-function collisions(labels: readonly string[]) {
+function collisions(labels: ReadonlyArray<string>) {
   const words = (label: string) => new Set(label.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
-  const found: string[] = [];
+  const found: Array<string> = [];
   labels.forEach((a, i) =>
     labels.forEach((b, j) => {
-      if (i === j) return;
+      if (i === j) {
+        return;
+      }
       const wb = words(b);
-      if ([...words(a)].every((w) => wb.has(w))) found.push(`${a} / ${b}`);
-    })
+      if ([...words(a)].every((w) => wb.has(w))) {
+        found.push(`${a} / ${b}`);
+      }
+    }),
   );
   return found;
 }

@@ -13,9 +13,7 @@ export const Default = demo(function ToastDemo() {
       <TransactionButton
         chainId={1}
         transaction={{ to: demoAccounts[1], value: parseEther("0.01") }}
-        onSubmitted={(hash) =>
-          toastTransaction(hash, { chainId: 1, description: "Send 0.01 ETH" })
-        }
+        onSubmitted={(hash) => toastTransaction(hash, { chainId: 1, description: "Send 0.01 ETH" })}
         hideStatus
       >
         Send 0.01 ETH

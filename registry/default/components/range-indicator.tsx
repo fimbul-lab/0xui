@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/range-indicator.md
 import { Skeleton } from "skullet/react";
 import type { RangeStatus } from "@/lib/concentrated-liquidity";
-import { getRangeBar, rangeStatusLabel, type RangePool } from "@/lib/range-indicator-core";
+import { getRangeBar, rangeStatusLabel } from "@/lib/range-indicator-core";
+import type { RangePool } from "@/lib/range-indicator-core";
 import { cn } from "@/lib/utils";
 
 export { getRangeBar, rangeStatusLabel };
@@ -62,10 +63,23 @@ function RangeIndicatorView({
   locale,
   className,
 }: RangeIndicatorProps & { pool: RangePool }) {
-  const bar = getRangeBar({ tickLower, tickUpper, pool, liquidity, token0, token1, invert, locale });
+  const bar = getRangeBar({
+    tickLower,
+    tickUpper,
+    pool,
+    liquidity,
+    token0,
+    token1,
+    invert,
+    locale,
+  });
 
   return (
-    <div data-slot="range-indicator" data-status={bar.status} className={cn("flex w-full flex-col gap-2 text-sm", className)}>
+    <div
+      data-slot="range-indicator"
+      data-status={bar.status}
+      className={cn("flex w-full flex-col gap-2 text-sm", className)}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="inline-flex items-center gap-1.5 text-xs font-medium">
           <span className={cn("size-2 rounded-full", statusDot[bar.status])} aria-hidden />
@@ -75,7 +89,10 @@ function RangeIndicatorView({
       </div>
       <div role="img" aria-label={bar.label} className="relative h-2 w-full rounded-full bg-muted">
         <span
-          className={cn("absolute inset-y-0 rounded-full", bar.status === "in-range" ? "bg-foreground" : "bg-muted-foreground/50")}
+          className={cn(
+            "absolute inset-y-0 rounded-full",
+            bar.status === "in-range" ? "bg-foreground" : "bg-muted-foreground/50",
+          )}
           style={{ left: `${bar.left}%`, width: `${Math.max(1, bar.right - bar.left)}%` }}
         />
         <span

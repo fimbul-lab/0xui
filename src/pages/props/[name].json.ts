@@ -1,6 +1,7 @@
 import type { APIRoute, GetStaticPaths } from "astro";
 import { text } from "@/lib/load-docs";
-import { allComponentDocs, type ComponentDoc } from "@/lib/props";
+import { allComponentDocs } from "@/lib/props";
+import type { ComponentDoc } from "@/lib/props";
 
 export const getStaticPaths = (() =>
   allComponentDocs().map((doc) => ({

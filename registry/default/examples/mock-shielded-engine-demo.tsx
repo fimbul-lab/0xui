@@ -12,11 +12,16 @@ const weth = {
   decimals: 18,
 } as const;
 
+const run =
+  <Result,>(action: () => Promise<Result>) =>
+  () =>
+    void action().catch(console.error);
+
 export default function MockShieldedEngineDemo() {
   const [engine] = useState(() =>
     createMockShieldedEngine({
       funds: [{ token: weth.address, amount: parseEther("1.25") }],
-      timings: { firstScan: 8_000, standby: 15_000, settle: 8_000 },
+      timings: { firstScan: 8000, standby: 15_000, settle: 8000 },
     }),
   );
   useEffect(() => {
@@ -24,8 +29,6 @@ export default function MockShieldedEngineDemo() {
     void engine.account.unlock("password");
     return () => engine.account.lock();
   }, [engine]);
-
-  const run = (action: () => Promise<unknown>) => () => void action().catch(() => {});
 
   return (
     <ShieldedProvider engine={engine}>

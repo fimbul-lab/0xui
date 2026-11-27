@@ -1,4 +1,5 @@
-import { getConnection, switchChain, watchConnection, type Config } from "@wagmi/core";
+import { getConnection, switchChain, watchConnection } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Chain } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
@@ -10,7 +11,7 @@ export type NetworkGuardState = {
   /** A wallet is connected to a chain outside the allowed ones. */
   wrongNetwork: boolean;
   /** The allowed chains the config knows. */
-  allowedChains: Chain[];
+  allowedChains: Array<Chain>;
   /** The chain the wallet is on. */
   currentChainId: number | undefined;
   /** The chain a switch goes to: the first allowed one. */
@@ -31,7 +32,7 @@ export type NetworkGuard = {
 /** Whether the connected wallet is on one of `chainIds`, and a way to switch to the first. Framework-free. */
 export function createNetworkGuard(
   config: Config,
-  chainIds: number | readonly number[],
+  chainIds: number | ReadonlyArray<number>,
 ): NetworkGuard {
   const allowed = typeof chainIds === "number" ? [chainIds] : chainIds;
   const allowedChains = config.chains.filter((c) => allowed.includes(c.id));
@@ -63,7 +64,9 @@ export function createNetworkGuard(
     get: store.get,
     subscribe: store.subscribe,
     async switchToTarget() {
-      if (!target) return false;
+      if (!target) {
+        return false;
+      }
       switching = true;
       store.set({ ...read(), cancelled: false, error: null });
       try {
@@ -71,7 +74,10 @@ export function createNetworkGuard(
         return true;
       } catch (error) {
         const cancelled = isUserRejection(error);
-        store.set({ cancelled, error: cancelled ? null : (error as Error) });
+        store.set({
+          cancelled,
+          error: cancelled ? null : error instanceof Error ? error : new Error(String(error)),
+        });
         return false;
       } finally {
         switching = false;

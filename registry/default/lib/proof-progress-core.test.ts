@@ -27,12 +27,12 @@ describe("createProver", () => {
     const engine = await timedEngine();
     const onProved = vi.fn();
     const prover = createProver(engine, { onProved });
-    const phases: string[] = [];
+    const phases: Array<string> = [];
     prover.subscribe(() => phases.push(prover.get().phase));
 
     const proved = prover.prove(draft);
     await vi.advanceTimersByTimeAsync(
-      MOCK_TIMINGS.loadCircuits + MOCK_TIMINGS.prove + MOCK_TIMINGS.verify + 100
+      MOCK_TIMINGS.loadCircuits + MOCK_TIMINGS.prove + MOCK_TIMINGS.verify + 100,
     );
     expect(await proved).toMatchObject({ draft });
     expect(phases).toEqual(["loading-circuits", "proving", "verifying", "done"]);

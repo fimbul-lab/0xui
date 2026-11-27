@@ -1,6 +1,7 @@
 // Docs: https://0xui.io/components/morph-text.md
 import type { ReactNode } from "react";
-import { TextMorph, type TextMorphProps } from "torph/react";
+import { TextMorph } from "torph/react";
+import type { TextMorphProps } from "torph/react";
 
 export type MorphTextProps = Omit<TextMorphProps, "children" | "as"> & {
   /**
@@ -16,16 +17,28 @@ export type MorphTextProps = Omit<TextMorphProps, "children" | "as"> & {
 const noWebAnimations =
   typeof Element !== "undefined" && typeof Element.prototype.animate !== "function";
 
+const isNodeArray = (node: ReactNode): node is ReadonlyArray<ReactNode> => Array.isArray(node);
+
 /** The text of plain children, or undefined when they hold an element. */
 function textOf(node: ReactNode): string | undefined {
-  if (typeof node === "string") return node;
-  if (typeof node === "number" || typeof node === "bigint") return String(node);
-  if (node == null || typeof node === "boolean") return "";
-  if (!Array.isArray(node)) return undefined;
+  if (typeof node === "string") {
+    return node;
+  }
+  if (typeof node === "number" || typeof node === "bigint") {
+    return String(node);
+  }
+  if (node === null || node === undefined || typeof node === "boolean") {
+    return "";
+  }
+  if (!isNodeArray(node)) {
+    return undefined;
+  }
   let text = "";
   for (const child of node) {
     const part = textOf(child);
-    if (part === undefined) return undefined;
+    if (part === undefined) {
+      return undefined;
+    }
     text += part;
   }
   return text;
@@ -39,7 +52,9 @@ function textOf(node: ReactNode): string | undefined {
 export function MorphText({ children, className, style, ...options }: MorphTextProps) {
   // A lone number stays a number, so torph formats it with `locale` and `decimals`.
   const text = typeof children === "number" ? children : textOf(children);
-  if (text === undefined) return <>{children}</>;
+  if (text === undefined) {
+    return <>{children}</>;
+  }
 
   if (noWebAnimations) {
     return (

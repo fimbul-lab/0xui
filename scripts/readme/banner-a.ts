@@ -6,10 +6,15 @@ const W = 1280;
 const H = 540;
 const T = 14;
 
+const eth = (x: number, y: number) =>
+  `<g transform="translate(${x} ${y})"><circle r="13" fill="${c.gray5}"/><path d="M0-8.6 5.3.4 0 3.5Z" fill="#6f7cf0"/><path d="M0-8.6-5.3.4 0 3.5Z" fill="#a9b2ff"/><path d="M0 4.9 5.3 1.8 0 9.2Z" fill="#6f7cf0"/><path d="M0 4.9-5.3 1.8 0 9.2Z" fill="#a9b2ff"/></g>`;
+const usdc = (x: number, y: number) =>
+  `<g transform="translate(${x} ${y})"><circle r="13" fill="#2775ca"/>${text("$", { size: 15, weight: 600, x: 0, y: 5.3, anchor: "middle" })}<path d="M-3.4-9.3a9.9 9.9 0 0 0 0 18.6M3.4-9.3a9.9 9.9 0 0 1 0 18.6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></g>`;
+
 export function bannerA(): string {
   const tl = new Timeline(T, "a");
-  const out: string[] = [];
-  const defs: string[] = [];
+  const out: Array<string> = [];
+  const defs: Array<string> = [];
 
   // Beats, in seconds.
   const typeFrom = 0.7;
@@ -180,11 +185,6 @@ export function bannerA(): string {
     `</g>`,
   );
 
-  const eth = (x: number, y: number) =>
-    `<g transform="translate(${x} ${y})"><circle r="13" fill="${c.gray5}"/><path d="M0-8.6 5.3.4 0 3.5Z" fill="#6f7cf0"/><path d="M0-8.6-5.3.4 0 3.5Z" fill="#a9b2ff"/><path d="M0 4.9 5.3 1.8 0 9.2Z" fill="#6f7cf0"/><path d="M0 4.9-5.3 1.8 0 9.2Z" fill="#a9b2ff"/></g>`;
-  const usdc = (x: number, y: number) =>
-    `<g transform="translate(${x} ${y})"><circle r="13" fill="#2775ca"/>${text("$", { size: 15, weight: 600, x: 0, y: 5.3, anchor: "middle" })}<path d="M-3.4-9.3a9.9 9.9 0 0 0 0 18.6M3.4-9.3a9.9 9.9 0 0 1 0 18.6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></g>`;
-
   const chip = (y: number, symbol: string, token: (x: number, y: number) => string) => {
     const tw = measure(symbol, { size: 15, weight: 600 });
     const w = 8 + 26 + 9 + tw + 8 + 14 + 12;
@@ -240,10 +240,8 @@ export function bannerA(): string {
     `</g>`,
     chip(getY + 35, "USDC", usdc),
     `</g>`,
-  );
 
-  // Switch tokens.
-  out.push(
+    // Switch tokens.
     `<g class="${piece(3)}">`,
     rect(cx + cw / 2 - 18, payY + panelH + 3 - 18, 36, 36, {
       r: 11,

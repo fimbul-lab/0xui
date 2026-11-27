@@ -1,4 +1,5 @@
-import { connect, getConnectors, watchConnectors, type Config, type Connector } from "@wagmi/core";
+import { connect, getConnectors, watchConnectors } from "@wagmi/core";
+import type { Config, Connector } from "@wagmi/core";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
 
@@ -16,25 +17,29 @@ export type WalletOption = {
   recent: boolean;
 };
 
+const rank = (o: WalletOption) => (o.recent ? 0 : o.installed ? 1 : 2);
+
 /**
  * Connectors as an ordered wallet list: recent first, then installed, then
  * the rest. The generic "injected" connector is dropped when installed
  * wallets announce themselves (EIP-6963), since it would duplicate one of them.
  */
-export function walletOptions(connectors: readonly Connector[], recentId?: string) {
+export function walletOptions(connectors: ReadonlyArray<Connector>, recentId?: string) {
   const announced = connectors.some((c) => c.rdns);
-  const rank = (o: WalletOption) => (o.recent ? 0 : o.installed ? 1 : 2);
   return connectors
-    .filter((c) => !(announced && c.id === "injected"))
-    .map(
-      (connector): WalletOption => ({
-        connector,
-        id: connector.id,
-        name: connector.id === "injected" ? "Browser wallet" : connector.name,
-        icon: connector.icon,
-        installed: Boolean(connector.rdns),
-        recent: connector.id === recentId,
-      }),
+    .flatMap((connector): Array<WalletOption> =>
+      announced && connector.id === "injected"
+        ? []
+        : [
+            {
+              connector,
+              id: connector.id,
+              name: connector.id === "injected" ? "Browser wallet" : connector.name,
+              icon: connector.icon,
+              installed: Boolean(connector.rdns),
+              recent: connector.id === recentId,
+            },
+          ],
     )
     .map((o, index) => ({ o, index }))
     .sort((a, b) => rank(a.o) - rank(b.o) || a.index - b.index)
@@ -42,7 +47,7 @@ export function walletOptions(connectors: readonly Connector[], recentId?: strin
 }
 
 export type ConnectWalletState = {
-  wallets: WalletOption[];
+  wallets: Array<WalletOption>;
   phase: ConnectPhase;
   /** The wallet a connection is waiting on. */
   pendingId: string | undefined;
@@ -63,13 +68,20 @@ export type ConnectWalletController = {
 export function createConnectWallet(config: Config): ConnectWalletController {
   let recentId: string | undefined;
   const store = createStore<ConnectWalletState>(
-    { wallets: walletOptions(getConnectors(config)), phase: "idle", pendingId: undefined, error: null },
+    {
+      wallets: walletOptions(getConnectors(config)),
+      phase: "idle",
+      pendingId: undefined,
+      error: null,
+    },
     (store) => {
       let active = true;
       const sync = () => store.set({ wallets: walletOptions(getConnectors(config), recentId) });
-      Promise.resolve(config.storage?.getItem("recentConnectorId")).then((id) => {
+      void Promise.resolve(config.storage?.getItem("recentConnectorId")).then((id) => {
         recentId = id ?? undefined;
-        if (active) sync();
+        if (active) {
+          sync();
+        }
       });
       const stop = watchConnectors(config, { onChange: sync });
       sync();
@@ -89,8 +101,8 @@ export function createConnectWallet(config: Config): ConnectWalletController {
         await connect(config, { connector: wallet.connector });
         store.set({ phase: "idle", pendingId: undefined });
         return true;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
+      } catch (error_) {
+        const error = error_ instanceof Error ? error_ : new Error(String(error_));
         store.set({
           phase: isUserRejection(error) ? "cancelled" : "error",
           pendingId: undefined,

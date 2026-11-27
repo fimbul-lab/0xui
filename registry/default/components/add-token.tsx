@@ -1,11 +1,13 @@
 // Docs: https://0xui.io/components/add-token.md
 import { CheckIcon, Loader2Icon, WalletIcon } from "lucide-react";
-import { useMemo, type ComponentProps, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useConfig } from "wagmi";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { createTokenAdder, type AddTokenPhase, type WatchedToken } from "@/lib/add-token-core";
+import { createTokenAdder } from "@/lib/add-token-core";
+import type { AddTokenPhase, WatchedToken } from "@/lib/add-token-core";
 import { errorCode, truncateAddress } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +49,9 @@ export function AddToken({
 }: AddTokenProps) {
   const { phase, error, connected, add } = useAddToken(token);
 
-  if (!connected) return null;
+  if (!connected) {
+    return null;
+  }
 
   return (
     <span

@@ -73,7 +73,14 @@ Pass `range` to highlight a position. Add `onRangeChange` and the handles become
 ```tsx
 const [range, setRange] = useState(() => rangeAroundTick(pool.tick, 8, pool.tickSpacing));
 
-<LiquidityChart bins={bins} pool={pool} token0={eth} token1={usdc} range={range} onRangeChange={setRange} />;
+<LiquidityChart
+  bins={bins}
+  pool={pool}
+  token0={eth}
+  token1={usdc}
+  range={range}
+  onRangeChange={setRange}
+/>;
 ```
 
 For the full "Set price range" panel with presets and price fields, use [Price Range](/components/price-range/).
@@ -94,29 +101,29 @@ The viewport, bar and handle math (`chartViewport`, `toBars`, `rangeSlider`) liv
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. Leave out while loading. |
-| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. |
-| `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
-| `invert` | `boolean` | `false` | Quote in token0 and flip the axis. |
-| `range` | `{ tickLower, tickUpper }` | — | Range to highlight. Bars outside it fade. |
-| `onRangeChange` | `(range) => void` | — | Makes the handles draggable. |
-| `height` | `number` | `160` | Plot height in px. |
-| `showControls` | `boolean` | `true` | Legend and zoom buttons. |
-| `locale` | `string` | runtime locale | Number formatting locale. |
+| Prop                | Type                                          | Default        | Description                                       |
+| ------------------- | --------------------------------------------- | -------------- | ------------------------------------------------- |
+| `bins`              | `LiquidityBin[]`                              | —              | From `getLiquidityBins`. Leave out while loading. |
+| `pool`              | `{ tick, tickSpacing, decimals0, decimals1 }` | —              | Current tick, spacing and decimals.               |
+| `token0` / `token1` | `{ symbol: string }`                          | —              | Any `Token` fits.                                 |
+| `invert`            | `boolean`                                     | `false`        | Quote in token0 and flip the axis.                |
+| `range`             | `{ tickLower, tickUpper }`                    | —              | Range to highlight. Bars outside it fade.         |
+| `onRangeChange`     | `(range) => void`                             | —              | Makes the handles draggable.                      |
+| `height`            | `number`                                      | `160`          | Plot height in px.                                |
+| `showControls`      | `boolean`                                     | `true`         | Legend and zoom buttons.                          |
+| `locale`            | `string`                                      | runtime locale | Number formatting locale.                         |
 
 ## Math library
 
 `concentrated-liquidity` holds the math every LP component uses. Exact `bigint` functions are ported from Uniswap's `TickMath` and `LiquidityAmounts`, so their results match the contracts. Use them for anything that goes into a transaction. The float functions are for display.
 
-| Function | What it does |
-| --- | --- |
-| `tickToPrice`, `priceToTick`, `nearestUsableTick` | Convert between ticks and human prices (token1 per token0). |
-| `priceRangeToTicks`, `rangeAroundTick` | Turn prices or a ±% into snapped ticks. |
-| `getSqrtRatioAtTick` | Exact sqrt price at a tick. |
-| `getAmountsForLiquidity`, `getLiquidityForAmounts` | Exact amounts for liquidity, and back. |
-| `getDependentAmount` | The other token's amount for a two-sided deposit. |
-| `getDepositMode`, `getRangeStatus` | Which tokens a range takes, and whether it's in range. |
-| `getLiquidityBins`, `ticksFromPositions` | Distribution for charts. |
-| `getDepthCurve`, `getMarketDepth` | Cumulative depth, and depth at ±%. |
+| Function                                           | What it does                                                |
+| -------------------------------------------------- | ----------------------------------------------------------- |
+| `tickToPrice`, `priceToTick`, `nearestUsableTick`  | Convert between ticks and human prices (token1 per token0). |
+| `priceRangeToTicks`, `rangeAroundTick`             | Turn prices or a ±% into snapped ticks.                     |
+| `getSqrtRatioAtTick`                               | Exact sqrt price at a tick.                                 |
+| `getAmountsForLiquidity`, `getLiquidityForAmounts` | Exact amounts for liquidity, and back.                      |
+| `getDependentAmount`                               | The other token's amount for a two-sided deposit.           |
+| `getDepositMode`, `getRangeStatus`                 | Which tokens a range takes, and whether it's in range.      |
+| `getLiquidityBins`, `ticksFromPositions`           | Distribution for charts.                                    |
+| `getDepthCurve`, `getMarketDepth`                  | Cumulative depth, and depth at ±%.                          |

@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/blocks/shield.md
 import { useQuery } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { Hash } from "viem";
 import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
@@ -11,7 +12,8 @@ import { PrivacyBadge } from "@/components/privacy-badge";
 import { useShieldedAccount, useShieldedEngine } from "@/components/shielded-provider";
 import { ShieldedTransactionStatus, formatWait } from "@/components/shielded-transaction-status";
 import { TokenAmount } from "@/components/token-amount";
-import { TokenInput, type TokenInputState } from "@/components/token-input";
+import { TokenInput } from "@/components/token-input";
+import type { TokenInputState } from "@/components/token-input";
 import type { Token, TokenPrices } from "@/components/token-select";
 import { StepIcon } from "@/components/transaction-status";
 import { useStore } from "@/hooks/use-store";
@@ -34,10 +36,8 @@ import {
   shieldStepStates,
   shieldSteps,
   walletCapabilitiesQueryOptions,
-  type ShieldPhase,
-  type ShieldStepKind,
-  type ShieldStepPhase,
 } from "@/lib/shield-core";
+import type { ShieldPhase, ShieldStepKind, ShieldStepPhase } from "@/lib/shield-core";
 import type { ShieldDraft, ShieldQuote, ShieldedTransaction } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
 
@@ -73,9 +73,13 @@ export function useShieldQuote(draft: ShieldDraft | undefined, { debounce = 300 
   const amount = useDebounced(draft?.amount, debounce);
   const settled = amount === draft?.amount;
   const query = useQuery(
-    shieldQuoteQueryOptions(engine, draft && amount !== undefined ? { ...draft, amount } : undefined, {
-      enabled: settled,
-    })
+    shieldQuoteQueryOptions(
+      engine,
+      draft && amount !== undefined ? { ...draft, amount } : undefined,
+      {
+        enabled: settled,
+      },
+    ),
   );
   return {
     quote: draft && settled ? query.data : undefined,
@@ -119,12 +123,12 @@ export function useShieldFlow({
           latest.current.onSubmitted?.(hash, shield);
         },
       }),
-    [config, engine]
+    [config, engine],
   );
   const state = useStore(controller);
 
   const allowance = useQuery(
-    shieldAllowanceQueryOptions(config, { draft, owner: state.account, spender: quote?.spender })
+    shieldAllowanceQueryOptions(config, { draft, owner: state.account, spender: quote?.spender }),
   );
   latest.current.refetchAllowance = () => void allowance.refetch();
   const capabilities = useQuery(
@@ -133,7 +137,7 @@ export function useShieldFlow({
       account: state.account,
       connector: state.connector,
       enabled: Boolean(draft) && state.connected,
-    })
+    }),
   );
 
   const planned = planShield({
@@ -170,7 +174,9 @@ export function useShieldFlow({
      * the shield is the click for its first step.
      */
     start: () => {
-      if (draft && quote && planned) controller.start({ draft, quote, ...planned });
+      if (draft && quote && planned) {
+        controller.start({ draft, quote, ...planned });
+      }
     },
     /** Open the wallet for the current step. One click, one prompt. */
     act: controller.act,
@@ -192,7 +198,9 @@ function AnimatedHeight({ children }: { children: ReactNode }) {
   const [height, setHeight] = useState<number>();
   useLayoutEffect(() => {
     const element = inner.current;
-    if (!element) return;
+    if (!element) {
+      return;
+    }
     const measure = () => setHeight(element.offsetHeight);
     measure();
     const observer = new ResizeObserver(measure);
@@ -333,7 +341,7 @@ export function ShieldStepList({ steps, symbol, className }: ShieldStepListProps
 
 export type ShieldProps = {
   /** ERC-20 tokens the user can shield. Only those on `chainId` are offered. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Chain to shield on. */
   chainId: number;
   /**
@@ -351,7 +359,7 @@ export type ShieldProps = {
   /** Initially selected token. Defaults to the first on `chainId`. */
   defaultToken?: Token;
   /** Symbols or addresses for quick picks. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Prices keyed by `chainId:address`, address or symbol, for the fiat line. */
   prices?: TokenPrices;
   /** Called with the shield transaction's hash. For a batched shield, that is once it is mined. */
@@ -423,7 +431,9 @@ export function Shield({
     draft,
     quote,
     onSubmitted: (hash, shield) => {
-      setSent({ hash, ...started.current!, quote: shield.quote });
+      if (started.current) {
+        setSent({ hash, ...started.current, quote: shield.quote });
+      }
       setFollowing(true);
       setAmountText("");
       setAmount(undefined);
@@ -434,7 +444,8 @@ export function Shield({
   const connected = flow.wallet.connected;
   const wrongChain = connected && flow.wallet.chainId !== chainId;
   const chainName = chains.find((c) => c.id === chainId)?.name ?? "the right network";
-  const running = flow.active !== undefined;
+  const active = flow.active;
+  const running = active !== undefined;
   const shown = started.current;
   const phase = flow.phase;
 
@@ -456,9 +467,9 @@ export function Shield({
       ? () => setConnectOpen(true)
       : form.action === "switch"
         ? () => void flow.switchChain(chainId)
-        : form.action === "start"
+        : form.action === "start" && token
           ? () => {
-              started.current = { amountText, token: token! };
+              started.current = { amountText, token };
               flow.start();
             }
           : undefined;
@@ -560,8 +571,8 @@ export function Shield({
             {input}
           </div>
           <ShieldQuoteRows
-            quote={running ? flow.active!.quote : quote}
-            amount={running ? flow.active!.draft.amount : draft?.amount}
+            quote={running ? active.quote : quote}
+            amount={running ? active.draft.amount : draft?.amount}
             token={running ? shown?.token : token}
             // Space is held for the quote, so nothing below shifts as it arrives.
             className={cn("transition-opacity duration-200", !running && !quote && "opacity-50")}
@@ -637,7 +648,7 @@ export function Shield({
               <ShieldSummary
                 amountText={shown.amountText}
                 token={shown.token}
-                received={flow.active!.quote.received}
+                received={active.quote.received}
                 onEdit={flow.leave}
                 editDisabled={flow.busy}
               />

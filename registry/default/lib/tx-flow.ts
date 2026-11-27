@@ -5,19 +5,11 @@ import {
   switchChain,
   watchConnection,
   writeContract,
-  type Config,
-  type SendTransactionParameters,
-  type WriteContractParameters,
 } from "@wagmi/core";
+import type { Config, SendTransactionParameters, WriteContractParameters } from "@wagmi/core";
 import { callQueryOptions, hashFn, simulateContractQueryOptions } from "@wagmi/core/query";
-import {
-  BaseError,
-  ContractFunctionRevertedError,
-  type Address,
-  type Chain,
-  type Hash,
-  type TransactionReceipt,
-} from "viem";
+import { BaseError, ContractFunctionRevertedError } from "viem";
+import type { Address, Chain, Hash, TransactionReceipt } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
 import { waitForMinedReceipt } from "@/lib/transaction-status-core";
@@ -80,7 +72,10 @@ export type TransactionFlow = {
 };
 
 const toError = (e: unknown) => (e instanceof Error ? e : new Error(String(e)));
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 function readTarget(config: Config, chainId: number | undefined) {
   const connection = getConnection(config);
@@ -134,11 +129,13 @@ export function createTransactionFlow(
     while (confirmations > 1 && id === run) {
       try {
         const count = await getTransactionConfirmations(config, { hash, chainId: target });
-        if (count >= BigInt(confirmations)) return;
+        if (count >= BigInt(confirmations)) {
+          return;
+        }
       } catch {
         // A failed poll isn't a failed transaction: try again next round.
       }
-      await sleep(4_000);
+      await sleep(4000);
     }
   };
 
@@ -154,22 +151,31 @@ export function createTransactionFlow(
         // Pin the chain so the wallet can't send on a different one.
         hash =
           "contract" in request
-            ? await writeContract(config, { chainId: target, ...request.contract } as ContractRequest)
+            ? await writeContract(config, {
+                chainId: target,
+                ...request.contract,
+              })
             : await sendTransaction(config, {
                 chainId: target,
                 ...request.transaction,
-              } as TransactionRequest);
-      } catch (e) {
-        if (id === run) fail(e);
+              });
+      } catch (error) {
+        if (id === run) {
+          fail(error);
+        }
         return;
       }
-      if (id !== run) return;
+      if (id !== run) {
+        return;
+      }
       store.set({ phase: "pending", hash });
       onSubmitted?.(hash);
 
       try {
         const receipt = await waitForMinedReceipt(config, { hash, chainId: target });
-        if (id !== run) return;
+        if (id !== run) {
+          return;
+        }
         store.set({ receipt });
         if (receipt.status === "reverted") {
           store.set({ phase: "reverted" });
@@ -177,26 +183,36 @@ export function createTransactionFlow(
           return;
         }
         await waitForConfirmations(hash, target, id);
-        if (id !== run) return;
+        if (id !== run) {
+          return;
+        }
         store.set({ phase: "success" });
         onSuccess?.(receipt);
-      } catch (e) {
-        if (id !== run) return;
-        const error = toError(e);
+      } catch (error_) {
+        if (id !== run) {
+          return;
+        }
+        const error = toError(error_);
         store.set({ phase: "error", error });
         onError?.(error);
       }
     },
     async switchToTarget() {
       const target = chainId ?? getConnection(config).chainId;
-      if (target === undefined) return;
+      if (target === undefined) {
+        return;
+      }
       const id = ++run;
       store.set({ phase: "switching", error: undefined });
       try {
         await switchChain(config, { chainId: target });
-        if (id === run) store.set({ phase: "idle", ...readTarget(config, chainId) });
-      } catch (e) {
-        if (id === run) fail(e);
+        if (id === run) {
+          store.set({ phase: "idle", ...readTarget(config, chainId) });
+        }
+      } catch (error) {
+        if (id === run) {
+          fail(error);
+        }
       }
     },
     reset() {
@@ -243,13 +259,15 @@ export function transactionSimulationQueryOptions(
 ) {
   const on = enabled && Boolean(account);
   const options = contract
-    ? simulateContractQueryOptions(config, {
+    ? // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wagmi types these options by ABI, and this request is only known at runtime
+      simulateContractQueryOptions(config, {
         ...contract,
         chainId,
         account,
         query: { enabled: on, retry: false },
       } as never)
     : {
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wagmi types these options by ABI, and this request is only known at runtime
         ...callQueryOptions(config, {
           ...transaction,
           chainId,
@@ -259,6 +277,7 @@ export function transactionSimulationQueryOptions(
         enabled: on && Boolean(transaction),
       };
   // Query keys hold bigints (values, amounts), which TanStack's default hash can't serialize.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- wagmi types these options by ABI, and this request is only known at runtime
   return { ...(options as ReturnType<typeof callQueryOptions>), queryKeyHashFn: hashFn };
 }
 

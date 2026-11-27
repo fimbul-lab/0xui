@@ -1,6 +1,7 @@
 import type { Config } from "@wagmi/core";
 import { getEnsAddressQueryOptions, hashFn } from "@wagmi/core/query";
-import { getAddress, isAddress, type Address } from "viem";
+import { getAddress, isAddress } from "viem";
+import type { Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 import {
@@ -50,7 +51,9 @@ function normalizeName(value: string) {
 /** Sort the text into an address, a private address, an ENS name or neither. Mixed case must match the checksum. */
 export function parseAddressInput(value: string): AddressInputKind {
   const text = value.trim();
-  if (!text) return { kind: "empty" };
+  if (!text) {
+    return { kind: "empty" };
+  }
   if (/^0x[0-9a-fA-F]*$/.test(text)) {
     return { kind: "address", text, address: isAddress(text) ? getAddress(text) : undefined };
   }
@@ -58,7 +61,9 @@ export function parseAddressInput(value: string): AddressInputKind {
   if (text.toLowerCase().startsWith(SHIELDED_ADDRESS_PREFIX) && !text.includes(".")) {
     return { kind: "shielded", text };
   }
-  if (text.includes(".")) return { kind: "name", name: normalizeName(text) };
+  if (text.includes(".")) {
+    return { kind: "name", name: normalizeName(text) };
+  }
   return { kind: "other" };
 }
 
@@ -100,17 +105,22 @@ export function addressInputState(
       return { ...base, phase: "empty" };
     case "shielded": {
       const { text } = input;
-      if (!shielded)
+      if (!shielded) {
         return { ...base, phase: "invalid", error: "Private (0zk) addresses can't be used here." };
-      if (isShieldedAddress(text)) return { ...base, phase: "valid", shieldedAddress: text };
-      if (text.length < SHIELDED_ADDRESS_LENGTH)
+      }
+      if (isShieldedAddress(text)) {
+        return { ...base, phase: "valid", shieldedAddress: text };
+      }
+      if (text.length < SHIELDED_ADDRESS_LENGTH) {
         return {
           ...base,
           phase: "incomplete",
           error: `Enter the full ${SHIELDED_ADDRESS_LENGTH}-character private address.`,
         };
-      if (text.length > SHIELDED_ADDRESS_LENGTH)
+      }
+      if (text.length > SHIELDED_ADDRESS_LENGTH) {
         return { ...base, phase: "invalid", error: "Private address is too long." };
+      }
       return {
         ...base,
         phase: "invalid",
@@ -119,21 +129,45 @@ export function addressInputState(
     }
     case "address": {
       const { text, address } = input;
-      if (address)
+      if (address) {
         return { ...base, phase: "valid", address, ensName: reverseName ?? undefined };
-      if (text.length === 42)
-        return { ...base, phase: "invalid", error: "Checksum doesn't match. Check the address for typos." };
-      if (text.length > 42) return { ...base, phase: "invalid", error: "Address is too long." };
+      }
+      if (text.length === 42) {
+        return {
+          ...base,
+          phase: "invalid",
+          error: "Checksum doesn't match. Check the address for typos.",
+        };
+      }
+      if (text.length > 42) {
+        return { ...base, phase: "invalid", error: "Address is too long." };
+      }
       return { ...base, phase: "incomplete", error: "Enter a full 42-character address." };
     }
     case "name": {
       const { name } = input;
-      if (!name) return { ...base, phase: "invalid", error: "Not a valid ENS name." };
-      if (!nameSettled || ens.isPending) return { ...base, phase: "resolving", ensName: name };
-      if (ens.isError)
-        return { ...base, phase: "invalid", ensName: name, error: "Couldn't look up this name. Try again." };
-      if (!ens.data)
-        return { ...base, phase: "not-found", ensName: name, error: `No address found for ${name}.` };
+      if (!name) {
+        return { ...base, phase: "invalid", error: "Not a valid ENS name." };
+      }
+      if (!nameSettled || ens.isPending) {
+        return { ...base, phase: "resolving", ensName: name };
+      }
+      if (ens.isError) {
+        return {
+          ...base,
+          phase: "invalid",
+          ensName: name,
+          error: "Couldn't look up this name. Try again.",
+        };
+      }
+      if (!ens.data) {
+        return {
+          ...base,
+          phase: "not-found",
+          ensName: name,
+          error: `No address found for ${name}.`,
+        };
+      }
       return { ...base, phase: "valid", address: ens.data, ensName: name };
     }
     case "other":
@@ -158,10 +192,15 @@ export function showAddressError(state: AddressInputState, touched: boolean) {
 /** The line under the input: the resolved address or name, the lookup in progress, or the error. */
 export function addressInputMessage(state: AddressInputState, value: string, showError: boolean) {
   if (state.shieldedAddress)
-    // Start and end, so a pasted address can be checked against its source.
+  // Start and end, so a pasted address can be checked against its source.
+  {
     return `Private address ${truncateAddress(state.shieldedAddress, { start: 9, end: 6 })}`;
-  if (state.phase === "valid" && state.ensName)
-    return value.includes(".") ? truncateAddress(state.address!) : state.ensName;
-  if (state.phase === "resolving") return `Looking up ${state.ensName}…`;
+  }
+  if (state.phase === "valid" && state.ensName) {
+    return value.includes(".") && state.address ? truncateAddress(state.address) : state.ensName;
+  }
+  if (state.phase === "resolving") {
+    return `Looking up ${state.ensName}…`;
+  }
   return showError ? state.error : undefined;
 }

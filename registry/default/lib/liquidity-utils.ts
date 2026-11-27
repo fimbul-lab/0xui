@@ -1,5 +1,6 @@
 import { formatUnits } from "viem";
-import { getTokenPrice, type TokenInfo, type TokenPrices } from "@/lib/token-list";
+import { getTokenPrice } from "@/lib/token-list";
+import type { TokenInfo, TokenPrices } from "@/lib/token-list";
 
 /** Value of two token amounts in fiat, or undefined without both prices. */
 export function positionValue(
@@ -10,7 +11,9 @@ export function positionValue(
 ) {
   const p0 = getTokenPrice(prices, token0);
   const p1 = getTokenPrice(prices, token1);
-  if (p0 === undefined || p1 === undefined) return undefined;
+  if (p0 === undefined || p1 === undefined) {
+    return undefined;
+  }
   return (
     Number(formatUnits(amounts.amount0, token0.decimals)) * p0 +
     Number(formatUnits(amounts.amount1, token1.decimals)) * p1
@@ -19,7 +22,9 @@ export function positionValue(
 
 /** "$1,234.56" for a fiat value, or undefined without one. */
 export function formatMoney(value: number | undefined, currency = "USD", locale?: string) {
-  return value === undefined ? undefined : new Intl.NumberFormat(locale, { style: "currency", currency }).format(value);
+  return value === undefined
+    ? undefined
+    : new Intl.NumberFormat(locale, { style: "currency", currency }).format(value);
 }
 
 /** "1.5 ETH and 300 USDC", leaving out a side that is zero. */

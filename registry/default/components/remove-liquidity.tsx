@@ -1,5 +1,6 @@
 // Docs: https://0xui.io/blocks/remove-liquidity.md
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Skeleton } from "skullet/react";
 import type { Address, Hash, Hex, TransactionReceipt } from "viem";
 import { useConfig, useConnection } from "wagmi";
@@ -48,7 +49,10 @@ function useNow(ms: number) {
   return now;
 }
 
-type RemovePool = Pick<PoolState, "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1">;
+type RemovePool = Pick<
+  PoolState,
+  "tick" | "sqrtPriceX96" | "tickSpacing" | "decimals0" | "decimals1"
+>;
 
 /** Stand-ins the loading skeleton is measured from. */
 const sampleToken = (symbol: string, n: number): Token => ({
@@ -58,7 +62,10 @@ const sampleToken = (symbol: string, n: number): Token => ({
   symbol,
   decimals: 18,
 });
-const sample: { position: Position<Token>; pool: RemovePool } = {
+/** What the block draws: the position and its pool. */
+type Loaded = { position: Position<Token>; pool: RemovePool };
+
+const sample: Loaded = {
   position: {
     tokenId: 100_000n,
     token0: sampleToken("ETH", 1),
@@ -151,24 +158,46 @@ function RemoveLiquidityView({
         )
       : undefined;
   const total = formatMoney(
-    positionValue({ amount0: out.amount0 + out.fees0, amount1: out.amount1 + out.fees1 }, token0, token1, prices),
+    positionValue(
+      { amount0: out.amount0 + out.fees0, amount1: out.amount1 + out.fees1 },
+      token0,
+      token1,
+      prices,
+    ),
     currency,
     locale,
   );
   const [base, quote] = invert ? [token1, token0] : [token0, token1];
 
   return (
-    <div data-slot="remove-liquidity" className={cn("flex w-full max-w-md flex-col gap-4 rounded-xl border bg-card p-4 text-card-foreground", className)}>
+    <div
+      data-slot="remove-liquidity"
+      className={cn(
+        "flex w-full max-w-md flex-col gap-4 rounded-xl border bg-card p-4 text-card-foreground",
+        className,
+      )}
+    >
       <header className="flex items-center gap-3">
         <span className="flex shrink-0 -space-x-2" aria-hidden>
-          <TokenIcon symbol={base.symbol} src={base.logoURI} size={28} className="rounded-full ring-2 ring-card" />
-          <TokenIcon symbol={quote.symbol} src={quote.logoURI} size={28} className="rounded-full ring-2 ring-card" />
+          <TokenIcon
+            symbol={base.symbol}
+            src={base.logoURI}
+            size={28}
+            className="rounded-full ring-2 ring-card"
+          />
+          <TokenIcon
+            symbol={quote.symbol}
+            src={quote.logoURI}
+            size={28}
+            className="rounded-full ring-2 ring-card"
+          />
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
           <h3 className="truncate font-semibold">{title}</h3>
           <span className="text-xs text-muted-foreground tabular-nums">
             {base.symbol} / {quote.symbol}
-            {position.fee !== undefined && ` · ${formatFee(position.fee, locale)}`} · #{position.tokenId.toString()}
+            {position.fee !== undefined && ` · ${formatFee(position.fee, locale)}`} · #
+            {position.tokenId.toString()}
           </span>
         </div>
       </header>
@@ -188,7 +217,9 @@ function RemoveLiquidityView({
       <section className="flex flex-col gap-3 rounded-lg bg-muted/40 p-3">
         <Slider
           value={percent}
-          onValueChange={(value) => setPercent(Array.isArray(value) ? value[0]! : value)}
+          onValueChange={(value) =>
+            setPercent(Array.isArray(value) ? (value[0] ?? percent) : value)
+          }
           min={0}
           max={100}
           step={1}
@@ -242,7 +273,8 @@ function RemoveLiquidityView({
                 <TokenAmount value={principal + fees} decimals={token.decimals} locale={locale} />
                 {fees > 0n && (
                   <span className="text-xs text-muted-foreground">
-                    incl. <TokenAmount value={fees} decimals={token.decimals} locale={locale} /> fees
+                    incl. <TokenAmount value={fees} decimals={token.decimals} locale={locale} />{" "}
+                    fees
                   </span>
                 )}
               </dd>

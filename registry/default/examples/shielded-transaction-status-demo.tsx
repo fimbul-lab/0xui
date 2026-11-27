@@ -16,7 +16,7 @@ export default function ShieldedTransactionStatusDemo() {
   const [engine] = useState(() =>
     createMockShieldedEngine({
       funds: [{ token: weth.address, amount: parseEther("0.49875"), state: "pending", hash }],
-      timings: { firstScan: 3_000 },
+      timings: { firstScan: 3000 },
     }),
   );
   useEffect(() => {

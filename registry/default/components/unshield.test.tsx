@@ -1,12 +1,22 @@
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { parseUnits } from "viem";
+import type { Hash } from "viem";
 import { describe, expect, it, vi } from "vitest";
-import { connectMock, createTestConfig, fakeChainRpc, renderWithWagmi, testAccounts } from "../../../test/wagmi";
+import {
+  connectMock,
+  createTestConfig,
+  fakeChainRpc,
+  renderWithWagmi,
+  testAccounts,
+} from "../../../test/wagmi";
 import { createMockShieldedEngine } from "../lib/mock-shielded-engine";
+import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
+import type { ShieldedEngine, UnshieldDraft } from "../lib/shielded-engine";
 import { ShieldedProvider } from "./shielded-provider";
 import type { Token } from "./token-select";
-import { Unshield, unshieldBlocker, type UnshieldProps } from "./unshield";
+import { Unshield, unshieldBlocker } from "./unshield";
+import type { UnshieldProps } from "./unshield";
 
 type MockOptions = Parameters<typeof createMockShieldedEngine>[0];
 
@@ -28,8 +38,12 @@ describe("unshieldBlocker", () => {
       spendable: 5n,
       recipient: RECIPIENT,
     } as const;
-    expect(unshieldBlocker({ ...base, accountStatus: "none" })).toBe("Create a private account first");
-    expect(unshieldBlocker({ ...base, accountStatus: "locked" })).toBe("Unlock your private account");
+    expect(unshieldBlocker({ ...base, accountStatus: "none" })).toBe(
+      "Create a private account first",
+    );
+    expect(unshieldBlocker({ ...base, accountStatus: "locked" })).toBe(
+      "Unlock your private account",
+    );
     expect(unshieldBlocker({ ...base, token: undefined })).toBe("Select a token");
     expect(unshieldBlocker({ ...base, amount: undefined })).toBe("Enter an amount");
     expect(unshieldBlocker({ ...base, spendable: undefined })).toBe("Scanning private balance…");
@@ -44,32 +58,50 @@ describe("Unshield", () => {
   const phase = () => root().getAttribute("data-phase");
   const amount = () => screen.getByRole("textbox", { name: /^Amount to unshield in / });
   const recipient = () => screen.getByRole("textbox", { name: "Recipient address" });
-  const button = (name: string | RegExp) => screen.findByRole("button", { name }, { timeout: 5_000 });
+  const button = (name: string | RegExp) =>
+    screen.findByRole("button", { name }, { timeout: 5000 });
 
-  /** Rendered with 10 TKN spendable. No wallet is connected unless asked. */
+  /**
+   * Rendered with 10 TKN spendable. No wallet is connected unless asked.
+   * `quote` stands in for the engine's price, as a relayer's would change.
+   */
   async function setup({
     engine: engineOptions,
     connect = false,
+    quote,
     ...props
-  }: Partial<UnshieldProps> & { engine?: MockOptions; connect?: boolean } = {}) {
+  }: Partial<UnshieldProps> & {
+    engine?: MockOptions;
+    connect?: boolean;
+    quote?: (mock: MockShieldedEngine) => ShieldedEngine["quote"];
+  } = {}) {
     const user = userEvent.setup();
-    const engine = createMockShieldedEngine({
+    const mock = createMockShieldedEngine({
       speed: Infinity,
       funds: [{ token: tkn.address, amount: parseUnits("10", 18) }],
       ...engineOptions,
     });
+    const engine = quote ? { ...mock, quote: quote(mock) } : mock;
     await engine.account.unlock("password");
     await engine.sync(1);
     const config = createTestConfig({ rpc: fakeChainRpc({}) });
-    const onSubmitted = vi.fn();
+    /** What `onSubmitted` was called with. `firstSubmit` resolves with the first call. */
+    const submitted: Array<[Hash, UnshieldDraft]> = [];
+    const { promise: firstSubmit, resolve } = Promise.withResolvers<[Hash, UnshieldDraft]>();
+    const onSubmitted = (hash: Hash, draft: UnshieldDraft) => {
+      submitted.push([hash, draft]);
+      resolve([hash, draft]);
+    };
     renderWithWagmi(
       <ShieldedProvider engine={engine}>
         <Unshield tokens={[tkn]} chainId={1} onSubmitted={onSubmitted} {...props} />
       </ShieldedProvider>,
-      { config }
+      { config },
     );
-    if (connect) await act(() => connectMock(config));
-    return { user, engine, onSubmitted };
+    if (connect) {
+      await act(() => connectMock(config));
+    }
+    return { user, engine, submitted, firstSubmit };
   }
 
   it("walks through what is missing, without a wallet", async () => {
@@ -102,14 +134,14 @@ describe("Unshield", () => {
   });
 
   it("proves, submits and follows the transaction", async () => {
-    const { user, engine, onSubmitted } = await setup();
+    const { user, engine, submitted, firstSubmit } = await setup();
     const submit = vi.spyOn(engine, "submit");
     await user.type(amount(), "4");
     await user.type(recipient(), RECIPIENT);
     await user.click(await button("Unshield TKN"));
 
-    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
-    const [hash, draft] = onSubmitted.mock.calls[0]!;
+    const [hash, draft] = await firstSubmit;
+    expect(submitted).toHaveLength(1);
     expect(hash).toMatch(/^0x[0-9a-f]{64}$/);
     expect(draft).toMatchObject({
       kind: "unshield",
@@ -124,13 +156,13 @@ describe("Unshield", () => {
     expect(phase()).toBe("idle");
     expect(amount()).toHaveValue("");
     expect(document.querySelector("[data-slot=transaction-status]")).toHaveTextContent(
-      "Unshield 4 TKN"
+      "Unshield 4 TKN",
     );
     await vi.waitFor(() => expect(root()).toHaveTextContent(/6\s*TKN spendable/));
   });
 
   it("shows a failed proof and proves again on request", async () => {
-    const { user, engine, onSubmitted } = await setup();
+    const { user, engine, firstSubmit } = await setup();
     engine.simulate.failNextProof("Out of memory");
     await user.type(amount(), "4");
     await user.type(recipient(), RECIPIENT);
@@ -143,12 +175,17 @@ describe("Unshield", () => {
     expect(amount().closest("[inert]")).not.toBeNull();
 
     await user.click(await button("Try again"));
-    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    await firstSubmit;
   });
 
   it("reports a failed send and lets the user go back", async () => {
-    const { user, engine, onSubmitted } = await setup();
-    vi.spyOn(engine, "submit").mockRejectedValueOnce(new Error("The relayer is busy."));
+    const { user, submitted } = await setup({
+      engine: {
+        relay: () => {
+          throw new Error("The relayer is busy.");
+        },
+      },
+    });
     await user.type(amount(), "4");
     await user.type(recipient(), RECIPIENT);
     await user.click(await button("Unshield TKN"));
@@ -158,16 +195,16 @@ describe("Unshield", () => {
     await user.click(await button("Back"));
     expect(phase()).toBe("idle");
     expect(amount()).toHaveValue("4");
-    expect(onSubmitted).not.toHaveBeenCalled();
+    expect(submitted).toEqual([]);
   });
 
   it("asks before sending when the proof's fee is higher than the one shown", async () => {
-    const { user, engine, onSubmitted } = await setup();
-    const prove = engine.prove.bind(engine);
-    vi.spyOn(engine, "prove").mockImplementation(async (draft, options) => {
-      const operation = await prove(draft, options);
-      const fee = operation.quote.fee * 2n;
-      return { ...operation, quote: { fee, received: draft.amount - fee } };
+    // The price shown is half the fee the proof then commits to.
+    const { user, engine, firstSubmit } = await setup({
+      quote: (mock) => async (draft) => {
+        const { fee } = await mock.quote(draft);
+        return { fee: fee / 2n, received: draft.amount - fee / 2n };
+      },
     });
     const submit = vi.spyOn(engine, "submit");
     await user.type(amount(), "4");
@@ -177,15 +214,20 @@ describe("Unshield", () => {
     const confirm = await button("Unshield at the new fee");
     expect(phase()).toBe("review");
     expect(submit).not.toHaveBeenCalled();
-    expect(screen.getByText("Fee (0.5%)")).toBeInTheDocument();
+    // The rows now show the proof's fee, not the one quoted.
+    expect(screen.getByText("Fee (0.25%)")).toBeInTheDocument();
 
     await user.click(confirm);
-    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalledTimes(1));
+    await firstSubmit;
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 
   it("says why an amount can't be unshielded", async () => {
-    const { user, engine } = await setup();
-    vi.spyOn(engine, "quote").mockRejectedValue(new Error("The most you can unshield at once is 3."));
+    const { user } = await setup({
+      quote: () => async () => {
+        throw new Error("The most you can unshield at once is 3.");
+      },
+    });
     await user.type(amount(), "4");
     await user.type(recipient(), RECIPIENT);
     expect(await button("Can't unshield this amount")).toBeDisabled();

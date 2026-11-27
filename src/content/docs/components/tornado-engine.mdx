@@ -11,11 +11,14 @@ A [mixer engine](/components/mixer-engine/) for classic Tornado Cash instances (
 Notes are the original format, `tornado-eth-0.1-1-0x…`. A note made here withdraws in any Tornado client, and the other way round.
 
 <Aside type="caution" title="No security review">
-  This engine handles notes that are worth money. It has not been reviewed. It was run end to end on Sepolia: a deposit, a proof accepted by the pool's verifier, and a withdrawal. It was not run on mainnet, with an ERC-20 pool, or against a live relayer.
+  This engine handles notes that are worth money. It has not been reviewed. It was run end to end on
+  Sepolia: a deposit, a proof accepted by the pool's verifier, and a withdrawal. It was not run on
+  mainnet, with an ERC-20 pool, or against a live relayer.
 </Aside>
 
 <Aside title="Know the law where you are">
-  The US lifted its sanctions on Tornado Cash in March 2025. Rules still differ by country, and mixers get extra scrutiny from exchanges. This is a UI library, not advice.
+  The US lifted its sanctions on Tornado Cash in March 2025. Rules still differ by country, and
+  mixers get extra scrutiny from exchanges. This is a UI library, not advice.
 </Aside>
 
 ## Installation
@@ -58,9 +61,9 @@ An ERC-20 pool also takes `token`. `symbol` and `denomination` are what the note
 
 Withdrawing needs the two files of the original trusted setup:
 
-| File | Size | SHA-256 |
-| --- | --- | --- |
-| `tornado.json` | 19 MB (1.8 MB gzipped) | `3ddd61db…fe536f98` |
+| File                    | Size                   | SHA-256             |
+| ----------------------- | ---------------------- | ------------------- |
+| `tornado.json`          | 19 MB (1.8 MB gzipped) | `3ddd61db…fe536f98` |
 | `tornadoProvingKey.bin` | 14 MB (9.6 MB gzipped) | `8e2d2f22…fa16a3af` |
 
 They are published with [tornado-core v2.1](https://github.com/tornadocash/tornado-core/releases/tag/v2.1) and in tornado-cli under `build/circuits`. Host them yourself and point `circuitsUrl` at the folder. The engine checks each file against the hash it ships with (`TORNADO_CIRCUIT_FILES`) and refuses anything else, so the host does not have to be trusted.
@@ -68,7 +71,9 @@ They are published with [tornado-core v2.1](https://github.com/tornadocash/torna
 They load on the first withdrawal, not before. Deposits need neither.
 
 <Aside title="The circuit runs as code">
-  `tornado.json` holds the circuit as JavaScript, and the prover runs it with `new Function`. A strict Content Security Policy has to allow `unsafe-eval` for this. The hash check is what makes that acceptable: only the published file is ever run.
+  `tornado.json` holds the circuit as JavaScript, and the prover runs it with `new Function`. A
+  strict Content Security Policy has to allow `unsafe-eval` for this. The hash check is what makes
+  that acceptable: only the published file is ever run.
 </Aside>
 
 ## What a withdrawal does
@@ -101,14 +106,14 @@ The proof commits to `address` and to the fee from `quote`, so a relayer can't t
 
 ## Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `pools` | `TornadoPool[]` | — | The pools offered. A `MixerPool` plus `deploymentBlock`. |
-| `chains` | `Record<number, { rpcUrl, relayer?, blockRange? }>` | — | One entry per chain. `blockRange` is the blocks per `eth_getLogs`, 50,000 by default, halved when the RPC refuses. |
-| `circuitsUrl` | `string` | — | Folder with the two circuit files. Needed to withdraw. |
-| `cache` | `TornadoCache \| false` | IndexedDB | Where final deposits are kept between page loads. |
-| `client` | `(chainId) => TornadoClient` | viem on `rpcUrl` | Chain reads. For tests. |
-| `fetch` | `typeof fetch` | global | HTTP for the circuit files. |
+| Option        | Type                                                | Default          | Description                                                                                                        |
+| ------------- | --------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `pools`       | `TornadoPool[]`                                     | —                | The pools offered. A `MixerPool` plus `deploymentBlock`.                                                           |
+| `chains`      | `Record<number, { rpcUrl, relayer?, blockRange? }>` | —                | One entry per chain. `blockRange` is the blocks per `eth_getLogs`, 50,000 by default, halved when the RPC refuses. |
+| `circuitsUrl` | `string`                                            | —                | Folder with the two circuit files. Needed to withdraw.                                                             |
+| `cache`       | `TornadoCache \| false`                             | IndexedDB        | Where final deposits are kept between page loads.                                                                  |
+| `client`      | `(chainId) => TornadoClient`                        | viem on `rpcUrl` | Chain reads. For tests.                                                                                            |
+| `fetch`       | `typeof fetch`                                      | global           | HTTP for the circuit files.                                                                                        |
 
 The cache holds commitments and their timestamps only. They are public: every one is in the pool's event log.
 

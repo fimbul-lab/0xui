@@ -7,12 +7,7 @@ export const Default = demo(() => (
 ));
 
 export const WithFiat = demo(() => (
-  <TokenAmount
-    value={parseUnits("2.5", 18)}
-    decimals={18}
-    symbol="ETH"
-    price={3150.42}
-  />
+  <TokenAmount value={parseUnits("2.5", 18)} decimals={18} symbol="ETH" price={3150.42} />
 ));
 
 export const Compact = demo(() => (

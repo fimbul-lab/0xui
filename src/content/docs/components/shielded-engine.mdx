@@ -11,7 +11,10 @@ import { Default } from "@/demos/shielded-engine";
 The shielded components show private balances, scan progress and proofs. They don't know which privacy protocol is behind them. They talk to a **shielded engine**: a small interface that wraps one protocol SDK and reports its state in neutral terms.
 
 <Aside type="caution" title="Preview">
-  Two engines exist. The [mock engine](/components/mock-shielded-engine/) imitates the Railgun SDK's behaviour without a network or real funds. The [Privacy Pools engine](/components/privacy-pools-engine/) shields into and unshields from the real Privacy Pools contracts. The interface will grow as the unshield and private send components are built.
+  Two engines exist. The [mock engine](/components/mock-shielded-engine/) imitates the Railgun SDK's
+  behaviour without a network or real funds. The [Privacy Pools
+  engine](/components/privacy-pools-engine/) shields into and unshields from the real Privacy Pools
+  contracts. The interface will grow as the unshield and private send components are built.
 </Aside>
 
 Everything below runs on the mock. Unlock it, then use the buttons to make things happen.
@@ -94,12 +97,12 @@ interface ShieldedEngine {
   quoteShield(draft: ShieldDraft): Promise<ShieldQuote>;
   prepareShield(
     draft: ShieldDraft,
-    options: { sign(message: string): Promise<Hex> }
+    options: { sign(message: string): Promise<Hex> },
   ): Promise<PreparedShield>;
 
   prove(
     draft: PrivateDraft,
-    options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
+    options: { onStage(stage: ProofStage): void; signal?: AbortSignal },
   ): Promise<ProvedOperation>;
   quote(draft: PrivateDraft): Promise<PrivateQuote>;
   submit(operation: ProvedOperation): Promise<{ hash: Hash }>;
@@ -108,7 +111,7 @@ interface ShieldedEngine {
   prepareExit?(
     chainId: number,
     id: string,
-    options: { onStage(stage: ProofStage): void; signal?: AbortSignal }
+    options: { onStage(stage: ProofStage): void; signal?: AbortSignal },
   ): Promise<PreparedExit>;
 }
 ```
@@ -123,12 +126,12 @@ Three rules make it easy to build UI on:
 
 A private balance is split by what can be done with it. Each engine maps its protocol's own states onto these five, and protocol names stay inside the engine.
 
-| State | Meaning |
-| --- | --- |
-| `spendable` | Ready to spend. |
-| `pending` | Recently shielded, waiting out the protocol's standby period. |
-| `proving` | Proofs for these funds are submitted and being checked. |
-| `incomplete` | A proof is missing. `retryProofs` tries again. |
+| State        | Meaning                                                                |
+| ------------ | ---------------------------------------------------------------------- |
+| `spendable`  | Ready to spend.                                                        |
+| `pending`    | Recently shielded, waiting out the protocol's standby period.          |
+| `proving`    | Proofs for these funds are submitted and being checked.                |
+| `incomplete` | A proof is missing. `retryProofs` tries again.                         |
 | `restricted` | Can't be spent privately. Can only return to the address it came from. |
 
 ### Sync

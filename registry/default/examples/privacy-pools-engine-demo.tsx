@@ -11,7 +11,7 @@ import {
 } from "@/lib/privacy-pools-engine";
 
 // Sepolia: real contracts, test funds.
-const chainId = 11155111;
+const chainId = 11_155_111;
 // The scan reads logs back to the pools' deployment, so the RPC must serve old logs.
 const rpcUrl = "https://sepolia.gateway.tenderly.co";
 

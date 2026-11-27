@@ -1,16 +1,12 @@
 // Docs: https://0xui.io/components/fee-tier-select.md
 import { Radio, RadioGroup, RadioIndicator } from "@ui-sdk/react/radio";
 import { CheckIcon } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState } from "react";
+import type { ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
 import { FieldLegend, FieldSet } from "@/components/primitives/field";
-import {
-  defaultFeeTier,
-  defaultFeeTiers,
-  feeTierBadge,
-  formatFee,
-  type FeeTierInfo,
-} from "@/lib/fee-tier-core";
+import { defaultFeeTier, defaultFeeTiers, feeTierBadge, formatFee } from "@/lib/fee-tier-core";
+import type { FeeTierInfo } from "@/lib/fee-tier-core";
 import { cn } from "@/lib/utils";
 
 export { defaultFeeTiers, feeTierBadge, formatFee };
@@ -28,7 +24,7 @@ export type FeeTierSelectProps = {
   /** Called with the whole tier, so its tick spacing comes along. */
   onValueChange?: (tier: FeeTier) => void;
   /** Tiers to offer. Defaults to Uniswap v3's four. */
-  tiers?: FeeTier[];
+  tiers?: Array<FeeTier>;
   /** Shares are loading: each tier shows a skeleton where its share goes. */
   loading?: boolean;
   /** Group label, read by screen readers and shown above the options. */
@@ -77,8 +73,12 @@ export function FeeTierSelect({
         value={selected === undefined ? null : String(selected)}
         onValueChange={(next) => {
           const tier = tiers.find((t) => String(t.fee) === next);
-          if (!tier) return;
-          if (value === undefined) setInner(tier.fee);
+          if (!tier) {
+            return;
+          }
+          if (value === undefined) {
+            setInner(tier.fee);
+          }
           onValueChange?.(tier);
         }}
         className="grid grid-cols-2 gap-2 sm:grid-cols-4"
@@ -91,14 +91,21 @@ export function FeeTierSelect({
               className="relative flex min-h-11 cursor-pointer flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-muted/40 has-data-checked:border-foreground has-data-checked:bg-muted/50 has-focus-visible:ring-2 has-focus-visible:ring-ring"
             >
               <span className="flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold tabular-nums">{formatFee(tier.fee, locale)}</span>
-                <Radio value={String(tier.fee)} className="grid size-4 place-items-center outline-none">
+                <span className="text-sm font-semibold tabular-nums">
+                  {formatFee(tier.fee, locale)}
+                </span>
+                <Radio
+                  value={String(tier.fee)}
+                  className="grid size-4 place-items-center outline-none"
+                >
                   <RadioIndicator>
                     <CheckIcon className="size-4" aria-hidden />
                   </RadioIndicator>
                 </Radio>
               </span>
-              {tier.description && <span className="text-xs text-muted-foreground">{tier.description}</span>}
+              {tier.description && (
+                <span className="text-xs text-muted-foreground">{tier.description}</span>
+              )}
               {loading && (
                 <span className="mt-auto">
                   <SkeletonBox width="7ch" height={18} radius={4} />

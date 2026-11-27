@@ -4,7 +4,8 @@ import { Field, FieldLabel } from "@ui-sdk/react/field";
 import { Radio, RadioGroup } from "@ui-sdk/react/radio";
 import { Textarea } from "@ui-sdk/react/textarea";
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
 import type { Address, Hash } from "viem";
 import { useConfig } from "wagmi";
@@ -44,18 +45,15 @@ import {
   mixerWithdrawConfirmText,
   mixerWithdrawRunningAction,
   planMixerDeposit,
-  type MixerDeposited,
-  type MixerWithdrawPhase,
 } from "@/lib/mixer-core";
-import {
-  MIXER_STAGES,
-  mixerPoolLabel,
-  sameMixerPool,
-  type MixerEngine,
-  type MixerPool,
-  type MixerStage,
-  type MixerWithdrawVia,
-  type MixerWithdrawal,
+import type { MixerDeposited, MixerWithdrawPhase } from "@/lib/mixer-core";
+import { MIXER_STAGES, mixerPoolLabel, sameMixerPool } from "@/lib/mixer-engine";
+import type {
+  MixerEngine,
+  MixerPool,
+  MixerStage,
+  MixerWithdrawVia,
+  MixerWithdrawal,
 } from "@/lib/mixer-engine";
 import { cn } from "@/lib/utils";
 
@@ -114,7 +112,9 @@ export function useMixerDeposit({
   const state = useStore(controller);
 
   const target = state.note?.pool ?? pool;
-  const allowance = useQuery(mixerAllowanceQueryOptions(config, { pool: target, owner: wallet.address }));
+  const allowance = useQuery(
+    mixerAllowanceQueryOptions(config, { pool: target, owner: wallet.address }),
+  );
   latest.current.refetchAllowance = () => void allowance.refetch();
   const capabilities = useQuery(
     mixerCapabilitiesQueryOptions(config, {
@@ -125,7 +125,7 @@ export function useMixerDeposit({
   );
   const planned = planMixerDeposit({
     pool: target,
-    allowance: allowance.data as bigint | undefined,
+    allowance: allowance.data,
     capabilities: capabilities.data,
   });
   const plan = state.frozen ?? planned;
@@ -183,8 +183,13 @@ function useWalletGate(chainId: number | undefined) {
     blocker,
     switching: wallet.switching,
     /** Fixes the blocker: opens the wallet picker or asks for the chain switch. */
-    fix: (action: "connect" | "switch-chain") =>
-      action === "connect" ? setConnectOpen(true) : void wallet.switchChain(chainId!),
+    fix: (action: "connect" | "switch-chain") => {
+      if (action === "connect") {
+        setConnectOpen(true);
+      } else if (chainId !== undefined) {
+        void wallet.switchChain(chainId);
+      }
+    },
     dialog: <ConnectWalletDialog open={connectOpen} onOpenChange={setConnectOpen} />,
   };
 }
@@ -195,7 +200,7 @@ const choiceCard =
 const poolKey = (pool: Pick<MixerPool, "chainId" | "address">) => `${pool.chainId}:${pool.address}`;
 
 export type MixerPoolPickerProps = {
-  pools: readonly MixerPool[];
+  pools: ReadonlyArray<MixerPool>;
   value: MixerPool | undefined;
   onValueChange: (pool: MixerPool) => void;
   disabled?: boolean;
@@ -221,7 +226,9 @@ export function MixerPoolPicker({
         value={selected ? poolKey(selected) : ""}
         onValueChange={(next) => {
           const pool = pools.find((candidate) => poolKey(candidate) === next);
-          if (pool) onValueChange(pool);
+          if (pool) {
+            onValueChange(pool);
+          }
         }}
         disabled={disabled}
         className="grid grid-cols-2 gap-2 sm:grid-cols-3"
@@ -504,6 +511,16 @@ export function MixerProofProgress({
   );
 }
 
+/** The time in ms, again every `ms`, so ages written in render stay fresh. */
+function useNow(ms: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(timer);
+  }, [ms]);
+  return now;
+}
+
 export type MixerWithdrawFormProps = {
   engine: MixerEngine;
   /** Called with the withdrawal transaction's hash once it is broadcast. */
@@ -528,6 +545,7 @@ export function MixerWithdrawForm({
   const [recipientText, setRecipientText] = useState("");
   const [recipient, setRecipient] = useState<Address>();
   const [via, setVia] = useState<MixerWithdrawVia>(engine.relays ? "relayer" : "wallet");
+  const now = useNow(60_000);
   const [sent, setSent] = useState<{ hash: Hash; chainId: number; label: string }>();
 
   const lookup = useMixerNote(engine, noteText);
@@ -581,7 +599,9 @@ export function MixerWithdrawForm({
       : kind === "refresh"
         ? lookup.refresh
         : kind === "start"
-          ? () => flow.start({ note: note!.note, recipient: recipient!, via }, quote!)
+          ? note && recipient && quote
+            ? () => flow.start({ note: note.note, recipient, via }, quote)
+            : undefined
           : kind === "confirm"
             ? flow.confirm
             : kind === "send"
@@ -600,7 +620,8 @@ export function MixerWithdrawForm({
           via: flow.withdrawal?.via ?? via,
         })
       : undefined;
-  const shownQuote = flow.withdrawal?.quote ?? (running ? flow.active!.expected : quote);
+  // While a withdrawal runs, the quote it started with; `active` is set exactly then.
+  const shownQuote = flow.withdrawal?.quote ?? flow.active?.expected ?? quote;
   const value = (raw: bigint) =>
     pool && (
       <TokenAmount value={raw} decimals={pool.decimals} symbol={pool.symbol} maxDecimals={6} />
@@ -661,7 +682,7 @@ export function MixerWithdrawForm({
               [
                 amount,
                 deposit.timestamp !== undefined &&
-                  `deposited ${formatMixerAge(Date.now() / 1_000 - deposit.timestamp)}`,
+                  `deposited ${formatMixerAge(now / 1000 - deposit.timestamp)}`,
                 deposit.depositsSince !== undefined &&
                   `${deposit.depositsSince.toLocaleString("en-US")} deposits since`,
               ]
@@ -703,7 +724,11 @@ export function MixerWithdrawForm({
           <FieldLabel className="mb-1.5 text-sm font-medium">Sent by</FieldLabel>
           <RadioGroup
             value={via}
-            onValueChange={(next) => setVia(next as MixerWithdrawVia)}
+            onValueChange={(next) => {
+              if (next === "relayer" || next === "wallet") {
+                setVia(next);
+              }
+            }}
             className="grid grid-cols-2 gap-2"
           >
             {(["relayer", "wallet"] as const).map((option) => (

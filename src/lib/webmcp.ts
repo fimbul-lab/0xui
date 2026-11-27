@@ -3,13 +3,45 @@
 
 type Fetch = (url: string) => Promise<Response>;
 
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject;
+type JsonObject = { [key: string]: JsonValue };
+
+interface SearchHit {
+  page: string;
+  title: string;
+  excerpt: string;
+}
+
+type DocsToolResult = string | Array<SearchHit> | JsonObject;
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+  if (typeof value === "object") {
+    return Object.values(value).every(isJsonValue);
+  }
+  return false;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && isJsonValue(value);
+}
+
 interface Tool {
   name: string;
   title: string;
   description: string;
   inputSchema: object;
   annotations: { readOnlyHint: boolean };
-  execute: (input: Record<string, unknown>) => Promise<unknown>;
+  execute: (input: JsonObject) => Promise<DocsToolResult>;
 }
 
 interface ModelContext {
@@ -21,7 +53,7 @@ interface PagefindResult {
 }
 
 interface Pagefind {
-  search(query: string): Promise<{ results: PagefindResult[] }>;
+  search(query: string): Promise<{ results: Array<PagefindResult> }>;
 }
 
 export interface DocsToolsOptions {
@@ -39,33 +71,36 @@ interface IndexEntry {
 
 const stripTags = (html: string) =>
   html
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replaceAll(/<[^>]+>/g, "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'");
 
 /** The page id in a docs or Markdown URL, like `components/balance`. */
 function pageId(url: string) {
-  return new URL(url, "https://0xui.io").pathname.replace(/^\/|\/$|\.md$/g, "");
+  return new URL(url, "https://0xui.io").pathname.replaceAll(/^\/|\/$|\.md$/g, "");
 }
 
 export function docsTools({
   fetch: get = (url) => fetch(url),
   pagefind = loadPagefind,
-}: DocsToolsOptions = {}): Tool[] {
+}: DocsToolsOptions = {}): Array<Tool> {
   const read = async (url: string) => {
     const response = await get(url);
-    if (!response.ok) throw new Error(`${url} returned ${response.status}.`);
+    if (!response.ok) {
+      throw new Error(`${url} returned ${response.status}.`);
+    }
     return response.text();
   };
 
-  let index: Promise<IndexEntry[]> | undefined;
+  let index: Promise<Array<IndexEntry>> | undefined;
   const pages = () =>
     (index ??= read("/llms.txt").then((text) =>
-      [...text.matchAll(/^- \[([^\]]+)\]\(([^)]+\.md)\): ?(.*)$/gm)].map(
-        ([, title, url, description]) => ({ title, id: pageId(url), description }),
+      [...text.matchAll(/^- \[([^\]]+)\]\(([^)]+\.md)\): ?(.*)$/gm)].flatMap(
+        ([, title, url, description = ""]) =>
+          title === undefined || url === undefined ? [] : [{ title, id: pageId(url), description }],
       ),
     ));
 
@@ -75,7 +110,7 @@ export function docsTools({
     return (
       all.find((entry) => entry.id === wanted) ??
       all.find((entry) => entry.id.split("/").pop() === wanted) ??
-      all.find((entry) => entry.title.toLowerCase() === wanted.replace(/-/g, " "))
+      all.find((entry) => entry.title.toLowerCase() === wanted.replaceAll("-", " "))
     );
   }
 
@@ -106,7 +141,9 @@ export function docsTools({
       async execute(input) {
         const query = String(input.query ?? "").trim();
         const limit = Math.min(Math.max(Number(input.limit) || 5, 1), 20);
-        if (!query) throw new Error("Pass a query.");
+        if (!query) {
+          throw new Error("Pass a query.");
+        }
 
         const search = await pagefind().catch(() => undefined);
         if (search) {
@@ -175,30 +212,61 @@ export function docsTools({
         const name = String(input.name ?? "")
           .trim()
           .replace(/^@0xui\//, "");
-        if (!/^[a-z0-9-]+$/.test(name)) throw new Error(`"${name}" isn't a registry item name.`);
-        const item = JSON.parse(await read(`/r/${name}.json`));
+        if (!/^[a-z0-9-]+$/.test(name)) {
+          throw new Error(`"${name}" isn't a registry item name.`);
+        }
+        const item: unknown = JSON.parse(await read(`/r/${name}.json`));
+        if (!isJsonObject(item)) {
+          throw new Error(`/r/${name}.json isn't a registry item.`);
+        }
         return { install: `npx shadcn@latest add @0xui/${name}`, ...item };
       },
     },
   ];
 }
 
+/** Pagefind's module, checked for the one function the search tool calls. */
+const isPagefind = (module: unknown): module is Pagefind =>
+  typeof module === "object" &&
+  module !== null &&
+  "search" in module &&
+  typeof module.search === "function";
+
 async function loadPagefind() {
   const url = "/pagefind/pagefind.js";
-  return (await import(/* @vite-ignore */ url)) as Pagefind;
+  const module: unknown = await import(/* @vite-ignore */ url);
+  if (!isPagefind(module)) {
+    throw new Error(`${url} isn't Pagefind's search module.`);
+  }
+  return module;
+}
+
+const isModelContext = (value: unknown): value is ModelContext =>
+  typeof value === "object" &&
+  value !== null &&
+  "registerTool" in value &&
+  typeof value.registerTool === "function";
+
+/** The WebMCP `modelContext` on a document or navigator, if the browser has one. */
+function modelContextOf(target: Document | Navigator | undefined) {
+  const context: unknown = target && "modelContext" in target ? target.modelContext : undefined;
+  return isModelContext(context) ? context : undefined;
 }
 
 /** Registers the docs tools with the browser. Does nothing without WebMCP. */
 export function registerDocsTools(options?: DocsToolsOptions) {
-  const scope = globalThis as { document?: { modelContext?: ModelContext } };
   const context =
-    scope.document?.modelContext ??
-    (globalThis as { navigator?: { modelContext?: ModelContext } }).navigator?.modelContext;
+    modelContextOf(typeof document === "undefined" ? undefined : document) ??
+    modelContextOf(typeof navigator === "undefined" ? undefined : navigator);
   const controller = new AbortController();
-  if (!context) return () => {};
+  if (!context) {
+    return () => {};
+  }
 
   for (const tool of docsTools(options)) {
-    // Early builds of navigator.modelContext returned synchronously.
+    // Early builds of navigator.modelContext returned synchronously. A refused
+    // tool leaves the rest registered, with nothing to recover.
+    // oxlint-disable-next-line landmines/no-silent-catch
     Promise.resolve()
       .then(() => context.registerTool(tool, { signal: controller.signal }))
       .catch(() => {});

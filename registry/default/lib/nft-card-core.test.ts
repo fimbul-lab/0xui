@@ -1,13 +1,25 @@
+import { QueryClient } from "@tanstack/react-query";
 import { encodeFunctionResult } from "viem";
 import { describe, expect, it } from "vitest";
 import { createTestConfig } from "../../../test/wagmi";
-import { nftAbi, nftImage, nftMetadataQueryOptions, nftPhase, nftTokenQueryOptions } from "./nft-card-core";
+import {
+  nftAbi,
+  nftImage,
+  nftMetadataQueryOptions,
+  nftPhase,
+  nftTokenQueryOptions,
+} from "./nft-card-core";
 
 const contract = "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D";
 
 async function readToken(config: ReturnType<typeof createTestConfig>, tokenId: bigint) {
   const options = nftTokenQueryOptions(config, { contract, tokenId, chainId: 1 });
-  const results = await options.queryFn({ queryKey: options.queryKey } as never);
+  const results = await options.queryFn({
+    client: new QueryClient(),
+    queryKey: options.queryKey,
+    signal: new AbortController().signal,
+    meta: undefined,
+  });
   return options.select(results);
 }
 
@@ -16,10 +28,16 @@ describe("nft-card", () => {
     const config = createTestConfig({
       rpc: {
         eth_call: ([{ data }]: [{ data: string }]) => {
-          if (data.startsWith("0x0e89341c"))
-            return encodeFunctionResult({ abi: nftAbi, functionName: "uri", result: "ipfs://Qm/{id}.json" });
-          if (data.startsWith("0x06fdde03"))
+          if (data.startsWith("0x0e89341c")) {
+            return encodeFunctionResult({
+              abi: nftAbi,
+              functionName: "uri",
+              result: "ipfs://Qm/{id}.json",
+            });
+          }
+          if (data.startsWith("0x06fdde03")) {
             return encodeFunctionResult({ abi: nftAbi, functionName: "name", result: "Items" });
+          }
           throw new Error("execution reverted");
         },
       },
@@ -52,7 +70,9 @@ describe("nft-card", () => {
   it("orders phases", () => {
     expect(nftPhase({ isLoading: true, notFound: true, metadataError: true })).toBe("loading");
     expect(nftPhase({ isLoading: false, notFound: true, metadataError: true })).toBe("not-found");
-    expect(nftPhase({ isLoading: false, notFound: false, metadataError: true })).toBe("metadata-error");
+    expect(nftPhase({ isLoading: false, notFound: false, metadataError: true })).toBe(
+      "metadata-error",
+    );
     expect(nftPhase({ isLoading: false, notFound: false, metadataError: false })).toBe("ready");
   });
 });

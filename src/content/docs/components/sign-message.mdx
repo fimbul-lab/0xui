@@ -51,29 +51,29 @@ For a full sign-in flow with a nonce, a server check and a session, see [Sign in
 
 ## States
 
-| `data-phase` | Button |
-| --- | --- |
-| `idle` | Your label, or "Connect wallet" |
-| `signing` | Spinner, "Sign in wallet…" |
-| `verifying` | Spinner, "Verifying…" |
-| `signed` | Check, "Signed" or "Signature verified" |
-| `invalid` | Alert: the signature doesn't match the connected address. |
-| `cancelled` | "Cancelled in wallet." Not an error. |
-| `error` | Alert with the wallet's message. |
+| `data-phase` | Button                                                    |
+| ------------ | --------------------------------------------------------- |
+| `idle`       | Your label, or "Connect wallet"                           |
+| `signing`    | Spinner, "Sign in wallet…"                                |
+| `verifying`  | Spinner, "Verifying…"                                     |
+| `signed`     | Check, "Signed" or "Signature verified"                   |
+| `invalid`    | Alert: the signature doesn't match the connected address. |
+| `cancelled`  | "Cancelled in wallet." Not an error.                      |
+| `error`      | Alert with the wallet's message.                          |
 
 ## Props
 
 Also accepts `Button` props (`variant`, `size`, `disabled`…).
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `message` | `string \| { raw: Hex }` | — | Message to sign. Pass this or `typedData`. |
-| `typedData` | `TypedDataDefinition` | — | EIP-712 payload. |
-| `verify` | `boolean` | `false` | Check the signature after signing. |
-| `onSigned` | `(signature) => void` | — | Called with the signature. |
-| `showMessage` | `boolean` | `false` | Show what is being signed. |
-| `showSignature` | `boolean` | `false` | Show the signature with copy. |
-| `children` | `ReactNode` | `"Sign message"` | Label. |
-| `agentConfirm` | `string \| false` | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. Not set while the button opens the wallet picker. |
+| Prop            | Type                     | Default              | Description                                                                                                                          |
+| --------------- | ------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `message`       | `string \| { raw: Hex }` | —                    | Message to sign. Pass this or `typedData`.                                                                                           |
+| `typedData`     | `TypedDataDefinition`    | —                    | EIP-712 payload.                                                                                                                     |
+| `verify`        | `boolean`                | `false`              | Check the signature after signing.                                                                                                   |
+| `onSigned`      | `(signature) => void`    | —                    | Called with the signature.                                                                                                           |
+| `showMessage`   | `boolean`                | `false`              | Show what is being signed.                                                                                                           |
+| `showSignature` | `boolean`                | `false`              | Show the signature with copy.                                                                                                        |
+| `children`      | `ReactNode`              | `"Sign message"`     | Label.                                                                                                                               |
+| `agentConfirm`  | `string \| false`        | label + what it does | Sets `data-agent-confirm`, so browser agents ask a person first. `false` drops it. Not set while the button opens the wallet picker. |
 
 Headless: `useSignFlow(request, { verify })`.

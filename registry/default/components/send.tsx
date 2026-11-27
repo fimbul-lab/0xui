@@ -1,13 +1,17 @@
 // Docs: https://0xui.io/blocks/send.md
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import type { Hash, TransactionReceipt } from "viem";
 import { useConfig } from "wagmi";
-import { AddressInput, type AddressInputState } from "@/components/address-input";
-import { TokenInput, type TokenInputState } from "@/components/token-input";
+import { AddressInput } from "@/components/address-input";
+import type { AddressInputState } from "@/components/address-input";
+import { TokenInput } from "@/components/token-input";
+import type { TokenInputState } from "@/components/token-input";
 import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
 import { TransactionStatus } from "@/components/transaction-status";
-import { sendBlocker, sendConfirmText, sendRequest, type SendDraft } from "@/lib/send-core";
+import { sendBlocker, sendConfirmText, sendRequest } from "@/lib/send-core";
+import type { SendDraft } from "@/lib/send-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -20,11 +24,11 @@ export {
 
 export type SendProps = {
   /** Tokens the user can send. Pass one to lock the token. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Initially selected token. Defaults to the first in `tokens`. */
   defaultToken?: Token;
   /** Symbols or addresses for quick picks. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Prices keyed by `chainId:address`, address or symbol, for the fiat line. */
   prices?: TokenPrices;
   /** Called once the wallet returns a hash. */
@@ -52,7 +56,13 @@ export function Send({
 }: SendProps) {
   const [recipientText, setRecipientText] = useState("");
   const [recipient, setRecipient] = useState<AddressInputState>();
-  const [token, setToken] = useState<Token>(defaultToken ?? tokens[0]!);
+  const [token, setToken] = useState<Token>(() => {
+    const initial = defaultToken ?? tokens[0];
+    if (!initial) {
+      throw new Error("Send needs at least one token.");
+    }
+    return initial;
+  });
   const [amountText, setAmountText] = useState("");
   const [amount, setAmount] = useState<TokenInputState>();
   const [hash, setHash] = useState<Hash>();

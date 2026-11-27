@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/account.md
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDownIcon, LogOutIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useConfig } from "wagmi";
 import { AddressAvatar } from "@/components/address-avatar";
 import { Balance } from "@/components/balance";
@@ -14,10 +15,7 @@ import { Button } from "@/components/primitives/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/primitives/popover";
 import { useStore } from "@/hooks/use-store";
 import { truncateAddress } from "@/lib/0xui-utils";
-import {
-  accountDisplayName,
-  createConnectedAccount,
-} from "@/lib/account-core";
+import { accountDisplayName, createConnectedAccount } from "@/lib/account-core";
 import { ensNameQueryOptions } from "@/lib/identity";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +77,9 @@ export function Account({
     onOpenChange?.(next);
   };
 
-  if (!account.address) return null;
+  if (!account.address) {
+    return null;
+  }
   const { address, displayName, ensName, connector, chainId } = account;
 
   return (
@@ -88,15 +88,13 @@ export function Account({
         className={cn(
           "inline-flex h-10 items-center gap-2 rounded-full border bg-background py-1 pr-3 pl-1 text-sm font-medium outline-none",
           "hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
-          className
+          className,
         )}
       >
         {/* Names the trigger "Account …" for screen readers and agents. */}
         <span className="sr-only">Account </span>
         <AddressAvatar address={address} size={30} />
-        {showBalance && (
-          <Balance className="text-muted-foreground" maxDecimals={3} />
-        )}
+        {showBalance && <Balance className="text-muted-foreground" maxDecimals={3} />}
         {/* Morphs from the address to the ENS name when it resolves. */}
         <span className={cn(!ensName && "font-mono")}>
           <MorphText>{displayName}</MorphText>
@@ -119,11 +117,7 @@ export function Account({
               </span>
             )}
           </div>
-          <CopyButton
-            value={address}
-            label="Copy your address"
-            className="ml-auto"
-          />
+          <CopyButton value={address} label="Copy your address" className="ml-auto" />
         </div>
 
         <div className="flex flex-col gap-1">
@@ -164,9 +158,7 @@ export function Account({
 
         <div className="flex items-center justify-between gap-2 border-t pt-3">
           {connector && (
-            <span className="text-xs text-muted-foreground">
-              Connected with {connector.name}
-            </span>
+            <span className="text-xs text-muted-foreground">Connected with {connector.name}</span>
           )}
           <Button
             variant="ghost"
@@ -174,7 +166,7 @@ export function Account({
             disabled={account.isDisconnecting}
             data-agent-confirm={`Disconnects ${connector?.name ?? "your wallet"} from this site`}
             onClick={() => {
-              account.disconnect();
+              void account.disconnect();
               setOpen(false);
               onDisconnect?.();
             }}

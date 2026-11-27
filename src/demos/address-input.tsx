@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { AddressInput, type AddressInputState } from "@/components/address-input";
+import { AddressInput } from "@/components/address-input";
+import type { AddressInputState } from "@/components/address-input";
 import { demo } from "./demo";
 
 export const Default = demo(function AddressInputDemo() {
@@ -10,7 +11,12 @@ export const Default = demo(function AddressInputDemo() {
       <AddressInput value={value} onValueChange={setValue} onResolve={setState} />
       <p className="text-xs text-muted-foreground">
         Try <code>vitalik.eth</code>, a pasted address, or flip the case of one letter.
-        {state?.phase === "valid" && <> Resolved: <code>{state.address}</code></>}
+        {state?.phase === "valid" && (
+          <>
+            {" "}
+            Resolved: <code>{state.address}</code>
+          </>
+        )}
       </p>
     </div>
   );
@@ -32,7 +38,7 @@ export const Shielded = demo(function ShieldedAddressInputDemo() {
         className="self-start text-xs underline underline-offset-4"
         onClick={() =>
           setValue(
-            "0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkumpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkwrfm4m"
+            "0zk1qyqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkumpd9kxwatw8qqqqqdl645pcpreh6dga7xa3w4dm9c3tzv6ntesk0fy2kzr476pkwrfm4m",
           )
         }
       >

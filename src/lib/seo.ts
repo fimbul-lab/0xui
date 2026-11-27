@@ -14,10 +14,20 @@ export const ogSize = { width: 1200, height: 630 };
 const homeTitle = "0xui: Web3 React components for wagmi, viem and shadcn";
 
 /** Titles of the section overviews, which are one generic word on the page itself. */
-const overviews: Record<string, string> = {
-  components: "Web3 React components",
-  blocks: "Web3 React blocks",
-};
+function overviewTitle(id: string) {
+  switch (id) {
+    case "components":
+      return "Web3 React components";
+    case "blocks":
+      return "Web3 React blocks";
+    default:
+      return undefined;
+  }
+}
+
+function isOverview(section: string): section is "components" | "blocks" {
+  return section === "components" || section === "blocks";
+}
 
 /**
  * The page's title for a search result or a link preview, without the site
@@ -26,10 +36,16 @@ const overviews: Record<string, string> = {
  * @param id Starlight route id, like `components/balance`. The landing page is `""`.
  */
 export function shareTitle(id: string, title: string): string {
-  if (!id) return homeTitle;
+  if (!id) {
+    return homeTitle;
+  }
   const [section, name] = id.split("/");
-  if (!name) return overviews[id] ?? title;
-  if (section === "blocks") return `${title} – React web3 block`;
+  if (!name) {
+    return overviewTitle(id) ?? title;
+  }
+  if (section === "blocks") {
+    return `${title} – React web3 block`;
+  }
   if (section === "components") {
     // Utilities are plain UI (a copy button, a dialog), not web3.
     return `${title} – ${groupOf(name) === "Utilities" ? "React component" : "React web3 component"}`;
@@ -47,10 +63,8 @@ export function ogImage(id: string, exists = true): string {
   return `${site}/og/${exists && id ? id : "index"}.png`;
 }
 
-type JsonLd = Record<string, unknown>;
-
 /** Structured data for the landing page: the site, who publishes it, and the code. */
-export function siteJsonLd(description: string): JsonLd {
+export function siteJsonLd(description: string) {
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -86,10 +100,10 @@ export function siteJsonLd(description: string): JsonLd {
  * Breadcrumbs for a docs page, like 0xui › Components › Balance. Only
  * sections with an overview page are a step: "Getting started" has none.
  */
-export function breadcrumbJsonLd(id: string, title: string): JsonLd {
+export function breadcrumbJsonLd(id: string, title: string) {
   const [section, name] = id.split("/");
-  const steps: { name: string; url: string }[] = [{ name: siteName, url: `${site}/` }];
-  if (name && section in overviews) {
+  const steps: Array<{ name: string; url: string }> = [{ name: siteName, url: `${site}/` }];
+  if (section && name && isOverview(section)) {
     steps.push({
       name: section === "components" ? "Components" : "Blocks",
       url: `${site}/${section}/`,

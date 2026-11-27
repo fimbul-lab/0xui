@@ -28,26 +28,23 @@ import { WalletButton } from "@/components/wallet-button";
 Pass props through to either state:
 
 ```tsx
-<WalletButton
-  connect={{ title: "Sign in", onConnect: track }}
-  account={{ showBalance: true }}
-/>
+<WalletButton connect={{ title: "Sign in", onConnect: track }} account={{ showBalance: true }} />
 ```
 
 ## States
 
-| Phase | What the user sees |
-| --- | --- |
-| `restoring` | Skeleton the size of the button: during server render and while wagmi reconnects. |
-| `disconnected` | [Connect Wallet](/components/connect-wallet/) button. |
-| `connected` | [Account](/components/account/) button. |
+| Phase          | What the user sees                                                                |
+| -------------- | --------------------------------------------------------------------------------- |
+| `restoring`    | Skeleton the size of the button: during server render and while wagmi reconnects. |
+| `disconnected` | [Connect Wallet](/components/connect-wallet/) button.                             |
+| `connected`    | [Account](/components/account/) button.                                           |
 
 `useWalletButtonPhase()` returns the current phase.
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `connect` | `ConnectWalletProps` | Props for the connect button and picker. |
-| `account` | `AccountProps` | Props for the account button and panel. |
-| `className` | `string` | Applied in every state. |
+| Prop        | Type                 | Description                              |
+| ----------- | -------------------- | ---------------------------------------- |
+| `connect`   | `ConnectWalletProps` | Props for the connect button and picker. |
+| `account`   | `AccountProps`       | Props for the account button and panel.  |
+| `className` | `string`             | Applied in every state.                  |

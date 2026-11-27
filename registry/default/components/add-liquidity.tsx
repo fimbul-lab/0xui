@@ -1,17 +1,21 @@
 // Docs: https://0xui.io/blocks/add-liquidity.md
 import { useQuery } from "@tanstack/react-query";
 import { LockIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import type { Address, Hash, TransactionReceipt } from "viem";
 import { Skeleton } from "skullet/react";
 import { useConfig, useConnection } from "wagmi";
 import { ApproveButton } from "@/components/approve-button";
 import { useTokenBalance } from "@/components/balance";
-import { FeeTierSelect, type FeeTier } from "@/components/fee-tier-select";
-import { PriceRange, type RangePreset } from "@/components/price-range";
+import { FeeTierSelect } from "@/components/fee-tier-select";
+import type { FeeTier } from "@/components/fee-tier-select";
+import { PriceRange } from "@/components/price-range";
+import type { RangePreset } from "@/components/price-range";
 import { SlippageInput } from "@/components/slippage-input";
 import { TokenInput } from "@/components/token-input";
-import { isNativeToken, type Token, type TokenPrices } from "@/components/token-select";
+import { isNativeToken } from "@/components/token-select";
+import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
 import {
   addLiquidityBlocker,
@@ -21,14 +25,18 @@ import {
   mintRequest,
   mintTransactionQueryOptions,
   shortToken,
-  type DepositSide,
-  type GetMintTransaction as GetMintTransactionFor,
-  type MintTransaction,
+} from "@/lib/add-liquidity-core";
+import type {
+  DepositSide,
+  GetMintTransaction as GetMintTransactionFor,
+  MintTransaction,
 } from "@/lib/add-liquidity-core";
 import type { LiquidityBin, PoolState, TickRange } from "@/lib/concentrated-liquidity";
+import { errorMessage } from "@/lib/0xui-utils";
 import { formatFee } from "@/lib/fee-tier-core";
 import { defaultRange as startingRange } from "@/lib/price-range-core";
-import { v3Mint, withSlippage, type MintRequest as V3MintRequest } from "@/lib/v3-position-manager";
+import { v3Mint, withSlippage } from "@/lib/v3-position-manager";
+import type { MintRequest as V3MintRequest } from "@/lib/v3-position-manager";
 import { cn } from "@/lib/utils";
 
 /** Everything needed to mint a position. Amounts in each token's smallest unit. */
@@ -65,7 +73,10 @@ export function useDepositAmounts({
   token0: Token;
   token1: Token;
 }) {
-  const [typed, setTyped] = useState<{ side: DepositSide; text: string }>({ side: "token0", text: "" });
+  const [typed, setTyped] = useState<{ side: DepositSide; text: string }>({
+    side: "token0",
+    text: "",
+  });
   const deposit = getDepositAmounts({ pool, range, token0, token1, typed });
   return {
     ...deposit,
@@ -93,7 +104,7 @@ export type AddLiquidityProps = {
   /** Current pool state. `sqrtPriceX96` makes the deposit ratio exact. Leave out while it loads: the block shows a skeleton. */
   pool?: PoolState;
   /** Liquidity bins for the range chart, from `getLiquidityBins`. Leave out while they load. */
-  bins?: readonly LiquidityBin[];
+  bins?: ReadonlyArray<LiquidityBin>;
   /** Show the liquidity chart. Turn off for a compact form. */
   showChart?: boolean;
   /** Build the mint transaction. Use `v3Mint({ positionManager })` for Uniswap v3 and forks. */
@@ -103,11 +114,11 @@ export type AddLiquidityProps = {
   /** Selected fee tier, when the pair has several. Changing it should load that tier's pool. */
   fee?: number;
   /** Fee tiers to offer. Shows the fee picker when set with `onFeeChange`. */
-  feeTiers?: FeeTier[];
+  feeTiers?: Array<FeeTier>;
   onFeeChange?: (tier: FeeTier) => void;
   /** Starting range. Defaults to ±10% (±0.1% for stable spacings). */
   defaultRange?: TickRange;
-  presets?: RangePreset[];
+  presets?: Array<RangePreset>;
   /** Quote prices in token0. Starts inverted when token0 is the stablecoin, like USDC/WETH. */
   defaultInvert?: boolean;
   /** Starting slippage tolerance in basis points. 50 is 0.5%. The user can change it. */
@@ -134,10 +145,20 @@ export type AddLiquidityProps = {
  */
 export function AddLiquidity({ pool, className, ...props }: AddLiquidityProps) {
   return (
-    <Skeleton data={pool} sample={samplePool} label="Loading pool" className={cn("w-full max-w-xl", className)}>
+    <Skeleton
+      data={pool}
+      sample={samplePool}
+      label="Loading pool"
+      className={cn("w-full max-w-xl", className)}
+    >
       {(p) => <AddLiquidityView key={p === samplePool ? "sample" : "pool"} {...props} pool={p} />}
     </Skeleton>
   );
+}
+
+/** The token's contract, or undefined for the native coin. */
+function erc20(token: Token) {
+  return isNativeToken(token) ? undefined : token.address;
 }
 
 function AddLiquidityView({
@@ -165,7 +186,9 @@ function AddLiquidityView({
 }: AddLiquidityProps & { pool: PoolState }) {
   const { address } = useConnection();
   const { chains } = useConfig();
-  const [range, setRange] = useState<TickRange>(() => defaultRange ?? startingRange(pool, defaultInvert));
+  const [range, setRange] = useState<TickRange>(
+    () => defaultRange ?? startingRange(pool, defaultInvert),
+  );
   const [invert, setInvert] = useState(defaultInvert);
   // A new fee tier means a new pool and spacing: start its range over.
   const [spacing, setSpacing] = useState(pool.tickSpacing);
@@ -178,12 +201,20 @@ function AddLiquidityView({
   const { amount0, amount1 } = deposit;
 
   // Balances for both sides: the typed side and the computed one.
-  const erc20 = (token: Token) => (isNativeToken(token) ? undefined : token.address);
   const balance0 = useTokenBalance({ token: erc20(token0), chainId: token0.chainId }).value;
   const balance1 = useTokenBalance({ token: erc20(token1), chainId: token1.chainId }).value;
   const short = shortToken([token0, amount0, balance0], [token1, amount1, balance1]);
 
-  const request = mintRequest({ token0, token1, fee, range, amount0, amount1, slippageBps, recipient: address });
+  const request = mintRequest({
+    token0,
+    token1,
+    fee,
+    range,
+    amount0,
+    amount1,
+    slippageBps,
+    recipient: address,
+  });
   const tx = useQuery(mintTransactionQueryOptions({ getTransaction, request, deadlineSeconds }));
 
   const blocker = addLiquidityBlocker({
@@ -227,7 +258,11 @@ function AddLiquidityView({
   const approve = (token: Token, amount: bigint, children: ReactNode) =>
     !blocker && address && !isNativeToken(token) && amount > 0n ? (
       <ApproveButton
-        token={{ address: token.address as Address, symbol: token.symbol, decimals: token.decimals }}
+        token={{
+          address: token.address,
+          symbol: token.symbol,
+          decimals: token.decimals,
+        }}
         spender={spender}
         amount={amount}
         chainId={token.chainId}
@@ -239,7 +274,7 @@ function AddLiquidityView({
       children
     );
 
-  const sides: DepositSide[] = invert ? ["token1", "token0"] : ["token0", "token1"];
+  const sides: Array<DepositSide> = invert ? ["token1", "token0"] : ["token0", "token1"];
   const tokenOf = { token0, token1 };
   const other = (side: DepositSide) => tokenOf[side === "token0" ? "token1" : "token0"];
 
@@ -253,7 +288,11 @@ function AddLiquidityView({
         {title && <h3 className="text-lg font-semibold">{title}</h3>}
         <span className="text-sm text-muted-foreground">
           {token0.symbol} / {token1.symbol}
-          {fee !== undefined && <span className="ml-2 rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">{formatFee(fee, locale)}</span>}
+          {fee !== undefined && (
+            <span className="ml-2 rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums">
+              {formatFee(fee, locale)}
+            </span>
+          )}
         </span>
       </header>
 
@@ -286,7 +325,8 @@ function AddLiquidityView({
             >
               <LockIcon className="size-4 shrink-0" aria-hidden />
               <span>
-                No {tokenOf[side].symbol} needed. The price is outside your range, so it only takes {other(side).symbol}.
+                No {tokenOf[side].symbol} needed. The price is outside your range, so it only takes{" "}
+                {other(side).symbol}.
               </span>
             </div>
           ) : (
@@ -298,14 +338,19 @@ function AddLiquidityView({
               token={tokenOf[side]}
               prices={prices}
             />
-          )
+          ),
         )}
-        <SlippageInput value={slippageBps} onValueChange={setSlippageBps} locale={locale} className="mt-1" />
+        <SlippageInput
+          value={slippageBps}
+          onValueChange={setSlippageBps}
+          locale={locale}
+          className="mt-1"
+        />
       </section>
 
       {tx.error && (
         <p role="alert" className="text-sm text-destructive">
-          {(tx.error as { shortMessage?: string }).shortMessage ?? tx.error.message}
+          {errorMessage(tx.error)}
         </p>
       )}
 

@@ -23,6 +23,7 @@ export const Default = shieldedDemo(
             size="sm"
             onClick={() =>
               // Fails when less than 0.2 WETH is spendable. Nothing to show for that here.
+              // oxlint-disable-next-line landmines/no-silent-catch
               void engine.simulate
                 .unshield({ token: weth, amount: parseEther("0.2") })
                 .catch(() => {})
@@ -37,8 +38,8 @@ export const Default = shieldedDemo(
   {
     funds: [{ token: weth, amount: parseEther("1.25") }],
     // Shorter than the real 60 s standby, so the demo doesn't drag.
-    timings: { ...quickStart, standby: 12_000, settle: 8_000 },
-  }
+    timings: { ...quickStart, standby: 12_000, settle: 8000 },
+  },
 );
 
 export const States = shieldedDemo(
@@ -53,7 +54,7 @@ export const States = shieldedDemo(
     ],
     // Funds put straight into a state stay there until something moves them.
     timings: quickStart,
-  }
+  },
 );
 
 export const StuckProofs = shieldedDemo(
@@ -65,7 +66,7 @@ export const StuckProofs = shieldedDemo(
     ],
     timings: quickStart,
     setup: (engine) => engine.simulate.keepIncomplete(),
-  }
+  },
 );
 
 export const Inline = shieldedDemo(
@@ -88,5 +89,5 @@ export const Inline = shieldedDemo(
       { token: demoShieldedUsdc.address, amount: parseUnits("100", 6), state: "pending" },
     ],
     timings: quickStart,
-  }
+  },
 );

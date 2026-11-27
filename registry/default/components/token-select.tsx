@@ -9,7 +9,8 @@ import {
   CommandStatus,
 } from "@ui-sdk/react/command";
 import { ChevronDownIcon, SearchIcon } from "lucide-react";
-import { useEffect, useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Skeleton } from "skullet/react";
 import type { Address } from "viem";
 import { useChainId, useConfig, useConnection } from "wagmi";
@@ -24,13 +25,8 @@ import {
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
 import { truncateAddress } from "@/lib/0xui-utils";
-import {
-  NATIVE_TOKEN_ADDRESS,
-  getTokenPrice,
-  isNativeToken,
-  type TokenInfo,
-  type TokenPrices,
-} from "@/lib/token-list";
+import { NATIVE_TOKEN_ADDRESS, getTokenPrice, isNativeToken } from "@/lib/token-list";
+import type { TokenInfo, TokenPrices } from "@/lib/token-list";
 import {
   filterTokens,
   mergeTokenBalances,
@@ -61,12 +57,12 @@ export {
  * token addresses.
  */
 export function useTokenBalances(
-  tokens: readonly Token[],
+  tokens: ReadonlyArray<Token>,
   {
     chainId,
     address: addressProp,
     enabled = true,
-  }: { chainId?: number; address?: Address; enabled?: boolean } = {}
+  }: { chainId?: number; address?: Address; enabled?: boolean } = {},
 ) {
   const config = useConfig();
   const connection = useConnection();
@@ -77,7 +73,7 @@ export function useTokenBalances(
 
   const balances = useMemo(
     () => mergeTokenBalances(tokens, native.data, reads.data),
-    [tokens, native.data, reads.data]
+    [tokens, native.data, reads.data],
   );
 
   return {
@@ -92,7 +88,7 @@ export type TokenSelectDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Tokens to choose from. Only those on `chainId` are shown. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Called with the chosen token. The dialog closes itself. */
   onValueChange: (token: Token) => void;
   /** Currently selected token, marked in the list. */
@@ -100,7 +96,7 @@ export type TokenSelectDialogProps = {
   /** Chain to list tokens for. Defaults to the current chain. */
   chainId?: number;
   /** Symbols or addresses shown as quick-pick chips. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Read and show the connected account's balances. */
   showBalances?: boolean;
   /** Prices keyed by `chainId:address`, address or symbol. Held tokens are sorted by value when given. */
@@ -122,15 +118,20 @@ export type TokenSelectDialogProps = {
 const presentations = { auto: "auto", dialog: "dialog", drawer: "sheet" } as const;
 
 /** Stand-in rows the loading skeleton is measured from. Never shown as text. */
-const sampleTokens: Token[] = ["Sample token", "Another one", "Third token name", "Fourth", "Fifth token", "Sixth one"].map(
-  (name, index) => ({
-    chainId: 0,
-    address: `0x${String(index + 1).padStart(40, "0")}`,
-    name,
-    symbol: "TKN",
-    decimals: 18,
-  })
-);
+const sampleTokens: Array<Token> = [
+  "Sample token",
+  "Another one",
+  "Third token name",
+  "Fourth",
+  "Fifth token",
+  "Sixth one",
+].map((name, index) => ({
+  chainId: 0,
+  address: `0x${String(index + 1).padStart(40, "0")}`,
+  name,
+  symbol: "TKN",
+  decimals: 18,
+}));
 
 const rowClassName = "flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left";
 
@@ -182,12 +183,12 @@ function TokenPicker({
   const currentChainId = useChainId();
   const chainId = chainIdProp ?? currentChainId;
   const [query, setQuery] = useState("");
-  const [recent, setRecent] = useState<string[]>([]);
+  const [recent, setRecent] = useState<Array<string>>([]);
   const [visible, setVisible] = useState(pageSize);
 
   const tokens = useMemo(
     () => allTokens.filter((t) => t.chainId === chainId),
-    [allTokens, chainId]
+    [allTokens, chainId],
   );
   const rpc = useTokenBalances(tokens, {
     chainId,
@@ -195,7 +196,7 @@ function TokenPicker({
   });
   const balances = useMemo(
     () => (balancesProp ? toBalanceMap(balancesProp) : rpc.balances),
-    [balancesProp, rpc.balances]
+    [balancesProp, rpc.balances],
   );
 
   useEffect(() => {
@@ -210,7 +211,9 @@ function TokenPicker({
 
   const results = useMemo(() => {
     const matches = filterTokens(tokens, query);
-    if (query) return matches;
+    if (query) {
+      return matches;
+    }
     return sortByHoldings(matches, balances, prices);
   }, [tokens, query, balances, prices]);
 
@@ -218,7 +221,9 @@ function TokenPicker({
   // the command's `run`. A symbol two tokens share also carries the address.
   const itemValue = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const token of tokens) counts.set(token.symbol, (counts.get(token.symbol) ?? 0) + 1);
+    for (const token of tokens) {
+      counts.set(token.symbol, (counts.get(token.symbol) ?? 0) + 1);
+    }
     return (token: Token) =>
       counts.get(token.symbol) === 1 ? token.symbol : `${token.symbol} ${key(token)}`;
   }, [tokens]);
@@ -241,7 +246,9 @@ function TokenPicker({
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription className="sr-only">Search by name, symbol or address.</DialogDescription>
+          <DialogDescription className="sr-only">
+            Search by name, symbol or address.
+          </DialogDescription>
         </DialogHeader>
 
         <Command
@@ -291,7 +298,10 @@ function TokenPicker({
                   label={token.symbol}
                   onSelect={() => select(token)}
                   aria-current={(value !== undefined && key(value) === key(token)) || undefined}
-                  className={cn(rowClassName, "cursor-pointer aria-[current]:bg-muted data-highlighted:bg-accent")}
+                  className={cn(
+                    rowClassName,
+                    "cursor-pointer aria-[current]:bg-muted data-highlighted:bg-accent",
+                  )}
                 >
                   <TokenRowContent
                     token={token}

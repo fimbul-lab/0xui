@@ -33,15 +33,15 @@ interface MixerEngine {
 }
 ```
 
-| Method | What it does |
-| --- | --- |
-| `createNote(pool)` | Makes a note from fresh randomness. Sends nothing. |
-| `parseNote(text)` | Reads pasted text. Rejects with a message fit to show when it is not a note, or is for a pool the engine doesn't know. |
-| `prepareDeposit(note)` | The deposit call for the wallet. An ERC-20 pool needs the pool approved for the amount first. |
-| `getDeposit(note)` | `missing`, `deposited` or `withdrawn`, with `depositsSince`: how many deposits came after it. |
-| `quote(pool, via)` | Fee and amount received, through `"wallet"` or `"relayer"`. |
-| `prove(draft)` | Reads the pool's deposits and makes the proof. Reports `syncing`, `loading-circuits`, `proving`, `verifying`. Takes an `AbortSignal`. |
-| `relay(withdrawal)` | Hands a `via: "relayer"` withdrawal to the relayer. Resolves once it is broadcast. |
+| Method                 | What it does                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `createNote(pool)`     | Makes a note from fresh randomness. Sends nothing.                                                                                    |
+| `parseNote(text)`      | Reads pasted text. Rejects with a message fit to show when it is not a note, or is for a pool the engine doesn't know.                |
+| `prepareDeposit(note)` | The deposit call for the wallet. An ERC-20 pool needs the pool approved for the amount first.                                         |
+| `getDeposit(note)`     | `missing`, `deposited` or `withdrawn`, with `depositsSince`: how many deposits came after it.                                         |
+| `quote(pool, via)`     | Fee and amount received, through `"wallet"` or `"relayer"`.                                                                           |
+| `prove(draft)`         | Reads the pool's deposits and makes the proof. Reports `syncing`, `loading-circuits`, `proving`, `verifying`. Takes an `AbortSignal`. |
+| `relay(withdrawal)`    | Hands a `via: "relayer"` withdrawal to the relayer. Resolves once it is broadcast.                                                    |
 
 ## Types
 
@@ -56,7 +56,11 @@ type MixerPool = {
 };
 
 type MixerNote = { note: string; pool: MixerPool; commitment: Hex };
-type MixerDeposit = { state: "missing" | "deposited" | "withdrawn"; timestamp?: number; depositsSince?: number };
+type MixerDeposit = {
+  state: "missing" | "deposited" | "withdrawn";
+  timestamp?: number;
+  depositsSince?: number;
+};
 type MixerWithdrawDraft = { note: string; recipient: Address; via: "wallet" | "relayer" };
 type MixerQuote = { fee: bigint; received: bigint };
 type MixerWithdrawal = { id: string; pool; recipient; via; quote; transaction: MixerCall };

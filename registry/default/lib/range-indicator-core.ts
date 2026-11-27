@@ -4,9 +4,8 @@ import {
   getRangeStatus,
   isFullRange,
   priceUnit,
-  type PoolState,
-  type RangeStatus,
 } from "@/lib/concentrated-liquidity";
+import type { PoolState, RangeStatus } from "@/lib/concentrated-liquidity";
 
 export type RangePool = Pick<PoolState, "tick" | "tickSpacing" | "decimals0" | "decimals1">;
 

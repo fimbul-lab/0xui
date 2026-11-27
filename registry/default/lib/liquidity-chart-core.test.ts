@@ -6,8 +6,8 @@ import {
   nextBar,
   rangeSlider,
   toBars,
-  type Bar,
 } from "@/lib/liquidity-chart-core";
+import type { Bar } from "@/lib/liquidity-chart-core";
 
 const bins = Array.from({ length: 100 }, (_, i) => ({
   tickLower: i * 10,
@@ -22,8 +22,18 @@ const bins = Array.from({ length: 100 }, (_, i) => ({
 
 describe("chartViewport", () => {
   it("shows every bin at zoom 1 and centers on the range when zoomed", () => {
-    expect(chartViewport({ bins, currentTick: 500, tickSpacing: 10, zoom: 1 })).toMatchObject({ lower: 0, upper: 1000, canZoomOut: false });
-    const zoomed = chartViewport({ bins, currentTick: 500, tickSpacing: 10, zoom: 4, range: { tickLower: 200, tickUpper: 300 } });
+    expect(chartViewport({ bins, currentTick: 500, tickSpacing: 10, zoom: 1 })).toMatchObject({
+      lower: 0,
+      upper: 1000,
+      canZoomOut: false,
+    });
+    const zoomed = chartViewport({
+      bins,
+      currentTick: 500,
+      tickSpacing: 10,
+      zoom: 4,
+      range: { tickLower: 200, tickUpper: 300 },
+    });
     expect((zoomed.lower + zoomed.upper) / 2).toBe(250);
     expect(zoomed.upper - zoomed.lower).toBe(250);
     expect(zoomed.zoomIn(4)).toBeCloseTo(6.4);
@@ -41,7 +51,7 @@ describe("toBars", () => {
 });
 
 describe("nextBar", () => {
-  const bars = [{}, { isCurrent: true }, {}] as Bar[];
+  const bars = [{}, { isCurrent: true }, {}] as Array<Bar>;
   it("starts at the current bar and flips with the axis", () => {
     expect(nextBar("ArrowRight", bars, undefined)).toBe(2);
     expect(nextBar("ArrowRight", bars, undefined, true)).toBe(0);
@@ -53,7 +63,12 @@ describe("nextBar", () => {
 describe("range handles", () => {
   it("maps the range onto a slider over the window, negated when inverted", () => {
     const range = { tickLower: 100, tickUpper: 400 };
-    expect(rangeSlider(range, 3, 997, 10)).toMatchObject({ min: 10, max: 990, value: [100, 400], offscreen: [false, false] });
+    expect(rangeSlider(range, 3, 997, 10)).toMatchObject({
+      min: 10,
+      max: 990,
+      value: [100, 400],
+      offscreen: [false, false],
+    });
     const inverted = rangeSlider(range, 0, 1000, 10, true);
     expect(inverted).toMatchObject({ min: -1000, max: 0, value: [-400, -100] });
     expect(inverted.tickOf(-400)).toBe(400);
@@ -74,8 +89,13 @@ describe("range handles", () => {
   });
 
   it("slides the band inside the usable ticks", () => {
-    expect(shiftRange({ tickLower: 100, tickUpper: 200 }, 33, 10)).toEqual({ tickLower: 130, tickUpper: 230 });
-    expect(shiftRange({ tickLower: 100, tickUpper: usableTickBounds(10).max }, 10, 10)).toBeUndefined();
+    expect(shiftRange({ tickLower: 100, tickUpper: 200 }, 33, 10)).toEqual({
+      tickLower: 130,
+      tickUpper: 230,
+    });
+    expect(
+      shiftRange({ tickLower: 100, tickUpper: usableTickBounds(10).max }, 10, 10),
+    ).toBeUndefined();
   });
 
   it("labels a handle by its move from the price", () => {

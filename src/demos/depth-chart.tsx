@@ -10,7 +10,8 @@ export const Default = demo(() => {
   const loaded = usePretendLoad();
   return (
     <div className="w-full max-w-xl">
-      <DepthChart locale="en-US"
+      <DepthChart
+        locale="en-US"
         bins={loaded ? bins : undefined}
         currentPrice={loaded ? price : undefined}
         token0={demoToken0}
@@ -22,7 +23,8 @@ export const Default = demo(() => {
 
 export const Inverted = demo(() => (
   <div className="w-full max-w-xl">
-    <DepthChart locale="en-US"
+    <DepthChart
+      locale="en-US"
       bins={bins}
       currentPrice={price}
       token0={demoToken0}

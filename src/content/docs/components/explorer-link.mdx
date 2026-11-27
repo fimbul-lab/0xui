@@ -60,9 +60,9 @@ const { href, explorerName } = useExplorerLink({ address }, chainId);
 
 Also accepts all `<a>` props except `href`.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `address` / `tx` / `block` | `string` / `string` / `bigint \| number` | — | What to link to. Pass one. |
-| `chainId` | `number` | current chain | Chain whose explorer to use. |
-| `children` | `ReactNode` | `"View on <explorer>"` | Link text. |
-| `icon` | `ComponentType \| false` | `ExternalLinkIcon` | Custom icon, or `false` to hide it. |
+| Prop                       | Type                                     | Default                | Description                         |
+| -------------------------- | ---------------------------------------- | ---------------------- | ----------------------------------- |
+| `address` / `tx` / `block` | `string` / `string` / `bigint \| number` | —                      | What to link to. Pass one.          |
+| `chainId`                  | `number`                                 | current chain          | Chain whose explorer to use.        |
+| `children`                 | `ReactNode`                              | `"View on <explorer>"` | Link text.                          |
+| `icon`                     | `ComponentType \| false`                 | `ExternalLinkIcon`     | Custom icon, or `false` to hide it. |

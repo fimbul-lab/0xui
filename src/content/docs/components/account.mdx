@@ -62,8 +62,7 @@ Children render at the bottom of the panel, above disconnect:
 ```tsx
 import { useConnectedAccount } from "@/components/account";
 
-const { address, ensName, displayName, chain, connector, disconnect } =
-  useConnectedAccount();
+const { address, ensName, displayName, chain, connector, disconnect } = useConnectedAccount();
 
 // With several wallets connected:
 const { otherAccounts, switchAccount, isSwitching } = useConnectedAccount();
@@ -72,9 +71,9 @@ otherAccounts.map(({ address, connector }) => switchAccount(connector));
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `open` / `defaultOpen` / `onOpenChange` | — | — | Control the panel. |
-| `showBalance` | `boolean` | `false` | Show the native balance in the trigger. |
-| `onDisconnect` | `() => void` | — | Called after disconnecting. |
-| `children` | `ReactNode` | — | Extra panel content. |
+| Prop                                    | Type         | Default | Description                             |
+| --------------------------------------- | ------------ | ------- | --------------------------------------- |
+| `open` / `defaultOpen` / `onOpenChange` | —            | —       | Control the panel.                      |
+| `showBalance`                           | `boolean`    | `false` | Show the native balance in the trigger. |
+| `onDisconnect`                          | `() => void` | —       | Called after disconnecting.             |
+| `children`                              | `ReactNode`  | —       | Extra panel content.                    |

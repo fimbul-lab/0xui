@@ -3,19 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { SwitchChainError } from "viem";
 import { describe, expect, it } from "vitest";
-import {
-  connectMock,
-  createTestConfig,
-  renderWithWagmi,
-} from "../../../test/wagmi";
+import { connectMock, createTestConfig, renderWithWagmi } from "../../../test/wagmi";
 import { ChainSelector, ChainSelectorDialog } from "./chain-selector";
 
 describe("ChainSelector", () => {
   it("shows the current chain", async () => {
     renderWithWagmi(<ChainSelector />);
-    expect(
-      await screen.findByRole("button", { name: /ethereum/i })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /ethereum/i })).toBeInTheDocument();
   });
 
   it("marks the active chain in the list", async () => {
@@ -37,12 +31,8 @@ describe("ChainSelector", () => {
     await user.click(screen.getByRole("button", { name: /ethereum/i }));
     await user.click(await screen.findByRole("button", { name: "Sepolia" }));
 
-    expect(
-      await screen.findByRole("button", { name: /sepolia/i })
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.queryByText("Select Network")).not.toBeInTheDocument()
-    );
+    expect(await screen.findByRole("button", { name: /sepolia/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Select Network")).not.toBeInTheDocument());
   });
 
   it("shows a rejected switch as cancelled, not as an error", async () => {
@@ -54,9 +44,7 @@ describe("ChainSelector", () => {
     await user.click(screen.getByRole("button", { name: /ethereum/i }));
     await user.click(await screen.findByRole("button", { name: "Sepolia" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Request cancelled in wallet"
-    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Request cancelled in wallet");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -93,18 +81,14 @@ describe("ChainSelector extras", () => {
 
     const trigger = await screen.findByRole("button", { name: /wrong network/i });
     await user.click(trigger);
-    expect(
-      await screen.findByText(/network this app doesn't support/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/network this app doesn't support/i)).toBeInTheDocument();
     // No chain is marked active.
     expect(screen.queryByRole("button", { current: true })).not.toBeInTheDocument();
   });
 
   it("shows per-chain meta", async () => {
     const user = userEvent.setup();
-    renderWithWagmi(
-      <ChainSelector chainMeta={(chain) => (chain.testnet ? "Testnet" : "~12s")} />
-    );
+    renderWithWagmi(<ChainSelector chainMeta={(chain) => (chain.testnet ? "Testnet" : "~12s")} />);
 
     await user.click(screen.getByRole("button", { name: /ethereum/i }));
     expect(await screen.findByText("~12s")).toBeInTheDocument();
@@ -139,7 +123,9 @@ describe("agent", () => {
     await act(() => connectMock(config));
 
     expect(onPage().map((entry) => entry.label)).toEqual(["Network: Ethereum"]);
-    expect((await agent.act({ steps: [{ ref: "Network", action: "setOpen", args: [true] }] })).ok).toBe(true);
+    expect(
+      (await agent.act({ steps: [{ ref: "Network", action: "setOpen", args: [true] }] })).ok,
+    ).toBe(true);
 
     const rows = await waitFor(() => {
       const buttons = onPage().filter((entry) => entry.component === "button");
@@ -159,10 +145,12 @@ describe("agent", () => {
 
     approve = true;
     expect((await agent.act(toSepolia)).ok).toBe(true);
-    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+    await waitFor(() => expect(config.state.chainId).toBe(11_155_111));
 
     approve = false;
-    expect((await agent.act({ steps: [{ ref: "Network", action: "setOpen", args: [false] }] })).ok).toBe(true);
+    expect(
+      (await agent.act({ steps: [{ ref: "Network", action: "setOpen", args: [false] }] })).ok,
+    ).toBe(true);
   });
 
   it("switches tabs without asking, in the dialog too", async () => {
@@ -176,7 +164,9 @@ describe("agent", () => {
     await waitFor(() => expect(onPage().map((entry) => entry.label)).toContain("Network type"));
     expect(onPage().map((entry) => entry.label)).toContain("Close network picker");
 
-    const result = await agent.act({ steps: [{ ref: "Network type", action: "setValue", args: ["Testnet"] }] });
+    const result = await agent.act({
+      steps: [{ ref: "Network type", action: "setValue", args: ["Testnet"] }],
+    });
     expect(result.ok, result.error?.message).toBe(true);
     const sepolia = await screen.findByRole("button", { name: "Sepolia" });
     expect(sepolia).toHaveAttribute("data-agent-confirm", "Asks your wallet to switch to Sepolia");

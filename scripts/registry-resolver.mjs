@@ -20,7 +20,9 @@ export function registryResolver() {
     name: "0xui:registry-resolver",
     enforce: "pre",
     resolveId(id) {
-      if (!id.startsWith("@/")) return null;
+      if (!id.startsWith("@/")) {
+        return null;
+      }
       const [rest, query] = id.slice(2).split("?");
       for (const dir of ["src/", "registry/default/"]) {
         for (const ext of extensions) {

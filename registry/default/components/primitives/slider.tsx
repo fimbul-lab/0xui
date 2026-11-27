@@ -34,7 +34,10 @@ function SliderControl({ className, ...props }: ComponentProps<typeof SliderCont
 function SliderTrack({ className, ...props }: ComponentProps<typeof SliderTrackPrimitive>) {
   return (
     <SliderTrackPrimitive
-      className={withClassName("relative h-1.5 w-full rounded-full bg-muted select-none", className)}
+      className={withClassName(
+        "relative h-1.5 w-full rounded-full bg-muted select-none",
+        className,
+      )}
       {...props}
     />
   );

@@ -1,4 +1,5 @@
-import { getChainId, type Config } from "@wagmi/core";
+import { getChainId } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import { getGasPriceQueryOptions, hashFn } from "@wagmi/core/query";
 import { formatGwei } from "viem";
 
@@ -10,7 +11,10 @@ export type GasTone = "low" | "medium" | "high";
  */
 export function gasPriceQueryOptions(
   config: Config,
-  { chainId, refreshInterval = 12_000 }: { chainId?: number; refreshInterval?: number | false } = {},
+  {
+    chainId,
+    refreshInterval = 12_000,
+  }: { chainId?: number; refreshInterval?: number | false } = {},
 ) {
   return {
     ...getGasPriceQueryOptions(config, { chainId: chainId ?? getChainId(config) }),
@@ -27,12 +31,13 @@ export function formatGasPrice(wei: bigint, locale?: string) {
   }).format(gwei);
 }
 
-export function gasTone(
-  wei: bigint,
-  thresholds: { low: number; high: number }
-): GasTone {
+export function gasTone(wei: bigint, thresholds: { low: number; high: number }): GasTone {
   const gwei = Number(formatGwei(wei));
-  if (gwei < thresholds.low) return "low";
-  if (gwei > thresholds.high) return "high";
+  if (gwei < thresholds.low) {
+    return "low";
+  }
+  if (gwei > thresholds.high) {
+    return "high";
+  }
   return "medium";
 }

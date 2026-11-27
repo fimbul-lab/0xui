@@ -1,26 +1,21 @@
 // Docs: https://0xui.io/components/batch-transaction.md
-import {
-  Timeline,
-  TimelineItem,
-  TimelineTitle,
-  type TimelineStatus,
-} from "@ui-sdk/react/timeline";
+import { Timeline, TimelineItem, TimelineTitle } from "@ui-sdk/react/timeline";
+import type { TimelineStatus } from "@ui-sdk/react/timeline";
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { agentConfirmText, errorCode } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, errorMessage } from "@/lib/0xui-utils";
 import {
   batchStepState,
   createBatchTransaction,
   describeBatchCalls,
-  type BatchCall,
-  type BatchMode,
-  type StepState,
 } from "@/lib/batch-transaction-core";
+import type { BatchCall, BatchMode, StepState } from "@/lib/batch-transaction-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -43,7 +38,7 @@ export function useBatchTransaction({
   chainId,
   mode = "auto",
 }: {
-  calls: readonly BatchCall[];
+  calls: ReadonlyArray<BatchCall>;
   chainId: number;
   mode?: BatchMode;
 }) {
@@ -71,7 +66,7 @@ const timelineStatus: Record<StepState, TimelineStatus> = {
 };
 
 export type BatchTransactionProps = Omit<ComponentProps<typeof Button>, "onClick" | "children"> & {
-  calls: readonly BatchCall[];
+  calls: ReadonlyArray<BatchCall>;
   chainId: number;
   mode?: BatchMode;
   /** Button label. */
@@ -109,7 +104,7 @@ export function BatchTransaction({
 
   const chainName = batch.targetChain?.name ?? "the selected network";
   let label: ReactNode = children;
-  let action: (() => unknown) | undefined = batch.execute;
+  let action: (() => void) | undefined = () => void batch.execute();
   // What a person confirms before an agent's press reaches the wallet.
   let confirm: string | undefined =
     agentConfirm === false
@@ -138,8 +133,10 @@ export function BatchTransaction({
     action = undefined;
   } else if (batch.wrongChain) {
     label = `Switch to ${batch.targetChain?.name ?? "the right network"}`;
-    action = batch.switchToTarget;
-    if (agentConfirm !== false) confirm = `Asks your wallet to switch to ${chainName}`;
+    action = () => void batch.switchToTarget();
+    if (agentConfirm !== false) {
+      confirm = `Asks your wallet to switch to ${chainName}`;
+    }
   }
 
   return (
@@ -193,7 +190,7 @@ export function BatchTransaction({
       )}
       {batch.phase === "error" && batch.error && (
         <p role="alert" className="text-sm text-destructive">
-          {(batch.error as { shortMessage?: string }).shortMessage ?? batch.error.message}
+          {errorMessage(batch.error)}
         </p>
       )}
       <ConnectWalletDialog open={connectOpen} onOpenChange={setConnectOpen} />
@@ -203,11 +200,13 @@ export function BatchTransaction({
 
 function StepIcon({ state }: { state: StepState }) {
   const className = "size-4 shrink-0";
-  if (state === "done")
+  if (state === "done") {
     return <CheckIcon role="img" aria-label="Done" className={cn(className, "text-emerald-500")} />;
-  if (state === "failed")
+  }
+  if (state === "failed") {
     return <XIcon role="img" aria-label="Failed" className={cn(className, "text-destructive")} />;
-  if (state === "active")
+  }
+  if (state === "active") {
     return (
       <Loader2Icon
         role="img"
@@ -215,5 +214,12 @@ function StepIcon({ state }: { state: StepState }) {
         className={cn(className, "animate-spin text-muted-foreground")}
       />
     );
-  return <CircleIcon role="img" aria-label="Not started" className={cn(className, "text-muted-foreground")} />;
+  }
+  return (
+    <CircleIcon
+      role="img"
+      aria-label="Not started"
+      className={cn(className, "text-muted-foreground")}
+    />
+  );
 }

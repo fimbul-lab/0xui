@@ -1,12 +1,14 @@
 // Docs: https://0xui.io/components/network-guard.md
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { useConfig } from "wagmi";
 import { Button } from "@/components/primitives/button";
 import { useMounted } from "@/hooks/use-mounted";
 import { useStore } from "@/hooks/use-store";
-import { errorCode } from "@/lib/0xui-utils";
-import { createNetworkGuard, type NetworkGuardPhase } from "@/lib/network-guard-core";
+import { errorCode, errorMessage } from "@/lib/0xui-utils";
+import { createNetworkGuard } from "@/lib/network-guard-core";
+import type { NetworkGuardPhase } from "@/lib/network-guard-core";
 import { cn } from "@/lib/utils";
 
 export type { NetworkGuardPhase };
@@ -15,7 +17,7 @@ export type { NetworkGuardPhase };
  * Whether the connected wallet is on one of `chainIds`, and a way to switch
  * to the first. The logic lives in `createNetworkGuard` (framework-free).
  */
-export function useNetworkGuard(chainIds: number | readonly number[]) {
+export function useNetworkGuard(chainIds: number | ReadonlyArray<number>) {
   const config = useConfig();
   const key = typeof chainIds === "number" ? String(chainIds) : chainIds.join(",");
   // Keyed by the ids rather than the array, which callers often pass inline.
@@ -34,7 +36,7 @@ export function useNetworkGuard(chainIds: number | readonly number[]) {
 
 export type NetworkGuardProps = {
   /** Chain or chains the content works on. The first one is offered as the switch target. */
-  chainId: number | readonly number[];
+  chainId: number | ReadonlyArray<number>;
   /**
    * "banner" shows a notice above the content. "replace" shows only the
    * notice until the wallet is on a supported chain.
@@ -51,7 +53,9 @@ export type NetworkGuardProps = {
  */
 export function NetworkGuard({ chainId, mode = "banner", children, className }: NetworkGuardProps) {
   const guard = useNetworkGuard(chainId);
-  if (!guard.wrongNetwork) return <>{children}</>;
+  if (!guard.wrongNetwork) {
+    return <>{children}</>;
+  }
 
   const names = guard.allowedChains.map((c) => c.name);
   const supported =
@@ -92,7 +96,7 @@ export function NetworkGuard({ chainId, mode = "banner", children, className }: 
         </p>
         {guard.error && (
           <p role="alert" className="text-destructive">
-            {(guard.error as { shortMessage?: string }).shortMessage ?? guard.error.message}
+            {errorMessage(guard.error)}
           </p>
         )}
       </div>
@@ -109,7 +113,9 @@ export function NetworkGuard({ chainId, mode = "banner", children, className }: 
     </div>
   );
 
-  if (mode === "replace") return notice;
+  if (mode === "replace") {
+    return notice;
+  }
   return (
     <>
       {notice}

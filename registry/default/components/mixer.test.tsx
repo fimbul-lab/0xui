@@ -26,10 +26,10 @@ import { NoteBackup } from "./note-backup";
 
 const RECIPIENT = "0x9999999999999999999999999999999999999999";
 const small = MOCK_MIXER_POOLS[0]!;
-const button = (name: string | RegExp) => screen.findByRole("button", { name }, { timeout: 5_000 });
+const button = (name: string | RegExp) => screen.findByRole("button", { name }, { timeout: 5000 });
 
 function chainWith({ balance = 10n ** 18n } = {}) {
-  const sends: { to: string; data?: string; value?: string }[] = [];
+  const sends: Array<{ to: string; data?: string; value?: string }> = [];
   const chain = fakeChainRpc({});
   const send = chain.eth_sendTransaction as (params: unknown) => unknown;
   const config = createTestConfig({
@@ -78,7 +78,7 @@ describe("formatMixerAge", () => {
   it("rounds to the unit a person would say", () => {
     expect(formatMixerAge(30)).toBe("just now");
     expect(formatMixerAge(600)).toBe("10 min ago");
-    expect(formatMixerAge(7_200)).toBe("2 hours ago");
+    expect(formatMixerAge(7200)).toBe("2 hours ago");
     expect(formatMixerAge(3 * 86_400)).toBe("3 days ago");
   });
 });
@@ -114,7 +114,9 @@ describe("MixerDepositForm", () => {
     const { config, sends } = chainWith({ balance });
     const onSubmitted = vi.fn();
     renderWithWagmi(<MixerDepositForm engine={engine} onSubmitted={onSubmitted} />, { config });
-    if (connect) await act(() => connectMock(config));
+    if (connect) {
+      await act(() => connectMock(config));
+    }
     return { user, engine, onSubmitted, sends };
   }
 
@@ -140,7 +142,7 @@ describe("MixerDepositForm", () => {
     expect(root().innerHTML).not.toContain(MOCK_NOTE_PREFIX);
 
     await user.click(screen.getByRole("button", { name: "Reveal note" }));
-    const shown = screen.getByLabelText("Your note").textContent!;
+    const shown = screen.getByLabelText("Your note").textContent;
     expect(shown.startsWith(`${MOCK_NOTE_PREFIX}-eth-0.1-1-0x`)).toBe(true);
     await user.click(screen.getByRole("checkbox", { name: /I saved my note/ }));
     expect(sends).toHaveLength(0);
@@ -185,21 +187,38 @@ describe("MixerWithdrawForm", () => {
     connect = false,
     crowd = 0,
     engineOptions = {},
+    quotedFeeBps,
   }: {
     deposited?: boolean;
     connect?: boolean;
     crowd?: number;
     engineOptions?: Parameters<typeof createMockMixerEngine>[0];
+    /** The relayer's fee in quotes, before the one it charges by the time the proof is made. */
+    quotedFeeBps?: number;
   } = {}) {
     const user = userEvent.setup();
     const engine = createMockMixerEngine({ speed: Infinity, ...engineOptions });
+    // Quotes from an engine with the quoted fee; everything else from `engine`.
+    const shown =
+      quotedFeeBps === undefined
+        ? engine
+        : {
+            ...engine,
+            quote: createMockMixerEngine({ ...engineOptions, relayerFeeBps: quotedFeeBps }).quote,
+          };
     const { note, commitment } = await engine.createNote(small);
-    if (deposited) engine.simulate.deposit(commitment);
-    if (crowd) engine.simulate.crowd(small, crowd);
+    if (deposited) {
+      engine.simulate.deposit(commitment);
+    }
+    if (crowd) {
+      engine.simulate.crowd(small, crowd);
+    }
     const { config, sends } = chainWith();
     const onSubmitted = vi.fn();
-    renderWithWagmi(<MixerWithdrawForm engine={engine} onSubmitted={onSubmitted} />, { config });
-    if (connect) await act(() => connectMock(config));
+    renderWithWagmi(<MixerWithdrawForm engine={shown} onSubmitted={onSubmitted} />, { config });
+    if (connect) {
+      await act(() => connectMock(config));
+    }
     const paste = async (text = note) => {
       const field = screen.getByLabelText("Note");
       await user.click(field);
@@ -266,26 +285,23 @@ describe("MixerWithdrawForm", () => {
     expect(withdrawal).toMatchObject({ recipient: RECIPIENT, via: "relayer" });
     // Nothing handed out links the withdrawal to its deposit.
     expect(
-      JSON.stringify(withdrawal, (_, v) => (typeof v === "bigint" ? `${v}` : v)),
+      JSON.stringify(withdrawal, (_, v: unknown) => (typeof v === "bigint" ? `${v}` : v)),
     ).not.toContain(commitment.slice(2));
     expect(screen.getByLabelText("Note")).toHaveValue("");
     expect(root()).toHaveAttribute("data-phase", "idle");
   });
 
   it("asks before sending when the relayer's fee went up", async () => {
-    const { user, engine, onSubmitted, paste, enterRecipient } = await setup({ crowd: 50 });
+    // The fee doubles between the quote on screen and the proof.
+    const { user, onSubmitted, paste, enterRecipient } = await setup({
+      crowd: 50,
+      engineOptions: { relayerFeeBps: 60 },
+      quotedFeeBps: 30,
+    });
     await paste();
     await enterRecipient();
     const start = await button("Withdraw 0.1 ETH");
-    // The fee doubles between the quote on screen and the proof.
-    const prove = engine.prove.bind(engine);
-    vi.spyOn(engine, "prove").mockImplementation(async (draft, options) => {
-      const proved = await prove(draft, options);
-      return {
-        ...proved,
-        quote: { fee: proved.quote.fee * 2n, received: proved.quote.received - proved.quote.fee },
-      };
-    });
+    expect(root()).toHaveTextContent(/Relayer fee\s*0\.0003\s*ETH/);
     await user.click(start);
 
     const confirm = await button("Withdraw at the new fee");
@@ -328,7 +344,10 @@ describe("MixerWithdrawForm", () => {
 
   it("offers only the wallet on an engine with no relayer", async () => {
     await setup({ engineOptions: { relayerFeeBps: false } });
-    expect(screen.getByRole("radio", { name: "A relayer" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("radio", { name: "A relayer" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     expect(screen.getByRole("radio", { name: "My wallet" })).toBeChecked();
   });
 

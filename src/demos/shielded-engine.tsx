@@ -6,9 +6,20 @@ import { ShieldedBalance } from "@/components/shielded-balance";
 import { useShieldedAccount } from "@/components/shielded-provider";
 import { ShieldedSyncStatus } from "@/components/shielded-sync-status";
 import { Button } from "@/components/primitives/button";
-import { demoWeth, shieldedDemo, type ShieldedDemoProps } from "./shielded-demo";
+import { demoWeth, shieldedDemo } from "./shielded-demo";
+import type { ShieldedDemoProps } from "./shielded-demo";
 
 const weth = demoWeth.address;
+
+const act = <Result,>(label: string, run: () => Result) => (
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => void Promise.resolve(run()).catch(console.error)}
+  >
+    {label}
+  </Button>
+);
 
 function Playground({ engine }: ShieldedDemoProps) {
   const { status, address } = useShieldedAccount();
@@ -29,12 +40,6 @@ function Playground({ engine }: ShieldedDemoProps) {
     );
   }
 
-  const act = (label: string, run: () => unknown) => (
-    <Button variant="outline" size="sm" onClick={() => void Promise.resolve(run()).catch(() => {})}>
-      {label}
-    </Button>
-  );
-
   return (
     <div className="flex w-full max-w-sm flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
@@ -49,15 +54,21 @@ function Playground({ engine }: ShieldedDemoProps) {
       <ShieldedBalance token={demoWeth} chainId={1} />
       <ShieldedSyncStatus chainId={1} />
       <div className="flex flex-wrap gap-2 border-t pt-4">
-        {act("Shield 0.5", () => engine.simulate.shield({ token: weth, amount: parseEther("0.5") }))}
+        {act("Shield 0.5", () =>
+          engine.simulate.shield({ token: weth, amount: parseEther("0.5") }),
+        )}
         {act("Shield, restricted", () =>
-          engine.simulate.shield({ token: weth, amount: parseEther("0.5"), outcome: "restricted" })
+          engine.simulate.shield({ token: weth, amount: parseEther("0.5"), outcome: "restricted" }),
         )}
         {act("Unshield 0.2", () =>
-          engine.simulate.unshield({ token: weth, amount: parseEther("0.2") })
+          engine.simulate.unshield({ token: weth, amount: parseEther("0.2") }),
         )}
         {act("Unshield, change gets stuck", () =>
-          engine.simulate.unshield({ token: weth, amount: parseEther("0.2"), change: "incomplete" })
+          engine.simulate.unshield({
+            token: weth,
+            amount: parseEther("0.2"),
+            change: "incomplete",
+          }),
         )}
         {act("Fail the next scan", () => {
           engine.simulate.failNextSync();
@@ -72,5 +83,5 @@ export const Default = shieldedDemo(Playground, {
   unlock: false,
   funds: [{ token: weth, amount: parseEther("1.25") }],
   // First scan in 8 s instead of 40, standby in 15 s instead of 60.
-  timings: { firstScan: 8_000, standby: 15_000, settle: 8_000 },
+  timings: { firstScan: 8000, standby: 15_000, settle: 8000 },
 });

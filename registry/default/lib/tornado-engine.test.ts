@@ -1,17 +1,15 @@
 import { readFile } from "node:fs/promises";
-import { decodeFunctionData, getAddress, hexToBytes, toHex, type Address, type Hex } from "viem";
-import { describe, expect, it, vi } from "vitest";
-import type { MixerStage } from "./mixer-engine";
+import { decodeFunctionData, getAddress, hexToBytes, toHex } from "viem";
+import type { Address, Hex } from "viem";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { MixerStage, MixerWithdrawal } from "./mixer-engine";
 import {
   TORNADO_ABI,
   createTornadoEngine,
   tornadoMerklePath,
   tornadoNoteHashes,
-  type TornadoCache,
-  type TornadoClient,
-  type TornadoPool,
-  type TornadoRelayer,
 } from "./tornado-engine";
+import type { TornadoCache, TornadoClient, TornadoPool, TornadoRelayer } from "./tornado-engine";
 
 const RECIPIENT: Address = "0x9999999999999999999999999999999999999999";
 const RELAYER: Address = "0x00000000000000000000000000000000000000fe";
@@ -21,7 +19,7 @@ const pool: TornadoPool = {
   symbol: "ETH",
   decimals: 18,
   denomination: 10n ** 17n,
-  deploymentBlock: 1_000n,
+  deploymentBlock: 1000n,
 };
 // From the tornado-cli README.
 const NOTE =
@@ -30,20 +28,20 @@ const COMMITMENT: Hex = "0x1b680c7dda0c2dd1b85f0fe126d49b16ed594b3cd6d5114db5f45
 const leaf = (n: number) => toHex(BigInt(n), { size: 32 });
 
 /** A pool in memory: deposits by block, with the reads the engine makes. */
-function fakeChain({ head = 2_000n } = {}) {
+function fakeChain({ head = 2000n } = {}) {
   const state = {
     head,
-    deposits: [] as { commitment: Hex; block: bigint }[],
+    deposits: [] as Array<{ commitment: Hex; block: bigint }>,
     spent: new Set<Hex>(),
     /** Roots the pool accepts. Undefined accepts any. */
     roots: undefined as Set<Hex> | undefined,
-    logRequests: [] as [bigint, bigint][],
+    logRequests: [] as Array<[bigint, bigint]>,
     /** Leaf indexes the RPC leaves out. */
     drop: new Set<number>(),
     rateLimited: 0,
     /** Ranges wider than this are refused. */
     maxRange: undefined as bigint | undefined,
-    calls: [] as Hex[],
+    calls: [] as Array<Hex>,
     refuse: undefined as string | undefined,
     deposit(commitment: Hex, block?: bigint) {
       state.deposits.push({ commitment, block: block ?? state.head });
@@ -72,14 +70,22 @@ function fakeChain({ head = 2_000n } = {}) {
     },
     readContract: async ({ functionName, args }) => {
       const [value] = args!;
-      if (functionName === "commitments") return state.deposits.some((d) => d.commitment === value);
-      if (functionName === "isSpent") return state.spent.has(value);
-      if (functionName === "isKnownRoot") return state.roots?.has(value) ?? true;
+      if (functionName === "commitments") {
+        return state.deposits.some((d) => d.commitment === value);
+      }
+      if (functionName === "isSpent") {
+        return state.spent.has(value);
+      }
+      if (functionName === "isKnownRoot") {
+        return state.roots?.has(value) ?? true;
+      }
       throw new Error(`unexpected read ${functionName}`);
     },
     call: async ({ data }) => {
       state.calls.push(data);
-      if (state.refuse) throw new Error(state.refuse);
+      if (state.refuse) {
+        throw new Error(state.refuse);
+      }
     },
   };
   const chain = Object.assign(state, { client });
@@ -88,11 +94,16 @@ function fakeChain({ head = 2_000n } = {}) {
 
 function memoryCache() {
   const store = new Map<string, string>();
+  const written = Promise.withResolvers<void>();
   const cache: TornadoCache = {
     get: async (key) => store.get(key),
-    set: async (key, value) => void store.set(key, value),
+    set: async (key, value) => {
+      store.set(key, value);
+      written.resolve();
+    },
   };
-  return { store, cache };
+  /** Resolves once the engine first writes to the cache. */
+  return { store, cache, written: written.promise };
 }
 
 function setup({
@@ -190,12 +201,12 @@ describe("tornado engine: notes", () => {
 describe("tornado engine: deposits", () => {
   it("follows a note from missing to deposited to withdrawn, with its crowd", async () => {
     const { chain, engine } = setup();
-    chain.deposit(leaf(1), 1_100n);
+    chain.deposit(leaf(1), 1100n);
     expect(await engine.getDeposit(NOTE)).toEqual({ state: "missing" });
 
-    chain.deposit(COMMITMENT, 1_200n);
-    chain.deposit(leaf(2), 1_300n);
-    chain.deposit(leaf(3), 1_990n);
+    chain.deposit(COMMITMENT, 1200n);
+    chain.deposit(leaf(2), 1300n);
+    chain.deposit(leaf(3), 1990n);
     expect(await engine.getDeposit(NOTE)).toEqual({
       state: "deposited",
       timestamp: 14_400,
@@ -209,25 +220,26 @@ describe("tornado engine: deposits", () => {
 
   it("reads final blocks once, and only the tail after that", async () => {
     const { chain, engine } = setup();
-    chain.deposit(COMMITMENT, 1_200n);
+    chain.deposit(COMMITMENT, 1200n);
     await engine.getDeposit(NOTE);
-    expect(chain.logRequests).toEqual([[1_000n, 2_000n]]);
+    expect(chain.logRequests).toEqual([[1000n, 2000n]]);
 
     chain.logRequests.length = 0;
-    chain.head = 2_010n;
-    chain.deposit(leaf(7), 2_005n);
+    chain.head = 2010n;
+    chain.deposit(leaf(7), 2005n);
     expect(await engine.getDeposit(NOTE)).toMatchObject({ depositsSince: 1 });
     // Blocks up to head - 64 were final and are not asked for again.
-    expect(chain.logRequests).toEqual([[1_937n, 2_010n]]);
+    expect(chain.logRequests).toEqual([[1937n, 2010n]]);
   });
 
   it("keeps final deposits between page loads", async () => {
-    const { store, cache } = memoryCache();
+    const { store, cache, written } = memoryCache();
     const first = setup({ cache });
-    first.chain.deposit(COMMITMENT, 1_200n);
-    first.chain.deposit(leaf(9), 1_995n);
+    first.chain.deposit(COMMITMENT, 1200n);
+    first.chain.deposit(leaf(9), 1995n);
     await first.engine.getDeposit(NOTE);
-    await vi.waitFor(() => expect(store.size).toBe(1));
+    await written;
+    expect(store.size).toBe(1);
     // The deposit in the last 64 blocks is not final yet, so it is not kept.
     expect(JSON.parse([...store.values()][0]!)).toEqual({
       syncedTo: "1936",
@@ -238,14 +250,14 @@ describe("tornado engine: deposits", () => {
     const second = setup({ cache });
     second.chain.deposits = first.chain.deposits;
     expect(await second.engine.getDeposit(NOTE)).toMatchObject({ depositsSince: 1 });
-    expect(second.chain.logRequests).toEqual([[1_937n, 2_000n]]);
+    expect(second.chain.logRequests).toEqual([[1937n, 2000n]]);
   });
 
   it("ignores a cache it can't read", async () => {
     const { store, cache } = memoryCache();
     const { chain, engine } = setup({ cache });
     store.set(`deposits:5:${pool.address.toLowerCase()}@1000`, "not json");
-    chain.deposit(COMMITMENT, 1_200n);
+    chain.deposit(COMMITMENT, 1200n);
     expect(await engine.getDeposit(NOTE)).toMatchObject({ state: "deposited", depositsSince: 0 });
   });
 
@@ -253,8 +265,8 @@ describe("tornado engine: deposits", () => {
     vi.useFakeTimers();
     try {
       const { chain, engine } = setup();
-      chain.deposit(COMMITMENT, 1_200n);
-      chain.deposit(leaf(4), 1_900n);
+      chain.deposit(COMMITMENT, 1200n);
+      chain.deposit(leaf(4), 1900n);
       chain.maxRange = 300n;
       chain.rateLimited = 2;
       const lookup = engine.getDeposit(NOTE);
@@ -268,8 +280,8 @@ describe("tornado engine: deposits", () => {
 
   it("still reports the state when the history can't be read", async () => {
     const { chain, engine } = setup();
-    chain.deposit(leaf(1), 1_100n);
-    chain.deposit(COMMITMENT, 1_200n);
+    chain.deposit(leaf(1), 1100n);
+    chain.deposit(COMMITMENT, 1200n);
     chain.drop.add(0);
     expect(await engine.getDeposit(NOTE)).toEqual({ state: "deposited" });
   });
@@ -277,7 +289,7 @@ describe("tornado engine: deposits", () => {
 
 describe("tornado engine: withdraw", () => {
   const draft = { note: NOTE, recipient: RECIPIENT, via: "wallet" } as const;
-  const prove = (engine: ReturnType<typeof setup>["engine"], stages: MixerStage[] = []) =>
+  const prove = (engine: ReturnType<typeof setup>["engine"], stages: Array<MixerStage> = []) =>
     engine.prove(draft, { onStage: (stage) => stages.push(stage) });
 
   it("quotes no fee from the wallet and the relayer's fee through one", async () => {
@@ -303,7 +315,7 @@ describe("tornado engine: withdraw", () => {
 
   it("refuses a note with no deposit, a spent one, and a history the pool does not know", async () => {
     const { chain, engine } = setup();
-    const stages: MixerStage[] = [];
+    const stages: Array<MixerStage> = [];
     await expect(prove(engine, stages)).rejects.toThrow("No deposit was found for this note.");
     expect(stages).toEqual(["syncing"]);
 
@@ -319,20 +331,20 @@ describe("tornado engine: withdraw", () => {
 
   it("says when the RPC left deposits out", async () => {
     const { chain, engine } = setup();
-    chain.deposit(leaf(1), 1_100n);
-    chain.deposit(COMMITMENT, 1_200n);
+    chain.deposit(leaf(1), 1100n);
+    chain.deposit(COMMITMENT, 1200n);
     chain.drop.add(0);
     await expect(prove(engine)).rejects.toThrow("left out some of the pool's deposits");
   });
 
   it("needs the circuit files, and refuses ones that are not the published files", async () => {
     const bare = setup();
-    bare.chain.deposit(COMMITMENT, 1_200n);
-    const stages: MixerStage[] = [];
+    bare.chain.deposit(COMMITMENT, 1200n);
+    const stages: Array<MixerStage> = [];
     await expect(prove(bare.engine, stages)).rejects.toThrow("Set `circuitsUrl`");
     expect(stages).toEqual(["syncing", "loading-circuits"]);
 
-    const requested: string[] = [];
+    const requested: Array<string> = [];
     const tampered = setup({
       circuitsUrl: "https://files.example/tornado",
       fetch: (async (url: string) => {
@@ -340,7 +352,7 @@ describe("tornado engine: withdraw", () => {
         return new Response("{}");
       }) as typeof fetch,
     });
-    tampered.chain.deposit(COMMITMENT, 1_200n);
+    tampered.chain.deposit(COMMITMENT, 1200n);
     await expect(prove(tampered.engine)).rejects.toThrow("is not the published circuit file");
     expect(requested.sort()).toEqual([
       "https://files.example/tornado/tornado.json",
@@ -349,24 +361,24 @@ describe("tornado engine: withdraw", () => {
 
     const missing = setup({
       circuitsUrl: "https://files.example/",
-      fetch: (async () => new Response("", { status: 404 })) as typeof fetch,
+      fetch: async () => new Response("", { status: 404 }),
     });
-    missing.chain.deposit(COMMITMENT, 1_200n);
+    missing.chain.deposit(COMMITMENT, 1200n);
     await expect(prove(missing.engine)).rejects.toThrow("the server answered 404");
   });
 
   it("refuses a recipient that is not an address before any work", async () => {
     const { chain, engine } = setup();
-    chain.deposit(COMMITMENT, 1_200n);
+    chain.deposit(COMMITMENT, 1200n);
     await expect(
-      engine.prove({ ...draft, recipient: "0x1234" as Address }, { onStage: () => {} }),
+      engine.prove({ ...draft, recipient: "0x1234" }, { onStage: () => {} }),
     ).rejects.toThrow("The recipient is not a valid address.");
     expect(chain.logRequests).toHaveLength(0);
   });
 
   it("stops before the proof when cancelled", async () => {
     const { chain, engine } = setup();
-    chain.deposit(COMMITMENT, 1_200n);
+    chain.deposit(COMMITMENT, 1200n);
     const run = new AbortController();
     run.abort();
     await expect(
@@ -374,80 +386,96 @@ describe("tornado engine: withdraw", () => {
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(chain.logRequests).toHaveLength(0);
   });
+});
 
-  // Needs the 33 MB of circuit files: TORNADO_CIRCUITS_DIR=/path bun run test tornado-engine
-  const dir = process.env.TORNADO_CIRCUITS_DIR;
-  it.skipIf(!dir)(
-    "proves a withdrawal the pool's call accepts, and relays it once",
-    async () => {
-      const send = vi.fn(async () => `0x${"ef".repeat(32)}` as const);
-      const relayer: TornadoRelayer = {
-        address: async () => RELAYER,
-        quote: async () => 10n ** 15n,
-        send,
-      };
-      const { chain, engine } = setup({
-        relayer,
-        circuitsUrl: "https://files.example/",
-        fetch: (async (url: string) =>
-          new Response(await readFile(`${dir}/${url.split("/").pop()}`))) as typeof fetch,
-      });
-      chain.deposit(leaf(1), 1_100n);
-      chain.deposit(COMMITMENT, 1_200n);
-      chain.deposit(leaf(2), 1_300n);
-
-      const stages: MixerStage[] = [];
-      const withdrawal = await engine.prove(
-        { ...draft, via: "relayer" },
-        { onStage: (stage) => stages.push(stage) },
-      );
-      expect(stages).toEqual(["syncing", "loading-circuits", "proving", "verifying"]);
-      expect(withdrawal.quote).toEqual({ fee: 10n ** 15n, received: 99n * 10n ** 15n });
-
-      const { functionName, args } = decodeFunctionData({
-        abi: TORNADO_ABI,
-        data: withdrawal.transaction.data,
-      });
-      expect(functionName).toBe("withdraw");
-      const [proof, root, nullifierHash, recipient, paid, fee, refund] = args as unknown as [
-        Hex,
-        Hex,
-        Hex,
-        Address,
-        Address,
-        bigint,
-        bigint,
-      ];
-      expect(proof).toHaveLength(2 + 512);
-      const { root: expected } = await tornadoMerklePath([1n, BigInt(COMMITMENT), 2n], 1);
-      expect(root).toBe(toHex(expected, { size: 32 }));
-      expect([recipient, paid, fee, refund]).toEqual([
-        RECIPIENT,
-        getAddress(RELAYER),
-        10n ** 15n,
-        0n,
-      ]);
-      // The pool was asked to check exactly this call.
-      expect(chain.calls).toEqual([withdrawal.transaction.data]);
-      // Nothing on the withdrawal points back at the deposit.
-      const text = JSON.stringify(withdrawal, (_, v) => (typeof v === "bigint" ? `${v}` : v));
-      expect(text).not.toContain(COMMITMENT.slice(2));
-
-      send.mockRejectedValueOnce(new Error("The relayer is busy."));
-      await expect(engine.relay(withdrawal)).rejects.toThrow("busy");
-      expect(await engine.relay(withdrawal)).toEqual({ hash: `0x${"ef".repeat(32)}` });
-      expect(send).toHaveBeenLastCalledWith({
-        pool,
-        proof,
-        args: [root, nullifierHash, recipient, paid, fee, refund],
-      });
-      await expect(engine.relay(withdrawal)).rejects.toThrow("already sent");
-
-      chain.refuse = "execution reverted: Invalid withdraw proof";
-      await expect(engine.prove(draft, { onStage: () => {} })).rejects.toThrow(
-        "The pool refused the proof: execution reverted: Invalid withdraw proof",
-      );
+// Needs the 33 MB of circuit files: TORNADO_CIRCUITS_DIR=/path bun run test tornado-engine
+const dir = process.env.TORNADO_CIRCUITS_DIR;
+describe.skipIf(!dir)("tornado engine: withdraw with the circuit files", () => {
+  const hash = `0x${"ef".repeat(32)}` as const;
+  /** What the relayer was asked to send. It refuses the first request. */
+  const sent: Array<Parameters<TornadoRelayer["send"]>[0]> = [];
+  const relayer: TornadoRelayer = {
+    address: async () => RELAYER,
+    quote: async () => 10n ** 15n,
+    send: async (request) => {
+      sent.push(request);
+      if (sent.length === 1) {
+        throw new Error("The relayer is busy.");
+      }
+      return hash;
     },
-    300_000,
-  );
+  };
+  const { chain, engine } = setup({
+    relayer,
+    circuitsUrl: "https://files.example/",
+    fetch: (async (url: string) =>
+      new Response(await readFile(`${dir}/${url.split("/").pop()}`))) as typeof fetch,
+  });
+  chain.deposit(leaf(1), 1100n);
+  chain.deposit(COMMITMENT, 1200n);
+  chain.deposit(leaf(2), 1300n);
+
+  const stages: Array<MixerStage> = [];
+  let withdrawal: MixerWithdrawal;
+  let checked: Array<Hex>;
+  let refused: unknown;
+  // Proving takes most of a minute, and the circuit files load only once.
+  beforeAll(async () => {
+    withdrawal = await engine.prove(
+      { note: NOTE, recipient: RECIPIENT, via: "relayer" },
+      { onStage: (stage) => stages.push(stage) },
+    );
+    checked = [...chain.calls];
+    chain.refuse = "execution reverted: Invalid withdraw proof";
+    refused = await engine
+      .prove({ note: NOTE, recipient: RECIPIENT, via: "wallet" }, { onStage: () => {} })
+      .then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+  }, 300_000);
+
+  it("proves a withdrawal the pool's call accepts, and relays it once", async () => {
+    expect(stages).toEqual(["syncing", "loading-circuits", "proving", "verifying"]);
+    expect(withdrawal.quote).toEqual({ fee: 10n ** 15n, received: 99n * 10n ** 15n });
+
+    const call = decodeFunctionData({ abi: TORNADO_ABI, data: withdrawal.transaction.data });
+    if (call.functionName !== "withdraw") {
+      throw new Error(`Expected a withdraw call, got ${call.functionName}.`);
+    }
+    const [proof, root, nullifierHash, recipient, paid, fee, refund] = call.args;
+    expect(proof).toHaveLength(2 + 512);
+    const { root: expected } = await tornadoMerklePath([1n, BigInt(COMMITMENT), 2n], 1);
+    expect(root).toBe(toHex(expected, { size: 32 }));
+    expect([recipient, paid, fee, refund]).toEqual([
+      RECIPIENT,
+      getAddress(RELAYER),
+      10n ** 15n,
+      0n,
+    ]);
+    // The pool was asked to check exactly this call.
+    expect(checked).toEqual([withdrawal.transaction.data]);
+    // Nothing on the withdrawal points back at the deposit.
+    const text = JSON.stringify(withdrawal, (_, v: unknown) =>
+      typeof v === "bigint" ? `${v}` : v,
+    );
+    expect(text).not.toContain(COMMITMENT.slice(2));
+
+    await expect(engine.relay(withdrawal)).rejects.toThrow("busy");
+    expect(await engine.relay(withdrawal)).toEqual({ hash });
+    expect(sent.at(-1)).toEqual({
+      pool,
+      proof,
+      args: [root, nullifierHash, recipient, paid, fee, refund],
+    });
+    await expect(engine.relay(withdrawal)).rejects.toThrow("already sent");
+  });
+
+  it("says when the pool refuses the proof", () => {
+    expect(refused).toMatchObject({
+      message: expect.stringContaining(
+        "The pool refused the proof: execution reverted: Invalid withdraw proof",
+      ),
+    });
+  });
 });

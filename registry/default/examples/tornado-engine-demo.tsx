@@ -3,7 +3,7 @@ import { Mixer } from "@/components/mixer";
 import { TORNADO_SEPOLIA_POOLS, createTornadoEngine } from "@/lib/tornado-engine";
 
 // Sepolia: real contracts, test funds.
-const chainId = 11155111;
+const chainId = 11_155_111;
 // A withdrawal reads the pool's deposits back to its deployment, so the RPC must serve old logs.
 const rpcUrl = "https://sepolia.gateway.tenderly.co";
 

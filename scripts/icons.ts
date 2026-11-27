@@ -25,7 +25,7 @@ function draw(size: number, fill: number, radius = 0): Promise<Buffer> {
 }
 
 /** An .ico file holding PNG images, which every browser since IE 11 reads. */
-function ico(images: { size: number; png: Buffer }[]): Buffer {
+function ico(images: Array<{ size: number; png: Buffer }>): Buffer {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(1, 2); // type: icon
   header.writeUInt16LE(images.length, 4);

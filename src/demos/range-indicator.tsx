@@ -17,7 +17,8 @@ export const Default = demo(() => {
   const loaded = usePretendLoad();
   return (
     <Card>
-      <RangeIndicator locale="en-US"
+      <RangeIndicator
+        locale="en-US"
         tickLower={t - 800}
         tickUpper={t + 1200}
         pool={loaded ? pool : undefined}
@@ -31,7 +32,8 @@ export const Default = demo(() => {
 export const States = demo(() => (
   <div className="grid w-full max-w-3xl gap-3 sm:grid-cols-2">
     <Card>
-      <RangeIndicator locale="en-US"
+      <RangeIndicator
+        locale="en-US"
         tickLower={t + 400}
         tickUpper={t + 1500}
         pool={pool}
@@ -40,7 +42,8 @@ export const States = demo(() => (
       />
     </Card>
     <Card>
-      <RangeIndicator locale="en-US"
+      <RangeIndicator
+        locale="en-US"
         tickLower={t - 800}
         tickUpper={t + 1200}
         liquidity={0n}
@@ -50,7 +53,8 @@ export const States = demo(() => (
       />
     </Card>
     <Card>
-      <RangeIndicator locale="en-US"
+      <RangeIndicator
+        locale="en-US"
         tickLower={full.min}
         tickUpper={full.max}
         pool={pool}
@@ -59,7 +63,8 @@ export const States = demo(() => (
       />
     </Card>
     <Card>
-      <RangeIndicator locale="en-US"
+      <RangeIndicator
+        locale="en-US"
         tickLower={t - 800}
         tickUpper={t + 1200}
         pool={pool}

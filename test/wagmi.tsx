@@ -2,83 +2,41 @@ import { QueryClient } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import {
-  custom,
   decodeFunctionData,
   encodeAbiParameters,
   encodeFunctionResult,
   erc20Abi,
   hexToBytes,
+  http as httpTransport,
   parseAbi,
   toHex,
   zeroAddress,
-  type Address,
-  type Chain,
-  type Hex,
 } from "viem";
-import { vi } from "vitest";
-import { createConfig, createConnector, type Config } from "wagmi";
+import type { Address, Chain, Hex } from "viem";
+import { createConfig, createConnector } from "wagmi";
+import type { Config } from "wagmi";
 import { connect } from "wagmi/actions";
 import { mainnet, sepolia } from "wagmi/chains";
-import { mock, type MockParameters } from "wagmi/connectors";
+import { mock } from "wagmi/connectors";
+import type { MockParameters } from "wagmi/connectors";
 import { Web3Provider } from "@/components/web3-provider";
+import { serveRpc } from "./rpc";
+import type { RpcResponses } from "./rpc";
 
 export const testAccounts = [
   "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
   "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
 ] as const;
 
-/**
- * Canned JSON-RPC responses by method name. A function receives the params.
- * Throw `{ code, message }` from a function to return a JSON-RPC error, e.g.
- * `{ code: 4001 }` for a user rejection.
- */
-export type RpcResponses = Record<string, unknown | ((params: any) => unknown)>;
+export type { RpcResponses };
 
-async function respond(rpc: RpcResponses, method: string, params: unknown) {
-  if (!(method in rpc)) throw new Error(`RPC method not mocked: ${method}`);
-  const response = rpc[method];
-  return typeof response === "function" ? response(params) : response;
-}
-
-/**
- * The mock connector forwards wallet methods it doesn't handle (e.g.
- * eth_sendTransaction) to the chain's RPC URL with fetch. Answer those from
- * the same map, as a JSON-RPC server would.
- */
-function stubWalletRpc(rpc: RpcResponses) {
-  const realFetch = globalThis.fetch;
-  vi.stubGlobal("fetch", async (url: string, init?: { body?: string }) => {
-    // Not JSON-RPC (e.g. NFT metadata, data: URIs): use the real fetch.
-    if (typeof init?.body !== "string") return realFetch(url, init as RequestInit);
-    const { id, method, params } = JSON.parse(init.body);
-    try {
-      const result = await respond(rpc, method, params);
-      return Response.json({ jsonrpc: "2.0", id, result });
-    } catch (error) {
-      const { code = -32603, message = String(error) } = error as {
-        code?: number;
-        message?: string;
-      };
-      return Response.json({ jsonrpc: "2.0", id, error: { code, message } });
-    }
-  });
-}
-
-/**
- * wagmi config with only the mock connector and a fake RPC. Nothing touches
- * the network: methods missing from `rpc` fail like an unreachable node.
- * Stubs `fetch` for the test (restored in test/setup.ts).
- *
- * Use `features` to make the "wallet" reject or fail, e.g.
- * `{ switchChainError: true }` for a user rejection.
- */
 /**
  * The mock wallet, reporting the given EIP-5792 capabilities per chain id,
  * e.g. `{ 1: { atomic: { status: "supported" } } }`.
  */
 function withCapabilities(
   wallet: ReturnType<typeof mock>,
-  capabilities: Record<number, unknown>
+  capabilities: Record<number, unknown>,
 ): ReturnType<typeof mock> {
   return createConnector((config) => {
     const connector = wallet(config);
@@ -92,8 +50,8 @@ function withCapabilities(
             args.method === "wallet_getCapabilities"
               ? Promise.resolve(
                   Object.fromEntries(
-                    Object.entries(capabilities).map(([id, value]) => [toHex(Number(id)), value])
-                  )
+                    Object.entries(capabilities).map(([id, value]) => [toHex(Number(id)), value]),
+                  ),
                 )
               : provider.request(args as never),
         } as typeof provider;
@@ -102,6 +60,14 @@ function withCapabilities(
   });
 }
 
+/**
+ * wagmi config with only the mock connector and a fake RPC node. Methods
+ * missing from `rpc` fail with a JSON-RPC error, and any other request fails
+ * the test (MSW in test/setup.ts).
+ *
+ * Use `features` to make the "wallet" reject or fail, e.g.
+ * `{ switchChainError: true }` for a user rejection.
+ */
 export function createTestConfig({
   features,
   rpc = {},
@@ -112,19 +78,16 @@ export function createTestConfig({
   features?: MockParameters["features"];
   rpc?: RpcResponses;
   /** Accounts the mock wallet exposes. The first one is used. */
-  accounts?: readonly [Address, ...Address[]];
+  accounts?: readonly [Address, ...Array<Address>];
   /** One mock wallet per entry, each with its own accounts. Defaults to a single wallet with `accounts`. */
-  wallets?: readonly (readonly [Address, ...Address[]])[];
+  wallets?: ReadonlyArray<readonly [Address, ...Array<Address>]>;
   /** EIP-5792 capabilities the wallet reports, by chain id. Without it the wallet can't batch. */
   capabilities?: Record<number, unknown>;
 } = {}) {
-  stubWalletRpc(rpc);
-  const transport = custom(
-    { request: ({ method, params }) => respond(rpc, method, params) },
-    { retryCount: 0 }
-  );
+  const url = serveRpc(rpc);
+  const transport = httpTransport(url, { retryCount: 0 });
   return createConfig({
-    chains: [withoutMulticall(mainnet), withoutMulticall(sepolia)],
+    chains: [testChain(mainnet, url), testChain(sepolia, url)],
     connectors: wallets.map((walletAccounts) => {
       const wallet = mock({ accounts: walletAccounts, features });
       return capabilities ? withCapabilities(wallet, capabilities) : wallet;
@@ -146,11 +109,20 @@ export const fakeTxHash = `0x${"ab".repeat(32)}` as const;
  * mined in block 100 with `status`. Spread it into `rpc` and override
  * methods as needed, e.g. `eth_sendTransaction` to reject.
  */
+/** The sender and recipient of the transaction in eth_sendTransaction's params. */
+function sentTransaction(params: unknown) {
+  const tx: unknown = Array.isArray(params) ? params[0] : undefined;
+  if (typeof tx !== "object" || tx === null || !("to" in tx) || typeof tx.to !== "string") {
+    throw new Error("eth_sendTransaction needs a transaction with a `to` address.");
+  }
+  return { from: "from" in tx && typeof tx.from === "string" ? tx.from : undefined, to: tx.to };
+}
+
 export function fakeChainRpc({
   status = "success",
   chainId = 1,
-}: { status?: "success" | "reverted"; chainId?: number } = {}): RpcResponses {
-  let sent: { from: string; to: string } | undefined;
+}: { status?: "success" | "reverted"; chainId?: number } = {}) {
+  let sent: ReturnType<typeof sentTransaction> | undefined;
   let block = 100;
   return {
     eth_chainId: `0x${chainId.toString(16)}`,
@@ -166,8 +138,8 @@ export function fakeChainRpc({
       baseFeePerGas: "0x3b9aca00",
       transactions: [],
     },
-    eth_sendTransaction: ([tx]: [{ from: string; to: string }]) => {
-      sent = tx;
+    eth_sendTransaction: (params: unknown) => {
+      sent = sentTransaction(params);
       return fakeTxHash;
     },
     eth_getTransactionByHash: () =>
@@ -207,21 +179,22 @@ export function fakeChainRpc({
         status: status === "success" ? "0x1" : "0x0",
         type: "0x2",
       },
-  };
+  } satisfies RpcResponses;
 }
 
 /**
- * wagmi batches reads through Multicall3 by default. Without it, reads become
- * plain RPC calls (eth_getBalance, eth_call) that are easy to fake.
+ * `chain` served by the test node at `url`. wagmi batches reads through
+ * Multicall3 by default; without it, reads become plain RPC calls
+ * (eth_getBalance, eth_call) that are easy to fake.
  */
-function withoutMulticall<chain extends Chain>(chain: chain): chain {
+function testChain<chain extends Chain>(chain: chain, url: string): chain {
   const { multicall3: _, ...contracts } = chain.contracts ?? {};
-  return { ...chain, contracts };
+  return { ...chain, contracts, rpcUrls: { default: { http: [url] } } };
 }
 
 export function renderWithWagmi(
   ui: ReactElement,
-  { config = createTestConfig() }: { config?: Config } = {}
+  { config = createTestConfig() }: { config?: Config } = {},
 ) {
   // No retries: a failing RPC should fail the query immediately.
   const queryClient = new QueryClient({
@@ -232,14 +205,18 @@ export function renderWithWagmi(
     ...render(
       <Web3Provider config={config} queryClient={queryClient}>
         {ui}
-      </Web3Provider>
+      </Web3Provider>,
     ),
   };
 }
 
 /** Connect a mock wallet (the first by default), as if the user approved the connection. */
 export function connectMock(config: Config, wallet = 0) {
-  return connect(config, { connector: config.connectors[wallet]! });
+  const connector = config.connectors[wallet];
+  if (!connector) {
+    throw new Error(`No mock wallet at index ${wallet}.`);
+  }
+  return connect(config, { connector });
 }
 
 type EthCall = [{ to: Address; data: Hex }];
@@ -259,7 +236,7 @@ export function erc20CallRpc({
   decimals?: number;
   symbol?: string;
 } = {}) {
-  const value = <T,>(v: T | (() => T)) => (typeof v === "function" ? (v as () => T)() : v);
+  const value = (v: bigint | (() => bigint)) => (typeof v === "function" ? v() : v);
   return ([{ data }]: EthCall) => {
     const { functionName } = decodeFunctionData({ abi: erc20Abi, data });
     const result =
@@ -272,8 +249,10 @@ export function erc20CallRpc({
             : functionName === "symbol"
               ? symbol
               : undefined;
-    if (result === undefined) throw new Error(`erc20 ${functionName} not mocked`);
-    return encodeFunctionResult({ abi: erc20Abi, functionName, result } as never);
+    if (result === undefined) {
+      throw new Error(`erc20 ${functionName} not mocked`);
+    }
+    return encodeFunctionResult({ abi: erc20Abi, functionName, result });
   };
 }
 
@@ -284,9 +263,13 @@ const universalResolverAbi = parseAbi([
 /** Decode a DNS wire-format name ("\x07vitalik\x03eth\x00") to "vitalik.eth". */
 function decodeDnsName(data: Hex) {
   const bytes = hexToBytes(data);
-  const labels: string[] = [];
-  for (let i = 0; bytes[i]; i += bytes[i]! + 1) {
-    labels.push(new TextDecoder().decode(bytes.slice(i + 1, i + 1 + bytes[i]!)));
+  const labels: Array<string> = [];
+  let i = 0;
+  let length = bytes[i];
+  while (length) {
+    labels.push(new TextDecoder().decode(bytes.slice(i + 1, i + 1 + length)));
+    i += length + 1;
+    length = bytes[i];
   }
   return labels.join(".");
 }
@@ -303,7 +286,7 @@ const resolverAbi = parseAbi([
  */
 export function ensResolveRpc(
   names: Record<string, Address>,
-  texts: Record<string, Record<string, string>> = {}
+  texts: Record<string, Record<string, string>> = {},
 ) {
   return ([{ data }]: EthCall) => {
     const { args } = decodeFunctionData({ abi: universalResolverAbi, data });

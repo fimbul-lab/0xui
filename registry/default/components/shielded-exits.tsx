@@ -1,14 +1,20 @@
 // Docs: https://0xui.io/components/shielded-exits.md
 import { Loader2Icon } from "lucide-react";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { Address, Hash } from "viem";
 import { useConfig } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { ProofProgress } from "@/components/proof-progress";
-import { shieldedBalanceMeta, type ShieldedToken } from "@/components/shielded-balance";
-import { useShieldedClient, useShieldedEngine, useShieldedStore } from "@/components/shielded-provider";
+import { shieldedBalanceMeta } from "@/components/shielded-balance";
+import type { ShieldedToken } from "@/components/shielded-balance";
+import {
+  useShieldedClient,
+  useShieldedEngine,
+  useShieldedStore,
+} from "@/components/shielded-provider";
 import { TokenAmount } from "@/components/token-amount";
 import { TransactionStatus } from "@/components/transaction-status";
 import { useStore } from "@/hooks/use-store";
@@ -95,7 +101,7 @@ export function useShieldedExit({
 export type ShieldedExitsProps = {
   chainId: number;
   /** Symbol and decimals for the tokens that may show up. Others are shown by address. */
-  tokens: readonly ShieldedToken[];
+  tokens: ReadonlyArray<ShieldedToken>;
   /** Called with the exit transaction's hash once the wallet has sent it. */
   onSubmitted?: (hash: Hash, exit: ShieldedExit) => void;
   /** Called when the exit is mined. The component has already asked the engine to scan. */
@@ -128,7 +134,7 @@ export function ShieldedExits({
   const { chains } = useConfig();
   const [connectOpen, setConnectOpen] = useState(false);
   /** Exits that were sent, followed until they are mined. */
-  const [sent, setSent] = useState<{ hash: Hash; label: string }[]>([]);
+  const [sent, setSent] = useState<Array<{ hash: Hash; label: string }>>([]);
 
   const tokenOf = (address: Address) =>
     tokens.find((token) => token.address.toLowerCase() === address.toLowerCase());
@@ -141,8 +147,12 @@ export function ShieldedExits({
     },
   });
 
-  if (!engine.prepareExit || !exits) return null;
-  if (exits.length === 0 && sent.length === 0 && !empty) return null;
+  if (!engine.prepareExit || !exits) {
+    return null;
+  }
+  if (exits.length === 0 && sent.length === 0 && !empty) {
+    return null;
+  }
 
   const blockerFor = (exit: ShieldedExit) =>
     shieldedExitBlocker({
@@ -229,7 +239,8 @@ export function ShieldedExits({
                     Public and final. {amount} goes back to{" "}
                     {exit.depositor ? truncateAddress(exit.depositor) : "the address it came from"},
                     and anyone can see it left the private balance.
-                    {exit.state === "spendable" && " These funds could be unshielded privately instead."}
+                    {exit.state === "spendable" &&
+                      " These funds could be unshielded privately instead."}
                   </p>
                   <ProofProgress
                     phase={exitProofPhase(flow)}

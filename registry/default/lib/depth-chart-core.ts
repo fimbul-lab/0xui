@@ -1,4 +1,5 @@
-import { getMarketDepth, type LiquidityBin, type PairToken } from "@/lib/concentrated-liquidity";
+import { getMarketDepth } from "@/lib/concentrated-liquidity";
+import type { LiquidityBin, PairToken } from "@/lib/concentrated-liquidity";
 
 /** One side of the book at a price move, in the displayed direction. */
 export type DepthReading = {
@@ -22,7 +23,7 @@ export type DepthOptions = { invert?: boolean; token0: PairToken; token1: PairTo
  * token1, so the sides swap and amounts are revalued in token0.
  */
 export function readDepth(
-  bins: readonly LiquidityBin[],
+  bins: ReadonlyArray<LiquidityBin>,
   currentPrice: number,
   percent: number,
   { invert = false, token0, token1 }: DepthOptions,
@@ -40,8 +41,20 @@ export function readDepth(
   const raw = x >= 0 ? (x / (1 + x)) * 100 : (-x / (1 + x)) * 100;
   const d = getMarketDepth(bins, currentPrice, Math.min(raw, 99.99));
   return percent >= 0
-    ? { percent, price: shown * (1 + x), amount: d.amount1, symbol: token1.symbol, value: d.amount1 / currentPrice }
-    : { percent, price: shown * (1 + x), amount: d.amount0, symbol: token0.symbol, value: d.amount0 };
+    ? {
+        percent,
+        price: shown * (1 + x),
+        amount: d.amount1,
+        symbol: token1.symbol,
+        value: d.amount1 / currentPrice,
+      }
+    : {
+        percent,
+        price: shown * (1 + x),
+        amount: d.amount0,
+        symbol: token0.symbol,
+        value: d.amount0,
+      };
 }
 
 /**
@@ -50,14 +63,14 @@ export function readDepth(
  * look like.
  */
 export function sampleDepth(
-  bins: readonly LiquidityBin[],
+  bins: ReadonlyArray<LiquidityBin>,
   currentPrice: number,
   span: number,
   options: DepthOptions,
   samples = 60,
 ) {
-  const asks: DepthReading[] = [];
-  const bids: DepthReading[] = [];
+  const asks: Array<DepthReading> = [];
+  const bids: Array<DepthReading> = [];
   for (let i = 0; i <= samples; i++) {
     const p = (span * i) / samples;
     asks.push(readDepth(bins, currentPrice, p, options));
@@ -70,9 +83,13 @@ export function sampleDepth(
 export function niceTicks(max: number) {
   const raw = max / 3;
   const pow = Math.pow(10, Math.floor(Math.log10(raw)));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw)!;
+  // Ten times `pow` is always at least `raw`.
+  const step = [1, 2, 2.5, 5].map((m) => m * pow).find((s) => s >= raw) ?? 10 * pow;
   const ticks = [0];
-  while (ticks.at(-1)! < max) ticks.push(ticks.at(-1)! + step);
+  for (let tick = 0; tick < max;) {
+    tick += step;
+    ticks.push(tick);
+  }
   return ticks;
 }
 
@@ -85,7 +102,14 @@ export function signedPercent(percent: number) {
 export function nextDepthReading(key: string, from: number | undefined, span: number) {
   const step = span / 20;
   const at = from ?? 0;
-  const next: Record<string, number> = { ArrowRight: at + step, ArrowLeft: at - step, Home: -span, End: span };
-  if (!(key in next)) return undefined;
-  return Math.max(-span, Math.min(span, Math.round(next[key]! * 100) / 100));
+  const next = new Map([
+    ["ArrowRight", at + step],
+    ["ArrowLeft", at - step],
+    ["Home", -span],
+    ["End", span],
+  ]).get(key);
+  if (next === undefined) {
+    return undefined;
+  }
+  return Math.max(-span, Math.min(span, Math.round(next * 100) / 100));
 }

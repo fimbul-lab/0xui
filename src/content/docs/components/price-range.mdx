@@ -39,7 +39,13 @@ Pass `tickLower` and `tickUpper` straight to the position manager's `mint`. To f
 ```ts
 import { getDependentAmount } from "@/lib/concentrated-liquidity";
 
-const usdcNeeded = getDependentAmount({ sqrtPriceX96, tickLower, tickUpper, amount: ethAmount, token: "token0" });
+const usdcNeeded = getDependentAmount({
+  sqrtPriceX96,
+  tickLower,
+  tickUpper,
+  amount: ethAmount,
+  token: "token0",
+});
 // undefined: the range takes only USDC. 0n: it takes only ETH.
 ```
 
@@ -70,18 +76,24 @@ Leave out `pool`, `bins` or both while it loads. The panel and the chart each sh
 The default presets follow the tick spacing: ±0.05%, ±0.1% and ±0.5% for stable pools (spacing 1), ±1%, ±5% and ±10% for spacing 10, and ±10%, ±20% and ±50% for the rest, plus full range. Pass your own:
 
 ```tsx
-<PriceRange presets={[{ label: "Narrow", percent: 2 }, { label: "Wide", percent: 30 }, { label: "Full range", full: true }]} />
+<PriceRange
+  presets={[
+    { label: "Narrow", percent: 2 },
+    { label: "Wide", percent: 30 },
+    { label: "Full range", full: true },
+  ]}
+/>
 ```
 
 ## States
 
 The root sets `data-deposit-mode` and `data-full-range`:
 
-| `data-deposit-mode` | Meaning | Shown |
-| --- | --- | --- |
-| `both` | The price is inside the range. | Nothing extra. |
-| `token0` | The range is above the price. | "Takes only ETH and earns no fees until the price moves into it." |
-| `token1` | The range is below the price. | The same, for the quote token. |
+| `data-deposit-mode` | Meaning                        | Shown                                                             |
+| ------------------- | ------------------------------ | ----------------------------------------------------------------- |
+| `both`              | The price is inside the range. | Nothing extra.                                                    |
+| `token0`            | The range is above the price.  | "Takes only ETH and earns no fees until the price moves into it." |
+| `token1`            | The range is below the price.  | The same, for the quote token.                                    |
 
 ## Hook
 
@@ -91,16 +103,16 @@ Under it, `@/lib/price-range-core` needs no framework: `defaultRange`, `rangeWit
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. Leave out while loading. |
-| `bins` | `LiquidityBin[]` | — | For the chart. Leave out while loading. |
-| `showChart` | `boolean` | `true` | Show the liquidity chart. |
-| `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
-| `value` / `defaultValue` | `{ tickLower, tickUpper }` | ±10% | Controlled or starting range. |
-| `onValueChange` | `(range) => void` | — | Called with snapped ticks. |
-| `invert` / `defaultInvert` | `boolean` | `false` | Quote prices in token0. |
-| `onInvertChange` | `(invert) => void` | — | Called when the token toggle changes. |
-| `presets` | `RangePreset[]` | by spacing | `[]` hides them. |
-| `title` | `ReactNode` | `"Set price range"` | Heading. |
-| `locale` | `string` | runtime locale | Number formatting locale. |
+| Prop                       | Type                                          | Default             | Description                                                  |
+| -------------------------- | --------------------------------------------- | ------------------- | ------------------------------------------------------------ |
+| `pool`                     | `{ tick, tickSpacing, decimals0, decimals1 }` | —                   | Current tick, spacing and decimals. Leave out while loading. |
+| `bins`                     | `LiquidityBin[]`                              | —                   | For the chart. Leave out while loading.                      |
+| `showChart`                | `boolean`                                     | `true`              | Show the liquidity chart.                                    |
+| `token0` / `token1`        | `{ symbol: string }`                          | —                   | Any `Token` fits.                                            |
+| `value` / `defaultValue`   | `{ tickLower, tickUpper }`                    | ±10%                | Controlled or starting range.                                |
+| `onValueChange`            | `(range) => void`                             | —                   | Called with snapped ticks.                                   |
+| `invert` / `defaultInvert` | `boolean`                                     | `false`             | Quote prices in token0.                                      |
+| `onInvertChange`           | `(invert) => void`                            | —                   | Called when the token toggle changes.                        |
+| `presets`                  | `RangePreset[]`                               | by spacing          | `[]` hides them.                                             |
+| `title`                    | `ReactNode`                                   | `"Set price range"` | Heading.                                                     |
+| `locale`                   | `string`                                      | runtime locale      | Number formatting locale.                                    |

@@ -7,11 +7,11 @@ import Install from "@/components/docs/Install.astro";
 import Preview from "@/components/docs/Preview.astro";
 import {
 
-  Default,
-  IconOnly,
-  Dialog,
-  GroupByNetwork,
-  Branded,
+Default,
+IconOnly,
+Dialog,
+GroupByNetwork,
+Branded,
 } from "@/demos/chain-selector";
 
 Shows the current chain and lets the user switch to any chain in your wagmi config. Comes as a popover (`ChainSelector`) and a dialog (`ChainSelectorDialog`). Both share the same props and behavior.
@@ -88,27 +88,27 @@ Splits chains into Mainnet and Testnet tabs, based on `chain.testnet`.
 
 ## States
 
-| State | What the user sees |
-| --- | --- |
-| Before hydration | A skeleton of the icon and name, so server HTML never shows wallet state and nothing moves when the chain appears. "Select Chain" for screen readers. |
-| Idle | Current chain icon and name. In the list, the active chain has a checkmark and `aria-current`. |
-| Switching | Spinner on the trigger and on the target row. The list is disabled until the wallet responds. |
-| Cancelled | The user dismissed the wallet prompt. Muted "Request cancelled in wallet" note. |
-| Error | Any other failure. The wallet's message is shown inline with `role="alert"`. |
-| Wrong network | The wallet is on a chain your config doesn't include. The trigger reads "Wrong network" with a warning icon, and the list asks the user to pick a supported chain. |
+| State            | What the user sees                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Before hydration | A skeleton of the icon and name, so server HTML never shows wallet state and nothing moves when the chain appears. "Select Chain" for screen readers.              |
+| Idle             | Current chain icon and name. In the list, the active chain has a checkmark and `aria-current`.                                                                     |
+| Switching        | Spinner on the trigger and on the target row. The list is disabled until the wallet responds.                                                                      |
+| Cancelled        | The user dismissed the wallet prompt. Muted "Request cancelled in wallet" note.                                                                                    |
+| Error            | Any other failure. The wallet's message is shown inline with `role="alert"`.                                                                                       |
+| Wrong network    | The wallet is on a chain your config doesn't include. The trigger reads "Wrong network" with a warning icon, and the list asks the user to pick a supported chain. |
 
 Errors and the cancelled note clear when the selector is reopened.
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `variant` | `"background" \| "branded" \| "mono"` | `"background"` | Chain icon style. |
-| `monoColor` | `string` | — | Icon color. Only with `variant="mono"`. |
-| `iconOnly` | `boolean` | `false` | Hide the visible label. It stays accessible. |
-| `groupByNetwork` | `boolean` | `false` | Group chains into Mainnet / Testnet tabs. |
-| `chainIcon` | `ComponentType<ChainIconProps> \| false` | `NetworkIcon` | Custom chain icon, or `false` to hide it. |
-| `chevronIcon` | `ComponentType<{ className?: string }> \| false` | `ChevronDownIcon` | Custom chevron, or `false` to hide it. |
-| `loaderIcon` | `ComponentType<{ className?: string }> \| false` | `Loader2Icon` | Custom spinner, or `false` to hide it. |
-| `disableIcons` | `boolean` | `false` | Hide every icon. Overrides the icon props. |
-| `chainMeta` | `(chain: Chain) => ReactNode` | — | Extra detail under each chain's name, e.g. `"~2s blocks"`. |
+| Prop             | Type                                             | Default           | Description                                                |
+| ---------------- | ------------------------------------------------ | ----------------- | ---------------------------------------------------------- |
+| `variant`        | `"background" \| "branded" \| "mono"`            | `"background"`    | Chain icon style.                                          |
+| `monoColor`      | `string`                                         | —                 | Icon color. Only with `variant="mono"`.                    |
+| `iconOnly`       | `boolean`                                        | `false`           | Hide the visible label. It stays accessible.               |
+| `groupByNetwork` | `boolean`                                        | `false`           | Group chains into Mainnet / Testnet tabs.                  |
+| `chainIcon`      | `ComponentType<ChainIconProps> \| false`         | `NetworkIcon`     | Custom chain icon, or `false` to hide it.                  |
+| `chevronIcon`    | `ComponentType<{ className?: string }> \| false` | `ChevronDownIcon` | Custom chevron, or `false` to hide it.                     |
+| `loaderIcon`     | `ComponentType<{ className?: string }> \| false` | `Loader2Icon`     | Custom spinner, or `false` to hide it.                     |
+| `disableIcons`   | `boolean`                                        | `false`           | Hide every icon. Overrides the icon props.                 |
+| `chainMeta`      | `(chain: Chain) => ReactNode`                    | —                 | Extra detail under each chain's name, e.g. `"~2s blocks"`. |

@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/transaction-status.md
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, CircleIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import type { Hash, TransactionReceipt } from "viem";
 import { useChainId, useConfig } from "wagmi";
 import { CopyButton } from "@/components/copy-button";
@@ -12,9 +13,8 @@ import {
   transactionConfirmationsQueryOptions,
   transactionStatus,
   transactionSteps,
-  type StepState,
-  type TxStatusPhase,
 } from "@/lib/transaction-status-core";
+import type { StepState, TxStatusPhase } from "@/lib/transaction-status-core";
 import { cn } from "@/lib/utils";
 
 export type { StepState, TxStatusPhase };
@@ -174,16 +174,19 @@ export function TransactionStatus({
 /** Icon for one step of a status list: a check, a spinner, a cross or an empty circle. */
 export function StepIcon({ state }: { state: StepState }) {
   const className = "size-4 shrink-0";
-  if (state === "done")
+  if (state === "done") {
     return <CheckIcon aria-label="Done" className={cn(className, "text-emerald-500")} />;
-  if (state === "failed")
+  }
+  if (state === "failed") {
     return <XIcon aria-label="Failed" className={cn(className, "text-destructive")} />;
-  if (state === "active")
+  }
+  if (state === "active") {
     return (
       <Loader2Icon
         aria-label="In progress"
         className={cn(className, "animate-spin text-muted-foreground")}
       />
     );
+  }
   return <CircleIcon aria-label="Not started" className={cn(className, "text-muted-foreground")} />;
 }

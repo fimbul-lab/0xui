@@ -48,10 +48,7 @@ export function TokenAmount({
   });
 
   return (
-    <span
-      data-slot="token-amount"
-      className={cn("inline-flex flex-col", className)}
-    >
+    <span data-slot="token-amount" className={cn("inline-flex flex-col", className)}>
       <span title={exact} className="tabular-nums">
         {animate ? <MorphText>{formatted}</MorphText> : formatted}
         {/* A space for screen readers and agents ("2 ETH", not "2ETH"); the margin spaces it visually. */}

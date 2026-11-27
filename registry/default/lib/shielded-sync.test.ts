@@ -9,12 +9,12 @@ describe("createShieldedSync", () => {
     vi.useFakeTimers();
     const engine = createMockShieldedEngine();
     const sync = createShieldedSync(engine, 1);
-    const seen: number[] = [];
+    const seen: Array<number> = [];
     const stop = sync.subscribe(() => seen.push(sync.get().progress));
     expect(sync.get().phase).toBe("idle");
 
     void engine.account.unlock("password");
-    await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan + 1_000);
+    await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan + 1000);
     expect(sync.get()).toMatchObject({ phase: "synced", progress: 1, isUpdate: false });
     expect(seen.every((value, i) => i === 0 || value >= seen[i - 1]!)).toBe(true);
     stop();

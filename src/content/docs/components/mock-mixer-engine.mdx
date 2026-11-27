@@ -33,37 +33,37 @@ Creating the engine starts no timers, so it is safe to create during server rend
 
 ## Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `speed` | `number` | `1` | Divides every delay. `Infinity` skips timers altogether. |
-| `timings` | `Partial<MockMixerTimings>` | see below | Override single delays, in ms. |
-| `pools` | `MixerPool[]` | 0.1, 1 and 10 ETH on chain 1 | The pools offered. No contract lives at the default addresses. |
-| `existingDeposits` | `number` | `1200` | Deposits each pool already holds. |
-| `relayerFeeBps` | `number \| false` | `30` | The relayer's cut. `false` for an engine with no relayer. |
-| `relay` | `(withdrawal) => Hash` | made-up hash | The hash `relay` resolves with. No chain knows the default, so pass one yours does if something waits for its receipt. |
+| Option             | Type                        | Default                      | Description                                                                                                            |
+| ------------------ | --------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `speed`            | `number`                    | `1`                          | Divides every delay. `Infinity` skips timers altogether.                                                               |
+| `timings`          | `Partial<MockMixerTimings>` | see below                    | Override single delays, in ms.                                                                                         |
+| `pools`            | `MixerPool[]`               | 0.1, 1 and 10 ETH on chain 1 | The pools offered. No contract lives at the default addresses.                                                         |
+| `existingDeposits` | `number`                    | `1200`                       | Deposits each pool already holds.                                                                                      |
+| `relayerFeeBps`    | `number \| false`           | `30`                         | The relayer's cut. `false` for an engine with no relayer.                                                              |
+| `relay`            | `(withdrawal) => Hash`      | made-up hash                 | The hash `relay` resolves with. No chain knows the default, so pass one yours does if something waits for its receipt. |
 
 ### Timings
 
 Guesses, not measurements. The [Tornado engine](/components/tornado-engine/) takes longer to prove.
 
-| Key | Default | What |
-| --- | --- | --- |
-| `sync` | 5 s | Reading a pool's deposits. Later reads take a tenth. |
-| `loadCircuits` | 4 s | Downloading circuits on the first proof. Later proofs take a twentieth. |
-| `prove` | 8 s | Generating the proof. |
-| `verify` | 1 s | Verifying it. |
-| `lookup` | 0.6 s | Looking a note up. |
+| Key            | Default | What                                                                    |
+| -------------- | ------- | ----------------------------------------------------------------------- |
+| `sync`         | 5 s     | Reading a pool's deposits. Later reads take a tenth.                    |
+| `loadCircuits` | 4 s     | Downloading circuits on the first proof. Later proofs take a twentieth. |
+| `prove`        | 8 s     | Generating the proof.                                                   |
+| `verify`       | 1 s     | Verifying it.                                                           |
+| `lookup`       | 0.6 s   | Looking a note up.                                                      |
 
 ## Making things happen
 
-| Method | What it does |
-| --- | --- |
-| `simulate.deposit(commitment)` | The deposit was mined. `false` if it was already known. |
-| `simulate.crowd(pool, n)` | `n` other deposits arrive after the ones so far. |
-| `simulate.withdrawn(withdrawal)` | A withdrawal the wallet sent was mined: its note is spent. A relayed one is marked by `relay`. |
-| `simulate.failNextSync(message?)` | The next read of the deposits fails. |
-| `simulate.failNextProof(message?)` | The next proof fails while proving. |
-| `simulate.failNextRelay(message?)` | The next `relay` is refused. |
+| Method                             | What it does                                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `simulate.deposit(commitment)`     | The deposit was mined. `false` if it was already known.                                        |
+| `simulate.crowd(pool, n)`          | `n` other deposits arrive after the ones so far.                                               |
+| `simulate.withdrawn(withdrawal)`   | A withdrawal the wallet sent was mined: its note is spent. A relayed one is marked by `relay`. |
+| `simulate.failNextSync(message?)`  | The next read of the deposits fails.                                                           |
+| `simulate.failNextProof(message?)` | The next proof fails while proving.                                                            |
+| `simulate.failNextRelay(message?)` | The next `relay` is refused.                                                                   |
 
 ## In tests
 

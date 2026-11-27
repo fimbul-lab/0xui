@@ -1,6 +1,8 @@
-import { formatUnits, parseUnits, zeroAddress, type Address, type Hash } from "viem";
+import { formatUnits, parseUnits, zeroAddress } from "viem";
+import type { Address, Hash } from "viem";
 import { createStore } from "@/lib/0xui-store";
-import { createProver, isProofStage, type ProofState } from "@/lib/proof-progress-core";
+import { createProver, isProofStage } from "@/lib/proof-progress-core";
+import type { ProofState } from "@/lib/proof-progress-core";
 import type {
   PrivateQuote,
   ProvedOperation,
@@ -35,8 +37,18 @@ export function unshieldQuoteQueryOptions(
   { enabled = true }: { enabled?: boolean } = {},
 ) {
   return {
-    queryKey: ["0xui", "unshield-quote", engine.id, draft?.chainId, draft?.token, draft?.amount.toString()],
-    queryFn: () => engine.quote({ kind: "unshield", ...draft!, recipient: zeroAddress }),
+    queryKey: [
+      "0xui",
+      "unshield-quote",
+      engine.id,
+      draft?.chainId,
+      draft?.token,
+      draft?.amount.toString(),
+    ],
+    queryFn: () =>
+      draft
+        ? engine.quote({ kind: "unshield", ...draft, recipient: zeroAddress })
+        : Promise.reject(new Error("Nothing to quote yet.")),
     enabled: Boolean(enabled && draft && draft.amount > 0n),
     staleTime: 30_000,
     retry: false,
@@ -62,13 +74,27 @@ export function unshieldBlocker({
   spendable: bigint | undefined;
   recipient: Address | undefined;
 }) {
-  if (accountStatus === "none") return "Create a private account first";
-  if (accountStatus === "locked") return "Unlock your private account";
-  if (!token) return "Select a token";
-  if (!amount) return "Enter an amount";
-  if (spendable === undefined) return "Scanning private balance…";
-  if (amount > spendable) return `Insufficient private ${token.symbol}`;
-  if (!recipient) return "Enter a recipient";
+  if (accountStatus === "none") {
+    return "Create a private account first";
+  }
+  if (accountStatus === "locked") {
+    return "Unlock your private account";
+  }
+  if (!token) {
+    return "Select a token";
+  }
+  if (!amount) {
+    return "Enter an amount";
+  }
+  if (spendable === undefined) {
+    return "Scanning private balance…";
+  }
+  if (amount > spendable) {
+    return `Insufficient private ${token.symbol}`;
+  }
+  if (!recipient) {
+    return "Enter a recipient";
+  }
   return undefined;
 }
 
@@ -80,6 +106,9 @@ export function parseUnshieldAmount(text: string, decimals: number) {
     return undefined;
   }
 }
+
+/** The form button's label, and whether pressing it starts the unshield. */
+export type UnshieldFormAction = { label: string; ready: boolean };
 
 /** The form's button before an unshield starts: the blocker, or the call to action. */
 export function unshieldFormAction({
@@ -94,10 +123,16 @@ export function unshieldFormAction({
   quoting: boolean;
   quoted: boolean;
   symbol: string | undefined;
-}): { label: string; ready: boolean } {
-  if (blocker) return { label: blocker, ready: false };
-  if (quoteFailed) return { label: "Can't unshield this amount", ready: false };
-  if (quoting || !quoted) return { label: "Fetching quote…", ready: false };
+}): UnshieldFormAction {
+  if (blocker) {
+    return { label: blocker, ready: false };
+  }
+  if (quoteFailed) {
+    return { label: "Can't unshield this amount", ready: false };
+  }
+  if (quoting || !quoted) {
+    return { label: "Fetching quote…", ready: false };
+  }
   return { label: `Unshield ${symbol}`, ready: true };
 }
 
@@ -148,12 +183,27 @@ export type UnshieldFlowState = {
 };
 
 /** The flow's phase, from its state. */
-export function unshieldPhase({ submitting, review, failure, proof }: UnshieldFlowState): UnshieldPhase {
-  if (submitting) return "submitting";
-  if (review) return "review";
-  if (failure || proof.phase === "error") return "error";
-  if (isProofStage(proof.phase)) return "proving";
-  if (proof.phase === "cancelled") return "cancelled";
+export function unshieldPhase({
+  submitting,
+  review,
+  failure,
+  proof,
+}: UnshieldFlowState): UnshieldPhase {
+  if (submitting) {
+    return "submitting";
+  }
+  if (review) {
+    return "review";
+  }
+  if (failure || proof.phase === "error") {
+    return "error";
+  }
+  if (isProofStage(proof.phase)) {
+    return "proving";
+  }
+  if (proof.phase === "cancelled") {
+    return "cancelled";
+  }
   return "idle";
 }
 
@@ -215,12 +265,16 @@ export function createUnshieldFlow(
     store.set({ review: undefined, submitting: true });
     try {
       const { hash } = await engine.submit(operation);
-      if (run !== id) return;
+      if (run !== id) {
+        return;
+      }
       store.set({ active: undefined, submitting: false });
       prover.reset();
       onSubmitted?.(hash, operation);
-    } catch (cause) {
-      if (run === id) store.set({ failure: toError(cause), submitting: false });
+    } catch (error) {
+      if (run === id) {
+        store.set({ failure: toError(error), submitting: false });
+      }
     }
   };
 
@@ -228,9 +282,14 @@ export function createUnshieldFlow(
     const id = ++run;
     store.set({ active: { draft, expected }, review: undefined, failure: undefined });
     const operation = await prover.prove(draft);
-    if (!operation || run !== id) return;
-    if (operation.quote.fee > expected.fee) store.set({ review: operation });
-    else await submit(operation, id);
+    if (!operation || run !== id) {
+      return;
+    }
+    if (operation.quote.fee > expected.fee) {
+      store.set({ review: operation });
+    } else {
+      await submit(operation, id);
+    }
   };
 
   return {
@@ -239,11 +298,15 @@ export function createUnshieldFlow(
     start: (draft, expected) => void start(draft, expected),
     confirm() {
       const { review } = store.get();
-      if (review) void submit(review, run);
+      if (review) {
+        void submit(review, run);
+      }
     },
     retry() {
       const { active, submitting } = store.get();
-      if (active && !submitting) void start(active.draft, active.expected);
+      if (active && !submitting) {
+        void start(active.draft, active.expected);
+      }
     },
     cancel: prover.cancel,
     leave() {

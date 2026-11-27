@@ -15,17 +15,14 @@ import {
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/primitives/tabs";
 import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
 import { cn } from "@/lib/utils";
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  Loader2Icon,
-  TriangleAlertIcon,
-} from "lucide-react";
-import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { CheckIcon, ChevronDownIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
-import { type Chain } from "viem";
+import type { Chain } from "viem";
 import { useConfig } from "wagmi";
-import { ChainIcon, type ChainIconProps } from "@/components/chain-badge";
+import { ChainIcon } from "@/components/chain-badge";
+import type { ChainIconProps } from "@/components/chain-badge";
 import { MorphText } from "@/components/morph-text";
 import { useMounted } from "@/hooks/use-mounted";
 import { useStore } from "@/hooks/use-store";
@@ -63,12 +60,12 @@ export type ChainSelectorProps = {
   chainMeta?: (chain: Chain) => ReactNode;
 } & IconStyleProps;
 
-function groupChainsByNetwork(chains: readonly Chain[]) {
-  const mainnet: Chain[] = [];
-  const testnet: Chain[] = [];
+function groupChainsByNetwork(chains: ReadonlyArray<Chain>) {
+  const mainnet: Array<Chain> = [];
+  const testnet: Array<Chain> = [];
 
   chains.forEach((chain) => {
-    if ((chain as Chain & { testnet?: boolean }).testnet) {
+    if (chain.testnet) {
       testnet.push(chain);
     } else {
       mainnet.push(chain);
@@ -90,12 +87,16 @@ export function useChainSwitcher() {
   const mounted = useMounted();
 
   const onSwitch = async (id: number) => {
-    if (await switcher.switchTo(id)) setOpen(false);
+    if (await switcher.switchTo(id)) {
+      setOpen(false);
+    }
   };
 
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) switcher.reset();
+    if (next) {
+      switcher.reset();
+    }
   };
 
   return {
@@ -114,15 +115,13 @@ function resolveIcons({
   chevronIcon,
   loaderIcon,
   disableIcons,
-}: Pick<
-  ChainSelectorProps,
-  "chainIcon" | "chevronIcon" | "loaderIcon" | "disableIcons"
->) {
-  if (disableIcons) return {};
+}: Pick<ChainSelectorProps, "chainIcon" | "chevronIcon" | "loaderIcon" | "disableIcons">) {
+  if (disableIcons) {
+    return {};
+  }
   return {
     ChainIcon: chainIcon === false ? undefined : chainIcon || ChainIcon,
-    ChevronIcon:
-      chevronIcon === false ? undefined : chevronIcon || ChevronDownIcon,
+    ChevronIcon: chevronIcon === false ? undefined : chevronIcon || ChevronDownIcon,
     LoaderIcon: loaderIcon === false ? undefined : loaderIcon || Loader2Icon,
   };
 }
@@ -131,7 +130,7 @@ function chainIconProps(
   chainId: number,
   variant: "branded" | "mono" | "background",
   monoColor: string | undefined,
-  className?: string
+  className?: string,
 ): ChainIconProps {
   return { chainId, variant, monoColor, className };
 }
@@ -153,7 +152,7 @@ const triggerClassName = ({
     // Bare text needs more room on the pill's curve than an icon does.
     !iconOnly && !ChainIcon && !unsupported && "pl-4",
     !iconOnly && !ChevronIcon && "pr-4",
-    unsupported && "border-destructive/50 text-destructive"
+    unsupported && "border-destructive/50 text-destructive",
   );
 
 function TriggerContent({
@@ -187,9 +186,7 @@ function TriggerContent({
     <>
       {/* Names the trigger "Network: <chain>" for screen readers and agents. */}
       <span className="sr-only">Network: </span>
-      {unsupported && (
-        <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />
-      )}
+      {unsupported && <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />}
       {/* Before mount the chain isn't known: a skeleton in the trigger's own
           shape, so the name and icon arrive without moving anything. */}
       {!mounted && ChainIcon && (
@@ -197,14 +194,7 @@ function TriggerContent({
       )}
       {mounted && currentChain && ChainIcon && (
         <div className="size-6">
-          <ChainIcon
-            {...chainIconProps(
-              currentChain.id,
-              variant,
-              monoColor,
-              "rounded-full"
-            )}
-          />
+          <ChainIcon {...chainIconProps(currentChain.id, variant, monoColor, "rounded-full")} />
         </div>
       )}
       <div className="flex items-center gap-2">
@@ -230,15 +220,13 @@ function TriggerContent({
             className={cn(
               "transition-transform h-fit w-fit",
               open && "rotate-180",
-              isPending && "hidden"
+              isPending && "hidden",
             )}
           >
             <ChevronIcon className="size-4 shrink-0" />
           </span>
         )}
-        {isPending && LoaderIcon && (
-          <LoaderIcon className="size-4 shrink-0 animate-spin" />
-        )}
+        {isPending && LoaderIcon && <LoaderIcon className="size-4 shrink-0 animate-spin" />}
       </div>
     </>
   );
@@ -275,24 +263,18 @@ function ChainItem({
       data-agent-confirm={`Asks your wallet to switch to ${chain.name}`}
       className={cn(
         "flex items-center w-full gap-2 p-2 rounded-md hover:bg-accent/20 group active:scale-97 cursor-pointer disabled:cursor-default disabled:opacity-50",
-        isActive && "bg-accent/20 opacity-100"
+        isActive && "bg-accent/20 opacity-100",
       )}
     >
       {ChainIcon && (
-        <ChainIcon
-          {...chainIconProps(chain.id, variant, monoColor, "rounded-full border")}
-        />
+        <ChainIcon {...chainIconProps(chain.id, variant, monoColor, "rounded-full border")} />
       )}
       <div className="flex min-w-0 flex-col items-start text-left">
         <span className="text-sm">{chain.name}</span>{" "}
-        {meta && (
-          <span className="text-xs text-muted-foreground">{meta}</span>
-        )}
+        {meta && <span className="text-xs text-muted-foreground">{meta}</span>}
       </div>
       {isActive && <CheckIcon className="size-4 ml-auto shrink-0" />}
-      {isSwitching && LoaderIcon && (
-        <LoaderIcon className="size-4 ml-auto shrink-0 animate-spin" />
-      )}
+      {isSwitching && LoaderIcon && <LoaderIcon className="size-4 ml-auto shrink-0 animate-spin" />}
     </ButtonPrimitive>
   );
 }
@@ -309,7 +291,7 @@ function ChainsGrid({
   variant,
   monoColor,
 }: {
-  chains: readonly Chain[];
+  chains: ReadonlyArray<Chain>;
   chainMeta?: (chain: Chain) => ReactNode;
   currentChainId?: number;
   pendingChainId?: number;
@@ -341,6 +323,10 @@ function ChainsGrid({
   );
 }
 
+const noChains = (label: string) => (
+  <p className="text-sm text-muted-foreground text-center py-4">No {label} chains available</p>
+);
+
 function ChainListContent({
   mounted,
   chains,
@@ -351,7 +337,7 @@ function ChainListContent({
   ...gridProps
 }: {
   mounted: boolean;
-  chains: readonly Chain[];
+  chains: ReadonlyArray<Chain>;
   groupByNetwork?: boolean;
   error: { message: string; shortMessage?: string } | null;
   cancelled: boolean;
@@ -379,13 +365,7 @@ function ChainListContent({
 
   const { mainnet, testnet } = groupByNetwork
     ? groupChainsByNetwork(chains)
-    : { mainnet: chains, testnet: [] as Chain[] };
-
-  const empty = (label: string) => (
-    <p className="text-sm text-muted-foreground text-center py-4">
-      No {label} chains available
-    </p>
-  );
+    : { mainnet: chains, testnet: [] as Array<Chain> };
 
   return (
     <>
@@ -418,14 +398,14 @@ function ChainListContent({
             {mainnet.length > 0 ? (
               <ChainsGrid chains={mainnet} {...gridProps} />
             ) : (
-              empty("mainnet")
+              noChains("mainnet")
             )}
           </TabsPanel>
           <TabsPanel value="testnet" className="mt-2">
             {testnet.length > 0 ? (
               <ChainsGrid chains={testnet} {...gridProps} />
             ) : (
-              empty("testnet")
+              noChains("testnet")
             )}
           </TabsPanel>
         </Tabs>
@@ -507,7 +487,7 @@ export function ChainSelector(props: ChainSelectorProps) {
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}
-          onSwitch={s.onSwitch}
+          onSwitch={(id) => void s.onSwitch(id)}
           ChainIcon={s.ChainIcon}
           LoaderIcon={s.LoaderIcon}
           variant={s.variant}
@@ -558,7 +538,7 @@ export function ChainSelectorDialog(props: ChainSelectorProps) {
           currentChainId={s.currentChain?.id}
           pendingChainId={s.pendingChainId}
           isPending={s.isPending}
-          onSwitch={s.onSwitch}
+          onSwitch={(id) => void s.onSwitch(id)}
           ChainIcon={s.ChainIcon}
           LoaderIcon={s.LoaderIcon}
           variant={s.variant}

@@ -1,5 +1,6 @@
 import { ConnectWallet } from "@/components/connect-wallet";
-import { Shield, type ShieldProps } from "@/components/shield";
+import { Shield } from "@/components/shield";
+import type { ShieldProps } from "@/components/shield";
 import { ShieldedAccount } from "@/components/shielded-account";
 import { ShieldedBalance } from "@/components/shielded-balance";
 import type { Token } from "@/components/token-select";
@@ -41,7 +42,7 @@ const shieldDemo = (variant: ShieldProps["variant"]) =>
       );
     },
     // The standby period is 20 s here, not the real 60.
-    { timings: { ...quickStart, standby: 20_000 } }
+    { timings: { ...quickStart, standby: 20_000 } },
   );
 
 export const Default = shieldDemo("in-place");

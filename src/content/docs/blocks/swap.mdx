@@ -29,7 +29,9 @@ Tokens use the [token list standard](/getting-started/token-lists/). The demo us
 import { Swap, type GetQuote } from "@/components/swap";
 
 const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount, taker }) => {
-  const res = await fetch(`/api/quote?sell=${sellToken.address}&buy=${buyToken.address}&amount=${sellAmount}&taker=${taker}`);
+  const res = await fetch(
+    `/api/quote?sell=${sellToken.address}&buy=${buyToken.address}&amount=${sellAmount}&taker=${taker}`,
+  );
   const q = await res.json();
   return {
     buyAmount: BigInt(q.buyAmount),
@@ -48,28 +50,28 @@ Quotes are fetched 400 ms after typing stops, cached per amount and token pair, 
 
 The swap button always names the blocker:
 
-| Situation | Button |
-| --- | --- |
-| No token picked | Select a token |
-| No amount | Enter an amount |
-| Amount above balance | Insufficient ETH balance |
-| Quote loading or out of date | Fetching quote… |
-| `getQuote` threw | No route found, plus the error message |
-| ERC-20 sell without allowance | Approve USDC |
-| Ready | Swap |
+| Situation                     | Button                                 |
+| ----------------------------- | -------------------------------------- |
+| No token picked               | Select a token                         |
+| No amount                     | Enter an amount                        |
+| Amount above balance          | Insufficient ETH balance               |
+| Quote loading or out of date  | Fetching quote…                        |
+| `getQuote` threw              | No route found, plus the error message |
+| ERC-20 sell without allowance | Approve USDC                           |
+| Ready                         | Swap                                   |
 
 Price impact over 5% shows in amber, and over 15% in red.
 
 ## Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `tokens` | `Token[]` | Tokens for both pickers. |
-| `getQuote` | `GetQuote` | Your quote function. |
-| `defaultSellToken` / `defaultBuyToken` | `Token` | Initial pair. Sell defaults to the first token. |
-| `popular` | `string[]` | Quick picks. |
-| `prices` | `Record<symbol, number>` | Fiat values. |
-| `onSubmitted` / `onSuccess` | — | Transaction callbacks. The input clears on success. |
-| `title` | `ReactNode` | Heading. Defaults to `"Swap"`. `null` hides it. |
+| Prop                                   | Type                     | Description                                         |
+| -------------------------------------- | ------------------------ | --------------------------------------------------- |
+| `tokens`                               | `Token[]`                | Tokens for both pickers.                            |
+| `getQuote`                             | `GetQuote`               | Your quote function.                                |
+| `defaultSellToken` / `defaultBuyToken` | `Token`                  | Initial pair. Sell defaults to the first token.     |
+| `popular`                              | `string[]`               | Quick picks.                                        |
+| `prices`                               | `Record<symbol, number>` | Fiat values.                                        |
+| `onSubmitted` / `onSuccess`            | —                        | Transaction callbacks. The input clears on success. |
+| `title`                                | `ReactNode`              | Heading. Defaults to `"Swap"`. `null` hides it.     |
 
 Headless pieces: `useSwapQuote` and `formatRate`. `@/lib/swap` holds the framework-free rest: `swapQuoteQueryOptions` for any TanStack Query adapter, and `swapBlocker` for the button text.

@@ -2,10 +2,10 @@ import { getCollection } from "astro:content";
 import registry from "../../registry.json";
 import type { DocPage, RegistryItem } from "./agent-docs";
 
-export const registryItems: RegistryItem[] = registry.items;
+export const registryItems: Array<RegistryItem> = registry.items;
 
 /** Every docs page except the landing page. */
-export async function loadDocs(): Promise<DocPage[]> {
+export async function loadDocs(): Promise<Array<DocPage>> {
   const docs = await getCollection("docs");
   return docs
     .filter((doc) => doc.id !== "index")

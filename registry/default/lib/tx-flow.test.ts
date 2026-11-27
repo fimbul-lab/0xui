@@ -7,15 +7,18 @@ import {
   fakeTxHash,
   testAccounts,
 } from "../../../test/wagmi";
-import { createTransactionFlow, simulationStatus, type TxPhase } from "./tx-flow";
+import { createTransactionFlow, simulationStatus } from "./tx-flow";
+import type { TxPhase } from "./tx-flow";
 
 const send = { transaction: { to: testAccounts[1], value: parseEther("0.1") } };
 
 function track(flow: ReturnType<typeof createTransactionFlow>) {
-  const phases: TxPhase[] = [];
+  const phases: Array<TxPhase> = [];
   const stop = flow.subscribe(() => {
     const { phase } = flow.get();
-    if (phases.at(-1) !== phase) phases.push(phase);
+    if (phases.at(-1) !== phase) {
+      phases.push(phase);
+    }
   });
   return { phases, stop };
 }
@@ -34,7 +37,9 @@ describe("createTransactionFlow", () => {
     expect(phases).toEqual(["confirming", "pending", "success"]);
     expect(flow.get()).toMatchObject({ hash: fakeTxHash, receipt: { status: "success" } });
     expect(onSubmitted).toHaveBeenCalledWith(fakeTxHash);
-    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ transactionHash: fakeTxHash }));
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ transactionHash: fakeTxHash }),
+    );
     stop();
   });
 
@@ -74,7 +79,7 @@ describe("createTransactionFlow", () => {
   it("switches to the target chain when the wallet is on another", async () => {
     const config = createTestConfig({ rpc: fakeChainRpc() });
     await connectMock(config);
-    const flow = createTransactionFlow(config, { chainId: 11155111 });
+    const flow = createTransactionFlow(config, { chainId: 11_155_111 });
     const { phases, stop } = track(flow);
 
     expect(flow.get()).toMatchObject({ wrongChain: true, targetChain: { name: "Sepolia" } });

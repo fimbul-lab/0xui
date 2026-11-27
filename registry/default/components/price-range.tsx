@@ -1,19 +1,15 @@
 // Docs: https://0xui.io/components/price-range.md
 import { Input } from "@ui-sdk/react/input";
 import { MinusIcon, PlusIcon } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Skeleton } from "skullet/react";
 import { LiquidityChart } from "@/components/liquidity-chart";
 import { Button } from "@/components/primitives/button";
 import { Field, FieldLabel } from "@/components/primitives/field";
 import { SegmentedControl, SegmentedControlItem } from "@/components/primitives/segmented-control";
-import {
-  formatPrice,
-  priceUnit,
-  type LiquidityBin,
-  type PairToken,
-  type TickRange,
-} from "@/lib/concentrated-liquidity";
+import { formatPrice, priceUnit } from "@/lib/concentrated-liquidity";
+import type { LiquidityBin, PairToken, TickRange } from "@/lib/concentrated-liquidity";
 import {
   activePreset,
   defaultRange,
@@ -25,10 +21,8 @@ import {
   rangeEdgePrice,
   rangeWithPrice,
   stepRangeEdge,
-  type RangeEdge,
-  type RangePool,
-  type RangePreset,
 } from "@/lib/price-range-core";
+import type { RangeEdge, RangePool, RangePreset } from "@/lib/price-range-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -67,8 +61,12 @@ export function usePriceRange({
   const [inner, setInner] = useState<TickRange>(() => defaultValue ?? defaultRange(pool, invert));
   const range = value ?? inner;
   const setRange = (next: TickRange | undefined) => {
-    if (!next) return;
-    if (value === undefined) setInner(next);
+    if (!next) {
+      return;
+    }
+    if (value === undefined) {
+      setInner(next);
+    }
     onValueChange?.(next);
   };
   return {
@@ -79,9 +77,11 @@ export function usePriceRange({
     priceOf: (edge: RangeEdge) => rangeEdgePrice(range, edge, pool, invert),
     isPreset: (preset: RangePreset) => activePreset([preset], range, pool, invert) !== undefined,
     /** Set an edge from a typed price in the displayed direction. */
-    setPrice: (edge: RangeEdge, price: number) => setRange(rangeWithPrice(range, edge, price, pool, invert)),
+    setPrice: (edge: RangeEdge, price: number) =>
+      setRange(rangeWithPrice(range, edge, price, pool, invert)),
     /** Move an edge one tick spacing up (+1) or down (−1) in displayed price. */
-    step: (edge: RangeEdge, direction: 1 | -1) => setRange(stepRangeEdge(range, edge, direction, pool, invert)),
+    step: (edge: RangeEdge, direction: 1 | -1) =>
+      setRange(stepRangeEdge(range, edge, direction, pool, invert)),
     applyPreset: (preset: RangePreset) => setRange(presetRange(preset, pool, invert)),
   };
 }
@@ -93,7 +93,7 @@ export type PriceRangeProps = {
   /** Current tick, spacing and decimals. Leave out while it loads: the panel shows a skeleton. */
   pool?: RangePool;
   /** Liquidity bins for the chart, from `getLiquidityBins`. Leave out while they load: the chart shows a skeleton. */
-  bins?: readonly LiquidityBin[];
+  bins?: ReadonlyArray<LiquidityBin>;
   /** Show the liquidity chart. Turn off for a compact form. */
   showChart?: boolean;
   token0: PairToken;
@@ -107,7 +107,7 @@ export type PriceRangeProps = {
   defaultInvert?: boolean;
   onInvertChange?: (invert: boolean) => void;
   /** Preset options. Defaults depend on the tick spacing. Pass `[]` to hide. */
-  presets?: RangePreset[];
+  presets?: Array<RangePreset>;
   title?: ReactNode;
   locale?: string;
   className?: string;
@@ -121,10 +121,20 @@ export type PriceRangeProps = {
  */
 export function PriceRange({ pool, className, ...props }: PriceRangeProps) {
   return (
-    <Skeleton data={pool} sample={samplePool} label="Loading pool" className={cn("w-full", className)}>
+    <Skeleton
+      data={pool}
+      sample={samplePool}
+      label="Loading pool"
+      className={cn("w-full", className)}
+    >
       {(p) => (
         // A new instance once the real pool lands, so the range starts from its price.
-        <PriceRangeView key={p === samplePool ? "sample" : "pool"} {...props} pool={p} loadingPool={p === samplePool} />
+        <PriceRangeView
+          key={p === samplePool ? "sample" : "pool"}
+          {...props}
+          pool={p}
+          loadingPool={p === samplePool}
+        />
       )}
     </Skeleton>
   );
@@ -151,12 +161,15 @@ function PriceRangeView({
   const [innerInvert, setInnerInvert] = useState(defaultInvert);
   const invert = invertProp ?? innerInvert;
   const setInvert = (next: boolean) => {
-    if (invertProp === undefined) setInnerInvert(next);
+    if (invertProp === undefined) {
+      setInnerInvert(next);
+    }
     onInvertChange?.(next);
   };
   const state = usePriceRange({ pool, value, defaultValue, onValueChange, invert });
   const unit = priceUnit(token0, token1, invert);
-  const single = state.depositMode === "both" ? undefined : state.depositMode === "token0" ? token0 : token1;
+  const single =
+    state.depositMode === "both" ? undefined : state.depositMode === "token0" ? token0 : token1;
   const preset = activePreset(presets, state.range, pool, invert);
 
   return (
@@ -164,7 +177,10 @@ function PriceRangeView({
       data-slot="price-range"
       data-deposit-mode={state.depositMode}
       data-full-range={state.isFullRange || undefined}
-      className={cn("flex w-full flex-col gap-4 rounded-xl border bg-card p-4 text-card-foreground", className)}
+      className={cn(
+        "flex w-full flex-col gap-4 rounded-xl border bg-card p-4 text-card-foreground",
+        className,
+      )}
     >
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-semibold">{title}</h3>
@@ -180,7 +196,10 @@ function PriceRangeView({
 
       <p className="-mt-2 text-sm text-muted-foreground">
         Current price:{" "}
-        <span className="font-medium text-foreground tabular-nums">{formatPrice(state.currentPrice, { locale })}</span> {unit}
+        <span className="font-medium text-foreground tabular-nums">
+          {formatPrice(state.currentPrice, { locale })}
+        </span>{" "}
+        {unit}
       </p>
 
       {showChart && (
@@ -202,7 +221,9 @@ function PriceRangeView({
           value={preset?.label ?? null}
           onValueChange={(label) => {
             const next = presets.find((p) => p.label === label);
-            if (next) state.applyPreset(next);
+            if (next) {
+              state.applyPreset(next);
+            }
           }}
           className="flex w-full flex-wrap"
         >
@@ -233,7 +254,8 @@ function PriceRangeView({
       {single && (
         <p role="status" className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
           The price is outside this range, so the position takes only{" "}
-          <span className="font-medium text-foreground">{single.symbol}</span> and earns no fees until the price moves into it.
+          <span className="font-medium text-foreground">{single.symbol}</span> and earns no fees
+          until the price moves into it.
         </p>
       )}
       {state.isFullRange && (
@@ -276,7 +298,9 @@ function PriceField({
     }
     const parsed = parsePriceInput(draft);
     setDraft(undefined);
-    if (parsed !== undefined) onCommit(parsed);
+    if (parsed !== undefined) {
+      onCommit(parsed);
+    }
   };
   const change = formatEdgeChange(price, current);
 
@@ -308,7 +332,9 @@ function PriceField({
           onValueChange={(next) => setDraft(next)}
           onBlur={commit}
           onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Enter") {
+              e.currentTarget.blur();
+            }
             if (e.key === "Escape") {
               cancelled.current = true;
               e.currentTarget.blur();

@@ -84,7 +84,10 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   const { address, chainId } = useConnection();
   const { data: nonce } = useQuery({
     queryKey: ["siwe-nonce", address],
-    queryFn: () => fetch("/api/siwe/nonce").then((r) => r.json()).then((d) => d.nonce as string),
+    queryFn: () =>
+      fetch("/api/siwe/nonce")
+        .then((r) => r.json())
+        .then((d) => d.nonce as string),
     enabled: Boolean(address),
     staleTime: Infinity,
   });
@@ -102,7 +105,7 @@ export function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
             statement: "Sign in to Example. This won't cost any gas.",
           })
         : undefined,
-    [address, chainId, nonce]
+    [address, chainId, nonce],
   );
 
   return (
@@ -131,12 +134,12 @@ Build the message with `useMemo`. `createSiweMessage` stamps the current time, s
 
 ## Checklist
 
-| Check | Why |
-| --- | --- |
-| The nonce comes from the server and works once | A captured signature can't be replayed. |
-| The server checks `domain` | A signature made for another site is rejected. |
-| The session cookie is `httpOnly`, `Secure` and `SameSite` | Scripts can't read it, and other sites can't send it. |
-| Sign out when the wallet's address changes or disconnects | The session should match the wallet in the browser. Compare `useConnection().address` with the session's address. |
-| Authorize on the session's address, never on one from the request body | The request body is whatever the caller sends. |
+| Check                                                                  | Why                                                                                                               |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| The nonce comes from the server and works once                         | A captured signature can't be replayed.                                                                           |
+| The server checks `domain`                                             | A signature made for another site is rejected.                                                                    |
+| The session cookie is `httpOnly`, `Secure` and `SameSite`              | Scripts can't read it, and other sites can't send it.                                                             |
+| Sign out when the wallet's address changes or disconnects              | The session should match the wallet in the browser. Compare `useConnection().address` with the session's address. |
+| Authorize on the session's address, never on one from the request body | The request body is whatever the caller sends.                                                                    |
 
 Signing in doesn't authorize transactions. The wallet still confirms each one.

@@ -1,12 +1,15 @@
-import { getBlockNumber, getContractEvents, watchContractEvent, type Config } from "@wagmi/core";
+import { getBlockNumber, getContractEvents, watchContractEvent } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import { hashFn } from "@wagmi/core/query";
-import { isAddress, type Abi, type Address, type Log } from "viem";
+import { isAddress } from "viem";
+import type { Abi, Address, Log } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { truncateAddress } from "@/lib/0xui-utils";
 
 export type FeedEvent = Log & {
   eventName?: string;
-  args?: Record<string, unknown> | readonly unknown[];
+  // oxlint-disable-next-line quality/no-unsafe-dictionary-type -- decoded args depend on the ABI you pass
+  args?: Record<string, unknown> | ReadonlyArray<unknown>;
 };
 
 export type EventFeedFilter = {
@@ -15,6 +18,7 @@ export type EventFeedFilter = {
   /** Event to follow. Omit for every event in the ABI. */
   eventName?: string;
   /** Indexed-argument filter, e.g. `{ to: myAddress }`. */
+  // oxlint-disable-next-line quality/no-unsafe-dictionary-type -- decoded args depend on the ABI you pass
   args?: Record<string, unknown>;
   chainId?: number;
 };
@@ -30,13 +34,15 @@ function newestFirst(a: FeedEvent, b: FeedEvent) {
 }
 
 /** Events from several sources, de-duplicated, newest first, at most `max`. */
-export function mergeFeedEvents(sources: readonly (readonly FeedEvent[])[], max: number) {
+export function mergeFeedEvents(sources: ReadonlyArray<ReadonlyArray<FeedEvent>>, max: number) {
   const seen = new Set<string>();
   return sources
     .flat()
     .filter((log) => {
       const id = feedEventId(log);
-      if (seen.has(id)) return false;
+      if (seen.has(id)) {
+        return false;
+      }
       seen.add(id);
       return true;
     })
@@ -46,16 +52,28 @@ export function mergeFeedEvents(sources: readonly (readonly FeedEvent[])[], max:
 
 /** Short display text for an event argument. */
 export function formatEventArg(value: unknown): string {
-  if (typeof value === "bigint") return value.toLocaleString();
-  if (typeof value === "string" && isAddress(value)) return truncateAddress(value);
-  if (typeof value === "string" && value.startsWith("0x") && value.length > 20)
+  if (typeof value === "bigint") {
+    return value.toLocaleString();
+  }
+  if (typeof value === "string" && isAddress(value)) {
+    return truncateAddress(value);
+  }
+  if (typeof value === "string" && value.startsWith("0x") && value.length > 20) {
     return truncateAddress(value, { start: 10, end: 6 });
-  if (Array.isArray(value)) return `[${value.map(formatEventArg).join(", ")}]`;
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(formatEventArg).join(", ")}]`;
+  }
   return String(value);
 }
 
 /** A string that changes only when the filter does, for memo keys. Arguments may be bigints. */
-export function eventFilterKey({ address, eventName, args, chainId }: Omit<EventFeedFilter, "abi">) {
+export function eventFilterKey({
+  address,
+  eventName,
+  args,
+  chainId,
+}: Omit<EventFeedFilter, "abi">) {
   return hashFn([address, eventName, args, chainId]);
 }
 
@@ -82,8 +100,8 @@ export function eventHistoryQueryOptions(
         chainId,
         fromBlock: latest - BigInt(blocks) + 1n,
         toBlock: latest,
-      } as never);
-      return logs as FeedEvent[];
+      });
+      return logs as Array<FeedEvent>;
     },
     enabled: blocks > 0,
     staleTime: Number.POSITIVE_INFINITY,
@@ -93,7 +111,7 @@ export function eventHistoryQueryOptions(
 
 export type EventWatcherState = {
   /** Events received since watching started, latest batch first. */
-  events: readonly FeedEvent[];
+  events: ReadonlyArray<FeedEvent>;
 };
 
 export type EventWatcher = {
@@ -118,11 +136,11 @@ export function createEventWatcher(
       eventName: filter.eventName,
       args: filter.args,
       chainId: filter.chainId,
-      onLogs: (logs: readonly Log[]) =>
+      onLogs: (logs: ReadonlyArray<Log>) =>
         store.set(({ events }) => ({
-          events: [...(logs as FeedEvent[]), ...events].slice(0, keep),
+          events: [...logs, ...events].slice(0, keep),
         })),
-    } as never),
+    }),
   );
   return {
     get: store.get,

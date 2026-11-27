@@ -1,22 +1,15 @@
 // Docs: https://0xui.io/components/token-input.md
-import { useId, type ReactNode } from "react";
+import { useId } from "react";
+import type { ReactNode } from "react";
 import { formatUnits } from "viem";
-import {
-  AmountInput,
-  getAmountState,
-  type AmountState,
-} from "@/components/amount-input";
+import { AmountInput, getAmountState } from "@/components/amount-input";
+import type { AmountState } from "@/components/amount-input";
 import { useTokenBalance } from "@/components/balance";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { TokenAmount, formatFiat } from "@/components/token-amount";
-import {
-  TokenSelect,
-  getTokenPrice,
-  isNativeToken,
-  type Token,
-  type TokenPrices,
-} from "@/components/token-select";
+import { TokenSelect, getTokenPrice, isNativeToken } from "@/components/token-select";
+import type { Token, TokenPrices } from "@/components/token-select";
 import { cn } from "@/lib/utils";
 
 export type TokenInputState = AmountState & {
@@ -36,9 +29,9 @@ export type TokenInputProps = {
   token?: Token;
   onTokenChange?: (token: Token) => void;
   /** Tokens for the picker. Omit to lock the token. */
-  tokens?: readonly Token[];
+  tokens?: ReadonlyArray<Token>;
   /** Symbols or addresses shown as quick picks in the token picker. */
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Price of one token, for the fiat line. Defaults to the token's entry in `prices`. */
   price?: number;
   /** Prices keyed by `chainId:address`, address or symbol: the fiat line, and sorting held tokens in the picker by value. */
@@ -113,7 +106,7 @@ export function TokenInput({
       className={cn(
         "flex flex-col gap-2 rounded-2xl border bg-muted/30 p-4 focus-within:border-ring",
         current.insufficient && "border-destructive/60",
-        className
+        className,
       )}
     >
       {label && (

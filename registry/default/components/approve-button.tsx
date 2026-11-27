@@ -1,9 +1,11 @@
 // Docs: https://0xui.io/components/approve-button.md
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { erc20Abi, formatUnits, type Address } from "viem";
+import { erc20Abi, formatUnits } from "viem";
+import type { Address } from "viem";
 import { useChainId, useConfig, useConnection } from "wagmi";
-import { TransactionButton, type TransactionButtonProps } from "@/components/transaction-button";
+import { TransactionButton } from "@/components/transaction-button";
+import type { TransactionButtonProps } from "@/components/transaction-button";
 import {
   allowanceQueryOptions,
   nextApproval,
@@ -88,7 +90,9 @@ export function ApproveButton({
     unlimited,
     resetFirst,
   });
-  if (step.kind === "none") return <>{children}</>;
+  if (step.kind === "none") {
+    return <>{children}</>;
+  }
 
   const checking = status === "connected" && allowance.isPending;
   const reset = step.kind === "reset";
@@ -120,9 +124,9 @@ export function ApproveButton({
       }
       successLabel={reset ? "Approval reset" : "Approved"}
       resetAfter={false}
-      onSuccess={async (receipt) => {
-        await allowance.refetch();
-        onSuccess?.(receipt);
+      onSuccess={(receipt) => {
+        // `refetch` resolves even when the read fails, so this never rejects.
+        void allowance.refetch().then(() => onSuccess?.(receipt));
       }}
     >
       {reset ? `Reset ${token.symbol} approval` : `Approve ${token.symbol}`}

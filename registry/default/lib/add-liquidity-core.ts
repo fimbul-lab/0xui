@@ -1,4 +1,5 @@
-import { formatUnits, type Address, type Hex } from "viem";
+import { formatUnits } from "viem";
+import type { Address, Hex } from "viem";
 import { parseAmount } from "@/lib/0xui-utils";
 import {
   displayPrice,
@@ -8,13 +9,12 @@ import {
   getSqrtRatioAtTick,
   isFullRange,
   priceUnit,
-  type DepositMode,
-  type PoolState,
-  type TickRange,
 } from "@/lib/concentrated-liquidity";
+import type { DepositMode, PoolState, TickRange } from "@/lib/concentrated-liquidity";
 import { formatPair } from "@/lib/liquidity-utils";
 import type { TokenInfo } from "@/lib/token-list";
-import { withSlippage, type MintRequest } from "@/lib/v3-position-manager";
+import { withSlippage } from "@/lib/v3-position-manager";
+import type { MintRequest } from "@/lib/v3-position-manager";
 
 export type DepositSide = "token0" | "token1";
 
@@ -63,13 +63,17 @@ export function getDepositAmounts({
       ? getDependentAmount({ sqrtPriceX96, ...range, amount: typedAmount, token: typed.side })
       : undefined;
 
-  const text = { [typed.side]: typedText, [other]: dependent ? formatUnits(dependent, tokens[other].decimals) : "" };
-  const amount = { [typed.side]: typedAmount ?? 0n, [other]: dependent ?? 0n };
+  const dependentText = dependent ? formatUnits(dependent, tokens[other].decimals) : "";
+  const pair = <T>(typedValue: T, otherValue: T): Record<DepositSide, T> =>
+    typed.side === "token0"
+      ? { token0: typedValue, token1: otherValue }
+      : { token0: otherValue, token1: typedValue };
+  const amount = pair(typedAmount ?? 0n, dependent ?? 0n);
   return {
     mode,
-    text: text as Record<DepositSide, string>,
-    amount0: amount.token0!,
-    amount1: amount.token1!,
+    text: pair(typedText, dependentText),
+    amount0: amount.token0,
+    amount1: amount.token1,
   };
 }
 
@@ -78,8 +82,12 @@ export function shortToken<T>(
   [token0, amount0, balance0]: [T, bigint, bigint | undefined],
   [token1, amount1, balance1]: [T, bigint, bigint | undefined],
 ) {
-  if (balance0 !== undefined && amount0 > balance0) return token0;
-  if (balance1 !== undefined && amount1 > balance1) return token1;
+  if (balance0 !== undefined && amount0 > balance0) {
+    return token0;
+  }
+  if (balance1 !== undefined && amount1 > balance1) {
+    return token1;
+  }
   return undefined;
 }
 
@@ -107,7 +115,9 @@ export function mintRequest<T extends Pick<TokenInfo, "address" | "symbol">>({
   slippageBps: number;
   recipient: Address | undefined;
 }): MintRequest<T> | undefined {
-  if (!recipient || (amount0 === 0n && amount1 === 0n)) return undefined;
+  if (!recipient || (amount0 === 0n && amount1 === 0n)) {
+    return undefined;
+  }
   return {
     token0,
     token1,
@@ -127,7 +137,9 @@ export function mintRequest<T extends Pick<TokenInfo, "address" | "symbol">>({
  * deadline, and rebuild it every half deadline so it never goes stale.
  * Any TanStack adapter takes them.
  */
-export function mintTransactionQueryOptions<T extends Pick<TokenInfo, "chainId" | "address" | "symbol">>({
+export function mintTransactionQueryOptions<
+  T extends Pick<TokenInfo, "chainId" | "address" | "symbol">,
+>({
   getTransaction,
   request,
   deadlineSeconds,
@@ -153,8 +165,16 @@ export function mintTransactionQueryOptions<T extends Pick<TokenInfo, "chainId" 
       request?.amount1Min.toString(),
       request?.recipient,
     ] as const,
-    queryFn: () =>
-      getTransaction({ ...request!, deadline: BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds) }),
+    queryFn: () => {
+      // `enabled` keeps the query from running without a request.
+      if (!request) {
+        throw new Error("No mint request to build a transaction for.");
+      }
+      return getTransaction({
+        ...request,
+        deadline: BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds),
+      });
+    },
     enabled: Boolean(request),
     staleTime: half,
     refetchInterval: half,
@@ -182,11 +202,21 @@ export function addLiquidityBlocker({
   failed: boolean;
   ready: boolean;
 }) {
-  if (!connected) return undefined;
-  if (amount0 === 0n && amount1 === 0n) return "Enter an amount";
-  if (short) return `Insufficient ${short.symbol} balance`;
-  if (failed) return "Can't build transaction";
-  if (!ready) return "Preparing…";
+  if (!connected) {
+    return undefined;
+  }
+  if (amount0 === 0n && amount1 === 0n) {
+    return "Enter an amount";
+  }
+  if (short) {
+    return `Insufficient ${short.symbol} balance`;
+  }
+  if (failed) {
+    return "Can't build transaction";
+  }
+  if (!ready) {
+    return "Preparing…";
+  }
   return undefined;
 }
 
@@ -218,10 +248,14 @@ export function addLiquidityConfirmText({
 }) {
   const on = chainName ? ` on ${chainName}` : "";
   const deposit = `Deposits ${formatPair(amount0, amount1, token0, token1)} from your wallet as liquidity`;
-  if (isFullRange(range.tickLower, range.tickUpper, pool.tickSpacing)) return `${deposit} over the full price range${on}`;
-  const [a, b] = [displayPrice(range.tickLower, pool, invert), displayPrice(range.tickUpper, pool, invert)].sort(
-    (m, n) => m - n,
-  );
-  const between = `${formatPrice(a!, { locale })} and ${formatPrice(b!, { locale })} ${priceUnit(token0, token1, invert)}`;
+  if (isFullRange(range.tickLower, range.tickUpper, pool.tickSpacing)) {
+    return `${deposit} over the full price range${on}`;
+  }
+  const edges = [
+    displayPrice(range.tickLower, pool, invert),
+    displayPrice(range.tickUpper, pool, invert),
+  ];
+  const [a, b] = [Math.min(...edges), Math.max(...edges)];
+  const between = `${formatPrice(a, { locale })} and ${formatPrice(b, { locale })} ${priceUnit(token0, token1, invert)}`;
   return `${deposit} between ${between}${on}`;
 }

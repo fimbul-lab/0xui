@@ -42,11 +42,7 @@ export function AddressAvatar({
   const image = src ?? avatar;
 
   return (
-    <Avatar
-      aria-hidden
-      className={cn("shrink-0", className)}
-      style={{ width: size, height: size }}
-    >
+    <Avatar aria-hidden className={cn("shrink-0", className)} style={{ width: size, height: size }}>
       {image && <AvatarImage src={image} alt="" />}
       <AvatarFallback style={{ background: addressGradient(address) }} />
     </Avatar>

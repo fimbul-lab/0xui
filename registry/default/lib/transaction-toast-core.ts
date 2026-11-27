@@ -1,5 +1,7 @@
-import { toast, type ToastAction, type Toaster, type ToastOptions } from "@ui-sdk/core/toast";
-import { getPublicClient, type Config } from "@wagmi/core";
+import { toast } from "@ui-sdk/core/toast";
+import type { ToastAction, ToastOptions, ToastRegionOptions } from "@ui-sdk/core/toast";
+import { getPublicClient } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Hash, TransactionReceipt } from "viem";
 import { getExplorerUrl } from "@/lib/0xui-utils";
 
@@ -12,7 +14,7 @@ export type TransactionToastOptions<Content = unknown> = {
   titles?: { pending?: string; success?: string; reverted?: string; error?: string };
   onConfirmed?: (receipt: TransactionReceipt) => void;
   /** Queue to show it in. Defaults to the shared `toast()` queue that `OverlayHost` renders. */
-  toaster?: Toaster<any>;
+  toaster?: ToastRegionOptions["toaster"];
 };
 
 /**
@@ -26,7 +28,7 @@ export function toastTransaction<Content>(
   options: TransactionToastOptions<Content> = {},
 ): string {
   const { chainId, description, titles = {}, onConfirmed } = options;
-  const toaster: Toaster<any> = options.toaster ?? toast;
+  const toaster: NonNullable<ToastRegionOptions["toaster"]> = options.toaster ?? toast;
   const client = getPublicClient(config, { chainId });
   const url = getExplorerUrl(client?.chain, { tx: hash });
   // Stays open on press, so the toast keeps tracking while the explorer opens.
@@ -43,11 +45,13 @@ export function toastTransaction<Content>(
   // A toast closed while pending comes back for the outcome.
   const settle = (next: Omit<ToastOptions, "id">) => {
     const full = { description, action, ...next };
-    if (!toaster.update(id, full)) toaster({ ...full, id });
+    if (!toaster.update(id, full)) {
+      toaster({ ...full, id });
+    }
   };
 
   if (!client) {
-    settle({ type: "error", title: titles.error ?? "Couldn't track transaction", duration: 8_000 });
+    settle({ type: "error", title: titles.error ?? "Couldn't track transaction", duration: 8000 });
     return id;
   }
 
@@ -58,7 +62,7 @@ export function toastTransaction<Content>(
         settle({
           type: "success",
           title: titles.success ?? "Transaction confirmed",
-          duration: 6_000,
+          duration: 6000,
         });
         onConfirmed?.(receipt);
       } else {

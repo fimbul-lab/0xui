@@ -1,15 +1,19 @@
 // Docs: https://0xui.io/blocks/swap.md
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownUpIcon } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { formatUnits, type Hash, type TransactionReceipt } from "viem";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { formatUnits } from "viem";
+import type { Hash, TransactionReceipt } from "viem";
 import { useConfig, useConnection } from "wagmi";
 import { ApproveButton } from "@/components/approve-button";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
-import { TokenInput, type TokenInputState } from "@/components/token-input";
+import { TokenInput } from "@/components/token-input";
+import type { TokenInputState } from "@/components/token-input";
 import type { Token, TokenPrices } from "@/components/token-select";
 import { TransactionButton } from "@/components/transaction-button";
+import { errorMessage } from "@/lib/0xui-utils";
 import {
   formatRate,
   isSameToken,
@@ -18,8 +22,8 @@ import {
   swapConfirmText,
   swapNeedsApproval,
   swapQuoteQueryOptions,
-  type GetQuote,
 } from "@/lib/swap-core";
+import type { GetQuote } from "@/lib/swap-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -79,12 +83,12 @@ export function useSwapQuote({
 
 export type SwapProps = {
   /** Tokens for both pickers. */
-  tokens: readonly Token[];
+  tokens: ReadonlyArray<Token>;
   /** Fetch a quote. Call your aggregator or router here. */
   getQuote: GetQuote;
   defaultSellToken?: Token;
   defaultBuyToken?: Token;
-  popular?: readonly string[];
+  popular?: ReadonlyArray<string>;
   /** Prices keyed by `chainId:address`, address or symbol, for fiat lines. */
   prices?: TokenPrices;
   onSubmitted?: (hash: Hash) => void;
@@ -136,7 +140,9 @@ export function Swap({
   const pick = (side: "sell" | "buy") => (token: Token) => {
     const other = side === "sell" ? buyToken : sellToken;
     // Picking the other side's token swaps them.
-    if (isSameToken(other, token)) return flip();
+    if (isSameToken(other, token)) {
+      return flip();
+    }
     if (side === "sell") {
       setSellToken(token);
       setSellText("");
@@ -163,7 +169,7 @@ export function Swap({
       ? formatRate(
           { token: sellToken, amount: sellAmount },
           { token: buyToken, amount: quote.buyAmount },
-          { invert: invertRate }
+          { invert: invertRate },
         )
       : undefined;
   const impact = quote?.priceImpact;
@@ -238,10 +244,13 @@ export function Swap({
         />
       </div>
 
-      <div className="flex min-h-5 items-center justify-between gap-2 text-sm text-muted-foreground" aria-live="polite">
+      <div
+        className="flex min-h-5 items-center justify-between gap-2 text-sm text-muted-foreground"
+        aria-live="polite"
+      >
         {error ? (
           <span role="alert" className="text-destructive">
-            {(error as { shortMessage?: string }).shortMessage ?? error.message}
+            {errorMessage(error)}
           </span>
         ) : rate ? (
           <Button
@@ -270,10 +279,10 @@ export function Swap({
         )}
       </div>
 
-      {needsApproval ? (
+      {needsApproval && quote?.spender ? (
         <ApproveButton
           token={sellToken}
-          spender={quote!.spender!}
+          spender={quote.spender}
           amount={sellAmount}
           chainId={sellToken.chainId}
           className="w-full [&>button]:h-11 [&>button]:w-full"

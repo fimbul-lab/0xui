@@ -1,11 +1,12 @@
 import { encodeFunctionData, erc20Abi, parseUnits } from "viem";
-import { BatchTransaction, type BatchCall } from "@/components/batch-transaction";
+import { BatchTransaction } from "@/components/batch-transaction";
+import type { BatchCall } from "@/components/batch-transaction";
 
 const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 // Uniswap's universal router.
 const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af";
 
-const calls: BatchCall[] = [
+const calls: Array<BatchCall> = [
   {
     label: "Approve 100 USDC",
     to: usdc,

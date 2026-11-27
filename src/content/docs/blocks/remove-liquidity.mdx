@@ -48,16 +48,16 @@ Leave out `position` and `pool` while it loads. The block shows a [skullet](http
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `position` | `Position<Token>` | — | The position, with `fees0` / `fees1`. Leave out while loading. |
-| `pool` | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | — | The position's pool. Leave out while loading. |
-| `getTransaction` | `(request: RemoveRequest) => tx` | — | `v3Remove({ positionManager, weth })` for Uniswap v3. |
-| `defaultPercent` | `number` | `50` | Starting share. |
-| `slippageBps` | `number` | `50` | Starting slippage. The user can change it. |
-| `deadlineSeconds` | `number` | `1200` | How long the transaction stays valid. |
-| `prices` / `currency` | `TokenPrices` / `string` | — / `"USD"` | Fiat total. |
-| `invert` | `boolean` | `false` | Quote in token0. |
-| `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)` | — | Transaction callbacks. |
-| `title` | `ReactNode` | `"Remove liquidity"` | Heading. |
-| `locale` | `string` | runtime locale | Number formatting locale. |
+| Prop                        | Type                                                         | Default              | Description                                                    |
+| --------------------------- | ------------------------------------------------------------ | -------------------- | -------------------------------------------------------------- |
+| `position`                  | `Position<Token>`                                            | —                    | The position, with `fees0` / `fees1`. Leave out while loading. |
+| `pool`                      | `{ tick, sqrtPriceX96?, tickSpacing, decimals0, decimals1 }` | —                    | The position's pool. Leave out while loading.                  |
+| `getTransaction`            | `(request: RemoveRequest) => tx`                             | —                    | `v3Remove({ positionManager, weth })` for Uniswap v3.          |
+| `defaultPercent`            | `number`                                                     | `50`                 | Starting share.                                                |
+| `slippageBps`               | `number`                                                     | `50`                 | Starting slippage. The user can change it.                     |
+| `deadlineSeconds`           | `number`                                                     | `1200`               | How long the transaction stays valid.                          |
+| `prices` / `currency`       | `TokenPrices` / `string`                                     | — / `"USD"`          | Fiat total.                                                    |
+| `invert`                    | `boolean`                                                    | `false`              | Quote in token0.                                               |
+| `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)`                                       | —                    | Transaction callbacks.                                         |
+| `title`                     | `ReactNode`                                                  | `"Remove liquidity"` | Heading.                                                       |
+| `locale`                    | `string`                                                     | runtime locale       | Number formatting locale.                                      |

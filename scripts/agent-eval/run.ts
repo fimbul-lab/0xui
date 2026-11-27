@@ -5,16 +5,39 @@ import { spawn } from "node:child_process";
 import { createReadStream, existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { requireAll, tasks, type Task } from "./tasks.ts";
+import { requireAll, tasks } from "./tasks.ts";
+import type { Task } from "./tasks.ts";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const ROOT = resolve(import.meta.dirname, "../..");
+
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject;
+type JsonObject = { [key: string]: JsonValue };
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return true;
+  }
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+  if (typeof value === "object") {
+    return Object.values(value).every(isJsonValue);
+  }
+  return false;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && isJsonValue(value);
+}
 
 type Options = {
-  tasks: string[];
+  tasks: Array<string>;
   model: string;
   keep: boolean;
   timeoutMin: number;
@@ -22,7 +45,7 @@ type Options = {
   out?: string;
 };
 
-function parseArgs(argv: string[]): Options {
+function parseArgs(argv: Array<string>): Options {
   const o: Options = {
     tasks: [],
     model: "claude-sonnet-5-5",
@@ -34,20 +57,30 @@ function parseArgs(argv: string[]): Options {
     const a = argv[i];
     const next = () => {
       const v = argv[++i];
-      if (v === undefined) throw new Error(`${a} needs a value`);
+      if (v === undefined) {
+        throw new Error(`${a} needs a value`);
+      }
       return v;
     };
-    if (a === "--") continue;
-    else if (a === "--task") o.tasks.push(...next().split(",").filter(Boolean));
-    else if (a === "--model") o.model = next();
-    else if (a === "--keep") o.keep = true;
-    else if (a === "--timeout") o.timeoutMin = Number(next());
-    else if (a === "--budget") o.budgetUsd = Number(next());
-    else if (a === "--out") o.out = resolve(next());
-    else
+    if (a === "--") {
+      continue;
+    } else if (a === "--task") {
+      o.tasks.push(...next().split(",").filter(Boolean));
+    } else if (a === "--model") {
+      o.model = next();
+    } else if (a === "--keep") {
+      o.keep = true;
+    } else if (a === "--timeout") {
+      o.timeoutMin = Number(next());
+    } else if (a === "--budget") {
+      o.budgetUsd = Number(next());
+    } else if (a === "--out") {
+      o.out = resolve(next());
+    } else {
       throw new Error(
         `Unknown flag ${a}. Flags: --task <id> --model <id> --keep --timeout <min> --budget <usd> --out <dir>`,
       );
+    }
   }
   return o;
 }
@@ -56,7 +89,7 @@ type RunResult = { code: number | null; output: string; timedOut: boolean };
 
 function run(
   cmd: string,
-  args: string[],
+  args: Array<string>,
   opts: {
     cwd: string;
     timeoutMs?: number;
@@ -76,7 +109,9 @@ function run(
     child.stdout.on("data", (d: Buffer) => {
       const s = d.toString();
       output += s;
-      if (!opts.onLine) return;
+      if (!opts.onLine) {
+        return;
+      }
       partial += s;
       const lines = partial.split("\n");
       partial = lines.pop() ?? "";
@@ -92,16 +127,19 @@ function run(
       : undefined;
     child.on("close", (code) => {
       clearTimeout(timer);
-      if (partial && opts.onLine) opts.onLine(partial);
+      if (partial && opts.onLine) {
+        opts.onLine(partial);
+      }
       done({ code, output, timedOut });
     });
   });
 }
 
-async function must(cmd: string, args: string[], cwd: string) {
+async function must(cmd: string, args: Array<string>, cwd: string) {
   const r = await run(cmd, args, { cwd });
-  if (r.code !== 0)
+  if (r.code !== 0) {
     throw new Error(`${cmd} ${args.join(" ")} failed (${r.code}):\n${r.output.slice(-4000)}`);
+  }
   return r.output;
 }
 
@@ -115,12 +153,16 @@ function serveRegistry(): Promise<{ url: string; close: () => void }> {
     res.writeHead(200, { "content-type": "application/json" });
     createReadStream(path).pipe(res);
   });
-  return new Promise((ok) =>
+  return new Promise((ok) => {
     server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address() as AddressInfo;
+      const address = server.address();
+      if (typeof address !== "object" || address === null) {
+        throw new Error("The registry server isn't listening on a TCP port.");
+      }
+      const { port } = address;
       ok({ url: `http://localhost:${port}/r/{name}.json`, close: () => server.close() });
-    }),
-  );
+    });
+  });
 }
 
 async function scaffold(work: string, registryUrl: string) {
@@ -146,12 +188,17 @@ async function scaffold(work: string, registryUrl: string) {
   );
   const app = join(work, "app");
   const configPath = join(app, "components.json");
-  const config = JSON.parse(await readFile(configPath, "utf8"));
+  const config: unknown = JSON.parse(await readFile(configPath, "utf8"));
+  if (!isJsonObject(config)) {
+    throw new Error(`${configPath} is not a JSON object.`);
+  }
   config.registries = { "@0xui": registryUrl };
   await writeFile(configPath, JSON.stringify(config, null, 2) + "\n");
   await mkdir(join(app, ".claude/skills/0xui"), { recursive: true });
   await cp(join(ROOT, "skills/0xui/SKILL.md"), join(app, ".claude/skills/0xui/SKILL.md"));
-  if (!existsSync(join(app, ".git"))) await must("git", ["init", "-q"], app);
+  if (!existsSync(join(app, ".git"))) {
+    await must("git", ["init", "-q"], app);
+  }
   await must("git", ["add", "-A"], app);
   await must(
     "git",
@@ -174,7 +221,7 @@ type Transcript = {
   toolCalls: number;
   tools: Record<string, number>;
   skillUsed: boolean;
-  shadcnAdds: string[];
+  shadcnAdds: Array<string>;
   costUsd?: number;
   durationMs?: number;
   turns?: number;
@@ -183,69 +230,124 @@ type Transcript = {
   finalMessage?: string;
 };
 
-type ContentBlock = { type: string; id?: string; name?: string; input?: Record<string, unknown> };
+type ContentBlock = { type: string; id?: string; name?: string; input?: JsonObject };
 
 function summarizeTool(b: ContentBlock) {
   const i = b.input ?? {};
   const detail = i.command ?? i.file_path ?? i.skill ?? i.url ?? i.pattern ?? "";
-  return `${b.name} ${String(detail).replace(/\s+/g, " ").slice(0, 120)}`;
+  return `${b.name} ${String(detail).replaceAll(/\s+/g, " ").slice(0, 120)}`;
 }
 
-function parseTranscript(lines: string[]): Transcript {
+/** One line of `claude -p --output-format stream-json`, or undefined when it isn't an object. */
+function parseEvent(line: string): JsonObject | undefined {
+  try {
+    const value: unknown = JSON.parse(line);
+    return isJsonObject(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The content blocks of an assistant event's message. */
+function contentBlocks(ev: JsonObject): Array<ContentBlock> {
+  const message = ev.message;
+  if (!isJsonObject(message) || !Array.isArray(message.content)) {
+    return [];
+  }
+  return message.content.flatMap((block: unknown) =>
+    isJsonObject(block) && typeof block.type === "string"
+      ? [
+          {
+            type: block.type,
+            id: typeof block.id === "string" ? block.id : undefined,
+            name: typeof block.name === "string" ? block.name : undefined,
+            input: isJsonObject(block.input) ? block.input : undefined,
+          },
+        ]
+      : [],
+  );
+}
+
+function parseTranscript(lines: Array<string>): Transcript {
   const t: Transcript = { toolCalls: 0, tools: {}, skillUsed: false, shadcnAdds: [] };
   const seen = new Set<string>();
   for (const line of lines) {
-    let ev: { type?: string; message?: { content?: ContentBlock[] }; [k: string]: unknown };
-    try {
-      ev = JSON.parse(line);
-    } catch {
+    const ev = parseEvent(line);
+    if (!ev) {
       continue;
     }
     if (ev.type === "assistant") {
-      for (const b of ev.message?.content ?? []) {
-        if (b.type !== "tool_use" || !b.name || (b.id && seen.has(b.id))) continue;
-        if (b.id) seen.add(b.id);
+      for (const b of contentBlocks(ev)) {
+        if (b.type !== "tool_use" || !b.name || (b.id && seen.has(b.id))) {
+          continue;
+        }
+        if (b.id) {
+          seen.add(b.id);
+        }
         t.toolCalls++;
         t.tools[b.name] = (t.tools[b.name] ?? 0) + 1;
         const input = JSON.stringify(b.input ?? {});
-        if ((b.name === "Skill" && input.includes("0xui")) || input.includes(".claude/skills/0xui"))
+        if (
+          (b.name === "Skill" && input.includes("0xui")) ||
+          input.includes(".claude/skills/0xui")
+        ) {
           t.skillUsed = true;
+        }
         const cmd = String(b.input?.command ?? "");
-        if (b.name === "Bash" && /shadcn\S*\s+add\b/.test(cmd)) t.shadcnAdds.push(cmd);
+        if (b.name === "Bash" && /shadcn\S*\s+add\b/.test(cmd)) {
+          t.shadcnAdds.push(cmd);
+        }
       }
     } else if (ev.type === "result") {
-      t.costUsd = ev.total_cost_usd as number | undefined;
-      t.durationMs = ev.duration_ms as number | undefined;
-      t.turns = ev.num_turns as number | undefined;
-      t.resultSubtype = ev.subtype as string | undefined;
-      t.isError = ev.is_error as boolean | undefined;
+      t.costUsd = typeof ev.total_cost_usd === "number" ? ev.total_cost_usd : undefined;
+      t.durationMs = typeof ev.duration_ms === "number" ? ev.duration_ms : undefined;
+      t.turns = typeof ev.num_turns === "number" ? ev.num_turns : undefined;
+      t.resultSubtype = typeof ev.subtype === "string" ? ev.subtype : undefined;
+      t.isError = typeof ev.is_error === "boolean" ? ev.is_error : undefined;
       t.finalMessage = typeof ev.result === "string" ? ev.result.slice(0, 2000) : undefined;
     }
   }
   return t;
 }
 
-async function listFiles(dir: string, base = dir): Promise<string[]> {
-  const out: string[] = [];
+async function listFiles(dir: string, base = dir): Promise<Array<string>> {
+  const out: Array<string> = [];
   for (const e of await readdir(dir, { withFileTypes: true })) {
-    if (e.name === "node_modules" || e.name === ".git" || e.name === "dist") continue;
+    if (e.name === "node_modules" || e.name === ".git" || e.name === "dist") {
+      continue;
+    }
     const p = join(dir, e.name);
-    if (e.isDirectory()) out.push(...(await listFiles(p, base)));
-    else out.push(relative(base, p));
+    if (e.isDirectory()) {
+      out.push(...(await listFiles(p, base)));
+    } else {
+      out.push(relative(base, p));
+    }
   }
   return out;
 }
 
-type Registry = Map<string, string[]>; // item name -> file paths relative to registry/default
+type Registry = Map<string, Array<string>>; // item name -> file paths relative to registry/default
 
 async function loadRegistry(): Promise<Registry> {
   // The source manifest: the built index leaves out the unlisted items.
-  const index = JSON.parse(await readFile(join(ROOT, "registry.json"), "utf8"));
+  const index: unknown = JSON.parse(await readFile(join(ROOT, "registry.json"), "utf8"));
+  if (!isJsonObject(index) || !Array.isArray(index.items)) {
+    throw new Error("registry.json has no items.");
+  }
+  const items: Array<unknown> = index.items;
   const reg: Registry = new Map();
-  for (const item of index.items as { name: string; files?: { path: string }[] }[]) {
+  for (const item of items) {
+    if (!isJsonObject(item) || typeof item.name !== "string") {
+      continue;
+    }
+    const files: Array<unknown> = Array.isArray(item.files) ? item.files : [];
     reg.set(
       item.name,
-      (item.files ?? []).map((f) => f.path.replace(/^registry\/[^/]+\//, "")),
+      files.flatMap((f) =>
+        isJsonObject(f) && typeof f.path === "string"
+          ? [f.path.replace(/^registry\/[^/]+\//, "")]
+          : [],
+      ),
     );
   }
   return reg;
@@ -263,11 +365,14 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
   const installedAt = (regPath: string) =>
     files.find((f) => f === regPath || f.endsWith("/" + regPath));
   const registryFiles = new Set<string>();
-  for (const paths of reg.values())
+  for (const paths of reg.values()) {
     for (const p of paths) {
       const at = installedAt(p);
-      if (at) registryFiles.add(at);
+      if (at) {
+        registryFiles.add(at);
+      }
     }
+  }
   const appCode = files.filter(
     (f) =>
       /\.(tsx?|jsx?)$/.test(f) &&
@@ -276,22 +381,34 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
       !registryFiles.has(f),
   );
   const sources = new Map<string, string>();
-  for (const f of appCode) sources.set(f, await readFile(join(app, f), "utf8"));
+  for (const f of appCode) {
+    sources.set(f, await readFile(join(app, f), "utf8"));
+  }
 
   const imported = new Set<string>();
   for (const [f, src] of sources) {
     for (const m of src.matchAll(IMPORT_RE)) {
       const spec = m[1];
+      if (spec === undefined) {
+        continue;
+      }
       let target: string | undefined;
-      if (spec.startsWith("@/")) target = "src/" + spec.slice(2);
-      else if (spec.startsWith(".")) target = relative(app, resolve(app, dirname(f), spec));
-      if (target) imported.add(stripExt(target));
+      if (spec.startsWith("@/")) {
+        target = "src/" + spec.slice(2);
+      } else if (spec.startsWith(".")) {
+        target = relative(app, resolve(app, dirname(f), spec));
+      }
+      if (target) {
+        imported.add(stripExt(target));
+      }
     }
   }
 
   const itemStatus = (name: string) => {
     const paths = reg.get(name);
-    if (!paths) return { installed: false, imported: false, note: "not in registry" };
+    if (!paths) {
+      return { installed: false, imported: false, note: "not in registry" };
+    }
     const at = paths.map(installedAt);
     const installed = at.every(Boolean);
     const isImported = at.some((p) => p && imported.has(stripExt(p)));
@@ -314,18 +431,25 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
     detail: passedGroup
       ? passedGroup.items.join(" + ")
       : groups
-          .map((g) => g.items.map((n) => `${n}: ${g.status[n].note}`).join(", "))
+          .map((g) =>
+            Object.entries(g.status)
+              .map(([n, s]) => `${n}: ${s.note}`)
+              .join(", "),
+          )
           .join(" | or | "),
   };
 
-  const scan = (rules: { pattern: string; why: string }[]) =>
+  const scan = (rules: Array<{ pattern: string; why: string }>) =>
     rules.flatMap((r) => {
       const re = new RegExp(r.pattern);
-      const hits: string[] = [];
-      for (const [f, src] of sources)
+      const hits: Array<string> = [];
+      for (const [f, src] of sources) {
         src.split("\n").forEach((line, i) => {
-          if (re.test(line)) hits.push(`${f}:${i + 1}`);
+          if (re.test(line)) {
+            hits.push(`${f}:${i + 1}`);
+          }
         });
+      }
       return [{ ...r, hits }];
     });
 
@@ -349,6 +473,8 @@ async function grade(app: string, task: Task, reg: Registry, buildLog: string) {
   };
 }
 
+const mark = (c: Check) => (c.pass ? "pass" : "FAIL");
+
 async function runTask(
   task: Task,
   template: string,
@@ -369,7 +495,7 @@ async function runTask(
   delete env.CLAUDECODE;
   delete env.CLAUDE_CODE_ENTRYPOINT;
   const started = Date.now();
-  const lines: string[] = [];
+  const lines: Array<string> = [];
   const agent = await run(
     "claude",
     [
@@ -398,19 +524,22 @@ async function runTask(
       timeoutMs: o.timeoutMin * 60_000,
       onLine: (line) => {
         lines.push(line);
-        try {
-          const ev = JSON.parse(line);
-          if (ev.type === "assistant")
-            for (const b of ev.message?.content ?? [])
-              if (b.type === "tool_use") console.log(`  [${task.id}] ${summarizeTool(b)}`);
-        } catch {}
+        const ev = parseEvent(line);
+        if (ev?.type === "assistant") {
+          for (const b of contentBlocks(ev)) {
+            if (b.type === "tool_use") {
+              console.log(`  [${task.id}] ${summarizeTool(b)}`);
+            }
+          }
+        }
       },
     },
   );
   const wallMs = Date.now() - started;
   await writeFile(join(logDir, "transcript.jsonl"), lines.join("\n") + "\n");
-  if (agent.code !== 0)
+  if (agent.code !== 0) {
     await writeFile(join(logDir, "agent-stderr.log"), agent.output.slice(-20_000));
+  }
   const transcript = parseTranscript(lines);
 
   console.log(
@@ -447,38 +576,41 @@ async function runTask(
     appDir: o.keep ? app : undefined,
   };
   await writeFile(join(logDir, "result.json"), JSON.stringify(result, null, 2) + "\n");
-  const mark = (c: Check) => (c.pass ? "pass" : "FAIL");
   console.log(
     `  [${task.id}] ${result.pass ? "PASS" : "FAIL"}: build ${mark(graded.checks.build)}, items ${mark(graded.checks.items)}, forbidden ${mark(graded.checks.forbid)}, provider ${mark(graded.checks.required)}`,
   );
-  if (!o.keep) await rm(dir, { recursive: true, force: true });
+  if (!o.keep) {
+    await rm(dir, { recursive: true, force: true });
+  }
   return result;
 }
 
 type Result = Awaited<ReturnType<typeof runTask>>;
 
-function summary(results: Result[], o: Options) {
-  const yn = (b: boolean) => (b ? "✅" : "❌");
-  const money = (n?: number) => (n === undefined ? "–" : `$${n.toFixed(2)}`);
-  const mins = (ms?: number) => (ms === undefined ? "–" : `${(ms / 60_000).toFixed(1)}m`);
+const yn = (b: boolean) => (b ? "✅" : "❌");
+const money = (n?: number) => (n === undefined ? "–" : `$${n.toFixed(2)}`);
+const mins = (ms?: number) => (ms === undefined ? "–" : `${(ms / 60_000).toFixed(1)}m`);
+
+function summary(results: Array<Result>, o: Options) {
   const rows = results.map((r) => {
     const c = r.checks;
     return `| ${r.task} | ${yn(r.pass)} | ${yn(c.build.pass)} | ${yn(c.items.pass)} | ${yn(c.forbid.pass)} | ${yn(c.required.pass)} | ${r.agent.skillUsed ? "yes" : "no"} | ${r.agent.toolCalls} | ${r.agent.turns ?? "–"} | ${money(r.agent.costUsd)} | ${mins(r.agent.wallMs)} |`;
   });
   const passed = results.filter((r) => r.pass).length;
-  const failures = results
-    .filter((r) => !r.pass)
-    .map((r) => {
-      const bad = Object.entries(r.checks)
-        .filter(([, c]) => !c.pass)
-        .map(([k, c]) => `- ${k}: ${k === "build" ? "see build.log" : c.detail}`);
-      const agentNote = r.agent.timedOut
-        ? ["- agent timed out"]
-        : r.agent.exitCode !== 0
-          ? [`- agent exited ${r.agent.exitCode}`]
-          : [];
-      return [`### ${r.task}`, ...agentNote, ...bad].join("\n");
-    });
+  const failures = results.flatMap((r) => {
+    if (r.pass) {
+      return [];
+    }
+    const bad = Object.entries(r.checks)
+      .filter(([, c]) => !c.pass)
+      .map(([k, c]) => `- ${k}: ${k === "build" ? "see build.log" : c.detail}`);
+    const agentNote = r.agent.timedOut
+      ? ["- agent timed out"]
+      : r.agent.exitCode !== 0
+        ? [`- agent exited ${r.agent.exitCode}`]
+        : [];
+    return [[`### ${r.task}`, ...agentNote, ...bad].join("\n")];
+  });
   return [
     `## 0xui agent eval: ${passed}/${results.length} passed`,
     "",
@@ -496,24 +628,30 @@ async function main() {
   const o = parseArgs(process.argv.slice(2));
   const selected = o.tasks.length ? tasks.filter((t) => o.tasks.includes(t.id)) : tasks;
   const unknown = o.tasks.filter((id) => !tasks.some((t) => t.id === id));
-  if (unknown.length)
+  if (unknown.length) {
     throw new Error(
       `Unknown task ${unknown.join(", ")}. Tasks: ${tasks.map((t) => t.id).join(", ")}`,
     );
-  if (!existsSync(join(ROOT, "public/r/registry.json")))
+  }
+  if (!existsSync(join(ROOT, "public/r/registry.json"))) {
     throw new Error("public/r is missing. Run `bun run registry:build` first.");
+  }
 
   const work = await mkdtemp(join(tmpdir(), "0xui-agent-eval-"));
   const out = o.out ?? join(work, "results");
   await mkdir(out, { recursive: true });
   const server = await serveRegistry();
-  const results: Result[] = [];
+  const results: Array<Result> = [];
   try {
     const reg = await loadRegistry();
     await mkdir(join(work, "template"));
     const template = await scaffold(join(work, "template"), server.url);
-    for (const task of selected) results.push(await runTask(task, template, work, out, o, reg));
-    if (!o.keep) await rm(join(work, "template"), { recursive: true, force: true });
+    for (const task of selected) {
+      results.push(await runTask(task, template, work, out, o, reg));
+    }
+    if (!o.keep) {
+      await rm(join(work, "template"), { recursive: true, force: true });
+    }
   } finally {
     server.close();
   }
@@ -529,7 +667,9 @@ async function main() {
   process.exitCode = results.every((r) => r.pass) ? 0 : 1;
 }
 
-main().catch((e) => {
-  console.error(e instanceof Error ? e.message : e);
+try {
+  await main();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
   process.exitCode = 2;
-});
+}

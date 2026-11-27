@@ -17,10 +17,18 @@ export type ShieldedTxStatusPhase =
 
 /** "about 2 min", "45 s", or undefined once there is nothing left to wait for. */
 export function formatWait(seconds: number) {
-  if (seconds <= 0) return undefined;
-  if (seconds >= 5_400) return `about ${Math.round(seconds / 3_600)} hours`;
-  if (seconds >= 3_000) return "about 1 hour";
-  if (seconds >= 90) return `about ${Math.ceil(seconds / 60)} min`;
+  if (seconds <= 0) {
+    return undefined;
+  }
+  if (seconds >= 5400) {
+    return `about ${Math.round(seconds / 3600)} hours`;
+  }
+  if (seconds >= 3000) {
+    return "about 1 hour";
+  }
+  if (seconds >= 90) {
+    return `about ${Math.ceil(seconds / 60)} min`;
+  }
   return `${seconds} s`;
 }
 
@@ -47,8 +55,12 @@ export function shieldedTxPhase({
         ? "restricted"
         : "standby";
   }
-  if (receiptFailed) return "error";
-  if (!receipt) return "pending";
+  if (receiptFailed) {
+    return "error";
+  }
+  if (!receipt) {
+    return "pending";
+  }
   return receipt.status === "reverted" ? "reverted" : "confirmed";
 }
 
@@ -58,7 +70,11 @@ export function shieldedTxPhase({
  */
 export function standbyBlockQueryOptions(
   config: Config,
-  { chainId, blockNumber, standby }: { chainId: number; blockNumber: bigint | undefined; standby: number | undefined }
+  {
+    chainId,
+    blockNumber,
+    standby,
+  }: { chainId: number; blockNumber: bigint | undefined; standby: number | undefined },
 ) {
   return {
     ...getBlockQueryOptions(config, {
@@ -73,19 +89,33 @@ export function standbyBlockQueryOptions(
 /** Unix ms when the standby period ends, from the block's timestamp (seconds). */
 export function spendableAt(blockTimestamp: bigint | undefined, standby: number | undefined) {
   return blockTimestamp !== undefined && standby !== undefined
-    ? (Number(blockTimestamp) + standby) * 1_000
+    ? (Number(blockTimestamp) + standby) * 1000
     : undefined;
 }
 
 /** What a shield is waiting for, as the end of a sentence: "waiting for a block". */
 export function shieldedStatusText(phase: ShieldedTxStatusPhase, secondsLeft?: number) {
-  if (phase === "pending") return "waiting for a block";
-  if (phase === "confirmed") return "updating private balance";
-  if (phase === "spendable") return "spendable";
-  if (phase === "restricted") return "restricted, it can only go back where it came from";
-  if (phase === "reverted") return "reverted, nothing was shielded";
-  if (phase === "error") return "couldn't be tracked";
-  if (secondsLeft === undefined) return "in its waiting period";
+  if (phase === "pending") {
+    return "waiting for a block";
+  }
+  if (phase === "confirmed") {
+    return "updating private balance";
+  }
+  if (phase === "spendable") {
+    return "spendable";
+  }
+  if (phase === "restricted") {
+    return "restricted, it can only go back where it came from";
+  }
+  if (phase === "reverted") {
+    return "reverted, nothing was shielded";
+  }
+  if (phase === "error") {
+    return "couldn't be tracked";
+  }
+  if (secondsLeft === undefined) {
+    return "in its waiting period";
+  }
   const wait = formatWait(secondsLeft);
   return wait ? `spendable in ${wait}` : "spendable any moment now";
 }
@@ -127,9 +157,9 @@ export function shieldedTxSteps({
   found: boolean;
   /** Seconds of standby left, when known. */
   secondsLeft: number | undefined;
-}): ShieldedTxStep[] {
+}): Array<ShieldedTxStep> {
   const failed = phase === "reverted" || phase === "error";
-  const steps: ShieldedTxStep[] = [
+  const steps: Array<ShieldedTxStep> = [
     { id: "submitted", label: "Submitted", state: "done" },
     {
       id: "included",
@@ -142,7 +172,9 @@ export function shieldedTxSteps({
       state: failed ? "failed" : blockNumber !== undefined || found ? "done" : "active",
     },
   ];
-  if (failed) return steps;
+  if (failed) {
+    return steps;
+  }
 
   const wait = secondsLeft === undefined ? undefined : formatWait(secondsLeft);
   steps.push(
@@ -173,7 +205,7 @@ export function shieldedTxSteps({
             : phase === "standby"
               ? "active"
               : "todo",
-    }
+    },
   );
   return steps;
 }

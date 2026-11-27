@@ -1,18 +1,15 @@
 // Docs: https://0xui.io/components/ens-profile.md
 import { useQuery } from "@tanstack/react-query";
-import { AtSignIcon, CodeXmlIcon, GlobeIcon, MailIcon, type LucideIcon } from "lucide-react";
+import { AtSignIcon, CodeXmlIcon, GlobeIcon, MailIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Skeleton } from "skullet/react";
 import type { Address as AddressType } from "viem";
 import { useConfig } from "wagmi";
 import { Address } from "@/components/address";
 import { AddressAvatar } from "@/components/address-avatar";
 import { ensAvatarQueryOptions } from "@/lib/identity";
-import {
-  ensProfileLinks,
-  ensProfilePhase,
-  ensProfileQueryOptions,
-  type EnsLinkKey,
-} from "@/lib/ens-profile-core";
+import { ensProfileLinks, ensProfilePhase, ensProfileQueryOptions } from "@/lib/ens-profile-core";
+import type { EnsLinkKey } from "@/lib/ens-profile-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -35,7 +32,7 @@ export function useEnsProfile({
 }: {
   address?: AddressType;
   name?: string;
-  records?: readonly string[];
+  records?: ReadonlyArray<string>;
 }) {
   const config = useConfig();
   const profile = useQuery(
@@ -76,7 +73,7 @@ export type EnsProfileProps = {
   /** Or look up this name directly. */
   name?: string;
   /** Text records to read. Known ones (url, com.twitter, com.github, email) render as links. */
-  records?: readonly string[];
+  records?: ReadonlyArray<string>;
   className?: string;
 };
 
@@ -91,7 +88,9 @@ export function EnsProfile({ address, name, records, className }: EnsProfileProp
   const links = ensProfileLinks(profile.records);
   // While loading, the header is drawn from a stand-in and measured into a skeleton.
   const shown =
-    phase === "loading" ? { ...sampleProfile, address: profile.address ?? sampleProfile.address } : profile;
+    phase === "loading"
+      ? { ...sampleProfile, address: profile.address ?? sampleProfile.address }
+      : profile;
 
   return (
     <article
@@ -102,11 +101,17 @@ export function EnsProfile({ address, name, records, className }: EnsProfileProp
       <Skeleton loading={phase === "loading"} label="Loading ENS profile">
         <div className="flex flex-col gap-4">
           <header className="flex items-center gap-3">
-            {shown.address && <AddressAvatar address={shown.address} src={shown.avatar} size={56} />}
+            {shown.address && (
+              <AddressAvatar address={shown.address} src={shown.avatar} size={56} />
+            )}
             <div className="flex min-w-0 flex-col gap-0.5">
               <h3 className="truncate text-lg font-semibold">{shown.name ?? "No ENS name"}</h3>
               {shown.address && (
-                <Address address={shown.address} ens={false} className="text-sm text-muted-foreground" />
+                <Address
+                  address={shown.address}
+                  ens={false}
+                  className="text-sm text-muted-foreground"
+                />
               )}
             </div>
           </header>

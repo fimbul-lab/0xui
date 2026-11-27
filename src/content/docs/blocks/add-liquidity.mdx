@@ -81,35 +81,35 @@ Minimum amounts are the desired amounts less the slippage tolerance (0.5% to sta
 
 The root sets `data-deposit-mode` (`both`, `token0` or `token1`). The button names the blocker:
 
-| Situation | Button |
-| --- | --- |
-| Not connected | Connect wallet |
-| No amount | Enter an amount |
-| Amount above balance | Insufficient USDC balance |
-| `getTransaction` threw | Can't build transaction, plus the error |
-| ERC-20 without allowance | Approve USDC (then the other token) |
-| Ready | Add liquidity |
+| Situation                | Button                                  |
+| ------------------------ | --------------------------------------- |
+| Not connected            | Connect wallet                          |
+| No amount                | Enter an amount                         |
+| Amount above balance     | Insufficient USDC balance               |
+| `getTransaction` threw   | Can't build transaction, plus the error |
+| ERC-20 without allowance | Approve USDC (then the other token)     |
+| Ready                    | Add liquidity                           |
 
 For agents, the button's [`data-agent-confirm`](/getting-started/conventions/#agents) states the exact deposit, the range and the network, like "Deposits 3000 USDC and 1 ETH from your wallet as liquidity between 2,700 and 3,300 USDC per ETH on Ethereum". The approvals before it ask on their own.
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `token0` / `token1` | `Token` | — | Pool tokens, in pool order. |
-| `pool` | `PoolState` | — | Current tick, sqrt price, liquidity, spacing, decimals. Leave out while loading. |
-| `bins` | `LiquidityBin[]` | — | For the range chart. Leave out while loading. |
-| `showChart` | `boolean` | `true` | Show the liquidity chart. |
-| `getTransaction` | `GetMintTransaction` | — | Builds the mint. `v3Mint({ positionManager, weth })` for Uniswap v3. |
-| `spender` | `Address` | — | Approved for both tokens: the position manager, or Permit2 for v4. |
-| `fee` | `number` | — | Fee in hundredths of a bip. Required by `v3Mint`. |
-| `feeTiers` / `onFeeChange` | `FeeTier[]` / `(tier) => void` | — | Show the fee picker. |
-| `defaultRange` | `{ tickLower, tickUpper }` | ±10% | Starting range. |
-| `presets` | `RangePreset[]` | by spacing | Range presets. |
-| `defaultInvert` | `boolean` | `false` | Quote prices in token0. |
-| `slippageBps` | `number` | `50` | Starting slippage tolerance in basis points. The user can change it. |
-| `deadlineSeconds` | `number` | `1200` | How long the mint stays valid. |
-| `prices` | `TokenPrices` | — | Fiat values under the amounts. |
-| `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)` | — | Transaction callbacks. |
-| `title` | `ReactNode` | `"Add liquidity"` | Heading. |
-| `locale` | `string` | runtime locale | Number formatting locale. Pin it when you server-render, so the server and the browser agree. |
+| Prop                        | Type                           | Default           | Description                                                                                   |
+| --------------------------- | ------------------------------ | ----------------- | --------------------------------------------------------------------------------------------- |
+| `token0` / `token1`         | `Token`                        | —                 | Pool tokens, in pool order.                                                                   |
+| `pool`                      | `PoolState`                    | —                 | Current tick, sqrt price, liquidity, spacing, decimals. Leave out while loading.              |
+| `bins`                      | `LiquidityBin[]`               | —                 | For the range chart. Leave out while loading.                                                 |
+| `showChart`                 | `boolean`                      | `true`            | Show the liquidity chart.                                                                     |
+| `getTransaction`            | `GetMintTransaction`           | —                 | Builds the mint. `v3Mint({ positionManager, weth })` for Uniswap v3.                          |
+| `spender`                   | `Address`                      | —                 | Approved for both tokens: the position manager, or Permit2 for v4.                            |
+| `fee`                       | `number`                       | —                 | Fee in hundredths of a bip. Required by `v3Mint`.                                             |
+| `feeTiers` / `onFeeChange`  | `FeeTier[]` / `(tier) => void` | —                 | Show the fee picker.                                                                          |
+| `defaultRange`              | `{ tickLower, tickUpper }`     | ±10%              | Starting range.                                                                               |
+| `presets`                   | `RangePreset[]`                | by spacing        | Range presets.                                                                                |
+| `defaultInvert`             | `boolean`                      | `false`           | Quote prices in token0.                                                                       |
+| `slippageBps`               | `number`                       | `50`              | Starting slippage tolerance in basis points. The user can change it.                          |
+| `deadlineSeconds`           | `number`                       | `1200`            | How long the mint stays valid.                                                                |
+| `prices`                    | `TokenPrices`                  | —                 | Fiat values under the amounts.                                                                |
+| `onSubmitted` / `onSuccess` | `(hash)` / `(receipt)`         | —                 | Transaction callbacks.                                                                        |
+| `title`                     | `ReactNode`                    | `"Add liquidity"` | Heading.                                                                                      |
+| `locale`                    | `string`                       | runtime locale    | Number formatting locale. Pin it when you server-render, so the server and the browser agree. |

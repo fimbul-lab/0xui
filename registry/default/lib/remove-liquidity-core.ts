@@ -1,7 +1,9 @@
-import { getPositionAmounts, type PoolState, type Position } from "@/lib/concentrated-liquidity";
+import { getPositionAmounts } from "@/lib/concentrated-liquidity";
+import type { PoolState, Position } from "@/lib/concentrated-liquidity";
 import { formatPair } from "@/lib/liquidity-utils";
 import type { TokenInfo } from "@/lib/token-list";
-import { withSlippage, type RemoveRequest } from "@/lib/v3-position-manager";
+import { withSlippage } from "@/lib/v3-position-manager";
+import type { RemoveRequest } from "@/lib/v3-position-manager";
 
 /** The quick picks under the slider, in percent. 100 reads "Max". */
 export const removePresets = [25, 50, 75, 100] as const;
@@ -34,8 +36,12 @@ export type RemoveAmounts = ReturnType<typeof getRemoveAmounts>;
 
 /** Why nothing can be removed yet, as button text, or undefined. */
 export function removeBlocker(position: Pick<Position, "liquidity">, percent: number) {
-  if (position.liquidity === 0n) return "Position is closed";
-  if (percent === 0) return "Select an amount";
+  if (position.liquidity === 0n) {
+    return "Position is closed";
+  }
+  if (percent === 0) {
+    return "Select an amount";
+  }
   return undefined;
 }
 

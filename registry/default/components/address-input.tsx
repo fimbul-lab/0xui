@@ -2,7 +2,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Input, InputGroup } from "@ui-sdk/react/input";
 import { ClipboardPasteIcon, EyeOffIcon, Loader2Icon } from "lucide-react";
-import { useEffect, useState, type ComponentProps } from "react";
+import { useEffect, useState } from "react";
+import type { ComponentProps } from "react";
 import { useConfig } from "wagmi";
 import { AddressAvatar } from "@/components/address-avatar";
 import { MorphText } from "@/components/morph-text";
@@ -14,9 +15,8 @@ import {
   ensAddressQueryOptions,
   parseAddressInput,
   showAddressError,
-  type AddressInputPhase,
-  type AddressInputState,
 } from "@/lib/address-input-core";
+import type { AddressInputPhase, AddressInputState } from "@/lib/address-input-core";
 import { ensNameQueryOptions } from "@/lib/identity";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,7 @@ function useDebounced<T>(value: T, delay: number) {
  */
 export function useAddressInput(
   value: string,
-  { debounce = 300, shielded = false }: { debounce?: number; shielded?: boolean } = {}
+  { debounce = 300, shielded = false }: { debounce?: number; shielded?: boolean } = {},
 ): AddressInputState {
   const config = useConfig();
   const input = parseAddressInput(value);
@@ -53,7 +53,7 @@ export function useAddressInput(
   return addressInputState(
     input,
     { ens, nameSettled: debouncedName === name, reverseName: reverse.data },
-    { shielded }
+    { shielded },
   );
 }
 
@@ -131,7 +131,9 @@ export function AddressInput({
           value={value}
           onValueChange={(next) => {
             onValueChange(next);
-            if (touched) setTouched(false);
+            if (touched) {
+              setTouched(false);
+            }
           }}
           onBlur={(event) => {
             setTouched(true);

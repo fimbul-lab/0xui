@@ -22,14 +22,22 @@ const [balanceOf, transfer, deposit, setFlag] = contractFunctions(abi);
 
 describe("contract-form", () => {
   it("lists functions, filtered and in the asked order", () => {
-    expect(contractFunctions(abi).map((fn) => fn.name)).toEqual(["balanceOf", "transfer", "deposit", "setFlag"]);
-    expect(contractFunctions(abi, { show: "read" }).map((fn) => fn.name)).toEqual(["balanceOf"]);
-    expect(contractFunctions(abi, { functions: ["transfer", "balanceOf"] }).map((fn) => fn.name)).toEqual([
-      "transfer",
+    expect(contractFunctions(abi).map((fn) => fn.name)).toEqual([
       "balanceOf",
+      "transfer",
+      "deposit",
+      "setFlag",
     ]);
+    expect(contractFunctions(abi, { show: "read" }).map((fn) => fn.name)).toEqual(["balanceOf"]);
+    expect(
+      contractFunctions(abi, { functions: ["transfer", "balanceOf"] }).map((fn) => fn.name),
+    ).toEqual(["transfer", "balanceOf"]);
     expect(functionSignature(transfer!)).toBe("transfer(address, uint256)");
-    expect([balanceOf, transfer, deposit].map((fn) => functionKind(fn!))).toEqual(["read", "write", "payable"]);
+    expect([balanceOf, transfer, deposit].map((fn) => functionKind(fn!))).toEqual([
+      "read",
+      "write",
+      "payable",
+    ]);
     expect(initialFunctionValues(setFlag!)).toEqual(["false"]);
   });
 
@@ -43,14 +51,21 @@ describe("contract-form", () => {
   });
 
   it("parses the ETH value of payable calls", () => {
-    expect(functionCallDraft(deposit!, [], "0.5").value).toBe(500000000000000000n);
+    expect(functionCallDraft(deposit!, [], "0.5").value).toBe(500_000_000_000_000_000n);
     expect(functionCallDraft(deposit!, [], "").value).toBeUndefined();
-    expect(functionCallDraft(deposit!, [], "abc")).toMatchObject({ value: null, blocker: "Check the ETH value" });
+    expect(functionCallDraft(deposit!, [], "abc")).toMatchObject({
+      value: null,
+      blocker: "Check the ETH value",
+    });
   });
 
   it("reads a view function", async () => {
     const config = createTestConfig({ rpc: { eth_call: erc20CallRpc({ balance: 42n }) } });
-    const options = readFunctionMutationOptions(config, { address: testAccounts[0], fn: balanceOf!, chainId: 1 });
+    const options = readFunctionMutationOptions(config, {
+      address: testAccounts[0],
+      fn: balanceOf!,
+      chainId: 1,
+    });
     expect(await options.mutationFn([testAccounts[1]])).toBe(42n);
   });
 });
@@ -61,7 +76,9 @@ describe("functionConfirmText", () => {
 
   it("names the function with every argument, the contract and the network", () => {
     const draft = functionCallDraft(transfer!, [testAccounts[0], "10"]);
-    expect(functionConfirmText(transfer!, draft, { address: contract, chainName: "Ethereum" })).toBe(
+    expect(
+      functionConfirmText(transfer!, draft, { address: contract, chainName: "Ethereum" }),
+    ).toBe(
       `Calls transfer(to: ${testAccounts[0]}, amount: 10) on contract ${contract} on Ethereum, from your wallet`,
     );
   });
@@ -70,7 +87,11 @@ describe("functionConfirmText", () => {
     const [deposit] = contractFunctions(
       parseAbi(["function deposit(uint256[] ids, (address to, uint256 amount), bool) payable"]),
     );
-    const draft = functionCallDraft(deposit!, ['["1", 2]', `{ "to": "${testAccounts[0]}", "amount": "5" }`, "true"], "0.5");
+    const draft = functionCallDraft(
+      deposit!,
+      ['["1", 2]', `{ "to": "${testAccounts[0]}", "amount": "5" }`, "true"],
+      "0.5",
+    );
     expect(functionConfirmText(deposit!, draft, { address: contract, nativeSymbol: "POL" })).toBe(
       `Calls deposit(ids: ["1","2"], arg1: {"to":"${testAccounts[0]}","amount":"5"}, arg2: true) ` +
         `on contract ${contract} and sends 0.5 POL, from your wallet`,

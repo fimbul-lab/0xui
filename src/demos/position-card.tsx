@@ -21,7 +21,8 @@ export const Default = demo(() => {
   const loaded = usePretendLoad();
   return (
     <div className="w-full max-w-md">
-      <PositionCard locale="en-US"
+      <PositionCard
+        locale="en-US"
         position={loaded ? inRangePosition : undefined}
         pool={loaded ? pool : undefined}
         prices={demoPrices}
@@ -40,7 +41,8 @@ export const Default = demo(() => {
 
 export const States = demo(() => (
   <div className="grid w-full max-w-4xl gap-3 md:grid-cols-2">
-    <PositionCard locale="en-US"
+    <PositionCard
+      locale="en-US"
       position={outOfRangePosition}
       pool={pool}
       prices={demoPrices}

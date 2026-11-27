@@ -41,26 +41,26 @@ Every other step runs without asking: reading the page, filling an amount, picki
 
 The bridge's tools, from ui-sdk:
 
-| Tool | Input | Returns |
-| --- | --- | --- |
-| `snapshot` | — | Every control on the page with its label, value, actions and any `confirm` sentence. |
-| `query` | `text?`, `within?`, `kind?` | Matching controls, or a list's choices, like a token picker's tokens. |
-| `act` | `steps` | Runs steps like `setValue` and `press` in order, and reports what changed. |
+| Tool       | Input                       | Returns                                                                              |
+| ---------- | --------------------------- | ------------------------------------------------------------------------------------ |
+| `snapshot` | —                           | Every control on the page with its label, value, actions and any `confirm` sentence. |
+| `query`    | `text?`, `within?`, `kind?` | Matching controls, or a list's choices, like a token picker's tokens.                |
+| `act`      | `steps`                     | Runs steps like `setValue` and `press` in order, and reports what changed.           |
 
 The wallet tools:
 
-| Tool | Input | Returns |
-| --- | --- | --- |
-| `get_wallet` | — | Connection status, address, wallet name, chain, and whether the chain is supported. |
-| `list_chains` | — | The app's chains, with the current one marked. |
-| `get_balance` | `token?`, `address?`, `chain?` | Native or ERC-20 balance as a decimal string, raw value and symbol. |
-| `get_token` | `token`, `chain?` | An ERC-20 token's name, symbol and decimals. |
-| `get_allowance` | `token`, `spender`, `owner?`, `chain?` | How much of a token a spender may move. |
-| `resolve_ens` | `name` or `address` | The address for an ENS name, or the primary name for an address. |
-| `get_gas_price` | `chain?` | Gas price in wei and gwei. |
-| `get_block_number` | `chain?` | The latest block number. |
-| `get_transaction` | `hash`, `chain?` | `success`, `reverted`, `pending` or `not-found`, with the block once mined. |
-| `switch_chain` | `chain` | The chain switched to. Asks the person first, then the wallet. |
+| Tool               | Input                                  | Returns                                                                             |
+| ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `get_wallet`       | —                                      | Connection status, address, wallet name, chain, and whether the chain is supported. |
+| `list_chains`      | —                                      | The app's chains, with the current one marked.                                      |
+| `get_balance`      | `token?`, `address?`, `chain?`         | Native or ERC-20 balance as a decimal string, raw value and symbol.                 |
+| `get_token`        | `token`, `chain?`                      | An ERC-20 token's name, symbol and decimals.                                        |
+| `get_allowance`    | `token`, `spender`, `owner?`, `chain?` | How much of a token a spender may move.                                             |
+| `resolve_ens`      | `name` or `address`                    | The address for an ENS name, or the primary name for an address.                    |
+| `get_gas_price`    | `chain?`                               | Gas price in wei and gwei.                                                          |
+| `get_block_number` | `chain?`                               | The latest block number.                                                            |
+| `get_transaction`  | `hash`, `chain?`                       | `success`, `reverted`, `pending` or `not-found`, with the block once mined.         |
+| `switch_chain`     | `chain`                                | The chain switched to. Asks the person first, then the wallet.                      |
 
 `chain` takes an id or a name, like `8453` or `"Base"`. An unsupported chain fails with the list of supported ones. Tools that return text from contracts, ENS or the page are marked `untrustedContentHint`, so the agent treats it as data.
 
@@ -102,18 +102,10 @@ const tools: AgentTool[] = [
 With an assistant of your own instead of the browser's, keep `<AgentTools enabled={false} />` mounted for the dialog and hand your model the same tools. `getAgent()` returns the page's bridge, which asks through the dialog:
 
 ```tsx
-import {
-  askPerson,
-  getAgent,
-  pageAgentTools,
-  walletAgentTools,
-} from "@/components/agent-tools";
+import { askPerson, getAgent, pageAgentTools, walletAgentTools } from "@/components/agent-tools";
 
 // In an effect or event handler, in the browser:
-const tools = [
-  ...pageAgentTools(getAgent()),
-  ...walletAgentTools(config, { confirm: askPerson }),
-];
+const tools = [...pageAgentTools(getAgent()), ...walletAgentTools(config, { confirm: askPerson })];
 // Give the model each tool's name, description and inputSchema,
 // and answer its calls with `tool.execute(input)`.
 ```
@@ -122,10 +114,10 @@ const tools = [
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `confirm` | `(message, { signal }) => boolean \| Promise<boolean>` \| `false` | dialog | Asks the person before an agent's step on a `data-agent-confirm` control or `switch_chain`. `false` refuses those steps. |
-| `tools` | `AgentTool[]` | — | Your own tools, registered next to the wallet tools. |
-| `enabled` | `boolean` | `true` | Register nothing with the browser while `false`, e.g. until the person opts in. The dialog still answers `askPerson`. |
+| Prop      | Type                                                              | Default | Description                                                                                                              |
+| --------- | ----------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `confirm` | `(message, { signal }) => boolean \| Promise<boolean>` \| `false` | dialog  | Asks the person before an agent's step on a `data-agent-confirm` control or `switch_chain`. `false` refuses those steps. |
+| `tools`   | `AgentTool[]`                                                     | —       | Your own tools, registered next to the wallet tools.                                                                     |
+| `enabled` | `boolean`                                                         | `true`  | Register nothing with the browser while `false`, e.g. until the person opts in. The dialog still answers `askPerson`.    |
 
 `useAgentTools(options)` takes the same options without rendering a dialog, so its `confirm` defaults to `false`.

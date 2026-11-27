@@ -29,10 +29,7 @@ function PopoverContent({
 
 function PopoverTitle({ className, ...props }: ComponentProps<typeof PopoverTitlePrimitive>) {
   return (
-    <PopoverTitlePrimitive
-      className={withClassName("text-sm font-medium", className)}
-      {...props}
-    />
+    <PopoverTitlePrimitive className={withClassName("text-sm font-medium", className)} {...props} />
   );
 }
 

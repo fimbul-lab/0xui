@@ -42,15 +42,15 @@ Copying puts the note on the clipboard, where other apps can read it. The compon
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `note` | `string` | — | The secret to back up. Required. |
-| `saved` | `boolean` | — | Whether the user confirmed the backup. Required. |
-| `onSavedChange` | `(saved: boolean) => void` | — | Required. |
-| `fileName` | `string` | `"note-backup.txt"` | Name of the downloaded file. |
-| `title` | `ReactNode` | `"Save your note"` | Heading. `null` hides it. |
-| `description` | `ReactNode` | what losing the note means | Text under the heading. |
-| `confirmLabel` | `ReactNode` | `"I saved my note somewhere safe"` | Text next to the checkbox. |
-| `className` | `string` | — | |
+| Prop            | Type                       | Default                            | Description                                      |
+| --------------- | -------------------------- | ---------------------------------- | ------------------------------------------------ |
+| `note`          | `string`                   | —                                  | The secret to back up. Required.                 |
+| `saved`         | `boolean`                  | —                                  | Whether the user confirmed the backup. Required. |
+| `onSavedChange` | `(saved: boolean) => void` | —                                  | Required.                                        |
+| `fileName`      | `string`                   | `"note-backup.txt"`                | Name of the downloaded file.                     |
+| `title`         | `ReactNode`                | `"Save your note"`                 | Heading. `null` hides it.                        |
+| `description`   | `ReactNode`                | what losing the note means         | Text under the heading.                          |
+| `confirmLabel`  | `ReactNode`                | `"I saved my note somewhere safe"` | Text next to the checkbox.                       |
+| `className`     | `string`                   | —                                  |                                                  |
 
 `downloadTextFile(fileName, text)` is exported too. It returns `false` where the browser can't start a download.

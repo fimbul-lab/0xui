@@ -82,8 +82,8 @@ export function createShieldedAccountFlow(engine: ShieldedEngine): ShieldedAccou
     try {
       await action();
       return true;
-    } catch (cause) {
-      error = toError(cause);
+    } catch (error_) {
+      error = toError(error_);
       return false;
     } finally {
       busy = undefined;
@@ -122,9 +122,15 @@ export const MIN_PASSWORD_LENGTH = 8;
 
 /** Why a new password can't be used yet, as button text, or undefined when it's fine. */
 export function passwordBlocker(password: string, confirmation: string) {
-  if (!password) return "Enter a password";
-  if (password.length < MIN_PASSWORD_LENGTH) return `Use at least ${MIN_PASSWORD_LENGTH} characters`;
-  if (password !== confirmation) return "Passwords don't match";
+  if (!password) {
+    return "Enter a password";
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `Use at least ${MIN_PASSWORD_LENGTH} characters`;
+  }
+  if (password !== confirmation) {
+    return "Passwords don't match";
+  }
   return undefined;
 }
 
@@ -136,7 +142,11 @@ export function phraseWords(text: string) {
 /** Why a typed recovery phrase can't be used yet, or undefined when the word count fits. */
 export function phraseBlocker(text: string) {
   const count = phraseWords(text).length;
-  if (count === 0) return "Enter your recovery phrase";
-  if (count !== 12 && count !== 24) return `Enter all 12 or 24 words (${count} so far)`;
+  if (count === 0) {
+    return "Enter your recovery phrase";
+  }
+  if (count !== 12 && count !== 24) {
+    return `Enter all 12 or 24 words (${count} so far)`;
+  }
   return undefined;
 }

@@ -56,14 +56,14 @@ Above the price the pool holds only token0, below it only token1. Walking out fr
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `bins` | `LiquidityBin[]` | — | From `getLiquidityBins`. Leave out while loading. |
-| `currentPrice` | `number` | — | Token1 per token0. Leave out while loading. |
-| `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
-| `invert` | `boolean` | `false` | Quote in token0. |
-| `window` | `number` | `10` | Visible move each side, in %. Setting it hides the window control. |
-| `windows` | `number[]` | `[2, 5, 10, 25]` | Window options, as a segmented control. `[]` hides it. |
-| `level` | `number` | `2` | Depth level for the headline figures and markers. |
-| `height` | `number` | `180` | Plot height in px. |
-| `locale` | `string` | runtime locale | Number formatting locale. |
+| Prop                | Type                 | Default          | Description                                                        |
+| ------------------- | -------------------- | ---------------- | ------------------------------------------------------------------ |
+| `bins`              | `LiquidityBin[]`     | —                | From `getLiquidityBins`. Leave out while loading.                  |
+| `currentPrice`      | `number`             | —                | Token1 per token0. Leave out while loading.                        |
+| `token0` / `token1` | `{ symbol: string }` | —                | Any `Token` fits.                                                  |
+| `invert`            | `boolean`            | `false`          | Quote in token0.                                                   |
+| `window`            | `number`             | `10`             | Visible move each side, in %. Setting it hides the window control. |
+| `windows`           | `number[]`           | `[2, 5, 10, 25]` | Window options, as a segmented control. `[]` hides it.             |
+| `level`             | `number`             | `2`              | Depth level for the headline figures and markers.                  |
+| `height`            | `number`             | `180`            | Plot height in px.                                                 |
+| `locale`            | `string`             | runtime locale   | Number formatting locale.                                          |

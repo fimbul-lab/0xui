@@ -37,14 +37,14 @@ Render one function with `ContractFunction`.
 
 ## Input rules
 
-| Solidity type | Enter | Checks |
-| --- | --- | --- |
-| `uint*` / `int*` | `1000` or `1_000` | Whole number, within the type's range |
-| `address` | `0x…` | Valid, and the checksum must match if mixed-case |
-| `bool` | select | — |
-| `bytes` / `bytesN` | `0x…` | Hex, exact length for `bytesN` |
-| `string` | text | — |
-| arrays, tuples | JSON: `["1", "2"]`, `{ "to": "0x…", "amount": "5" }` | Each element by its type |
+| Solidity type      | Enter                                                | Checks                                           |
+| ------------------ | ---------------------------------------------------- | ------------------------------------------------ |
+| `uint*` / `int*`   | `1000` or `1_000`                                    | Whole number, within the type's range            |
+| `address`          | `0x…`                                                | Valid, and the checksum must match if mixed-case |
+| `bool`             | select                                               | —                                                |
+| `bytes` / `bytesN` | `0x…`                                                | Hex, exact length for `bytesN`                   |
+| `string`           | text                                                 | —                                                |
+| arrays, tuples     | JSON: `["1", "2"]`, `{ "to": "0x…", "amount": "5" }` | Each element by its type                         |
 
 Payable functions get an ETH value field. The write button names the first field to fix, e.g. "Check amount".
 

@@ -7,8 +7,8 @@ import {
   MOCK_SHIELD_MESSAGE,
   MOCK_TIMINGS,
   createMockShieldedEngine,
-  type MockShieldedEngine,
 } from "./mock-shielded-engine";
+import type { MockShieldedEngine } from "./mock-shielded-engine";
 import type { ProofStage, ShieldedSync } from "./shielded-engine";
 
 const weth = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" as const;
@@ -27,13 +27,16 @@ async function unlocked(options: Parameters<typeof createMockShieldedEngine>[0] 
 }
 
 /** Let work the engine scheduled for "later" (standby, settling) run. */
-const settle = () => new Promise((resolve) => setTimeout(resolve));
+const settle = () =>
+  new Promise((resolve) => {
+    setTimeout(resolve);
+  });
 
 const amountsOf = (engine: MockShieldedEngine, token: string = weth) =>
   engine.getBalances(1)?.find((balance) => balance.token === token)?.amounts;
 
 function recordSync(engine: MockShieldedEngine) {
-  const states: ShieldedSync[] = [];
+  const states: Array<ShieldedSync> = [];
   engine.subscribe("sync", () => states.push(engine.getSync(1)));
   return states;
 }
@@ -83,9 +86,21 @@ describe("account", () => {
     expect(imported).not.toBe(other.account.address());
   });
 
+  it("can refuse the next import only", async () => {
+    const engine = instant({ account: "none" });
+    engine.simulate.failNextImport();
+    await expect(engine.account.import(MOCK_MNEMONIC, "pw")).rejects.toThrow(
+      "That recovery phrase isn't valid.",
+    );
+    expect(engine.account.status()).toBe("none");
+
+    await engine.account.import(MOCK_MNEMONIC, "pw");
+    expect(engine.account.status()).toBe("unlocked");
+  });
+
   it("clears balances and scan state on lock, and tells listeners", async () => {
     const engine = await unlocked({ funds: [{ token: weth, amount: 5n }] });
-    const events: string[] = [];
+    const events: Array<string> = [];
     engine.subscribe("account", () => events.push("account"));
     engine.subscribe("balances", () => events.push("balances"));
     engine.subscribe("sync", () => events.push("sync"));
@@ -141,8 +156,14 @@ describe("scan", () => {
     expect(engine.getSync(1).status).toBe("synced");
     expect(published).toHaveBeenCalledTimes(1);
     expect(engine.getBalances(1)).toEqual([
-      { token: weth, amounts: { spendable: 3n, pending: 2n, proving: 0n, incomplete: 0n, restricted: 0n } },
-      { token: usdc, amounts: { spendable: 0n, pending: 0n, proving: 0n, incomplete: 0n, restricted: 7n } },
+      {
+        token: weth,
+        amounts: { spendable: 3n, pending: 2n, proving: 0n, incomplete: 0n, restricted: 0n },
+      },
+      {
+        token: usdc,
+        amounts: { spendable: 0n, pending: 0n, proving: 0n, incomplete: 0n, restricted: 7n },
+      },
     ]);
   });
 
@@ -178,10 +199,10 @@ describe("scan", () => {
 
   it("only scans the configured chains on its own", async () => {
     const engine = await unlocked({ chains: [1] });
-    expect(engine.getSync(11155111).status).toBe("idle");
-    await engine.sync(11155111);
-    expect(engine.getSync(11155111).status).toBe("synced");
-    expect(engine.getBalances(11155111)).toEqual([]);
+    expect(engine.getSync(11_155_111).status).toBe("idle");
+    await engine.sync(11_155_111);
+    expect(engine.getSync(11_155_111).status).toBe("synced");
+    expect(engine.getBalances(11_155_111)).toEqual([]);
   });
 
   it("does nothing while locked", async () => {
@@ -217,7 +238,7 @@ describe("shield and unshield", () => {
     const engine = await unlocked();
     await engine.simulate.shield({ token: weth, amount: 10_000n, outcome: "restricted" });
     await settle();
-    expect(amountsOf(engine)).toMatchObject({ restricted: 9_975n, spendable: 0n });
+    expect(amountsOf(engine)).toMatchObject({ restricted: 9975n, spendable: 0n });
   });
 
   it("takes 25 bps on the way out and returns the rest of the note as change", async () => {
@@ -249,7 +270,7 @@ describe("shield and unshield", () => {
       ],
     });
     await expect(engine.simulate.unshield({ token: weth, amount: 6n })).rejects.toThrow(
-      "Not enough spendable balance"
+      "Not enough spendable balance",
     );
     expect(amountsOf(engine)?.spendable).toBe(5n);
   });
@@ -302,10 +323,14 @@ describe("shielding through the interface", () => {
 
   it("asks the wallet for one signature and returns a call for it to send", async () => {
     const engine = await unlocked();
-    const sign = vi.fn().mockResolvedValue("0x1234");
+    const asked: Array<string> = [];
+    const sign = async (message: string) => {
+      asked.push(message);
+      return "0x1234" as const;
+    };
     const prepared = await engine.prepareShield(draft, { sign });
 
-    expect(sign).toHaveBeenCalledExactlyOnceWith(MOCK_SHIELD_MESSAGE);
+    expect(asked).toEqual([MOCK_SHIELD_MESSAGE]);
     expect(prepared.transaction).toMatchObject({ to: MOCK_SHIELD_CONTRACT, value: 0n });
     expect(prepared.transaction.data).toMatch(/^0x[0-9a-f]{128}$/);
     // Preparing moves nothing.
@@ -324,13 +349,32 @@ describe("shielding through the interface", () => {
     const engine = await unlocked();
     const declined = Object.assign(new Error("User rejected the request."), { code: 4001 });
     await expect(
-      engine.prepareShield(draft, { sign: () => Promise.reject(declined) })
+      engine.prepareShield(draft, { sign: () => Promise.reject(declined) }),
     ).rejects.toBe(declined);
 
     engine.account.lock();
     const sign = vi.fn();
-    await expect(engine.prepareShield(draft, { sign })).rejects.toThrow("Unlock the private account");
+    await expect(engine.prepareShield(draft, { sign })).rejects.toThrow(
+      "Unlock the private account",
+    );
     expect(sign).not.toHaveBeenCalled();
+  });
+
+  it("can fail the next shield before asking for a signature", async () => {
+    const engine = await unlocked();
+    engine.simulate.failNextShield("This token can't be shielded.");
+    const asked: Array<string> = [];
+    const sign = async (message: string) => {
+      asked.push(message);
+      return "0x1234" as const;
+    };
+    await expect(engine.prepareShield(draft, { sign })).rejects.toThrow(
+      "This token can't be shielded.",
+    );
+    expect(asked).toEqual([]);
+
+    await engine.prepareShield(draft, { sign });
+    expect(asked).toEqual([MOCK_SHIELD_MESSAGE]);
   });
 
   it("reports a shield by its public hash only once a scan has found it", async () => {
@@ -353,7 +397,7 @@ describe("shielding through the interface", () => {
       state: "pending",
     });
     // Any casing of the hash, and the same object until something changes.
-    expect(engine.getTransaction(1, hash.toUpperCase().replace("0X", "0x") as typeof hash)).toBe(found);
+    expect(engine.getTransaction(1, `0x${hash.slice(2).toUpperCase()}`)).toBe(found);
     void engine.sync(1);
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.repeatScan + 100);
     expect(engine.getTransaction(1, hash)).toBe(found);
@@ -363,7 +407,9 @@ describe("shielding through the interface", () => {
   });
 
   it("forgets what it found when the account locks", async () => {
-    const engine = await unlocked({ funds: [{ token: weth, amount: 5n, state: "restricted", hash }] });
+    const engine = await unlocked({
+      funds: [{ token: weth, amount: 5n, state: "restricted", hash }],
+    });
     expect(engine.getTransaction(1, hash)).toMatchObject({ state: "restricted", amount: 5n });
     engine.account.lock();
     expect(engine.getTransaction(1, hash)).toBeUndefined();
@@ -387,13 +433,15 @@ describe("exits", () => {
     await engine.sync(1);
     expect(engine.getExits!(1)).toBe(exits);
 
-    const stages: ProofStage[] = [];
+    const stages: Array<ProofStage> = [];
     const { transaction } = await engine.prepareExit!(1, exits[0]!.id, {
       onStage: (stage) => stages.push(stage),
     });
     expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
     expect(transaction.to).toBeDefined();
-    await expect(engine.prepareExit!(1, "nope", { onStage() {} })).rejects.toThrow("no longer there");
+    await expect(engine.prepareExit!(1, "nope", { onStage() {} })).rejects.toThrow(
+      "no longer there",
+    );
 
     await engine.simulate.exit(exits[0]!.id);
     expect(engine.getExits!(1)).toEqual([]);
@@ -413,9 +461,12 @@ describe("prove", () => {
 
   it("quotes the fee and refuses more than is spendable", async () => {
     const engine = await unlocked({ funds: [{ token: weth, amount: 100_000n }] });
-    expect(await engine.quote({ ...draft, amount: 40_000n })).toEqual({ fee: 100n, received: 39_900n });
+    expect(await engine.quote({ ...draft, amount: 40_000n })).toEqual({
+      fee: 100n,
+      received: 39_900n,
+    });
     await expect(engine.quote({ ...draft, amount: 200_000n })).rejects.toThrow(
-      "Not enough spendable balance."
+      "Not enough spendable balance.",
     );
     await expect(engine.quote({ ...draft, amount: 0n })).rejects.toThrow("Enter an amount.");
   });
@@ -442,7 +493,7 @@ describe("prove", () => {
 
   it("reports the three stages in order and returns the operation", async () => {
     const engine = await unlocked({ funds });
-    const stages: ProofStage[] = [];
+    const stages: Array<ProofStage> = [];
     const operation = await engine.prove(draft, { onStage: (stage) => stages.push(stage) });
 
     expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
@@ -459,7 +510,7 @@ describe("prove", () => {
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan + 100);
 
     const time = async () => {
-      const stages: ProofStage[] = [];
+      const stages: Array<ProofStage> = [];
       let done = false;
       void engine.prove(draft, { onStage: (s) => stages.push(s) }).then(() => (done = true));
       await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.loadCircuits - 100);
@@ -480,8 +531,12 @@ describe("prove", () => {
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.unlock + MOCK_TIMINGS.firstScan + 100);
 
     const controller = new AbortController();
-    const stages: ProofStage[] = [];
-    const proof = engine.prove(draft, { onStage: (s) => stages.push(s), signal: controller.signal });
+    const stages: Array<ProofStage> = [];
+    const proof = engine.prove(draft, {
+      onStage: (s) => stages.push(s),
+      signal: controller.signal,
+    });
+    // oxlint-disable-next-line vitest/valid-expect -- awaited after the abort below
     const outcome = expect(proof).rejects.toMatchObject({ name: "AbortError" });
     await vi.advanceTimersByTimeAsync(MOCK_TIMINGS.loadCircuits + 100);
     controller.abort();
@@ -499,7 +554,7 @@ describe("prove", () => {
     await expect(engine.prove(draft, { onStage })).resolves.toBeDefined();
 
     await expect(engine.prove({ ...draft, amount: 11n }, { onStage })).rejects.toThrow(
-      "Not enough spendable balance"
+      "Not enough spendable balance",
     );
 
     engine.account.lock();

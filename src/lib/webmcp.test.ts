@@ -1,5 +1,9 @@
-import { describe, expect, test, vi } from "vitest";
-import { docsTools, registerDocsTools, type DocsToolsOptions } from "./webmcp";
+import { http, HttpResponse } from "msw";
+import { beforeEach, describe, expect, test } from "vitest";
+import { server } from "../../test/msw";
+import { provideModelContext } from "../../test/webmcp";
+import { docsTools, registerDocsTools } from "./webmcp";
+import type { DocsToolsOptions } from "./webmcp";
 
 const llms = `# 0xui
 
@@ -13,22 +17,30 @@ const llms = `# 0xui
 - [Swap](https://0xui.io/blocks/swap.md): Swap form with quotes and an approval step.
 `;
 
-const files: Record<string, string> = {
+const files = {
   "/llms.txt": llms,
   "/components/balance.md": "# Balance",
   "/blocks/swap.md": "# Swap",
   "/r/balance.json": JSON.stringify({ name: "balance", dependencies: ["wagmi"] }),
-};
+} satisfies Record<string, string>;
 
-const fetch = vi.fn(async (url: string) =>
-  url in files ? new Response(files[url]) : new Response("Not found", { status: 404 }),
-);
+beforeEach(() => {
+  server.use(
+    ...Object.entries(files).map(([path, body]) => http.get(path, () => new HttpResponse(body))),
+    http.get("/*", () => new HttpResponse("Not found", { status: 404 })),
+  );
+});
+
+/** Fetch a docs path from the page's origin, as a browser resolves it. */
+const fetch = (url: string) => globalThis.fetch(new URL(url, location.href));
 
 function tool(name: string, pagefind?: DocsToolsOptions["pagefind"]) {
   const found = docsTools({ fetch, pagefind: pagefind ?? (async () => undefined) }).find(
     (candidate) => candidate.name === name,
   );
-  if (!found) throw new Error(`No tool ${name}`);
+  if (!found) {
+    throw new Error(`No tool ${name}`);
+  }
   return found;
 }
 
@@ -98,18 +110,13 @@ test("every tool is read-only with a valid name", () => {
 });
 
 test("registers with document.modelContext and unregisters on abort", async () => {
-  const signals: AbortSignal[] = [];
-  const registerTool = vi.fn(async (_tool: unknown, options: { signal: AbortSignal }) => {
-    signals.push(options.signal);
-  });
-  Object.defineProperty(document, "modelContext", { value: { registerTool }, configurable: true });
+  const { signals, registered } = provideModelContext();
 
   const unregister = registerDocsTools({ fetch });
-  await vi.waitFor(() => expect(registerTool).toHaveBeenCalledTimes(4));
+  await registered(4);
+  expect(signals).toHaveLength(4);
   unregister();
   expect(signals.every((signal) => signal.aborted)).toBe(true);
-
-  delete (document as { modelContext?: unknown }).modelContext;
 });
 
 test("does nothing without WebMCP", () => {

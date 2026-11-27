@@ -50,8 +50,8 @@ function hexStream(seed: number) {
   return () => {
     let ch = last;
     while (ch === last) {
-      state = (state * 1664525 + 1013904223) >>> 0;
-      ch = "0123456789abcdef"[state >>> 28];
+      state = (state * 1_664_525 + 1_013_904_223) >>> 0;
+      ch = "0123456789abcdef".charAt(state >>> 28);
     }
     last = ch;
     return ch;
@@ -60,8 +60,8 @@ function hexStream(seed: number) {
 
 export function bannerC(): string {
   const tl = new Timeline(T, "c");
-  const out: string[] = [];
-  const defs: string[] = [];
+  const out: Array<string> = [];
+  const defs: Array<string> = [];
   const end = 11.4;
 
   // ── Corners: the chain's pulse ─────────────────────────────────────────
@@ -170,8 +170,10 @@ export function bannerC(): string {
   const tagY = 312;
   const start = 2;
   const next = hexStream(101);
-  [...line].forEach((ch, i) => {
-    if (ch === " ") return;
+  Array.from(line).forEach((ch, i) => {
+    if (ch === " ") {
+      return;
+    }
     const x = tagX + tagAdv * i;
     const from = start + i * 0.04;
     const frames = 5;
@@ -202,7 +204,9 @@ export function bannerC(): string {
   const name = { family: "mono" as const, size: 14.5, fill: c.gray3 };
   const rowBase = rowY + (H - rowY) / 2 + 4.6;
   const parts: Array<[string, object?]> = [];
-  for (const item of components) parts.push([item], ["   /   ", { fill: c.gray5 }]);
+  for (const item of components) {
+    parts.push([item], ["   /   ", { fill: c.gray5 }]);
+  }
   const once = runs(parts, { ...name, x: 0, y: rowBase });
   const speed = 34;
   const scroll = "c-scroll";

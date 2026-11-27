@@ -1,23 +1,26 @@
 // Docs: https://0xui.io/components/transaction-button.md
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, Loader2Icon } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useChainId, useConfig, useConnection } from "wagmi";
 import { ConnectWalletDialog } from "@/components/connect-wallet";
 import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { useStore } from "@/hooks/use-store";
-import { agentConfirmText, errorCode } from "@/lib/0xui-utils";
+import { agentConfirmText, errorCode, errorMessage } from "@/lib/0xui-utils";
 import {
   createTransactionFlow,
   revertReason,
   simulationStatus,
   transactionSimulationQueryOptions,
-  type ContractRequest,
-  type SimulationStatus,
-  type TransactionFlowOptions,
-  type TransactionRequest,
-  type TxPhase,
+} from "@/lib/tx-flow";
+import type {
+  ContractRequest,
+  SimulationStatus,
+  TransactionFlowOptions,
+  TransactionRequest,
+  TxPhase,
 } from "@/lib/tx-flow";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +49,7 @@ export function useTransactionFlow({
   const callbacks = useRef({ onSubmitted, onSuccess, onError });
   useEffect(() => {
     callbacks.current = { onSubmitted, onSuccess, onError };
-  });
+  }, [onSubmitted, onSuccess, onError]);
   const flow = useMemo(
     () =>
       createTransactionFlow(config, {
@@ -197,7 +200,9 @@ export function TransactionButton({
   const { phase, reset } = flow;
 
   useEffect(() => {
-    if (phase !== "success" || resetAfter === false) return;
+    if (phase !== "success" || resetAfter === false) {
+      return;
+    }
     const timer = setTimeout(reset, resetAfter);
     return () => clearTimeout(timer);
   }, [phase, resetAfter, reset]);
@@ -213,11 +218,13 @@ export function TransactionButton({
   // The transaction just sent may have changed what the next one would do.
   const resimulate = simulation.refetch;
   useEffect(() => {
-    if (simulate && (phase === "success" || phase === "reverted")) resimulate();
+    if (simulate && (phase === "success" || phase === "reverted")) {
+      void resimulate();
+    }
   }, [simulate, phase, resimulate]);
 
   let label: ReactNode = children;
-  let action: (() => unknown) | undefined;
+  let action: (() => void) | undefined;
   // What an agent must ask the person before pressing: the transaction by
   // default, the network switch while that's what the button does, and
   // nothing while it only opens the wallet picker (connecting asks there).
@@ -247,25 +254,25 @@ export function TransactionButton({
     label = disabledReason;
   } else if (flow.wrongChain) {
     label = `Switch to ${flow.targetChain?.name ?? "the right network"}`;
-    action = flow.switchToTarget;
+    action = () => void flow.switchToTarget();
     confirm = `Asks your wallet to switch to ${flow.targetChain?.name ?? "the right network"}`;
   } else if (simulation.status === "checking") {
     label = "Checking…";
   } else if (simulation.status === "failed") {
     label = "Transaction will fail";
   } else if (contract) {
-    action = () => flow.execute({ contract });
+    action = () => void flow.execute({ contract });
   } else if (transaction) {
-    action = () => flow.execute({ transaction });
+    action = () => void flow.execute({ transaction });
   }
 
   const message =
     phase === "reverted"
       ? "Transaction reverted. Nothing changed except the gas fee."
       : phase === "error"
-        ? ((flow.error as { shortMessage?: string } | undefined)?.shortMessage ??
-          flow.error?.message ??
-          "Something went wrong.")
+        ? flow.error
+          ? errorMessage(flow.error)
+          : "Something went wrong."
         : simulation.status === "failed"
           ? `This transaction would fail: ${simulation.reason}`
           : undefined;

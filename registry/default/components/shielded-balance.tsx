@@ -1,11 +1,13 @@
 // Docs: https://0xui.io/components/shielded-balance.md
 import { Loader2Icon } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { SkeletonBox } from "skullet/react";
 import type { Address } from "viem";
 import { Button } from "@/components/primitives/button";
 import { useShieldedEngine, useShieldedStore } from "@/components/shielded-provider";
-import { TokenAmount, type TokenAmountProps } from "@/components/token-amount";
+import { TokenAmount } from "@/components/token-amount";
+import type { TokenAmountProps } from "@/components/token-amount";
 import type { FormatTokenAmountOptions } from "@/lib/0xui-utils";
 import {
   createShieldedBalances,
@@ -13,18 +15,13 @@ import {
   shieldedBalanceMeta,
   tokenAmounts,
   totalShielded,
-  type ShieldedBalancePhase,
-  type ShieldedRetryPhase,
 } from "@/lib/shielded-balance-core";
-import { SHIELDED_BALANCE_STATES, type ShieldedBalanceState } from "@/lib/shielded-engine";
+import type { ShieldedBalancePhase, ShieldedRetryPhase } from "@/lib/shielded-balance-core";
+import { SHIELDED_BALANCE_STATES } from "@/lib/shielded-engine";
+import type { ShieldedBalanceState } from "@/lib/shielded-engine";
 import { cn } from "@/lib/utils";
 
-export {
-  shieldedBalanceMeta,
-  totalShielded,
-  type ShieldedBalancePhase,
-  type ShieldedRetryPhase,
-};
+export { shieldedBalanceMeta, totalShielded, type ShieldedBalancePhase, type ShieldedRetryPhase };
 
 /** SkeletonBox is a block by default. This one sits in a line of text. */
 const inlineBox = { display: "inline-block", verticalAlign: "middle" } as const;
@@ -158,7 +155,9 @@ export function ShieldedBalance({
   });
   const format = { maxDecimals, compact, locale };
 
-  if (phase === "idle") return null;
+  if (phase === "idle") {
+    return null;
+  }
 
   const headline =
     phase === "loading" ? (
@@ -167,13 +166,13 @@ export function ShieldedBalance({
         <SkeletonBox width="6em" height="1em" style={inlineBox} />
         <span className="sr-only">Loading private balance</span>
       </span>
-    ) : phase === "error" ? (
+    ) : phase === "error" || !amounts ? (
       <span title="Couldn't load private balance" className="text-muted-foreground">
         —<span className="sr-only">Couldn't load private balance</span>
       </span>
     ) : (
       <TokenAmount
-        value={amounts!.spendable}
+        value={amounts.spendable}
         decimals={token.decimals}
         symbol={token.symbol}
         animate={animate}
@@ -220,13 +219,13 @@ export function ShieldedBalance({
         <div className="text-2xl font-medium">{headline}</div>
       </div>
 
-      {others.length > 0 && (
+      {amounts && others.length > 0 && (
         <ul className="flex flex-col gap-3 border-t pt-3">
           {others.map((state) => (
             <ShieldedBalanceRow
               key={state}
               state={state}
-              amount={amounts![state]}
+              amount={amounts[state]}
               token={token}
               {...format}
             >
@@ -240,7 +239,10 @@ export function ShieldedBalance({
                     aria-busy={retryPhase === "retrying" || undefined}
                   >
                     {retryPhase === "retrying" && (
-                      <Loader2Icon aria-hidden className="animate-spin motion-reduce:animate-none" />
+                      <Loader2Icon
+                        aria-hidden
+                        className="animate-spin motion-reduce:animate-none"
+                      />
                     )}
                     {retryPhase === "retrying" ? "Retrying proofs…" : "Retry proofs"}
                   </Button>

@@ -1,12 +1,8 @@
 // Docs: https://0xui.io/components/transaction-history.md
-import {
-  Timeline,
-  TimelineItem,
-  TimelineTime,
-  TimelineTitle,
-} from "@ui-sdk/react/timeline";
+import { Timeline, TimelineItem, TimelineTime, TimelineTitle } from "@ui-sdk/react/timeline";
 import { CheckIcon, Loader2Icon, XIcon } from "lucide-react";
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
 import type { Address } from "viem";
 import { useConnection } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
@@ -22,8 +18,8 @@ import {
   recordTransaction,
   transactionHistory,
   updateTransaction,
-  type HistoryEntry,
 } from "@/lib/transaction-history-core";
+import type { HistoryEntry } from "@/lib/transaction-history-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -58,7 +54,9 @@ function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string })
     chainId: entry.chainId,
   });
   useEffect(() => {
-    if (receipt.data) updateTransaction(entry.hash, { status: receiptStatus(receipt.data) });
+    if (receipt.data) {
+      updateTransaction(entry.hash, { status: receiptStatus(receipt.data) });
+    }
   }, [receipt.data, entry.hash]);
 
   const status = entryStatus(entry, receipt.data);
@@ -93,7 +91,11 @@ function HistoryRow({ entry, locale }: { entry: HistoryEntry; locale?: string })
           {status === "reverted" && " · Reverted"}
         </span>
       </div>{" "}
-      <ExplorerLink tx={entry.hash} chainId={entry.chainId} className="shrink-0 text-xs text-muted-foreground">
+      <ExplorerLink
+        tx={entry.hash}
+        chainId={entry.chainId}
+        className="shrink-0 text-xs text-muted-foreground"
+      >
         View
       </ExplorerLink>
     </TimelineItem>
@@ -107,7 +109,7 @@ export type TransactionHistoryProps = {
    * Transactions from your own source, e.g. an indexer, instead of the ones
    * recorded in this browser. Pending entries still update live.
    */
-  transactions?: readonly HistoryEntry[];
+  transactions?: ReadonlyArray<HistoryEntry>;
   /** Rows per page, with "Show more" for the rest. */
   pageSize?: number;
   /** Show a "Clear" button. */
@@ -174,7 +176,8 @@ export function TransactionHistory({
         >
           {/* One run of text, so the button lays out as "Show more (5)". */}
           <span>
-            Show more <span className="sr-only">transactions</span> ({transactions.length - visible})
+            Show more <span className="sr-only">transactions</span> ({transactions.length - visible}
+            )
           </span>
         </Button>
       )}

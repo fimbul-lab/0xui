@@ -1,5 +1,7 @@
-import { formatUnits, type Address, type Hex } from "viem";
-import { isNativeToken, type TokenInfo } from "@/lib/token-list";
+import { formatUnits } from "viem";
+import type { Address, Hex } from "viem";
+import { isNativeToken } from "@/lib/token-list";
+import type { TokenInfo } from "@/lib/token-list";
 
 export type SwapQuote = {
   /** Output amount, in the buy token's smallest unit. */
@@ -28,7 +30,9 @@ export function formatRate(
 ) {
   const sellUnits = Number(formatUnits(sell.amount, sell.token.decimals));
   const buyUnits = Number(formatUnits(buy.amount, buy.token.decimals));
-  if (!sellUnits || !buyUnits) return undefined;
+  if (!sellUnits || !buyUnits) {
+    return undefined;
+  }
   const [from, to, rate] = invert
     ? [buy.token, sell.token, sellUnits / buyUnits]
     : [sell.token, buy.token, buyUnits / sellUnits];
@@ -67,7 +71,9 @@ export function swapQuoteQueryOptions({
       taker,
     ] as const,
     queryFn: () =>
-      getQuote({ sellToken: sellToken!, buyToken: buyToken!, sellAmount: sellAmount!, taker }),
+      sellToken && buyToken && sellAmount !== undefined
+        ? getQuote({ sellToken, buyToken, sellAmount, taker })
+        : Promise.reject(new Error("Pick both tokens and an amount to quote.")),
     enabled: Boolean(sellToken && buyToken && sellAmount && sellAmount > 0n),
     refetchInterval: refreshInterval,
     retry: false,
@@ -101,11 +107,21 @@ export function swapBlocker({
   quoting: boolean;
   quote: SwapQuote | undefined;
 }) {
-  if (!sellToken || !buyToken) return "Select a token";
-  if (!sellAmount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${sellToken.symbol} balance`;
-  if (error) return "No route found";
-  if (quoting || !quote) return "Fetching quote…";
+  if (!sellToken || !buyToken) {
+    return "Select a token";
+  }
+  if (!sellAmount) {
+    return "Enter an amount";
+  }
+  if (insufficient) {
+    return `Insufficient ${sellToken.symbol} balance`;
+  }
+  if (error) {
+    return "No route found";
+  }
+  if (quoting || !quote) {
+    return "Fetching quote…";
+  }
   return undefined;
 }
 

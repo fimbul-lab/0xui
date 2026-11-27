@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { SkeletonBox } from "skullet/react";
 import type { Address } from "viem";
 import { useChainId, useConfig, useConnection } from "wagmi";
-import { TokenAmount, type TokenAmountProps } from "@/components/token-amount";
-import { balancePhase, tokenBalanceQueryOptions, type BalancePhase } from "@/lib/balance-core";
+import { TokenAmount } from "@/components/token-amount";
+import type { TokenAmountProps } from "@/components/token-amount";
+import { balancePhase, tokenBalanceQueryOptions } from "@/lib/balance-core";
+import type { BalancePhase } from "@/lib/balance-core";
 import { cn } from "@/lib/utils";
 
 export type { BalancePhase };
@@ -90,7 +92,9 @@ export function Balance({
     refreshInterval,
   });
 
-  if (phase === "idle") return null;
+  if (phase === "idle") {
+    return null;
+  }
 
   if (phase === "loading") {
     return (
@@ -119,15 +123,15 @@ export function Balance({
     );
   }
 
+  if (value === undefined || decimals === undefined) {
+    return null;
+  }
+
   return (
-    <span
-      data-slot="balance"
-      data-phase={phase}
-      className={cn("inline-flex", className)}
-    >
+    <span data-slot="balance" data-phase={phase} className={cn("inline-flex", className)}>
       <TokenAmount
-        value={value!}
-        decimals={decimals!}
+        value={value}
+        decimals={decimals}
         symbol={symbolProp ?? symbol}
         animate={animate}
         {...format}

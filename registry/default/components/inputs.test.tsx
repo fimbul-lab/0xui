@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { useState } from "react";
-import { parseEther, parseUnits, type Address } from "viem";
+import { parseEther, parseUnits } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -12,22 +12,15 @@ import {
   renderWithWagmi,
   testAccounts,
 } from "../../../test/wagmi";
-import { AddressInput, type AddressInputState } from "./address-input";
-import {
-  AmountInput,
-  getAmountState,
-  sanitizeAmountInput,
-  type AmountState,
-} from "./amount-input";
-import { TokenInput, type TokenInputState } from "./token-input";
+import { AddressInput } from "./address-input";
+import type { AddressInputState } from "./address-input";
+import { AmountInput, getAmountState, sanitizeAmountInput } from "./amount-input";
+import type { AmountState } from "./amount-input";
+import { TokenInput } from "./token-input";
+import type { TokenInputState } from "./token-input";
 import { TransactionButton } from "./transaction-button";
-import {
-  NATIVE_TOKEN_ADDRESS,
-  TokenSelect,
-  filterTokens,
-  sortByHoldings,
-  type Token,
-} from "./token-select";
+import { NATIVE_TOKEN_ADDRESS, TokenSelect, filterTokens, sortByHoldings } from "./token-select";
+import type { Token } from "./token-select";
 
 const eth: Token = {
   chainId: 1,
@@ -57,7 +50,11 @@ const dai: Token = {
   name: "Dai Stablecoin",
   decimals: 18,
 };
-const baseUsdc: Token = { ...usdc, chainId: 8453, address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" };
+const baseUsdc: Token = {
+  ...usdc,
+  chainId: 8453,
+  address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+};
 const tokens = [eth, usdc, usdt, dai, baseUsdc];
 
 describe("sanitizeAmountInput", () => {
@@ -158,10 +155,7 @@ describe("AmountInput", () => {
 
 describe("filterTokens", () => {
   it("ranks exact and prefix symbol matches first", () => {
-    expect(filterTokens([dai, usdt, usdc], "usd").map((t) => t.symbol)).toEqual([
-      "USDT",
-      "USDC",
-    ]);
+    expect(filterTokens([dai, usdt, usdc], "usd").map((t) => t.symbol)).toEqual(["USDT", "USDC"]);
     // Symbol matches beat name matches.
     expect(filterTokens([dai, usdc], "d").map((t) => t.symbol)).toEqual(["DAI", "USDC"]);
     expect(filterTokens([usdt, usdc], "usdc").map((t) => t.symbol)).toEqual(["USDC"]);
@@ -177,7 +171,12 @@ describe("filterTokens", () => {
 });
 
 describe("sortByHoldings", () => {
-  const wojak: Token = { ...dai, address: "0x5026F006B85729a8b14553FAE6af249aD16c9aaB", symbol: "WOJAK", name: "Wojak" };
+  const wojak: Token = {
+    ...dai,
+    address: "0x5026F006B85729a8b14553FAE6af249aD16c9aaB",
+    symbol: "WOJAK",
+    name: "Wojak",
+  };
   const balances = new Map<string, bigint>([
     [eth.address.toLowerCase(), parseEther("2")],
     [usdc.address.toLowerCase(), parseUnits("10000", 6)],
@@ -199,9 +198,7 @@ describe("TokenSelect", () => {
   it("searches, picks, and remembers recent tokens", async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
-    renderWithWagmi(
-      <TokenSelect tokens={tokens} onValueChange={onValueChange} chainId={1} />
-    );
+    renderWithWagmi(<TokenSelect tokens={tokens} onValueChange={onValueChange} chainId={1} />);
 
     await user.click(screen.getByRole("button", { name: "Select token" }));
     const dialog = await screen.findByRole("dialog", { name: "Select a token" });
@@ -215,17 +212,23 @@ describe("TokenSelect", () => {
     await user.click(screen.getByRole("button", { name: "Select token" }));
     const reopened = await screen.findByRole("dialog");
     expect(
-      within(within(reopened).getByRole("group", { name: "Quick picks" })).getByRole(
-        "button",
-        { name: /USDT/ }
-      )
+      within(within(reopened).getByRole("group", { name: "Quick picks" })).getByRole("button", {
+        name: /USDT/,
+      }),
     ).toBeInTheDocument();
   });
 
   it("picks with arrow keys while focus stays in the search field", async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
-    renderWithWagmi(<TokenSelect tokens={tokens} onValueChange={onValueChange} chainId={1} showBalances={false} />);
+    renderWithWagmi(
+      <TokenSelect
+        tokens={tokens}
+        onValueChange={onValueChange}
+        chainId={1}
+        showBalances={false}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Select token" }));
     const dialog = await screen.findByRole("dialog");
@@ -242,7 +245,9 @@ describe("TokenSelect", () => {
 
   it("returns focus to its button on Escape, and says whether it's open", async () => {
     const user = userEvent.setup();
-    renderWithWagmi(<TokenSelect tokens={tokens} onValueChange={() => {}} chainId={1} showBalances={false} />);
+    renderWithWagmi(
+      <TokenSelect tokens={tokens} onValueChange={() => {}} chainId={1} showBalances={false} />,
+    );
     const trigger = screen.getByRole("button", { name: "Select token" });
     expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
@@ -266,32 +271,46 @@ describe("TokenSelect", () => {
 
   it("pages through long lists", async () => {
     const user = userEvent.setup();
-    const many: Token[] = Array.from({ length: 150 }, (_, i) => ({
+    const many: Array<Token> = Array.from({ length: 7 }, (_, i) => ({
       chainId: 1,
       address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
       symbol: `T${i}`,
       name: `Token ${i}`,
       decimals: 18,
     }));
-    renderWithWagmi(<TokenSelect tokens={many} onValueChange={() => {}} chainId={1} showBalances={false} />);
+    renderWithWagmi(
+      <TokenSelect
+        tokens={many}
+        pageSize={3}
+        onValueChange={() => {}}
+        chainId={1}
+        showBalances={false}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Select token" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getAllByRole("option")).toHaveLength(50);
-    expect(within(dialog).getByText("Showing 50 of 150")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("option")).toHaveLength(3);
+    expect(within(dialog).getByText("Showing 3 of 7")).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole("button", { name: "Show more tokens" }));
-    expect(within(dialog).getAllByRole("option")).toHaveLength(100);
+    expect(within(dialog).getAllByRole("option")).toHaveLength(6);
 
     // A search starts from the first page again and finds tokens beyond it.
-    await user.type(within(dialog).getByRole("combobox", { name: "Search tokens" }), "T149");
-    expect(within(dialog).getByRole("option", { name: /T149/ })).toBeInTheDocument();
-  }, 15_000);
+    await user.type(within(dialog).getByRole("combobox", { name: "Search tokens" }), "T6");
+    expect(within(dialog).getByRole("option", { name: /T6/ })).toBeInTheDocument();
+  });
 
   it("loads the next page when the arrow keys reach the last row", async () => {
     const user = userEvent.setup();
     renderWithWagmi(
-      <TokenSelect tokens={tokens} pageSize={2} onValueChange={() => {}} chainId={1} showBalances={false} />
+      <TokenSelect
+        tokens={tokens}
+        pageSize={2}
+        onValueChange={() => {}}
+        chainId={1}
+        showBalances={false}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Select token" }));
@@ -300,7 +319,7 @@ describe("TokenSelect", () => {
     await user.click(within(dialog).getByRole("combobox", { name: "Search tokens" }));
     await user.keyboard("{ArrowDown}");
     expect(within(dialog).getAllByRole("option")).toHaveLength(4);
-  }, 15_000);
+  });
 
   it("uses balances from your own source instead of the RPC", async () => {
     const user = userEvent.setup();
@@ -311,11 +330,13 @@ describe("TokenSelect", () => {
         balances={{ [usdt.address]: parseUnits("250", 6) }}
         onValueChange={() => {}}
         chainId={1}
-      />
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Select token" }));
-    const rows = within(await screen.findByRole("listbox", { name: "Tokens" })).getAllByRole("option");
+    const rows = within(await screen.findByRole("listbox", { name: "Tokens" })).getAllByRole(
+      "option",
+    );
     expect(rows[0]).toHaveTextContent("USDT");
     expect(rows[0]).toHaveTextContent("250");
   });
@@ -364,7 +385,7 @@ describe("TokenInput", () => {
     await user.type(input, "1");
     expect(await screen.findByRole("alert")).toHaveTextContent("Insufficient USDC balance");
     expect(onState).toHaveBeenLastCalledWith(
-      expect.objectContaining({ amount: parseUnits("1001", 6), insufficient: true })
+      expect.objectContaining({ amount: parseUnits("1001", 6), insufficient: true }),
     );
   });
 });
@@ -382,12 +403,15 @@ describe("AddressInput", () => {
     const onResolve = vi.fn();
     renderWithWagmi(<ControlledAddress onResolve={onResolve} />);
 
-    await user.type(screen.getByRole("textbox", { name: "Recipient address" }), vitalik.toLowerCase());
+    await user.type(
+      screen.getByRole("textbox", { name: "Recipient address" }),
+      vitalik.toLowerCase(),
+    );
 
     await waitFor(() =>
       expect(onResolve).toHaveBeenLastCalledWith(
-        expect.objectContaining({ phase: "valid", address: vitalik })
-      )
+        expect.objectContaining({ phase: "valid", address: vitalik }),
+      ),
     );
   });
 
@@ -410,7 +434,7 @@ describe("AddressInput", () => {
     const user = userEvent.setup();
     const onResolve = vi.fn();
     const config = createTestConfig({
-      rpc: { eth_call: ensResolveRpc({ "vitalik.eth": vitalik as Address }) },
+      rpc: { eth_call: ensResolveRpc({ "vitalik.eth": vitalik }) },
     });
     renderWithWagmi(<ControlledAddress onResolve={onResolve} />, { config });
 
@@ -418,8 +442,8 @@ describe("AddressInput", () => {
 
     await waitFor(() =>
       expect(onResolve).toHaveBeenLastCalledWith(
-        expect.objectContaining({ phase: "valid", address: vitalik, ensName: "vitalik.eth" })
-      )
+        expect.objectContaining({ phase: "valid", address: vitalik, ensName: "vitalik.eth" }),
+      ),
     );
     expect(screen.getByText("0xd8dA…6045")).toBeInTheDocument();
   });
@@ -431,9 +455,7 @@ describe("AddressInput", () => {
 
     await user.type(screen.getByRole("textbox", { name: "Recipient address" }), "nobody.eth");
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "No address found for nobody.eth."
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("No address found for nobody.eth.");
   });
 });
 
@@ -446,11 +468,17 @@ describe("agents", () => {
   /** Every entry is named, and no label's words all appear in another's. */
   function expectNamedAndDistinct() {
     const entries = onPage();
-    const words = (label: string) => label.toLowerCase().split(/[^\p{L}\p{N}…]+/u).filter(Boolean);
+    const words = (label: string) =>
+      label
+        .toLowerCase()
+        .split(/[^\p{L}\p{N}…]+/u)
+        .filter(Boolean);
     for (const a of entries) {
       expect(a.label, `${a.component} ${a.ref} has no name`).toBeTruthy();
       for (const b of entries) {
-        if (a === b) continue;
+        if (a === b) {
+          continue;
+        }
         const inside = words(a.label!).every((word) => words(b.label!).includes(word));
         expect(inside, `"${a.label}" also names "${b.label}"`).toBe(false);
       }
@@ -482,12 +510,20 @@ describe("agents", () => {
     const onState = vi.fn();
     renderWithWagmi(<SendForm onState={onState} />);
 
-    const components = agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+    const components = agent
+      .snapshot()
+      .filter((entry) => !entry.offPage && entry.component !== "more");
     for (const entry of components) {
       expect(entry.label, `${entry.component} ${entry.ref} has no name`).toBeTruthy();
     }
     const labels = components.map((entry) => entry.label);
-    for (const label of ["Recipient address", "Paste into Recipient", "Amount", "Max", "Select token"]) {
+    for (const label of [
+      "Recipient address",
+      "Paste into Recipient",
+      "Amount",
+      "Max",
+      "Select token",
+    ]) {
       expect(labels, `${label} is missing from the snapshot`).toContain(label);
     }
 
@@ -497,10 +533,12 @@ describe("agents", () => {
           { ref: "Recipient", action: "setValue", args: [testAccounts[0].toLowerCase()] },
           { ref: "Amount", action: "setValue", args: ["2.5"] },
         ],
-      })
+      }),
     );
     expect(result.ok, result.error?.message).toBe(true);
-    expect(screen.getByRole("textbox", { name: "Recipient address" })).toHaveValue(testAccounts[0].toLowerCase());
+    expect(screen.getByRole("textbox", { name: "Recipient address" })).toHaveValue(
+      testAccounts[0].toLowerCase(),
+    );
     expect(onState).toHaveBeenLastCalledWith({ amount: parseUnits("2.5", 6), exceedsMax: false });
 
     // Typing rules hold for agents too.
@@ -511,11 +549,18 @@ describe("agents", () => {
   it("finds a token in the picker and picks it", async () => {
     const onValueChange = vi.fn();
     renderWithWagmi(
-      <TokenSelect tokens={tokens} onValueChange={onValueChange} chainId={1} showBalances={false} />,
+      <TokenSelect
+        tokens={tokens}
+        onValueChange={onValueChange}
+        chainId={1}
+        showBalances={false}
+      />,
     );
 
     // Closed, the picker is one button. Pressing it shows the searchable list.
-    expect(onPage().map((entry) => [entry.component, entry.label])).toEqual([["button", "Select token"]]);
+    expect(onPage().map((entry) => [entry.component, entry.label])).toEqual([
+      ["button", "Select token"],
+    ]);
     const opened = await agent.act({ steps: [{ ref: "Select token", action: "press" }] });
     expect(opened.ok, opened.error?.message).toBe(true);
     const list = opened.appeared?.find((entry) => entry.component === "command");
@@ -528,15 +573,21 @@ describe("agents", () => {
     ]);
     // Open, the dialog takes its title, "Select a token". It shares words with
     // the button behind it, but a step there goes to the open dialog.
-    for (const entry of onPage()) expect(entry.label, `${entry.ref} has no name`).toBeTruthy();
+    for (const entry of onPage()) {
+      expect(entry.label, `${entry.ref} has no name`).toBeTruthy();
+    }
     expect(onPage().map((entry) => entry.label)).toContain("Close token picker");
 
     const found = await agent.query({ within: "Search tokens", text: "tether" });
-    if ("error" in found) throw new Error(found.error);
+    if ("error" in found) {
+      throw new Error(found.error);
+    }
     const [usdtItem] = found[0]!.items!;
     expect(usdtItem!.label).toBe("USDT Tether USD");
 
-    const picked = await agent.act({ steps: [{ ref: "Search tokens", action: "run", args: [usdtItem!.value] }] });
+    const picked = await agent.act({
+      steps: [{ ref: "Search tokens", action: "run", args: [usdtItem!.value] }],
+    });
     expect(picked.ok, picked.error?.message).toBe(true);
     expect(onValueChange).toHaveBeenCalledWith(usdt);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
@@ -545,7 +596,12 @@ describe("agents", () => {
   it("picks a token by its symbol, or by its row's text", async () => {
     const onValueChange = vi.fn();
     renderWithWagmi(
-      <TokenSelect tokens={tokens} onValueChange={onValueChange} chainId={1} showBalances={false} />,
+      <TokenSelect
+        tokens={tokens}
+        onValueChange={onValueChange}
+        chainId={1}
+        showBalances={false}
+      />,
     );
     const bySymbol = await agent.act({
       steps: [
@@ -578,9 +634,23 @@ describe("agents", () => {
     renderWithWagmi(
       <>
         <AddressInput value="" onValueChange={noop} />
-        <TokenInput label="Amount" value="" onValueChange={noop} token={eth} onTokenChange={noop} tokens={tokens} />
+        <TokenInput
+          label="Amount"
+          value=""
+          onValueChange={noop}
+          token={eth}
+          onTokenChange={noop}
+          tokens={tokens}
+        />
         <TransactionButton transaction={{ to: testAccounts[1], value: 1n }}>Send</TransactionButton>
-        <TokenInput label="You pay" value="" onValueChange={noop} token={usdc} onTokenChange={noop} tokens={tokens} />
+        <TokenInput
+          label="You pay"
+          value=""
+          onValueChange={noop}
+          token={usdc}
+          onTokenChange={noop}
+          tokens={tokens}
+        />
         <TokenInput
           label="You receive"
           value=""
@@ -598,7 +668,11 @@ describe("agents", () => {
     await screen.findByRole("button", { name: "Max Amount" });
     await screen.findByRole("button", { name: "Max You pay" });
 
-    expect(expectNamedAndDistinct().map((entry) => entry.label).sort()).toEqual(
+    expect(
+      expectNamedAndDistinct()
+        .map((entry) => entry.label)
+        .sort(),
+    ).toEqual(
       [
         "Recipient address",
         "Paste into Recipient",
@@ -624,16 +698,22 @@ describe("agents", () => {
   });
 
   it("reaches tokens past the first page by searching", async () => {
-    const many: Token[] = Array.from({ length: 12 }, (_, i) => ({
+    const many: Array<Token> = Array.from({ length: 12 }, (_, i) => ({
       chainId: 1,
-      address: `0x${String(i + 1).padStart(40, "0")}` as Address,
+      address: `0x${String(i + 1).padStart(40, "0")}`,
       symbol: `TK${i}`,
       name: `Token ${i}`,
       decimals: 18,
     }));
     const onValueChange = vi.fn();
     renderWithWagmi(
-      <TokenSelect tokens={many} pageSize={5} onValueChange={onValueChange} chainId={1} showBalances={false} />,
+      <TokenSelect
+        tokens={many}
+        pageSize={5}
+        onValueChange={onValueChange}
+        chainId={1}
+        showBalances={false}
+      />,
     );
     await agent.act({ steps: [{ ref: "Select token", action: "press" }] });
     await waitFor(() => expect(onPage().map((entry) => entry.label)).toContain("Show more tokens"));
@@ -671,7 +751,10 @@ describe("agents", () => {
             onTokenChange={setToken}
             tokens={tokens}
           />
-          <TransactionButton transaction={{ to: testAccounts[1], value: 1n }} agentConfirm="Sends the amount to the recipient">
+          <TransactionButton
+            transaction={{ to: testAccounts[1], value: 1n }}
+            agentConfirm="Sends the amount to the recipient"
+          >
             Send
           </TransactionButton>
         </>
@@ -682,7 +765,14 @@ describe("agents", () => {
     await screen.findByRole("button", { name: "Max Amount" });
 
     const labels = expectNamedAndDistinct().map((entry) => entry.label);
-    for (const label of ["Recipient address", "Paste into Recipient", "Amount in ETH", "Amount token: ETH, change", "Max Amount", "Send"]) {
+    for (const label of [
+      "Recipient address",
+      "Paste into Recipient",
+      "Amount in ETH",
+      "Amount token: ETH, change",
+      "Max Amount",
+      "Send",
+    ]) {
       expect(labels, `${label} is missing from the snapshot`).toContain(label);
     }
 
@@ -695,7 +785,9 @@ describe("agents", () => {
     expect(filled.ok, filled.error?.message).toBe(true);
     expect(screen.getByRole("textbox", { name: "Amount in ETH" })).toHaveValue("5");
 
-    expect(onPage().find((entry) => entry.label === "Send")?.confirm).toBe("Sends the amount to the recipient");
+    expect(onPage().find((entry) => entry.label === "Send")?.confirm).toBe(
+      "Sends the amount to the recipient",
+    );
     expect((await agent.act({ steps: [{ ref: "Send", action: "press" }] })).ok).toBe(false);
   });
 

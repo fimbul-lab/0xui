@@ -21,7 +21,7 @@ export const SignIn = demo(() => {
             statement: "Sign in to the 0xui docs. This won't cost any gas.",
           })
         : "",
-    [address, chainId, nonce]
+    [address, chainId, nonce],
   );
 
   return (

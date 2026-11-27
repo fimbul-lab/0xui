@@ -18,7 +18,7 @@ export interface DocPage {
 export interface DocSection {
   title: string;
   blurb?: string;
-  pages: DocPage[];
+  pages: Array<DocPage>;
 }
 
 /** URL of a page's Markdown, like `https://0xui.io/components/balance.md`. */
@@ -32,14 +32,19 @@ export function markdownPath(id: string) {
 }
 
 /** Every listed page except the landing page, in sidebar order. Unlisted pages are left out. */
-export function docSections(docs: DocPage[]): DocSection[] {
+export function docSections(docs: Array<DocPage>): Array<DocSection> {
   const byId = new Map(docs.map((doc) => [doc.id, doc]));
-  const pick = (ids: string[]) =>
-    ids.map((id) => byId.get(id)).filter((doc): doc is DocPage => Boolean(doc));
+  const pick = (ids: Array<string>) =>
+    ids.flatMap((id) => {
+      const doc = byId.get(id);
+      return doc ? [doc] : [];
+    });
   const names = (section: string) =>
-    docs
-      .filter((doc) => doc.id.startsWith(`${section}/`) && !unlistedPages.has(doc.id))
-      .map((doc) => doc.id.slice(section.length + 1));
+    docs.flatMap((doc) =>
+      doc.id.startsWith(`${section}/`) && !unlistedPages.has(doc.id)
+        ? [doc.id.slice(section.length + 1)]
+        : [],
+    );
 
   return [
     { title: "Getting started", pages: pick(gettingStarted.map((item) => item.slug)) },
@@ -64,16 +69,24 @@ export function docSections(docs: DocPage[]): DocSection[] {
 const runner = "npx shadcn@latest";
 
 /** The `shadcn add` command for one or more registry items. */
-export function installCommand(names: string[]) {
+export function installCommand(names: Array<string>) {
   return `${runner} add ${names.map((name) => `@0xui/${name}`).join(" ")}`;
 }
 
-const asideLabels: Record<string, string> = {
-  note: "Note",
-  tip: "Tip",
-  caution: "Caution",
-  danger: "Danger",
-};
+function asideLabel(type: string) {
+  switch (type) {
+    case "note":
+      return "Note";
+    case "tip":
+      return "Tip";
+    case "caution":
+      return "Caution";
+    case "danger":
+      return "Danger";
+    default:
+      return "Note";
+  }
+}
 
 function attribute(tag: string, name: string) {
   return tag.match(new RegExp(`${name}="([^"]*)"`))?.[1];
@@ -81,7 +94,7 @@ function attribute(tag: string, name: string) {
 
 /** Turns a docs link like `/components/token-amount/#props` into its Markdown URL. */
 function rewriteLinks(line: string) {
-  return line.replace(
+  return line.replaceAll(
     /\]\(\/((?:getting-started|components|blocks)(?:\/[a-z0-9-]+)?)\/?(#[^)]*)?\)/g,
     (_, id: string, hash = "") => `](${markdownUrl(id)}${hash})`,
   );
@@ -94,16 +107,21 @@ function rewriteLinks(line: string) {
  */
 export function mdxToMarkdown(mdx: string, index: (section: string) => string = () => "") {
   const lines = mdx.replace(/^---\n[\s\S]*?\n---\n/, "").split("\n");
-  const out: string[] = [];
+  const out: Array<string> = [];
   let fence: string | undefined;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    if (line === undefined) {
+      break;
+    }
     const marker = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
 
     if (fence) {
       out.push(line);
-      if (marker && marker[0] === fence[0] && marker.length >= fence.length) fence = undefined;
+      if (marker && marker[0] === fence[0] && marker.length >= fence.length) {
+        fence = undefined;
+      }
       continue;
     }
     if (marker) {
@@ -111,7 +129,9 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
       out.push(line);
       continue;
     }
-    if (/^(import|export) /.test(line)) continue;
+    if (/^(import|export) /.test(line)) {
+      continue;
+    }
 
     const name = line.match(/^\s*<([A-Z][A-Za-z.]*)/)?.[1];
     if (!name) {
@@ -121,25 +141,32 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
 
     // The opening tag can span lines, like `<Install name={[ … ]} />`.
     let open = line;
-    while (!/>\s*$/.test(open) && i + 1 < lines.length) open += `\n${lines[++i]}`;
+    let next = lines[i + 1];
+    while (!/>\s*$/.test(open) && next !== undefined) {
+      open += `\n${next}`;
+      next = lines[++i + 1];
+    }
     const selfClosing = /\/>\s*$/.test(open);
-    const children: string[] = [];
+    const children: Array<string> = [];
     if (!selfClosing && !open.includes(`</${name}>`)) {
-      while (i + 1 < lines.length && !lines[i + 1].includes(`</${name}>`)) {
-        children.push(lines[++i]);
+      while (next !== undefined && !next.includes(`</${name}>`)) {
+        children.push(next);
+        next = lines[++i + 1];
       }
       i++;
     }
 
     if (name === "Install") {
-      const names = [...open.matchAll(/"([a-z0-9-]+)"/g)].map((match) => match[1]);
+      const names = [...open.matchAll(/"([a-z0-9-]+)"/g)].flatMap((match) => match[1] ?? []);
       out.push("```bash", installCommand(names), "```");
     } else if (name === "Aside") {
       const type = attribute(open, "type") ?? "note";
       const title = attribute(open, "title");
-      const label = asideLabels[type] ?? "Note";
+      const label = asideLabel(type);
       out.push(`> **${title ? `${label}: ${title}` : label}**`, ">");
-      for (const child of children) out.push(`> ${rewriteLinks(child.trim())}`.trimEnd());
+      for (const child of children) {
+        out.push(`> ${rewriteLinks(child.trim())}`.trimEnd());
+      }
     } else if (name === "ComponentIndex") {
       out.push(index(attribute(open, "section") ?? ""));
     }
@@ -148,18 +175,18 @@ export function mdxToMarkdown(mdx: string, index: (section: string) => string = 
 
   return out
     .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
+    .replaceAll(/\n{3,}/g, "\n\n")
     .trim();
 }
 
-function pageList(pages: DocPage[]) {
+function pageList(pages: Array<DocPage>) {
   return pages
     .map((page) => `- [${page.title}](${markdownUrl(page.id)}): ${page.description}`)
     .join("\n");
 }
 
 /** The list a `<ComponentIndex section>` renders, as Markdown. */
-export function sectionIndex(docs: DocPage[], section: string) {
+export function sectionIndex(docs: Array<DocPage>, section: string) {
   return docSections(docs)
     .filter((group) =>
       section === "components"
@@ -180,11 +207,11 @@ export interface RegistryItem {
   name: string;
   type: string;
   description?: string;
-  files?: { path: string }[];
+  files?: Array<{ path: string }>;
 }
 
 /** One page as a standalone Markdown document. */
-export function pageMarkdown(page: DocPage, docs: DocPage[], registry: RegistryItem[]) {
+export function pageMarkdown(page: DocPage, docs: Array<DocPage>, registry: Array<RegistryItem>) {
   const [section, name] = page.id.split("/");
   const item =
     section === "components" || section === "blocks"
@@ -225,7 +252,7 @@ AI agents can use apps built with 0xui: render \`<AgentTools />\` (\`@0xui/agent
 Every page below is Markdown. Append \`.md\` to any docs URL for its Markdown, read everything at once at ${site}/llms-full.txt, or install the agent skill: \`npx skills add ${site}\`.`;
 
 /** `/llms.txt`, as https://llmstxt.org describes it. */
-export function llmsTxt(docs: DocPage[], registry: RegistryItem[]) {
+export function llmsTxt(docs: Array<DocPage>, registry: Array<RegistryItem>) {
   const documented = new Set(docs.map((doc) => doc.id.split("/")[1]));
   const extras = registry.filter(
     (item) => !documented.has(item.name) && item.type !== "registry:example",
@@ -250,7 +277,7 @@ export function llmsTxt(docs: DocPage[], registry: RegistryItem[]) {
 }
 
 /** `/llms-full.txt`: every page, in sidebar order. */
-export function llmsFullTxt(docs: DocPage[], registry: RegistryItem[]) {
+export function llmsFullTxt(docs: Array<DocPage>, registry: Array<RegistryItem>) {
   const pages = docSections(docs).flatMap((section) => section.pages);
   return [
     "# 0xui",

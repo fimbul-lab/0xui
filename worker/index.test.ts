@@ -2,20 +2,26 @@ import { describe, expect, test } from "vitest";
 import worker from "./index";
 import { agentLinks, markdownFor, prefersMarkdown } from "./negotiate";
 
-const files: Record<string, [string, string]> = {
+const notFound: [string, string] = ["<h1>Not found</h1>", "text/html"];
+const files = {
   "/components/balance/": ["<h1>Balance</h1>", "text/html; charset=utf-8"],
   "/components/balance.md": ["# Balance", "text/markdown"],
   "/llms.txt": ["# 0xui", "text/plain"],
-  "/404.html": ["<h1>Not found</h1>", "text/html"],
-};
+  "/404.html": notFound,
+} satisfies Record<string, [string, string]>;
+
+function hasOwnKey<T extends object>(record: T, key: string): key is Extract<keyof T, string> {
+  return Object.hasOwn(record, key);
+}
 
 const env = {
   ASSETS: {
     async fetch(input: Request | URL | string) {
-      const path = new URL(input instanceof Request ? input.url : input).pathname;
-      const [body, type] = files[path] ?? files["/404.html"];
+      const url = typeof input === "object" && "url" in input ? input.url : input;
+      const path = new URL(url).pathname;
+      const [body, type] = hasOwnKey(files, path) ? files[path] : notFound;
       return new Response(body, {
-        status: path in files ? 200 : 404,
+        status: hasOwnKey(files, path) ? 200 : 404,
         headers: { "Content-Type": type },
       });
     },

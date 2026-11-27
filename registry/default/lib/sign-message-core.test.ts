@@ -3,7 +3,8 @@ import type { Address } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it, vi } from "vitest";
 import { createTestConfig } from "../../../test/wagmi";
-import { createMessageSigner, type SignPhase } from "./sign-message-core";
+import { createMessageSigner } from "./sign-message-core";
+import type { SignPhase } from "./sign-message-core";
 
 const signer = privateKeyToAccount(generatePrivateKey());
 const signingConfig = (sign = signer) =>
@@ -19,7 +20,7 @@ describe("createMessageSigner", () => {
     const config = signingConfig();
     await connect(config, { connector: config.connectors[0]! });
     const flow = createMessageSigner(config);
-    const phases: SignPhase[] = [];
+    const phases: Array<SignPhase> = [];
     const stop = flow.subscribe(() => phases.push(flow.get().phase));
     const onSigned = vi.fn();
 

@@ -2,7 +2,8 @@
 import { ExternalLinkIcon } from "lucide-react";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
 import { useChainId, useChains } from "wagmi";
-import { getExplorerUrl, type ExplorerTarget } from "@/lib/0xui-utils";
+import { getExplorerUrl } from "@/lib/0xui-utils";
+import type { ExplorerTarget } from "@/lib/0xui-utils";
 import { cn } from "@/lib/utils";
 
 export type ExplorerLinkProps = Omit<ComponentProps<"a">, "href" | "children"> &
@@ -30,20 +31,19 @@ export function useExplorerLink(target: ExplorerTarget, chainId?: number) {
  * Link to an address, transaction or block on the chain's block explorer.
  * Renders plain text when the chain has no explorer configured.
  */
-export function ExplorerLink({
-  address,
-  tx,
-  block,
-  chainId,
-  children,
-  icon,
-  className,
-  ...props
-}: ExplorerLinkProps) {
-  const target = (
-    address ? { address } : tx ? { tx } : { block }
-  ) as ExplorerTarget;
-  const { href, explorerName } = useExplorerLink(target, chainId);
+export function ExplorerLink(linkProps: ExplorerLinkProps) {
+  // The target props (`address`, `tx`, `block`) are read from `linkProps`, not passed to the <a>.
+  const {
+    address: _address,
+    tx: _tx,
+    block: _block,
+    chainId,
+    children,
+    icon,
+    className,
+    ...props
+  } = linkProps;
+  const { href, explorerName } = useExplorerLink(linkProps, chainId);
   const Icon = icon === false ? null : (icon ?? ExternalLinkIcon);
 
   if (!href) {
@@ -55,10 +55,7 @@ export function ExplorerLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn(
-        "inline-flex items-center gap-1 underline-offset-4 hover:underline",
-        className
-      )}
+      className={cn("inline-flex items-center gap-1 underline-offset-4 hover:underline", className)}
       {...props}
     >
       {children ?? `View on ${explorerName ?? "explorer"}`}

@@ -1,13 +1,10 @@
-import {
-  getConnection,
-  sendTransaction,
-  switchChain,
-  watchConnection,
-  type Config,
-} from "@wagmi/core";
-import { formatUnits, type Address, type Hash } from "viem";
+import { getConnection, sendTransaction, switchChain, watchConnection } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
+import { formatUnits } from "viem";
+import type { Address, Hash } from "viem";
 import { createStore } from "@/lib/0xui-store";
-import { errorCode, isUserRejection, truncateAddress, type ErrorCode } from "@/lib/0xui-utils";
+import { errorCode, errorMessage, isUserRejection, truncateAddress } from "@/lib/0xui-utils";
+import type { ErrorCode } from "@/lib/0xui-utils";
 import type { ProofPhase } from "@/lib/proof-progress-core";
 import type { ShieldedClient } from "@/lib/shielded-client";
 import type { PreparedExit, ProofStage, ShieldedEngine, ShieldedExit } from "@/lib/shielded-engine";
@@ -117,20 +114,37 @@ export function createShieldedExitFlow(
     current?.abort();
     const run = new AbortController();
     current = run;
-    store.set({ exit, problem: undefined, prepared: undefined, stage: "loading-circuits", phase: "proving" });
+    store.set({
+      exit,
+      problem: undefined,
+      prepared: undefined,
+      stage: "loading-circuits",
+      phase: "proving",
+    });
     try {
-      const prepared = await engine.prepareExit!(chainId, exit.id, {
+      if (!engine.prepareExit) {
+        throw new Error("This engine can't exit funds.");
+      }
+      const prepared = await engine.prepareExit(chainId, exit.id, {
         signal: run.signal,
         onStage: (stage) => {
-          if (current === run) store.set({ stage });
+          if (current === run) {
+            store.set({ stage });
+          }
         },
       });
-      if (current !== run) return;
+      if (current !== run) {
+        return;
+      }
       store.set({ prepared, phase: "ready" });
-    } catch (cause) {
-      if (current !== run) return;
-      if (run.signal.aborted) return store.set({ phase: "cancelled" });
-      const error = toError(cause);
+    } catch (error_) {
+      if (current !== run) {
+        return;
+      }
+      if (run.signal.aborted) {
+        return store.set({ phase: "cancelled" });
+      }
+      const error = toError(error_);
       store.set({
         phase: "error",
         problem: { message: error.message, code: errorCode("error", error), proof: true },
@@ -140,19 +154,23 @@ export function createShieldedExitFlow(
 
   const send = async () => {
     const { exit, prepared, phase } = store.get();
-    if (!exit || !prepared || phase === "wallet") return;
+    if (!exit || !prepared || phase === "wallet") {
+      return;
+    }
     store.set({ problem: undefined, phase: "wallet" });
     try {
       const hash = await sendTransaction(config, { chainId, ...prepared.transaction });
       leave();
       onSubmitted?.(hash, exit);
-    } catch (cause) {
-      const error = toError(cause);
-      if (isUserRejection(error)) return store.set({ phase: "cancelled" });
+    } catch (error_) {
+      const error = toError(error_);
+      if (isUserRejection(error)) {
+        return store.set({ phase: "cancelled" });
+      }
       store.set({
         phase: "error",
         problem: {
-          message: (error as { shortMessage?: string }).shortMessage ?? error.message,
+          message: errorMessage(error),
           code: errorCode("error", error),
           proof: false,
         },
@@ -202,13 +220,23 @@ export function shieldedExitBlocker({
   chainId: number;
   chainName?: string;
 }): { label: string; action?: "connect" | "switch-chain" } | undefined {
-  if (!address) return { label: "Connect wallet", action: "connect" };
+  if (!address) {
+    return { label: "Connect wallet", action: "connect" };
+  }
   if (depositor && address.toLowerCase() !== depositor.toLowerCase()) {
     return { label: `Switch wallet to ${truncateAddress(depositor)}` };
   }
-  if (walletChainId !== chainId) return { label: `Switch to ${chainName}`, action: "switch-chain" };
+  if (walletChainId !== chainId) {
+    return { label: `Switch to ${chainName}`, action: "switch-chain" };
+  }
   return undefined;
 }
+
+/** The open exit's button label, and what pressing it does, if anything. */
+export type ShieldedExitAction = {
+  label: string;
+  action?: "connect" | "switch-chain" | "prepare" | "send";
+};
 
 /**
  * The open exit's button: its label and what a click does. A blocker comes
@@ -224,14 +252,22 @@ export function shieldedExitAction({
   phase: ShieldedExitPhase;
   prepared: boolean;
   switching: boolean;
-}): { label: string; action?: "connect" | "switch-chain" | "prepare" | "send" } {
+}): ShieldedExitAction {
   if (blocker) {
-    if (blocker.action === "switch-chain" && switching) return { label: "Switching network…" };
+    if (blocker.action === "switch-chain" && switching) {
+      return { label: "Switching network…" };
+    }
     return blocker;
   }
-  if (phase === "proving") return { label: "Preparing exit…" };
-  if (phase === "wallet") return { label: "Confirm in wallet…" };
-  if (prepared) return { label: "Send exit from wallet", action: "send" };
+  if (phase === "proving") {
+    return { label: "Preparing exit…" };
+  }
+  if (phase === "wallet") {
+    return { label: "Confirm in wallet…" };
+  }
+  if (prepared) {
+    return { label: "Send exit from wallet", action: "send" };
+  }
   return { label: phase === "idle" ? "Prepare exit" : "Try again", action: "prepare" };
 }
 
@@ -242,10 +278,18 @@ export function exitProofPhase({
   problem,
   prepared,
 }: Pick<ShieldedExitState, "phase" | "stage" | "problem"> & { prepared: boolean }): ProofPhase {
-  if (problem?.proof) return "error";
-  if (phase === "cancelled" && !prepared) return "cancelled";
-  if (prepared) return "done";
-  if (phase === "proving") return stage ?? "loading-circuits";
+  if (problem?.proof) {
+    return "error";
+  }
+  if (phase === "cancelled" && !prepared) {
+    return "cancelled";
+  }
+  if (prepared) {
+    return "done";
+  }
+  if (phase === "proving") {
+    return stage ?? "loading-circuits";
+  }
   return phase === "idle" ? "idle" : "done";
 }
 

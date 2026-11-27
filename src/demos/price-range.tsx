@@ -14,7 +14,8 @@ export const Default = demo(() => {
   const loaded = usePretendLoad();
   return (
     <div className="flex w-full max-w-xl flex-col gap-3">
-      <PriceRange locale="en-US"
+      <PriceRange
+        locale="en-US"
         pool={loaded ? pool : undefined}
         bins={loaded ? bins : undefined}
         token0={demoToken0}
@@ -32,7 +33,8 @@ export const Default = demo(() => {
 
 export const WithoutChart = demo(() => (
   <div className="w-full max-w-xl">
-    <PriceRange locale="en-US"
+    <PriceRange
+      locale="en-US"
       pool={pool}
       showChart={false}
       token0={demoToken0}
@@ -49,7 +51,8 @@ export const Preview = demo(() => {
   });
   return (
     <div className="flex w-full max-w-xl flex-col gap-4">
-      <PriceRange locale="en-US"
+      <PriceRange
+        locale="en-US"
         pool={pool}
         bins={bins}
         token0={demoToken0}
@@ -57,7 +60,13 @@ export const Preview = demo(() => {
         value={range}
         onValueChange={setRange}
       />
-      <RangeIndicator locale="en-US" {...range} pool={pool} token0={demoToken0} token1={demoToken1} />
+      <RangeIndicator
+        locale="en-US"
+        {...range}
+        pool={pool}
+        token0={demoToken0}
+        token1={demoToken1}
+      />
     </div>
   );
 });

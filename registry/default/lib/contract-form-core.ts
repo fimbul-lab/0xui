@@ -1,18 +1,11 @@
-import { readContract, type Config } from "@wagmi/core";
-import {
-  formatEther,
-  getAddress,
-  isAddress,
-  isHex,
-  parseEther,
-  size,
-  type Abi,
-  type AbiFunction,
-  type AbiParameter,
-  type Address,
-} from "viem";
+import { readContract } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
+import { formatEther, getAddress, isAddress, isHex, parseEther, size } from "viem";
+import type { Abi, AbiFunction, AbiParameter, Address } from "viem";
 
-export type ParsedAbiInput = { value: unknown; error?: undefined } | { value?: undefined; error: string };
+export type ParsedAbiInput =
+  | { value: unknown; error?: undefined }
+  | { value?: undefined; error: string };
 
 function intBounds(type: string) {
   const signed = type.startsWith("int");
@@ -23,27 +16,35 @@ function intBounds(type: string) {
 }
 
 /** Turn an already-parsed JSON value into the shape viem expects for `param`. */
+// oxlint-disable-next-line quality/no-unknown-returns -- an ABI value can be any shape; viem's encoder checks it
 function coerce(param: AbiParameter, value: unknown): unknown {
-  const array = param.type.match(/^(.*)\[(\d*)\]$/);
-  if (array) {
-    if (!Array.isArray(value)) throw new Error("Expected a JSON array");
-    if (array[2] && value.length !== Number(array[2])) throw new Error(`Expected ${array[2]} items`);
-    return value.map((item) => coerce({ ...param, type: array[1]! }, item));
+  const [, itemType, length] = param.type.match(/^(.*)\[(\d*)\]$/) ?? [];
+  if (itemType !== undefined) {
+    if (!Array.isArray(value)) {
+      throw new Error("Expected a JSON array");
+    }
+    if (length && value.length !== Number(length)) {
+      throw new Error(`Expected ${length} items`);
+    }
+    return value.map((item) => coerce({ ...param, type: itemType }, item));
   }
   if (param.type === "tuple") {
-    const components = (param as { components: readonly AbiParameter[] }).components;
-    if (Array.isArray(value)) return components.map((c, i) => coerce(c, value[i]));
-    if (value && typeof value === "object")
+    const components = "components" in param ? param.components : [];
+    if (Array.isArray(value)) {
+      return components.map((c, i) => coerce(c, value[i]));
+    }
+    if (value && typeof value === "object") {
+      const fields = new Map<string, unknown>(Object.entries(value));
       return Object.fromEntries(
-        components.map((c, i) => [
-          c.name ?? i,
-          coerce(c, (value as Record<string, unknown>)[c.name ?? i]),
-        ]),
+        components.map((c, i) => [c.name ?? i, coerce(c, fields.get(c.name ?? String(i)))]),
       );
+    }
     throw new Error("Expected a JSON object or array");
   }
   const parsed = parseAbiInput(param, typeof value === "string" ? value : JSON.stringify(value));
-  if (parsed.error) throw new Error(parsed.error);
+  if (parsed.error) {
+    throw new Error(parsed.error);
+  }
   return parsed.value;
 }
 
@@ -62,45 +63,75 @@ export function parseAbiInput(param: AbiParameter, raw: string): ParsedAbiInput 
   const type = param.type;
   try {
     if (isComplexAbiType(type)) {
-      if (!text) return { error: "Required" };
+      if (!text) {
+        return { error: "Required" };
+      }
       return { value: coerce(param, JSON.parse(text)) };
     }
-    if (type === "string") return { value: raw };
-    if (!text) return { error: "Required" };
+    if (type === "string") {
+      return { value: raw };
+    }
+    if (!text) {
+      return { error: "Required" };
+    }
     if (/^u?int\d*$/.test(type)) {
-      if (!/^-?\d+$/.test(text.replace(/_/g, ""))) return { error: "Whole number" };
-      const value = BigInt(text.replace(/_/g, ""));
+      if (!/^-?\d+$/.test(text.replaceAll("_", ""))) {
+        return { error: "Whole number" };
+      }
+      const value = BigInt(text.replaceAll("_", ""));
       const { min, max } = intBounds(type);
-      if (value < min || value > max) return { error: `Out of range for ${type}` };
+      if (value < min || value > max) {
+        return { error: `Out of range for ${type}` };
+      }
       return { value };
     }
     if (type === "address") {
-      if (!isAddress(text, { strict: false })) return { error: "Not an address" };
-      if (!isAddress(text)) return { error: "Checksum doesn't match" };
+      if (!isAddress(text, { strict: false })) {
+        return { error: "Not an address" };
+      }
+      if (!isAddress(text)) {
+        return { error: "Checksum doesn't match" };
+      }
       return { value: getAddress(text) };
     }
     if (type === "bool") {
-      if (text === "true") return { value: true };
-      if (text === "false") return { value: false };
+      if (text === "true") {
+        return { value: true };
+      }
+      if (text === "false") {
+        return { value: false };
+      }
       return { error: "true or false" };
     }
     if (type.startsWith("bytes")) {
-      if (!isHex(text)) return { error: "Hex, starting with 0x" };
+      if (!isHex(text)) {
+        return { error: "Hex, starting with 0x" };
+      }
       const fixed = type.slice(5);
-      if (fixed && size(text) !== Number(fixed)) return { error: `Exactly ${fixed} bytes` };
+      if (fixed && size(text) !== Number(fixed)) {
+        return { error: `Exactly ${fixed} bytes` };
+      }
       return { value: text };
     }
     return { error: `Unsupported type ${type}` };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Invalid JSON" };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invalid JSON" };
   }
 }
 
 /** Readable text for a contract return value: bigints as digits, nested values as JSON. */
 export function formatAbiValue(value: unknown): string {
-  if (typeof value === "bigint") return value.toString();
-  if (typeof value === "string" || typeof value === "boolean") return String(value);
-  return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2);
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  if (typeof value === "string" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(
+    value,
+    (_key: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v),
+    2,
+  );
 }
 
 /** View and pure functions only read. */
@@ -121,10 +152,15 @@ export function functionKind(fn: AbiFunction): "read" | "payable" | "write" {
 /** The ABI's functions, optionally only `functions` (in that order) and only reads or writes. */
 export function contractFunctions(
   abi: Abi,
-  { functions, show = "all" }: { functions?: readonly string[]; show?: "all" | "read" | "write" } = {},
+  {
+    functions,
+    show = "all",
+  }: { functions?: ReadonlyArray<string>; show?: "all" | "read" | "write" } = {},
 ) {
   const all = abi.filter((item): item is AbiFunction => item.type === "function");
-  const picked = functions ? functions.flatMap((name) => all.filter((fn) => fn.name === name)) : all;
+  const picked = functions
+    ? functions.flatMap((name) => all.filter((fn) => fn.name === name))
+    : all;
   return picked.filter((fn) =>
     show === "read" ? isReadFunction(fn) : show === "write" ? !isReadFunction(fn) : true,
   );
@@ -137,9 +173,9 @@ export function initialFunctionValues(fn: AbiFunction) {
 
 export type FunctionCallDraft = {
   /** Parsed values, one per input. */
-  args: unknown[];
+  args: Array<unknown>;
   /** Why each input is invalid, or undefined. */
-  errors: (string | undefined)[];
+  errors: Array<string | undefined>;
   /** The ETH value in wei, undefined when blank, null when it doesn't parse. */
   value: bigint | undefined | null;
   /** What to fix before calling, as button text, or undefined when ready. */
@@ -149,7 +185,7 @@ export type FunctionCallDraft = {
 /** Parse a function's form: its inputs and, for payable functions, the ETH value. */
 export function functionCallDraft(
   fn: AbiFunction,
-  values: readonly string[],
+  values: ReadonlyArray<string>,
   ethValue = "",
 ): FunctionCallDraft {
   const parsed = fn.inputs.map((input, i) => parseAbiInput(input, values[i] ?? ""));
@@ -162,12 +198,12 @@ export function functionCallDraft(
       value = null;
     }
   }
-  const blocker =
-    firstError >= 0
-      ? `Check ${fn.inputs[firstError]!.name || `argument ${firstError + 1}`}`
-      : value === null
-        ? "Check the ETH value"
-        : undefined;
+  const errorInput = fn.inputs[firstError];
+  const blocker = errorInput
+    ? `Check ${errorInput.name || `argument ${firstError + 1}`}`
+    : value === null
+      ? "Check the ETH value"
+      : undefined;
   return { args: parsed.map((p) => p.value), errors: parsed.map((p) => p.error), value, blocker };
 }
 
@@ -178,8 +214,12 @@ export function inputName(input: AbiParameter, index: number) {
 
 /** One argument on one line, for a confirmation: bigints as digits, nested values as compact JSON. */
 function formatArgInline(value: unknown) {
-  if (typeof value === "bigint" || typeof value === "string" || typeof value === "boolean") return String(value);
-  return JSON.stringify(value, (_, v) => (typeof v === "bigint" ? v.toString() : v));
+  if (typeof value === "bigint" || typeof value === "string" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value, (_key: string, v: unknown) =>
+    typeof v === "bigint" ? v.toString() : v,
+  );
 }
 
 /**
@@ -190,9 +230,15 @@ function formatArgInline(value: unknown) {
 export function functionConfirmText(
   fn: AbiFunction,
   draft: Pick<FunctionCallDraft, "args" | "value">,
-  { address, chainName, nativeSymbol = "ETH" }: { address: Address; chainName?: string; nativeSymbol?: string },
+  {
+    address,
+    chainName,
+    nativeSymbol = "ETH",
+  }: { address: Address; chainName?: string; nativeSymbol?: string },
 ) {
-  const args = fn.inputs.map((input, i) => `${inputName(input, i)}: ${formatArgInline(draft.args[i])}`).join(", ");
+  const args = fn.inputs
+    .map((input, i) => `${inputName(input, i)}: ${formatArgInline(draft.args[i])}`)
+    .join(", ");
   const value = draft.value ? ` and sends ${formatEther(draft.value)} ${nativeSymbol}` : "";
   const on = chainName ? ` on ${chainName}` : "";
   return `Calls ${fn.name}(${args}) on contract ${address}${on}${value}, from your wallet`;
@@ -208,13 +254,13 @@ export function readFunctionMutationOptions(
 ) {
   return {
     mutationKey: ["0xui", "contract-read", chainId, address, functionSignature(fn)] as const,
-    mutationFn: (args: readonly unknown[]) =>
+    mutationFn: (args: ReadonlyArray<unknown>) =>
       readContract(config, {
         address,
         abi: [fn],
         functionName: fn.name,
         args,
         chainId,
-      } as Parameters<typeof readContract>[1]) as Promise<unknown>,
+      }) as Promise<unknown>,
   };
 }

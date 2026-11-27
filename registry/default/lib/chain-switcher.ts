@@ -1,18 +1,12 @@
-import {
-  getChainId,
-  getConnection,
-  switchChain,
-  watchChainId,
-  watchConnection,
-  type Config,
-} from "@wagmi/core";
+import { getChainId, getConnection, switchChain, watchChainId, watchConnection } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Chain } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
 
 export type ChainSwitcherState = {
   /** Every chain in the wagmi config. */
-  chains: readonly Chain[];
+  chains: ReadonlyArray<Chain>;
   /** The chain the app is on, or undefined while the wallet is on one it doesn't configure. */
   currentChain: Chain | undefined;
   /** The wallet is connected to a chain missing from the config. */
@@ -81,7 +75,7 @@ export function createChainSwitcher(config: Config): ChainSwitcher {
         store.set({
           pendingChainId: undefined,
           cancelled,
-          error: cancelled ? null : (error as Error),
+          error: cancelled ? null : error instanceof Error ? error : new Error(String(error)),
         });
         return false;
       }

@@ -5,13 +5,20 @@ import { markdownPath } from "@/lib/agent-docs";
 const { entry, id } = Astro.locals.starlightRoute;
 const { title, description } = entry.data;
 
-const sections: Record<string, string> = {
-  "getting-started": "Getting started",
-  components: "Components",
-  blocks: "Blocks",
-};
+function sectionLabel(section: string) {
+  switch (section) {
+    case "getting-started":
+      return "Getting started";
+    case "components":
+      return "Components";
+    case "blocks":
+      return "Blocks";
+    default:
+      return undefined;
+  }
+}
 const [section, name] = id.split("/");
-const eyebrow = name ? sections[section] : undefined;
+const eyebrow = section && name ? sectionLabel(section) : undefined;
 
 // Component and block pages link to what `shadcn add` actually installs.
 const item =
@@ -76,11 +83,15 @@ const markdown = markdownPath(id);
   // The fetch goes inside the ClipboardItem so Safari still counts the click
   // as the user gesture that allows the write.
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-markdown]")) {
-    const label = button.querySelector("[data-label]")!;
-    const status = button.querySelector("[data-status]")!;
+    const label = button.querySelector("[data-label]");
+    const status = button.querySelector("[data-status]");
+    const markdown = button.dataset.markdown;
+    if (!label || !status || !markdown) {
+      continue;
+    }
     let reset: ReturnType<typeof setTimeout>;
     button.addEventListener("click", async () => {
-      const text = fetch(button.dataset.markdown!).then((response) => response.text());
+      const text = fetch(markdown).then((response) => response.text());
       try {
         if (typeof ClipboardItem === "function") {
           await navigator.clipboard.write([

@@ -62,7 +62,9 @@ function DialogContent({
             {showCloseButton && (
               <DialogClose
                 aria-label={closeLabel}
-                render={<Button variant="ghost" size="icon-sm" className="absolute top-2 right-2" />}
+                render={
+                  <Button variant="ghost" size="icon-sm" className="absolute top-2 right-2" />
+                }
               >
                 <XIcon aria-hidden />
               </DialogClose>
@@ -99,7 +101,10 @@ function DialogTitle({ className, ...props }: ComponentProps<typeof DialogTitleP
   );
 }
 
-function DialogDescription({ className, ...props }: ComponentProps<typeof DialogDescriptionPrimitive>) {
+function DialogDescription({
+  className,
+  ...props
+}: ComponentProps<typeof DialogDescriptionPrimitive>) {
   return (
     <DialogDescriptionPrimitive
       className={withClassName(

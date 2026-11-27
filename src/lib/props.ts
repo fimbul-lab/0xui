@@ -31,25 +31,27 @@ export interface ComponentDoc {
    * the ones it handles itself are in `props`, marked `attribute`.
    */
   extends?: string;
-  props: PropDoc[];
+  props: Array<PropDoc>;
 }
 
 interface RegistryItemFiles {
   name: string;
-  files?: { path: string }[];
+  files?: Array<{ path: string }>;
 }
 
 const root = process.cwd();
 
 export function componentName(item: string) {
-  return item.replace(/(^|-)([a-z0-9])/g, (_, _dash, char: string) => char.toUpperCase());
+  return item.replaceAll(/(^|-)([a-z0-9])/g, (_, _dash, char: string) => char.toUpperCase());
 }
 
 let cached: ts.Program | undefined;
 
 /** One program over every item's main file, built on first use. */
 function program() {
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const configPath = join(root, "tsconfig.json");
   const config = ts.readConfigFile(configPath, ts.sys.readFile);
   const { options } = ts.parseJsonConfigFileContent(config.config, ts.sys, root, {}, configPath);
@@ -63,11 +65,17 @@ function program() {
 type Origin = { kind: "own" | "local" | "package" | "dom"; label?: string };
 
 function origin(file: string, mainFile: string): Origin {
-  if (file === mainFile) return { kind: "own" };
+  if (file === mainFile) {
+    return { kind: "own" };
+  }
   const path = relative(root, file).split(sep).join("/");
   const pkg = path.match(/node_modules\/((?:@[^/]+\/)?[^/]+)/)?.[1];
-  if (pkg === "@types/react") return { kind: "dom" };
-  if (pkg) return { kind: "package", label: pkg };
+  if (pkg === "@types/react") {
+    return { kind: "dom" };
+  }
+  if (pkg) {
+    return { kind: "package", label: pkg };
+  }
   return { kind: "local", label: path.replace(/^.*\//, "").replace(/\.tsx?$/, "") };
 }
 
@@ -103,19 +111,31 @@ function destructured(declaration: ts.Declaration) {
   return defaults;
 }
 
-const elementNames: Record<string, string> = {
-  Anchor: "a",
-  Button: "button",
-  Div: "div",
-  Input: "input",
-  Span: "span",
-  "": "HTML",
-};
+function elementName(tag: string) {
+  switch (tag) {
+    case "Anchor":
+      return "a";
+    case "Button":
+      return "button";
+    case "Div":
+      return "div";
+    case "Input":
+      return "input";
+    case "Span":
+      return "span";
+    case "":
+      return "HTML";
+    default:
+      return tag.toLowerCase();
+  }
+}
 
-function domElement(types: string[]) {
+function domElement(types: Array<string>) {
   for (const text of types) {
-    const match = text.match(/\bHTML(\w*)Element\b/);
-    if (match) return elementNames[match[1]] ?? match[1].toLowerCase();
+    const tag = text.match(/\bHTML(\w*)Element\b/)?.[1];
+    if (tag !== undefined) {
+      return elementName(tag);
+    }
   }
   return "HTML";
 }
@@ -123,43 +143,59 @@ function domElement(types: string[]) {
 /** The main component's props, or undefined when the item has no exported component of its name. */
 export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined {
   const path = item.files?.[0]?.path;
-  if (!path?.endsWith(".tsx")) return undefined;
+  if (!path?.endsWith(".tsx")) {
+    return undefined;
+  }
   const component = componentName(item.name);
   const mainFile = join(root, path);
   const prog = program();
   const checker = prog.getTypeChecker();
   const source = prog.getSourceFile(mainFile);
   const moduleSymbol = source && checker.getSymbolAtLocation(source);
-  if (!moduleSymbol) return undefined;
+  if (!moduleSymbol) {
+    return undefined;
+  }
 
   let symbol = checker.getExportsOfModule(moduleSymbol).find((s) => s.name === component);
-  if (!symbol) return undefined;
-  if (symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+  if (!symbol) {
+    return undefined;
+  }
+  if (symbol.flags & ts.SymbolFlags.Alias) {
+    symbol = checker.getAliasedSymbol(symbol);
+  }
   const declaration = symbol.valueDeclaration ?? symbol.declarations?.[0];
-  if (!declaration) return undefined;
+  if (!declaration) {
+    return undefined;
+  }
   const signature = checker.getTypeOfSymbolAtLocation(symbol, declaration).getCallSignatures()[0];
   const param = signature?.parameters[0];
-  if (!param) return { name: item.name, component, props: [] };
+  if (!param) {
+    return { name: item.name, component, props: [] };
+  }
 
   const propsType = checker.getTypeOfSymbolAtLocation(param, declaration);
   const variants = propsType.isUnion() ? propsType.types : [propsType];
   const names = [...new Set(variants.flatMap((t) => t.getProperties().map((p) => p.name)))];
   const bound = destructured(declaration);
 
-  const props: PropDoc[] = [];
-  const domTypes: string[] = [];
+  const props: Array<PropDoc> = [];
+  const domTypes: Array<string> = [];
   let hasDom = false;
 
   for (const name of names) {
     // A prop that only some union members declare is optional overall.
     const inAll = variants.every((t) => t.getProperty(name));
     const symbols = variants.flatMap((t) => t.getProperty(name) ?? []);
+    const first = symbols[0];
+    if (!first) {
+      continue;
+    }
     const declarations = symbols.flatMap((s) => s.declarations ?? []);
     const best = declarations
       .map((d) => ({ d, o: origin(d.getSourceFile().fileName, mainFile) }))
       .sort((a, b) => rank[a.o.kind] - rank[b.o.kind])[0];
     const type = checker.typeToString(
-      checker.getTypeOfSymbolAtLocation(symbols[0], declaration),
+      checker.getTypeOfSymbolAtLocation(first, declaration),
       undefined,
       ts.TypeFormatFlags.NoTruncation,
     );
@@ -187,15 +223,23 @@ export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined 
       required,
     };
     const description = docs.find((d) => d.description)?.description;
-    if (description) prop.description = description;
+    if (description) {
+      prop.description = description;
+    }
     const fallback = docs.find((d) => d.default)?.default ?? bound.get(name);
-    if (fallback) prop.default = fallback;
+    if (fallback) {
+      prop.default = fallback;
+    }
     if (best.o.kind === "dom") {
       prop.type = type.replace(/ \| undefined$/, "");
       prop.attribute = true;
     }
-    if (best.o.kind === "local") prop.from = best.o.label;
-    if (best.o.kind === "package") prop.package = best.o.label;
+    if (best.o.kind === "local") {
+      prop.from = best.o.label;
+    }
+    if (best.o.kind === "package") {
+      prop.package = best.o.label;
+    }
     props.push(prop);
   }
 
@@ -208,6 +252,6 @@ export function extractProps(item: RegistryItemFiles): ComponentDoc | undefined 
 }
 
 /** Every registry item with a main component. */
-export function allComponentDocs(): ComponentDoc[] {
+export function allComponentDocs(): Array<ComponentDoc> {
   return registry.items.flatMap((item: RegistryItemFiles) => extractProps(item) ?? []);
 }

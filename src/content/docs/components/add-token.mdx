@@ -27,19 +27,19 @@ import { AddToken } from "@/components/add-token";
 
 ## States
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `idle` | "Add USDC to wallet" |
-| `adding` | Spinner, "Confirm in your wallet." |
-| `added` | Check, "USDC added" (disabled) |
-| `cancelled` | "Cancelled in wallet." Not an error. |
-| `error` | The wallet doesn't support adding tokens, or failed. |
+| `data-phase` | What the user sees                                   |
+| ------------ | ---------------------------------------------------- |
+| `idle`       | "Add USDC to wallet"                                 |
+| `adding`     | Spinner, "Confirm in your wallet."                   |
+| `added`      | Check, "USDC added" (disabled)                       |
+| `cancelled`  | "Cancelled in wallet." Not an error.                 |
+| `error`      | The wallet doesn't support adding tokens, or failed. |
 
 ## Props
 
 Also accepts `Button` props (`variant`, `size`, `disabled`…).
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `token` | `{ address, symbol, decimals, logoURI? }` | Token to add. Wallets show `logoURI` as its icon. |
-| `children` | `ReactNode` | Label. Defaults to "Add &lt;symbol&gt; to wallet". |
+| Prop       | Type                                      | Description                                        |
+| ---------- | ----------------------------------------- | -------------------------------------------------- |
+| `token`    | `{ address, symbol, decimals, logoURI? }` | Token to add. Wallets show `logoURI` as its icon.  |
+| `children` | `ReactNode`                               | Label. Defaults to "Add &lt;symbol&gt; to wallet". |

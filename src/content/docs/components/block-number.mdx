@@ -43,16 +43,16 @@ With HTTP transports, wagmi polls for new blocks (every 4 seconds by default). P
 
 `data-phase` on the root holds the current state.
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `loading` | Grey dot and a skeleton where the number will be. "Loading block…" for screen readers. |
-| `live` | Green dot (pulses while watching) and the block number. |
-| `error` | Red dot, "RPC unavailable". |
+| `data-phase` | What the user sees                                                                     |
+| ------------ | -------------------------------------------------------------------------------------- |
+| `loading`    | Grey dot and a skeleton where the number will be. "Loading block…" for screen readers. |
+| `live`       | Green dot (pulses while watching) and the block number.                                |
+| `error`      | Red dot, "RPC unavailable".                                                            |
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `chainId` | `number` | current chain | Chain to watch. |
-| `watch` | `boolean` | `true` | Keep updating. |
-| `explorer` | `boolean` | `false` | Link the number to the block on the explorer. |
+| Prop       | Type      | Default       | Description                                   |
+| ---------- | --------- | ------------- | --------------------------------------------- |
+| `chainId`  | `number`  | current chain | Chain to watch.                               |
+| `watch`    | `boolean` | `true`        | Keep updating.                                |
+| `explorer` | `boolean` | `false`       | Link the number to the block on the explorer. |

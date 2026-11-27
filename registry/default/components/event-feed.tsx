@@ -1,12 +1,8 @@
 // Docs: https://0xui.io/components/event-feed.md
 import { useQuery } from "@tanstack/react-query";
-import {
-  Timeline,
-  TimelineDescription,
-  TimelineItem,
-  TimelineTitle,
-} from "@ui-sdk/react/timeline";
-import { useMemo, type ReactNode } from "react";
+import { Timeline, TimelineDescription, TimelineItem, TimelineTitle } from "@ui-sdk/react/timeline";
+import { useMemo } from "react";
+import type { ReactNode } from "react";
 import type { Abi, Address } from "viem";
 import { useConfig } from "wagmi";
 import { ExplorerLink } from "@/components/explorer-link";
@@ -18,8 +14,8 @@ import {
   feedEventId,
   formatEventArg,
   mergeFeedEvents,
-  type FeedEvent,
 } from "@/lib/event-feed-core";
+import type { EventFeedFilter, FeedEvent } from "@/lib/event-feed-core";
 import { cn } from "@/lib/utils";
 
 export {
@@ -37,7 +33,7 @@ export type UseEventFeedParameters = {
   /** Event to follow. Omit for every event in the ABI. */
   eventName?: string;
   /** Indexed-argument filter, e.g. `{ to: myAddress }`. */
-  args?: Record<string, unknown>;
+  args?: EventFeedFilter["args"];
   chainId?: number;
   /** Also load events from this many recent blocks. Keep it small: public RPCs cap log ranges. */
   historyBlocks?: number;
@@ -48,7 +44,7 @@ export type UseEventFeedParameters = {
    * live events and de-duplicated. Prefer this over `historyBlocks` in
    * production.
    */
-  initialEvents?: readonly FeedEvent[];
+  initialEvents?: ReadonlyArray<FeedEvent>;
 };
 
 /**
@@ -69,7 +65,14 @@ export function useEventFeed({
   const config = useConfig();
   const filterKey = eventFilterKey({ address, eventName, args, chainId });
   const history = useQuery(
-    eventHistoryQueryOptions(config, { address, abi, eventName, args, chainId, blocks: historyBlocks }),
+    eventHistoryQueryOptions(config, {
+      address,
+      abi,
+      eventName,
+      args,
+      chainId,
+      blocks: historyBlocks,
+    }),
   );
   // Keyed by value, so a new `args` object on each render doesn't restart the watch.
   const watcher = useMemo(
@@ -113,7 +116,10 @@ export function EventFeed({
       className={cn("flex flex-col gap-2 rounded-2xl border p-4", className)}
     >
       <header className="flex items-center gap-2">
-        <span aria-hidden className="size-2 animate-pulse rounded-full bg-emerald-500 motion-reduce:animate-none" />
+        <span
+          aria-hidden
+          className="size-2 animate-pulse rounded-full bg-emerald-500 motion-reduce:animate-none"
+        />
         {title && <h3 className="font-semibold">{title}</h3>}
       </header>
       {historyError && (
@@ -143,14 +149,18 @@ export function EventFeed({
                     renderEvent(event)
                   ) : (
                     <>
-                      <TimelineTitle className="font-medium">{event.eventName ?? "Event"}</TimelineTitle>{" "}
+                      <TimelineTitle className="font-medium">
+                        {event.eventName ?? "Event"}
+                      </TimelineTitle>{" "}
                       {event.args && (
                         <TimelineDescription>
                           <dl className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                             {Object.entries(event.args).map(([key, value]) => (
                               <div key={key} className="flex gap-1">
                                 <dt>{key}</dt>{" "}
-                                <dd className="font-mono text-foreground">{formatEventArg(value)}</dd>{" "}
+                                <dd className="font-mono text-foreground">
+                                  {formatEventArg(value)}
+                                </dd>{" "}
                               </div>
                             ))}
                           </dl>

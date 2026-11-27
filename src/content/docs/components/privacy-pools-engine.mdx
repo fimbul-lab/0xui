@@ -9,7 +9,10 @@ import Install from "@/components/docs/Install.astro";
 A [shielded engine](/components/shielded-engine/) for [Privacy Pools](https://privacypools.com) v1 by 0xbow, built on its public SDK, `@0xbow/privacy-pools-core-sdk`. With it the [Shield](/blocks/shield/) block deposits into the real contracts and the [Unshield](/blocks/unshield/) block withdraws from them.
 
 <Aside type="caution" title="Use test networks">
-  This engine handles a recovery phrase and builds transactions that move funds. It has not had a security review. Deposits, relayed withdrawals and exits were each run on Sepolia, with small amounts, and nowhere else. If something fails, the same recovery phrase opens the account at privacypools.com. Whether you may use a privacy protocol depends on where you are.
+  This engine handles a recovery phrase and builds transactions that move funds. It has not had a
+  security review. Deposits, relayed withdrawals and exits were each run on Sepolia, with small
+  amounts, and nowhere else. If something fails, the same recovery phrase opens the account at
+  privacypools.com. Whether you may use a privacy protocol depends on where you are.
 </Aside>
 
 There is no live demo here. A shield needs a wallet with Sepolia funds, and the docs' Demo Wallet sends nothing. Install the example and run it.
@@ -47,7 +50,13 @@ const engine = createPrivacyPoolsEngine({
   },
 });
 
-const eth = { chainId: 11155111, address: PRIVACY_POOLS_NATIVE, name: "Ether", symbol: "ETH", decimals: 18 };
+const eth = {
+  chainId: 11155111,
+  address: PRIVACY_POOLS_NATIVE,
+  name: "Ether",
+  symbol: "ETH",
+  decimals: 18,
+};
 
 <ShieldedProvider engine={engine}>
   <ShieldedAccount>
@@ -148,22 +157,22 @@ These mainnet values come from 0xbow's own app. Check them against 0xbow's docum
 
 ## What it maps to
 
-| Engine | Privacy Pools |
-| --- | --- |
-| `account.create` | A new 12-word phrase, encrypted with the password and kept in `storage`. |
-| `account.address` | Always `null`. v1 has no private address. |
-| `quoteShield` | Vetting fee and minimum from the Entrypoint. `standby` is the `reviewTime` estimate. `spender` is the Entrypoint, or nothing for ETH. No signature. |
-| `prepareShield` | The Entrypoint `deposit` call. ETH goes as the transaction's value. |
-| `pending` | Deposited, not yet approved by the ASP. |
-| `spendable` | Approved by the ASP. |
-| `proving` | Handed to the relayer, not yet seen on chain. |
-| `incomplete` | Never used. |
-| `restricted` | Declined by the ASP. Only reported with `checkDeclined`; without it a declined deposit shows as `pending`. |
-| `quote` | The relayer's fee for the amount. Rejects when the amount can't be unshielded, and says why. |
-| `prove` | The withdrawal proof for one deposit, made in the browser. |
-| `submit` | Hands the proof to the relayer, which sends the transaction. |
-| `getExits` | Every deposit that still holds funds, with the address that made it. |
-| `prepareExit` | The pool's `ragequit` call for one deposit, after a proof. That address's wallet sends it. |
+| Engine            | Privacy Pools                                                                                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `account.create`  | A new 12-word phrase, encrypted with the password and kept in `storage`.                                                                            |
+| `account.address` | Always `null`. v1 has no private address.                                                                                                           |
+| `quoteShield`     | Vetting fee and minimum from the Entrypoint. `standby` is the `reviewTime` estimate. `spender` is the Entrypoint, or nothing for ETH. No signature. |
+| `prepareShield`   | The Entrypoint `deposit` call. ETH goes as the transaction's value.                                                                                 |
+| `pending`         | Deposited, not yet approved by the ASP.                                                                                                             |
+| `spendable`       | Approved by the ASP.                                                                                                                                |
+| `proving`         | Handed to the relayer, not yet seen on chain.                                                                                                       |
+| `incomplete`      | Never used.                                                                                                                                         |
+| `restricted`      | Declined by the ASP. Only reported with `checkDeclined`; without it a declined deposit shows as `pending`.                                          |
+| `quote`           | The relayer's fee for the amount. Rejects when the amount can't be unshielded, and says why.                                                        |
+| `prove`           | The withdrawal proof for one deposit, made in the browser.                                                                                          |
+| `submit`          | Hands the proof to the relayer, which sends the transaction.                                                                                        |
+| `getExits`        | Every deposit that still holds funds, with the address that made it.                                                                                |
+| `prepareExit`     | The pool's `ragequit` call for one deposit, after a proof. That address's wallet sends it.                                                          |
 
 The ASP publishes approvals in bulk, but a decline can only be asked about named deposits, which tells the ASP they are yours. So by default the engine does not ask, and a declined deposit stays `pending`.
 
@@ -201,17 +210,17 @@ Deposits made with an older Privacy Pools key scheme and not migrated since are 
 
 ## Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `chains` | `Record<number, PrivacyPoolsChain>` | — | Deployments by chain id: `rpcUrl`, `entrypoint`, `aspUrl`, `pools`, `relayerUrl?`, `blockRange?`. |
-| `circuitsUrl` | `string` | — | Where the circuit files are served. Needed to unshield and to exit. |
-| `checkDeclined` | `boolean` | `false` | Ask the ASP whether unapproved deposits were declined. Names those deposits to the ASP. |
-| `storage` | `{ getItem, setItem, removeItem }` | `localStorage` | Where the encrypted phrase is kept. |
-| `reviewTime` | `number` | `3600` | Seconds a deposit usually waits for the ASP. An estimate for the quote, not a protocol rule: it can take days. |
-| `pollInterval` | `number` | `60000` | Ms between scans while unlocked, so approvals show up. `0` turns it off. |
-| `cache` | `{ get, set } \| false` | IndexedDB | Where pool events are kept between page loads. |
-| `client` | `(chainId) => PrivacyPoolsClient` | viem on `rpcUrl` | Chain reads, for tests or your own transport. |
-| `fetch` | `typeof fetch` | global `fetch` | HTTP for the ASP and the relayer. |
+| Option          | Type                                | Default          | Description                                                                                                    |
+| --------------- | ----------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| `chains`        | `Record<number, PrivacyPoolsChain>` | —                | Deployments by chain id: `rpcUrl`, `entrypoint`, `aspUrl`, `pools`, `relayerUrl?`, `blockRange?`.              |
+| `circuitsUrl`   | `string`                            | —                | Where the circuit files are served. Needed to unshield and to exit.                                            |
+| `checkDeclined` | `boolean`                           | `false`          | Ask the ASP whether unapproved deposits were declined. Names those deposits to the ASP.                        |
+| `storage`       | `{ getItem, setItem, removeItem }`  | `localStorage`   | Where the encrypted phrase is kept.                                                                            |
+| `reviewTime`    | `number`                            | `3600`           | Seconds a deposit usually waits for the ASP. An estimate for the quote, not a protocol rule: it can take days. |
+| `pollInterval`  | `number`                            | `60000`          | Ms between scans while unlocked, so approvals show up. `0` turns it off.                                       |
+| `cache`         | `{ get, set } \| false`             | IndexedDB        | Where pool events are kept between page loads.                                                                 |
+| `client`        | `(chainId) => PrivacyPoolsClient`   | viem on `rpcUrl` | Chain reads, for tests or your own transport.                                                                  |
+| `fetch`         | `typeof fetch`                      | global `fetch`   | HTTP for the ASP and the relayer.                                                                              |
 
 The SDK logs scan progress to the console: pool addresses and counts, no secrets.
 

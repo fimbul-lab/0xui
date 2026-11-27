@@ -1,18 +1,19 @@
 // Docs: https://0xui.io/components/mock-shielded-engine.md
-import { encodeAbiParameters, type Address, type Hash } from "viem";
+import { encodeAbiParameters } from "viem";
+import type { Address, Hash } from "viem";
 import { encodeBech32m } from "@/lib/0xui-utils";
-import {
-  SHIELDED_BALANCE_STATES,
-  type ProvedOperation,
-  type ShieldedExit,
-  type ShieldedAccountStatus,
-  type ShieldedTokenBalance,
-  type ShieldedBalanceState,
-  type ShieldedEngine,
-  type ShieldedEvent,
-  type ShieldedSync,
-  type ShieldedSyncStage,
-  type ShieldedTransaction,
+import { SHIELDED_BALANCE_STATES } from "@/lib/shielded-engine";
+import type {
+  ProvedOperation,
+  ShieldedExit,
+  ShieldedAccountStatus,
+  ShieldedTokenBalance,
+  ShieldedBalanceState,
+  ShieldedEngine,
+  ShieldedEvent,
+  ShieldedSync,
+  ShieldedSyncStage,
+  ShieldedTransaction,
 } from "@/lib/shielded-engine";
 
 /**
@@ -21,25 +22,25 @@ import {
  */
 export const MOCK_TIMINGS = {
   /** Creating or importing an account. */
-  createAccount: 6_000,
+  createAccount: 6000,
   /** Unlocking an existing account. A guess: not measured. */
   unlock: 800,
   /** The first scan of a chain. */
   firstScan: 40_000,
   /** Every scan after the first. Also the delay before a change shows up in the balances. */
-  repeatScan: 3_500,
+  repeatScan: 3500,
   /** Downloading the circuit files (about 9 MB). First proof only; later proofs take a twentieth of this. */
-  loadCircuits: 4_000,
+  loadCircuits: 4000,
   /** Generating the proof. */
-  prove: 8_000,
+  prove: 8000,
   /** Verifying the proof. */
-  verify: 1_000,
+  verify: 1000,
   /** How long shielded funds stay `pending`. 60 s on testnets; set 3_600_000 to imitate mainnet. */
   standby: 60_000,
   /** How long change from a spend stays `proving`. A guess: not measured. */
   settle: 15_000,
   /** One attempt at the missing proofs. A guess: not measured. */
-  retryProofs: 5_000,
+  retryProofs: 5000,
 };
 
 export type MockTimings = typeof MOCK_TIMINGS;
@@ -87,9 +88,9 @@ export type MockShieldedEngineOptions = {
   /** Password of the initial locked account. */
   password?: string;
   /** Chains scanned automatically after unlock. Other chains scan when `sync` is called. */
-  chains?: readonly number[];
+  chains?: ReadonlyArray<number>;
   /** Funds the account already holds. They show up after the first scan. */
-  funds?: readonly MockFunds[];
+  funds?: ReadonlyArray<MockFunds>;
   /** Pretend the circuit files are already downloaded, so the first proof is as fast as the rest. */
   circuitsCached?: boolean;
   /** Ask the wallet for a signature before a shield, as Railgun does. Turn off to imitate a protocol that needs none. */
@@ -140,6 +141,10 @@ export type MockSimulate = {
   failNextProof(message?: string): void;
   /** The next `retryProofs` call rejects. */
   failNextRetry(message?: string): void;
+  /** The next `account.import` rejects, as a real engine does for a phrase that fails its checksum. */
+  failNextImport(message?: string): void;
+  /** The next `prepareShield` rejects before asking for a signature, as for a token the protocol can't shield. */
+  failNextShield(message?: string): void;
   /** While on, `retryProofs` finishes but the funds stay `incomplete`. */
   keepIncomplete(keep?: boolean): void;
 };
@@ -156,13 +161,13 @@ type Note = {
 
 type ChainState = {
   /** What the account really holds. Only a scan copies it into `balances`. */
-  notes: Note[];
+  notes: Array<Note>;
   sync: ShieldedSync;
-  balances: readonly ShieldedTokenBalance[] | undefined;
+  balances: ReadonlyArray<ShieldedTokenBalance> | undefined;
   /** Public transactions the last scan found, by lower-case hash. */
   transactions: Map<string, ShieldedTransaction>;
   /** Restricted notes the last scan found, as public exits. */
-  exits: readonly ShieldedExit[] | undefined;
+  exits: ReadonlyArray<ShieldedExit> | undefined;
   /** A scan has finished at least once, so the next one is a short repeat scan. */
   scanned: boolean;
   scan: Promise<void> | undefined;
@@ -171,7 +176,7 @@ type ChainState = {
 
 type ScanStep = { stage: ShieldedSyncStage; progress: number };
 
-const ramp = (stage: ShieldedSyncStage, from: number, to: number, count: number): ScanStep[] =>
+const ramp = (stage: ShieldedSyncStage, from: number, to: number, count: number): Array<ScanStep> =>
   Array.from({ length: count }, (_, i) => ({
     stage,
     progress: from + ((to - from) * i) / (count - 1),
@@ -197,19 +202,24 @@ const IDLE: ShieldedSync = Object.freeze({ stage: "notes", status: "idle", progr
  * holds no keys.
  */
 function mockAddress(seed: string) {
-  let state = 2166136261;
-  for (let i = 0; i < seed.length; i++) state = Math.imul(state ^ seed.charCodeAt(i), 16777619);
+  let state = 2_166_136_261;
+  for (let i = 0; i < seed.length; i++) {
+    state = Math.imul(state ^ seed.charCodeAt(i), 16_777_619);
+  }
   // 117 five-bit words. The first is 0, as in a real address (version byte 01).
   const words = [0];
   while (words.length < 117) {
-    state = (Math.imul(state, 1664525) + 1013904223) | 0;
+    state = (Math.imul(state, 1_664_525) + 1_013_904_223) | 0;
     words.push((state >>> 27) & 31);
   }
   return encodeBech32m("0zk", words);
 }
 
-function toBalances(notes: readonly Note[]): ShieldedTokenBalance[] {
-  const byToken = new Map<string, { token: Address; amounts: Record<ShieldedBalanceState, bigint> }>();
+function toBalances(notes: ReadonlyArray<Note>): Array<ShieldedTokenBalance> {
+  const byToken = new Map<
+    string,
+    { token: Address; amounts: Record<ShieldedBalanceState, bigint> }
+  >();
   for (const note of notes) {
     const key = note.token.toLowerCase();
     let balance = byToken.get(key);
@@ -225,15 +235,29 @@ function toBalances(notes: readonly Note[]): ShieldedTokenBalance[] {
   return [...byToken.values()];
 }
 
-function sameBalances(a: readonly ShieldedTokenBalance[], b: readonly ShieldedTokenBalance[]) {
+function sameBalances(
+  a: ReadonlyArray<ShieldedTokenBalance>,
+  b: ReadonlyArray<ShieldedTokenBalance>,
+) {
   return (
     a.length === b.length &&
-    a.every(
-      (balance, i) =>
-        balance.token === b[i]!.token &&
-        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === b[i]!.amounts[state])
-    )
+    a.every((balance, i) => {
+      const other = b[i];
+      return (
+        other !== undefined &&
+        balance.token === other.token &&
+        SHIELDED_BALANCE_STATES.every((state) => balance.amounts[state] === other.amounts[state])
+      );
+    })
   );
+}
+
+const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
+
+function requirePassword(value: string) {
+  if (!value) {
+    throw new Error("Choose a password.");
+  }
 }
 
 /**
@@ -262,7 +286,9 @@ export function createMockShieldedEngine({
   relay,
   shieldSignature = true,
 }: MockShieldedEngineOptions = {}): MockShieldedEngine {
-  if (!(speed > 0)) throw new RangeError("speed must be greater than 0.");
+  if (!(speed > 0)) {
+    throw new RangeError("speed must be greater than 0.");
+  }
 
   const timings = { ...MOCK_TIMINGS, ...timingOverrides };
   const defaultChain = autoChains[0] ?? 1;
@@ -273,7 +299,9 @@ export function createMockShieldedEngine({
     balances: new Set(),
   };
   const emit = (event: ShieldedEvent) => {
-    for (const listener of listeners[event]) listener();
+    for (const listener of listeners[event]) {
+      listener();
+    }
   };
 
   let status: ShieldedAccountStatus = initialAccount;
@@ -288,6 +316,8 @@ export function createMockShieldedEngine({
   let keepIncomplete = false;
   let nextProofFailure: string | undefined;
   let nextRetryFailure: string | undefined;
+  let nextImportFailure: string | undefined;
+  let nextShieldFailure: string | undefined;
 
   const chainStates = new Map<number, ChainState>();
   function chainOf(chainId: number) {
@@ -319,13 +349,19 @@ export function createMockShieldedEngine({
   function wait(ms: number, signal?: AbortSignal) {
     const delay = ms / speed;
     return new Promise<void>((resolve, reject) => {
-      if (signal?.aborted) return reject(signal.reason);
+      if (signal?.aborted) {
+        reject(signal.reason);
+        return;
+      }
       // Nothing to wait for: stay on the microtask queue, so at
       // `speed: Infinity` a whole flow finishes without a single timer.
-      if (!(delay >= 1)) return resolve();
+      if (!(delay >= 1)) {
+        resolve();
+        return;
+      }
       const onAbort = () => {
         clearTimeout(timer);
-        reject(signal!.reason);
+        reject(signal?.reason);
       };
       const timer = setTimeout(() => {
         signal?.removeEventListener("abort", onAbort);
@@ -353,7 +389,9 @@ export function createMockShieldedEngine({
     for (const [index, step] of steps.entries()) {
       setSync(chain, { ...step, status: "syncing" });
       await wait(stepTime);
-      if (started !== session) return;
+      if (started !== session) {
+        return;
+      }
       if (index === failAt) {
         setSync(chain, { ...step, status: "error", error: failure });
         return;
@@ -368,10 +406,14 @@ export function createMockShieldedEngine({
       changed = true;
     }
     for (const note of chain.notes) {
-      if (!note.hash) continue;
+      if (!note.hash) {
+        continue;
+      }
       const key = note.hash.toLowerCase();
       // A new object only when the state moved, so the reference is stable in between.
-      if (chain.transactions.get(key)?.state === note.state) continue;
+      if (chain.transactions.get(key)?.state === note.state) {
+        continue;
+      }
       chain.transactions.set(key, {
         kind: "shield",
         token: note.token,
@@ -387,26 +429,33 @@ export function createMockShieldedEngine({
         const { token, amount, state, depositor } = note;
         return { id: exitId(note), token, amount, state, depositor };
       });
+    const previous = chain.exits;
     if (
-      !chain.exits ||
-      chain.exits.length !== exits.length ||
-      exits.some((exit, i) => exit.id !== chain.exits![i]!.id)
+      !previous ||
+      previous.length !== exits.length ||
+      exits.some((exit, i) => exit.id !== previous[i]?.id)
     ) {
       chain.exits = exits;
       changed = true;
     }
-    if (changed) emit("balances");
+    if (changed) {
+      emit("balances");
+    }
     // The SDK's "complete" event carries progress 0.
     setSync(chain, { stage: "transactions", status: "synced", progress: 0 });
   }
 
   /** Scan a chain, or join the scan already running. Does nothing while the account is not unlocked. */
   function scan(chainId: number): Promise<void> {
-    if (status !== "unlocked") return Promise.resolve();
+    if (status !== "unlocked") {
+      return Promise.resolve();
+    }
     const chain = chainOf(chainId);
     if (!chain.scan) {
       const running: Promise<void> = runScan(chain).finally(() => {
-        if (chain.scan === running) chain.scan = undefined;
+        if (chain.scan === running) {
+          chain.scan = undefined;
+        }
       });
       chain.scan = running;
     }
@@ -425,30 +474,36 @@ export function createMockShieldedEngine({
   let exitCount = 0;
   function exitId(note: Note) {
     let id = exitIds.get(note);
-    if (!id) exitIds.set(note, (id = `mock-exit-${++exitCount}`));
+    if (!id) {
+      exitIds.set(note, (id = `mock-exit-${++exitCount}`));
+    }
     return id;
   }
-
-  const feeOn = (amount: bigint) => (amount * MOCK_FEE_BPS) / 10_000n;
 
   /** Spend whole notes for an unshield, and bring the remainder back as change. */
   async function unshield(
     token: Address,
     amount: bigint,
     chainId: number,
-    change: "spendable" | "incomplete"
+    change: "spendable" | "incomplete",
   ) {
     const chain = chainOf(chainId);
     // Spend whole notes, oldest first, until they cover the amount.
     let covered = 0n;
     const spent = new Set<Note>();
     for (const note of chain.notes) {
-      if (covered >= amount) break;
-      if (note.state !== "spendable" || !sameToken(note.token, token)) continue;
+      if (covered >= amount) {
+        break;
+      }
+      if (note.state !== "spendable" || !sameToken(note.token, token)) {
+        continue;
+      }
       spent.add(note);
       covered += note.amount;
     }
-    if (amount <= 0n || covered < amount) throw new Error("Not enough spendable balance.");
+    if (amount <= 0n || covered < amount) {
+      throw new Error("Not enough spendable balance.");
+    }
     chain.notes = chain.notes.filter((note) => !spent.has(note));
 
     if (covered > amount) {
@@ -464,11 +519,9 @@ export function createMockShieldedEngine({
   }
 
   function requireUnlocked() {
-    if (status !== "unlocked") throw new Error("Unlock the private account first.");
-  }
-
-  function requirePassword(value: string) {
-    if (!value) throw new Error("Choose a password.");
+    if (status !== "unlocked") {
+      throw new Error("Unlock the private account first.");
+    }
   }
 
   /** Drop everything that needs the decrypted account. */
@@ -487,12 +540,16 @@ export function createMockShieldedEngine({
   function open() {
     status = "unlocked";
     emit("account");
-    for (const chainId of autoChains) void scan(chainId);
+    for (const chainId of autoChains) {
+      void scan(chainId);
+    }
   }
 
   async function setAccount(mnemonic: string, newPassword: string) {
     await wait(timings.createAccount);
-    if (status === "unlocked") close();
+    if (status === "unlocked") {
+      close();
+    }
     password = newPassword;
     address = mockAddress(mnemonic);
     open();
@@ -515,17 +572,30 @@ export function createMockShieldedEngine({
           throw new Error("A recovery phrase has 12 or 24 words.");
         }
         requirePassword(newPassword);
+        const failure = nextImportFailure;
+        nextImportFailure = undefined;
+        if (failure !== undefined) {
+          throw new Error(failure);
+        }
         await setAccount(words.join(" "), newPassword);
       },
       async unlock(attempt) {
-        if (status === "none") throw new Error("There is no private account to unlock.");
-        if (status === "unlocked") return;
+        if (status === "none") {
+          throw new Error("There is no private account to unlock.");
+        }
+        if (status === "unlocked") {
+          return;
+        }
         await wait(timings.unlock);
-        if (attempt !== password) throw new Error("Wrong password.");
+        if (attempt !== password) {
+          throw new Error("Wrong password.");
+        }
         open();
       },
       lock() {
-        if (status !== "unlocked") return;
+        if (status !== "unlocked") {
+          return;
+        }
         status = "locked";
         close();
         emit("account");
@@ -546,12 +616,14 @@ export function createMockShieldedEngine({
 
     // Fees are read once when a real engine starts, so a quote costs nothing.
     async quoteShield(draft) {
-      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (draft.amount <= 0n) {
+        throw new Error("Enter an amount.");
+      }
       const fee = feeOn(draft.amount);
       return {
         fee,
         received: draft.amount - fee,
-        standby: Math.round(timings.standby / speed / 1_000),
+        standby: Math.round(timings.standby / speed / 1000),
         spender: MOCK_SHIELD_CONTRACT,
         needsSignature: shieldSignature,
       };
@@ -559,16 +631,25 @@ export function createMockShieldedEngine({
 
     async prepareShield(draft, { sign }) {
       requireUnlocked();
-      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (draft.amount <= 0n) {
+        throw new Error("Enter an amount.");
+      }
+      const failure = nextShieldFailure;
+      nextShieldFailure = undefined;
+      if (failure !== undefined) {
+        throw new Error(failure);
+      }
       // A real engine turns this signature into a one-off key. The mock only asks for it.
-      if (shieldSignature) await sign(MOCK_SHIELD_MESSAGE);
+      if (shieldSignature) {
+        await sign(MOCK_SHIELD_MESSAGE);
+      }
       requireUnlocked();
       return {
         transaction: {
           to: MOCK_SHIELD_CONTRACT,
           data: encodeAbiParameters(
             [{ type: "address" }, { type: "uint256" }],
-            [draft.token, draft.amount]
+            [draft.token, draft.amount],
           ),
           value: 0n,
         },
@@ -581,27 +662,45 @@ export function createMockShieldedEngine({
       const failure = nextRetryFailure;
       nextRetryFailure = undefined;
       await wait(timings.retryProofs);
-      if (started !== session) return;
-      if (failure !== undefined) throw new Error(failure);
-      if (keepIncomplete) return;
+      if (started !== session) {
+        return;
+      }
+      if (failure !== undefined) {
+        throw new Error(failure);
+      }
+      if (keepIncomplete) {
+        return;
+      }
 
       const notes = chainOf(chainId).notes.filter((note) => note.state === "incomplete");
-      if (notes.length === 0) return;
-      for (const note of notes) note.state = "proving";
+      if (notes.length === 0) {
+        return;
+      }
+      for (const note of notes) {
+        note.state = "proving";
+      }
       later(timings.settle, chainId, () => {
-        for (const note of notes) note.state = "spendable";
+        for (const note of notes) {
+          note.state = "spendable";
+        }
       });
       await scan(chainId);
     },
 
     async prove(draft, { onStage, signal }) {
       requireUnlocked();
-      if (signal?.aborted) throw signal.reason;
-      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (signal?.aborted) {
+        throw signal.reason;
+      }
+      if (draft.amount <= 0n) {
+        throw new Error("Enter an amount.");
+      }
       const spendable = chainOf(draft.chainId)
         .notes.filter((note) => note.state === "spendable" && sameToken(note.token, draft.token))
         .reduce((sum, note) => sum + note.amount, 0n);
-      if (spendable < draft.amount) throw new Error("Not enough spendable balance.");
+      if (spendable < draft.amount) {
+        throw new Error("Not enough spendable balance.");
+      }
 
       const started = session;
       const failure = nextProofFailure;
@@ -612,10 +711,14 @@ export function createMockShieldedEngine({
       circuitsLoaded = true;
       onStage("proving");
       await wait(timings.prove, signal);
-      if (failure !== undefined) throw new Error(failure);
+      if (failure !== undefined) {
+        throw new Error(failure);
+      }
       onStage("verifying");
       await wait(timings.verify, signal);
-      if (started !== session) throw new Error("The private account was locked.");
+      if (started !== session) {
+        throw new Error("The private account was locked.");
+      }
 
       const fee = feeOn(draft.amount);
       const operation = {
@@ -629,12 +732,16 @@ export function createMockShieldedEngine({
     },
 
     async quote(draft) {
-      if (draft.amount <= 0n) throw new Error("Enter an amount.");
+      if (draft.amount <= 0n) {
+        throw new Error("Enter an amount.");
+      }
       if (status === "unlocked") {
         const spendable = chainOf(draft.chainId)
           .notes.filter((note) => note.state === "spendable" && sameToken(note.token, draft.token))
           .reduce((sum, note) => sum + note.amount, 0n);
-        if (spendable < draft.amount) throw new Error("Not enough spendable balance.");
+        if (spendable < draft.amount) {
+          throw new Error("Not enough spendable balance.");
+        }
       }
       const fee = feeOn(draft.amount);
       return { fee, received: draft.amount - fee };
@@ -643,20 +750,26 @@ export function createMockShieldedEngine({
     async submit(operation) {
       requireUnlocked();
       // A proof belongs to the session that made it, and is spent by its first submit.
-      if (proofs.get(operation.id) !== session) throw new Error("This proof can't be used. Prove again.");
-      if (Date.now() > operation.expiresAt) throw new Error("The proof expired. Prove again.");
+      if (proofs.get(operation.id) !== session) {
+        throw new Error("This proof can't be used. Prove again.");
+      }
+      if (Date.now() > operation.expiresAt) {
+        throw new Error("The proof expired. Prove again.");
+      }
       proofs.delete(operation.id);
       const { token, amount, chainId } = operation.draft;
       await unshield(token, amount, chainId, "spendable");
       const number = operation.id.slice("mock-proof-".length);
-      return { hash: (await relay?.(operation)) ?? (`0x${number.padStart(64, "0")}` as Hash) };
+      return { hash: (await relay?.(operation)) ?? `0x${number.padStart(64, "0")}` };
     },
 
     getExits: (chainId) => chainOf(chainId).exits,
 
     async prepareExit(chainId, id, { onStage, signal }) {
       requireUnlocked();
-      if (signal?.aborted) throw signal.reason;
+      if (signal?.aborted) {
+        throw signal.reason;
+      }
       const started = session;
       if (!chainOf(chainId).notes.some((note) => exitIds.get(note) === id)) {
         throw new Error("These funds are no longer there to exit. Scan again.");
@@ -668,7 +781,9 @@ export function createMockShieldedEngine({
       await wait(timings.prove, signal);
       onStage("verifying");
       await wait(timings.verify, signal);
-      if (started !== session) throw new Error("The private account was locked.");
+      if (started !== session) {
+        throw new Error("The private account was locked.");
+      }
       // Not a real call: the mock's contract is not deployed anywhere.
       return { transaction: { to: MOCK_SHIELD_CONTRACT, data: "0x", value: 0n } };
     },
@@ -714,6 +829,12 @@ export function createMockShieldedEngine({
       },
       failNextRetry(message = "Couldn't generate the missing proofs.") {
         nextRetryFailure = message;
+      },
+      failNextImport(message = "That recovery phrase isn't valid.") {
+        nextImportFailure = message;
+      },
+      failNextShield(message = "Couldn't build the shield transaction.") {
+        nextShieldFailure = message;
       },
       keepIncomplete(keep = true) {
         keepIncomplete = keep;

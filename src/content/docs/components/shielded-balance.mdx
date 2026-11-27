@@ -49,13 +49,13 @@ Only states that hold funds are listed.
   <States client:load />
 </Preview>
 
-| State | Shown as | Meaning |
-| --- | --- | --- |
-| `spendable` | The headline | Ready to send or unshield. |
-| `pending` | Pending | Recently shielded. Spendable after the waiting period. |
-| `proving` | Proving | Proofs for these funds are being checked. |
-| `incomplete` | Incomplete, with **Retry proofs** | A proof is missing, so these funds can't be spent yet. |
-| `restricted` | Restricted | Can't be spent privately. Can only go back to the address it came from. |
+| State        | Shown as                          | Meaning                                                                 |
+| ------------ | --------------------------------- | ----------------------------------------------------------------------- |
+| `spendable`  | The headline                      | Ready to send or unshield.                                              |
+| `pending`    | Pending                           | Recently shielded. Spendable after the waiting period.                  |
+| `proving`    | Proving                           | Proofs for these funds are being checked.                               |
+| `incomplete` | Incomplete, with **Retry proofs** | A proof is missing, so these funds can't be spent yet.                  |
+| `restricted` | Restricted                        | Can't be spent privately. Can only go back to the address it came from. |
 
 ### Retry proofs
 
@@ -92,12 +92,12 @@ amounts?.pending; // bigint
 
 ## States
 
-| `data-phase` | What the user sees |
-| --- | --- |
-| `idle` | Nothing: the private account is not unlocked. |
-| `loading` | A skeleton, during the first scan. "Loading private balance" for screen readers. |
-| `ready` | The balance. A token the account doesn't hold reads as 0. |
-| `error` | "—": the first scan failed. [Shielded Sync Status](/components/shielded-sync-status/) shows why and offers a retry. |
+| `data-phase` | What the user sees                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `idle`       | Nothing: the private account is not unlocked.                                                                       |
+| `loading`    | A skeleton, during the first scan. "Loading private balance" for screen readers.                                    |
+| `ready`      | The balance. A token the account doesn't hold reads as 0.                                                           |
+| `error`      | "—": the first scan failed. [Shielded Sync Status](/components/shielded-sync-status/) shows why and offers a retry. |
 
 While a later scan runs, the root has `data-updating` and a small spinner sits next to the label. The amounts stay on screen.
 
@@ -105,8 +105,8 @@ While a later scan runs, the root has `data-updating` and a small spinner sits n
 
 Also accepts the [Token Amount](/components/token-amount/) formatting props: `maxDecimals`, `compact`, `price`, `currency` and `locale`. The headline morphs when it changes. Pass `animate={false}` to turn that off.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `token` | `{ address, symbol, decimals }` | — | Token to show. |
-| `chainId` | `number` | — | Chain to read. Required. |
-| `variant` | `"card" \| "inline"` | `"card"` | The breakdown, or the spendable amount alone. |
+| Prop      | Type                            | Default  | Description                                   |
+| --------- | ------------------------------- | -------- | --------------------------------------------- |
+| `token`   | `{ address, symbol, decimals }` | —        | Token to show.                                |
+| `chainId` | `number`                        | —        | Chain to read. Required.                      |
+| `variant` | `"card" \| "inline"`            | `"card"` | The breakdown, or the spendable amount alone. |

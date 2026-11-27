@@ -1,19 +1,8 @@
 // Docs: https://0xui.io/components/shielded-engine.md
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
-import {
-  SERVER_ACCOUNT,
-  createShieldedClient,
-  type ReadableStore,
-  type ShieldedAccountSnapshot,
-  type ShieldedClient,
-} from "@/lib/shielded-client";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import type { ReactNode } from "react";
+import { SERVER_ACCOUNT, createShieldedClient } from "@/lib/shielded-client";
+import type { ReadableStore, ShieldedAccountSnapshot, ShieldedClient } from "@/lib/shielded-client";
 import type { ShieldedEngine, ShieldedEvent } from "@/lib/shielded-engine";
 
 const ShieldedClientContext = createContext<ShieldedClient | null>(null);
@@ -27,9 +16,7 @@ export type ShieldedProviderProps = {
 /** Gives the shielded components below an engine. Wrap the private part of your app once. */
 export function ShieldedProvider({ engine, children }: ShieldedProviderProps) {
   const client = useMemo(() => createShieldedClient(engine), [engine]);
-  return (
-    <ShieldedClientContext.Provider value={client}>{children}</ShieldedClientContext.Provider>
-  );
+  return <ShieldedClientContext.Provider value={client}>{children}</ShieldedClientContext.Provider>;
 }
 
 /** The engine and its stores, from the nearest ShieldedProvider. */
@@ -64,17 +51,17 @@ export function useShieldedStore<T>(store: ReadableStore<T>, serverValue: T) {
 export function useShieldedState<T>(
   event: ShieldedEvent,
   read: (engine: ShieldedEngine) => T,
-  serverValue: T
+  serverValue: T,
 ) {
   const engine = useShieldedEngine();
   const subscribe = useCallback(
     (listener: () => void) => engine.subscribe(event, listener),
-    [engine, event]
+    [engine, event],
   );
   return useSyncExternalStore(
     subscribe,
     () => read(engine),
-    () => serverValue
+    () => serverValue,
   );
 }
 

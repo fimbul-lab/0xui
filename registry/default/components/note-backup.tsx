@@ -1,7 +1,8 @@
 // Docs: https://0xui.io/components/note-backup.md
 import { Checkbox, CheckboxIndicator } from "@ui-sdk/react/checkbox";
 import { CheckIcon, DownloadIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import type { ReactNode } from "react";
 import { CopyButton } from "@/components/copy-button";
 import { Button } from "@/components/primitives/button";
 import { cn } from "@/lib/utils";
@@ -111,7 +112,9 @@ export function NoteBackup({
           onClick={() => {
             const ok = downloadTextFile(fileName, `${note}\n`);
             setDownloadFailed(!ok);
-            if (ok) setTaken(true);
+            if (ok) {
+              setTaken(true);
+            }
           }}
         >
           <DownloadIcon aria-hidden />

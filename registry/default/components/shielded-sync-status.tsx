@@ -1,21 +1,13 @@
 // Docs: https://0xui.io/components/shielded-sync-status.md
-import {
-  Progress,
-  ProgressIndicator,
-  ProgressTrack,
-} from "@ui-sdk/react/progress";
+import { Progress, ProgressIndicator, ProgressTrack } from "@ui-sdk/react/progress";
 import { CheckIcon, Loader2Icon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "@/components/primitives/button";
 import { useShieldedEngine, useShieldedStore } from "@/components/shielded-provider";
-import { SHIELDED_SYNC_STAGES, type ShieldedSyncStage } from "@/lib/shielded-engine";
-import {
-  advanceSync,
-  createShieldedSync,
-  serverSync,
-  type ShieldedSyncPhase,
-  type ShieldedSyncView,
-} from "@/lib/shielded-sync";
+import { SHIELDED_SYNC_STAGES } from "@/lib/shielded-engine";
+import type { ShieldedSyncStage } from "@/lib/shielded-engine";
+import { advanceSync, createShieldedSync, serverSync } from "@/lib/shielded-sync";
+import type { ShieldedSyncPhase, ShieldedSyncView } from "@/lib/shielded-sync";
 import { cn } from "@/lib/utils";
 
 export { advanceSync, type ShieldedSyncPhase, type ShieldedSyncView };
@@ -64,7 +56,9 @@ export function ShieldedSyncBar({
   const percent = Math.round(Math.min(Math.max(progress, 0), 1) * 100);
   return (
     <Progress value={percent} aria-label={label} className="w-full">
-      <ProgressTrack className={cn("h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}>
+      <ProgressTrack
+        className={cn("h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}
+      >
         <ProgressIndicator className="h-full rounded-full bg-primary transition-[width] duration-700 ease-out motion-reduce:transition-none" />
       </ProgressTrack>
     </Progress>
@@ -88,7 +82,9 @@ export function ShieldedSyncStatus({
   className,
 }: ShieldedSyncStatusProps) {
   const { phase, stage, progress, error, isUpdate, sync } = useShieldedSync({ chainId });
-  if (phase === "idle") return null;
+  if (phase === "idle") {
+    return null;
+  }
 
   const percent = Math.round(progress * 100);
   const step = SHIELDED_SYNC_STAGES.indexOf(stage) + 1;
@@ -161,7 +157,10 @@ export function ShieldedSyncStatus({
     >
       <div className="flex min-h-6 items-center gap-2">
         {icon}
-        <span role="status" className={cn("min-w-0 flex-1", phase === "error" && "text-destructive")}>
+        <span
+          role="status"
+          className={cn("min-w-0 flex-1", phase === "error" && "text-destructive")}
+        >
           {label}
         </span>
         {phase === "syncing" && (

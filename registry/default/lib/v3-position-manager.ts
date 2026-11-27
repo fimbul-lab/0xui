@@ -7,7 +7,8 @@
 // Native ETH: the manager only holds WETH. Deposits send ETH as value and
 // add `refundETH`. Withdrawals collect to the manager itself, then
 // `unwrapWETH9` the WETH side and `sweepToken` the other side to the user.
-import { encodeFunctionData, parseAbi, zeroAddress, type Address, type Hex } from "viem";
+import { encodeFunctionData, isAddress, parseAbi, zeroAddress } from "viem";
+import type { Address, Hex } from "viem";
 
 /** Anything with an address and decimals: a token list `Token` fits. */
 type TokenLike = { address: string; symbol: string };
@@ -17,6 +18,14 @@ export type PositionTransaction = { to: Address; data: Hex; value?: bigint };
 export const NATIVE_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 const isNative = (token: TokenLike) => token.address.toLowerCase() === NATIVE_ADDRESS.toLowerCase();
 const MAX_UINT128 = 2n ** 128n - 1n;
+
+/** A token's address, checked before it goes into calldata. */
+function tokenAddress(token: TokenLike): Address {
+  if (!isAddress(token.address, { strict: false })) {
+    throw new Error(`${token.symbol} has an invalid address: ${token.address}`);
+  }
+  return token.address;
+}
 
 export const positionManagerAbi = parseAbi([
   "function mint((address token0, address token1, uint24 fee, int24 tickLower, int24 tickUpper, uint256 amount0Desired, uint256 amount1Desired, uint256 amount0Min, uint256 amount1Min, address recipient, uint256 deadline) params) payable returns (uint256 tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
@@ -40,14 +49,25 @@ export function deadlineIn(seconds: number) {
 }
 
 function poolAddress(token: TokenLike, weth: Address | undefined) {
-  if (!isNative(token)) return token.address as Address;
-  if (!weth) throw new Error(`Pass \`weth\` to use native ${token.symbol}.`);
+  if (!isNative(token)) {
+    return tokenAddress(token);
+  }
+  if (!weth) {
+    throw new Error(`Pass \`weth\` to use native ${token.symbol}.`);
+  }
   return weth;
 }
 
-function multicall(to: Address, calls: Hex[], value?: bigint): PositionTransaction {
-  if (calls.length === 1) return value ? { to, data: calls[0], value } : { to, data: calls[0] };
-  const data = encodeFunctionData({ abi: positionManagerAbi, functionName: "multicall", args: [calls] });
+function multicall(to: Address, calls: Array<Hex>, value?: bigint): PositionTransaction {
+  const [only, ...rest] = calls;
+  if (only !== undefined && rest.length === 0) {
+    return value ? { to, data: only, value } : { to, data: only };
+  }
+  const data = encodeFunctionData({
+    abi: positionManagerAbi,
+    functionName: "multicall",
+    args: [calls],
+  });
   return value ? { to, data, value } : { to, data };
 }
 
@@ -71,20 +91,40 @@ function collectCalls({
   amount0Min?: bigint;
   amount1Min?: bigint;
   weth?: Address;
-}): Hex[] {
+}): Array<Hex> {
   const native = isNative(token0) ? 0 : isNative(token1) ? 1 : undefined;
   const collect = encodeFunctionData({
     abi: positionManagerAbi,
     functionName: "collect",
-    args: [{ tokenId, recipient: native === undefined ? recipient : zeroAddress, amount0Max: MAX_UINT128, amount1Max: MAX_UINT128 }],
+    args: [
+      {
+        tokenId,
+        recipient: native === undefined ? recipient : zeroAddress,
+        amount0Max: MAX_UINT128,
+        amount1Max: MAX_UINT128,
+      },
+    ],
   });
-  if (native === undefined) return [collect];
-  if (!weth) throw new Error("Pass `weth` to withdraw native ETH.");
-  const [ethMin, other, otherMin] = native === 0 ? [amount0Min, token1, amount1Min] : [amount1Min, token0, amount0Min];
+  if (native === undefined) {
+    return [collect];
+  }
+  if (!weth) {
+    throw new Error("Pass `weth` to withdraw native ETH.");
+  }
+  const [ethMin, other, otherMin] =
+    native === 0 ? [amount0Min, token1, amount1Min] : [amount1Min, token0, amount0Min];
   return [
     collect,
-    encodeFunctionData({ abi: positionManagerAbi, functionName: "unwrapWETH9", args: [ethMin, recipient] }),
-    encodeFunctionData({ abi: positionManagerAbi, functionName: "sweepToken", args: [other.address as Address, otherMin, recipient] }),
+    encodeFunctionData({
+      abi: positionManagerAbi,
+      functionName: "unwrapWETH9",
+      args: [ethMin, recipient],
+    }),
+    encodeFunctionData({
+      abi: positionManagerAbi,
+      functionName: "sweepToken",
+      args: [tokenAddress(other), otherMin, recipient],
+    }),
   ];
 }
 
@@ -119,7 +159,9 @@ export function v3Mint({ positionManager, weth }: { positionManager: Address; we
     if (BigInt(token0) >= BigInt(token1)) {
       throw new Error("token0 must sort below token1. Pass the tokens in pool order.");
     }
-    if (r.fee === undefined) throw new Error("v3 pools need a fee tier.");
+    if (r.fee === undefined) {
+      throw new Error("v3 pools need a fee tier.");
+    }
     const mint = encodeFunctionData({
       abi: positionManagerAbi,
       functionName: "mint",
@@ -139,9 +181,19 @@ export function v3Mint({ positionManager, weth }: { positionManager: Address; we
         },
       ],
     });
-    const value = isNative(r.token0) ? r.amount0Desired : isNative(r.token1) ? r.amount1Desired : 0n;
-    if (value === 0n) return { to: positionManager, data: mint };
-    return multicall(positionManager, [mint, encodeFunctionData({ abi: positionManagerAbi, functionName: "refundETH" })], value);
+    const value = isNative(r.token0)
+      ? r.amount0Desired
+      : isNative(r.token1)
+        ? r.amount1Desired
+        : 0n;
+    if (value === 0n) {
+      return { to: positionManager, data: mint };
+    }
+    return multicall(
+      positionManager,
+      [mint, encodeFunctionData({ abi: positionManagerAbi, functionName: "refundETH" })],
+      value,
+    );
   };
 }
 
@@ -169,7 +221,15 @@ export function v3Remove({ positionManager, weth }: { positionManager: Address; 
     const decrease = encodeFunctionData({
       abi: positionManagerAbi,
       functionName: "decreaseLiquidity",
-      args: [{ tokenId: r.tokenId, liquidity: r.liquidity, amount0Min: r.amount0Min, amount1Min: r.amount1Min, deadline: r.deadline }],
+      args: [
+        {
+          tokenId: r.tokenId,
+          liquidity: r.liquidity,
+          amount0Min: r.amount0Min,
+          amount1Min: r.amount1Min,
+          deadline: r.deadline,
+        },
+      ],
     });
     return multicall(positionManager, [decrease, ...collectCalls({ ...r, weth })]);
   };
@@ -184,5 +244,6 @@ export type CollectRequest<T extends TokenLike = TokenLike> = {
 
 /** Collect a position's uncollected fees. Native ETH is unwrapped. */
 export function v3Collect({ positionManager, weth }: { positionManager: Address; weth?: Address }) {
-  return (r: CollectRequest): PositionTransaction => multicall(positionManager, collectCalls({ ...r, weth }));
+  return (r: CollectRequest): PositionTransaction =>
+    multicall(positionManager, collectCalls({ ...r, weth }));
 }

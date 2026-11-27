@@ -1,5 +1,7 @@
-import { erc20Abi, formatUnits, type Address } from "viem";
-import { isNativeToken, type TokenInfo } from "@/lib/token-list";
+import { erc20Abi, formatUnits } from "viem";
+import type { Address } from "viem";
+import { isNativeToken } from "@/lib/token-list";
+import type { TokenInfo } from "@/lib/token-list";
 
 export type SendDraft = {
   recipient: Address | undefined;
@@ -24,11 +26,21 @@ export function sendBlocker(
   draft: SendDraft,
   { recipientPhase, insufficient }: { recipientPhase: SendRecipientPhase; insufficient: boolean },
 ) {
-  if (recipientPhase === "empty") return "Enter a recipient";
-  if (recipientPhase === "resolving") return "Looking up name…";
-  if (!draft.recipient) return "Enter a valid recipient";
-  if (!draft.amount) return "Enter an amount";
-  if (insufficient) return `Insufficient ${draft.token.symbol} balance`;
+  if (recipientPhase === "empty") {
+    return "Enter a recipient";
+  }
+  if (recipientPhase === "resolving") {
+    return "Looking up name…";
+  }
+  if (!draft.recipient) {
+    return "Enter a valid recipient";
+  }
+  if (!draft.amount) {
+    return "Enter an amount";
+  }
+  if (insufficient) {
+    return `Insufficient ${draft.token.symbol} balance`;
+  }
   return undefined;
 }
 

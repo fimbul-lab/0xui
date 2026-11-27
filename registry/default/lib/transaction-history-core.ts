@@ -17,35 +17,69 @@ export type HistoryEntry = {
 
 const STORAGE_KEY = "0xui:transactions";
 const LIMIT = 50;
-const EMPTY: readonly HistoryEntry[] = [];
+const EMPTY: ReadonlyArray<HistoryEntry> = [];
 const listeners = new Set<() => void>();
-let cache: HistoryEntry[] | undefined;
+let cache: Array<HistoryEntry> | undefined;
 
-function load(): readonly HistoryEntry[] {
-  if (cache) return cache;
-  if (typeof localStorage === "undefined") return EMPTY;
-  try {
-    cache = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-  } catch {
-    cache = [];
-  }
-  return cache!;
+/** Whether a stored value has the shape of an entry. Storage can hold anything. */
+function isHistoryEntry(value: unknown): value is HistoryEntry {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "hash" in value &&
+    typeof value.hash === "string" &&
+    value.hash.startsWith("0x") &&
+    "chainId" in value &&
+    typeof value.chainId === "number" &&
+    "submittedAt" in value &&
+    typeof value.submittedAt === "number" &&
+    "status" in value &&
+    (value.status === "pending" || value.status === "confirmed" || value.status === "reverted") &&
+    (!("from" in value) || value.from === undefined || typeof value.from === "string") &&
+    (!("description" in value) ||
+      value.description === undefined ||
+      typeof value.description === "string")
+  );
 }
 
-function save(entries: readonly HistoryEntry[]) {
+function load(): ReadonlyArray<HistoryEntry> {
+  if (cache) {
+    return cache;
+  }
+  if (typeof localStorage === "undefined") {
+    return EMPTY;
+  }
+  let entries: Array<HistoryEntry>;
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    entries = Array.isArray(stored) ? stored.filter(isHistoryEntry) : [];
+  } catch {
+    entries = [];
+  }
+  cache = entries;
+  return entries;
+}
+
+function save(entries: ReadonlyArray<HistoryEntry>) {
   cache = entries.slice(0, LIMIT);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
   } catch {
     // Storage blocked or full: history lasts for this page only.
   }
-  for (const listener of [...listeners]) listener();
+  for (const listener of [...listeners]) {
+    listener();
+  }
 }
 
 function onStorage(e: StorageEvent) {
-  if (e.key !== STORAGE_KEY) return;
+  if (e.key !== STORAGE_KEY) {
+    return;
+  }
   cache = undefined;
-  for (const listener of [...listeners]) listener();
+  for (const listener of [...listeners]) {
+    listener();
+  }
 }
 
 /**
@@ -62,7 +96,9 @@ export const transactionHistory = {
       window.addEventListener("storage", onStorage);
     }
     return () => {
-      if (!listeners.delete(listener)) return;
+      if (!listeners.delete(listener)) {
+        return;
+      }
       if (listeners.size === 0 && typeof window !== "undefined") {
         window.removeEventListener("storage", onStorage);
       }
@@ -91,8 +127,13 @@ export function clearTransactionHistory() {
 }
 
 /** Entries sent by `from`, plus those with no sender. All of them when `from` is undefined. */
-export function filterTransactions(entries: readonly HistoryEntry[], from: Address | undefined) {
-  if (!from) return entries;
+export function filterTransactions(
+  entries: ReadonlyArray<HistoryEntry>,
+  from: Address | undefined,
+) {
+  if (!from) {
+    return entries;
+  }
   const sender = from.toLowerCase();
   return entries.filter((e) => !e.from || e.from.toLowerCase() === sender);
 }
@@ -114,12 +155,21 @@ export function entryStatus(
 }
 
 /** "2 minutes ago", from a timestamp in ms. */
-export function formatRelativeTime(ms: number, { locale, now = Date.now() }: { locale?: string; now?: number } = {}) {
+export function formatRelativeTime(
+  ms: number,
+  { locale, now = Date.now() }: { locale?: string; now?: number } = {},
+) {
   const seconds = Math.round((ms - now) / 1000);
   const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const abs = Math.abs(seconds);
-  if (abs < 60) return format.format(seconds, "second");
-  if (abs < 3600) return format.format(Math.round(seconds / 60), "minute");
-  if (abs < 86400) return format.format(Math.round(seconds / 3600), "hour");
-  return format.format(Math.round(seconds / 86400), "day");
+  if (abs < 60) {
+    return format.format(seconds, "second");
+  }
+  if (abs < 3600) {
+    return format.format(Math.round(seconds / 60), "minute");
+  }
+  if (abs < 86_400) {
+    return format.format(Math.round(seconds / 3600), "hour");
+  }
+  return format.format(Math.round(seconds / 86_400), "day");
 }

@@ -35,15 +35,23 @@ export function createStore<S extends object>(
           break;
         }
       }
-      if (!changed) return;
+      if (!changed) {
+        return;
+      }
       state = { ...state, ...next };
-      for (const listener of [...listeners]) listener();
+      for (const listener of [...listeners]) {
+        listener();
+      }
     },
     subscribe(listener) {
       listeners.add(listener);
-      if (listeners.size === 1 && start) stop = start(store);
+      if (listeners.size === 1 && start) {
+        stop = start(store);
+      }
       return () => {
-        if (!listeners.delete(listener)) return;
+        if (!listeners.delete(listener)) {
+          return;
+        }
         if (listeners.size === 0) {
           stop?.();
           stop = undefined;

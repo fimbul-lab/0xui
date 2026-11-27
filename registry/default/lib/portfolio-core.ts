@@ -1,11 +1,6 @@
 import { formatUnits } from "viem";
-import {
-  getTokenPrice,
-  isNativeToken,
-  looksLikeSpam,
-  type TokenInfo,
-  type TokenPrices,
-} from "@/lib/token-list";
+import { getTokenPrice, isNativeToken, looksLikeSpam } from "@/lib/token-list";
+import type { TokenInfo, TokenPrices } from "@/lib/token-list";
 
 /** Why a holding is tucked under "Hidden tokens". */
 export type HiddenReason = "spam" | "unlisted" | "unpriced" | "dust";
@@ -46,46 +41,63 @@ export type PortfolioFilters = {
 /** Hidden reason for a holding, or undefined to show it. The native currency is always shown. */
 export function hiddenReason(
   row: Omit<PortfolioRow, "hidden">,
-  { isSpam = looksLikeSpam, showUnlisted = false, hideUnpriced = true, minValue = 0.5 }: PortfolioFilters = {},
+  {
+    isSpam = looksLikeSpam,
+    showUnlisted = false,
+    hideUnpriced = true,
+    minValue = 0.5,
+  }: PortfolioFilters = {},
 ): HiddenReason | undefined {
-  if (isNativeToken(row.token)) return undefined;
-  if (isSpam(row.token)) return "spam";
-  if (row.unlisted && !showUnlisted) return "unlisted";
-  if (row.value === undefined) return hideUnpriced ? "unpriced" : undefined;
-  if (row.value < minValue) return "dust";
+  if (isNativeToken(row.token)) {
+    return undefined;
+  }
+  if (isSpam(row.token)) {
+    return "spam";
+  }
+  if (row.unlisted && !showUnlisted) {
+    return "unlisted";
+  }
+  if (row.value === undefined) {
+    return hideUnpriced ? "unpriced" : undefined;
+  }
+  if (row.value < minValue) {
+    return "dust";
+  }
   return undefined;
 }
 
 const byValue = (a: PortfolioRow, b: PortfolioRow) =>
   (b.value ?? -1) - (a.value ?? -1) ||
-  Number(formatUnits(b.balance, b.token.decimals)) - Number(formatUnits(a.balance, a.token.decimals));
+  Number(formatUnits(b.balance, b.token.decimals)) -
+    Number(formatUnits(a.balance, a.token.decimals));
 
 /** Balances from your own source, keyed by token address in any case. */
 export type PortfolioBalances = ReadonlyMap<string, bigint> | Record<string, bigint>;
 
 /** Balances keyed by lowercase address. */
 export function normalizeBalances(balances: PortfolioBalances): Map<string, bigint> {
-  const entries = balances instanceof Map ? [...balances] : Object.entries(balances);
+  // A map is iterable and a plain record is not, even across realms.
+  const entries = Symbol.iterator in balances ? [...balances] : Object.entries(balances);
   return new Map(entries.map(([key, value]) => [key.toLowerCase(), value]));
 }
 
 export type PortfolioInput = {
   /** The token list, already narrowed to `chainId`. */
-  tokens: readonly TokenInfo[];
+  tokens: ReadonlyArray<TokenInfo>;
   chainId: number;
   /** Balances by lowercase address, for `tokens`. Ignored when `holdings` is set. */
   balances: ReadonlyMap<string, bigint>;
   /** Holdings with their own metadata. Win over `balances`. */
-  holdings?: readonly PortfolioHolding[];
+  holdings?: ReadonlyArray<PortfolioHolding>;
   prices?: TokenPrices;
   hideZero?: boolean;
 } & PortfolioFilters;
 
 export type PortfolioSummary = {
   /** Shown holdings, by value then amount. */
-  rows: PortfolioRow[];
+  rows: Array<PortfolioRow>;
   /** Holdings tucked away, each with its reason. */
-  hidden: PortfolioRow[];
+  hidden: Array<PortfolioRow>;
   /** Fiat total of the shown rows. */
   total: number;
   /** Shown rows without a price, left out of the total. */
@@ -122,11 +134,13 @@ export function summarizePortfolio({
         balance: balances.get(token.address.toLowerCase()) ?? 0n,
         unlisted: false,
       }));
-  const all: PortfolioRow[] = held
+  const all: Array<PortfolioRow> = held
     .map((row) => {
       const price = getTokenPrice(prices, row.token);
       const value =
-        price === undefined ? undefined : Number(formatUnits(row.balance, row.token.decimals)) * price;
+        price === undefined
+          ? undefined
+          : Number(formatUnits(row.balance, row.token.decimals)) * price;
       return { ...row, value };
     })
     .filter((row) => !hideZero || row.balance > 0n)
@@ -159,9 +173,17 @@ export function portfolioPhase({
   /** Shown plus hidden rows. */
   count: number;
 }): PortfolioPhase {
-  if (loadingProp) return "loading";
-  if (!hasSource) return "idle";
-  if (isLoading) return "loading";
-  if (isError) return "error";
+  if (loadingProp) {
+    return "loading";
+  }
+  if (!hasSource) {
+    return "idle";
+  }
+  if (isLoading) {
+    return "loading";
+  }
+  if (isError) {
+    return "error";
+  }
   return count ? "ready" : "empty";
 }

@@ -1,10 +1,17 @@
-import { getEnsAddress, getEnsName, getEnsText, type Config } from "@wagmi/core";
+import { getEnsAddress, getEnsName, getEnsText } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
 
 /** Text records read by default. */
-export const defaultEnsRecords = ["description", "url", "com.twitter", "com.github", "email"] as const;
+export const defaultEnsRecords = [
+  "description",
+  "url",
+  "com.twitter",
+  "com.github",
+  "email",
+] as const;
 
 /** The normalized form of an ENS name, or undefined when it isn't a valid one. */
 export function safeNormalize(name: string) {
@@ -21,7 +28,7 @@ export type EnsProfileParameters = {
   /** Or look up this name directly. */
   name?: string;
   /** Text records to read. */
-  records?: readonly string[];
+  records?: ReadonlyArray<string>;
 };
 
 export type EnsProfileData = {
@@ -52,11 +59,14 @@ export function ensProfileQueryOptions(
       const resolved =
         address ??
         (ensName
-          ? ((await getEnsAddress(config, { name: ensName, chainId }).catch(() => null)) ?? undefined)
+          ? ((await getEnsAddress(config, { name: ensName, chainId }).catch(() => null)) ??
+            undefined)
           : undefined);
       const values = ensName
         ? await Promise.all(
-            records.map((key) => getEnsText(config, { name: ensName, key, chainId }).catch(() => null)),
+            records.map((key) =>
+              getEnsText(config, { name: ensName, key, chainId }).catch(() => null),
+            ),
           )
         : [];
       return {
@@ -80,7 +90,9 @@ export function ensProfilePhase(
   data: EnsProfileData | undefined,
   isLoading: boolean,
 ): EnsProfilePhase {
-  if (isLoading) return "loading";
+  if (isLoading) {
+    return "loading";
+  }
   return (name ? !data?.address : !data?.name) ? "not-found" : "ready";
 }
 
@@ -88,7 +100,10 @@ export type EnsLinkKey = "url" | "com.twitter" | "com.github" | "email";
 
 export type EnsLink = { key: EnsLinkKey; label: string; href: string; text: string };
 
-const linkFormats: Record<EnsLinkKey, { label: string; href: (v: string) => string; text?: (v: string) => string }> = {
+const linkFormats: Record<
+  EnsLinkKey,
+  { label: string; href: (v: string) => string; text?: (v: string) => string }
+> = {
   url: {
     label: "Website",
     href: (v) => (/^https?:\/\//.test(v) ? v : `https://${v}`),
@@ -103,12 +118,18 @@ const linkFormats: Record<EnsLinkKey, { label: string; href: (v: string) => stri
   email: { label: "Email", href: (v) => `mailto:${v}` },
 };
 
+const linkKeys: ReadonlyArray<EnsLinkKey> = ["url", "com.twitter", "com.github", "email"];
+
 /** The records that render as links (url, com.twitter, com.github, email), in that order. */
-export function ensProfileLinks(records: Record<string, string | undefined>): EnsLink[] {
-  return (Object.keys(linkFormats) as EnsLinkKey[]).flatMap((key) => {
+export function ensProfileLinks(records: Record<string, string | undefined>): Array<EnsLink> {
+  return linkKeys.flatMap((key) => {
     const value = records[key];
-    if (!value) return [];
+    if (!value) {
+      return [];
+    }
     const format = linkFormats[key];
-    return [{ key, label: format.label, href: format.href(value), text: format.text?.(value) ?? value }];
+    return [
+      { key, label: format.label, href: format.href(value), text: format.text?.(value) ?? value },
+    ];
   });
 }

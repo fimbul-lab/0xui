@@ -6,10 +6,10 @@ import {
   createBatchTransaction,
   describeBatchCalls,
   supportsAtomic,
-  type BatchCall,
 } from "./batch-transaction-core";
+import type { BatchCall } from "./batch-transaction-core";
 
-const calls: BatchCall[] = [
+const calls: Array<BatchCall> = [
   { to: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", data: "0x095ea7b3", label: "Approve" },
   { to: "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af", data: "0x1234", label: "Swap" },
 ];
@@ -21,11 +21,13 @@ describe("createBatchTransaction", () => {
   it("sends one transaction per call when the wallet can't batch", async () => {
     const sent = vi.fn();
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
-    const config = createTestConfig({ rpc: { ...chain, eth_sendTransaction: (p: unknown) => (sent(), send(p)) } });
+    const send = chain.eth_sendTransaction;
+    const config = createTestConfig({
+      rpc: { ...chain, eth_sendTransaction: (p: unknown) => (sent(), send(p)) },
+    });
     await connect(config, { connector: config.connectors[0]! });
     const batch = createBatchTransaction(config, { chainId: 1 });
-    const phases: string[] = [];
+    const phases: Array<string> = [];
     const stop = batch.subscribe(() => phases.push(batch.get().phase));
 
     expect(batch.get()).toMatchObject({ isConnected: true, wrongChain: false, atomic: false });
@@ -39,7 +41,10 @@ describe("createBatchTransaction", () => {
   });
 
   it("goes atomic when the wallet supports it", async () => {
-    const config = createTestConfig({ rpc: fakeChainRpc(), capabilities: { 1: { atomic: { status: "supported" } } } });
+    const config = createTestConfig({
+      rpc: fakeChainRpc(),
+      capabilities: { 1: { atomic: { status: "supported" } } },
+    });
     await connect(config, { connector: config.connectors[0]! });
     const batch = createBatchTransaction(config, { chainId: 1 });
     const stop = batch.subscribe(() => {});
@@ -83,7 +88,7 @@ describe("createBatchTransaction", () => {
   it("notices the wrong chain and switches", async () => {
     const config = createTestConfig({ rpc: fakeChainRpc() });
     await connect(config, { connector: config.connectors[0]! });
-    const batch = createBatchTransaction(config, { chainId: 11155111 });
+    const batch = createBatchTransaction(config, { chainId: 11_155_111 });
     const stop = batch.subscribe(() => {});
 
     expect(batch.get()).toMatchObject({ wrongChain: true, targetChain: { name: "Sepolia" } });

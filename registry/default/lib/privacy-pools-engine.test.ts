@@ -4,16 +4,14 @@ import {
   generateMerkleProof,
   getCommitment,
 } from "@0xbow/privacy-pools-core-sdk";
+import type { CommitmentProof, WithdrawalProof } from "@0xbow/privacy-pools-core-sdk";
+import { http, HttpResponse } from "msw";
+import type { JsonBodyType } from "msw";
 import { poseidon1, poseidon3 } from "poseidon-lite";
-import {
-  decodeFunctionData,
-  encodeAbiParameters,
-  parseAbi,
-  parseUnits,
-  type Address,
-  type Hash,
-} from "viem";
+import { decodeFunctionData, encodeAbiParameters, parseAbi, parseUnits } from "viem";
+import type { Address, Hash } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { server } from "../../../test/msw";
 import {
   PRIVACY_POOLS_NATIVE,
   createPrivacyPoolsEngine,
@@ -21,18 +19,23 @@ import {
   encryptPhrase,
   nextDepositIndex,
   poolAccountState,
-  type PrivacyPoolsCache,
-  type PrivacyPoolsClient,
-  type PrivacyPoolsStorage,
+} from "./privacy-pools-engine";
+import type {
+  PrivacyPoolsCache,
+  PrivacyPoolsClient,
+  PrivacyPoolsStorage,
 } from "./privacy-pools-engine";
 import type { ProofStage, ShieldedEngine, ShieldedSync, UnshieldDraft } from "./shielded-engine";
 
-const CHAIN = 11155111;
+const CHAIN = 11_155_111;
 const ENTRYPOINT: Address = "0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB";
 const USDC: Address = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 const USDC_POOL: Address = "0x0b062Fe33c4f1592D8EA63f9a0177FcA44374C0f";
 const ETH_POOL: Address = "0x644d5A2554d36e27509254F32ccfeBe8cd58861f";
-const SCOPES: Record<string, bigint> = { [USDC_POOL]: 111n, [ETH_POOL]: 222n };
+const SCOPES = new Map<string, bigint>([
+  [USDC_POOL, 111n],
+  [ETH_POOL, 222n],
+]);
 const DEPOSITOR: Address = "0x1111111111111111111111111111111111111111";
 const RECIPIENT: Address = "0x2222222222222222222222222222222222222222";
 const FEE_RECEIVER: Address = "0x3333333333333333333333333333333333333333";
@@ -57,14 +60,20 @@ type Log = {
   logIndex: number;
 };
 
+/** What the relayer answers a relay request with. */
+type RelayerAnswer = { success?: boolean; txHash?: string; error?: string; message?: string };
+
+/** Each fake chain serves its ASP and relayer at hosts of its own. */
+let chainCount = 0;
+
 /** A chain small enough to hold in a test: a head, some logs, and the Entrypoint's answers. */
 function fakeChain() {
   const state = {
-    head: 1_000n,
-    logs: [] as Log[],
+    head: 1000n,
+    logs: [] as Array<Log>,
     /** Approved labels, by scope. */
-    approved: new Map<string, string[]>(),
-    getLogsCalls: [] as { fromBlock: bigint; toBlock: bigint }[],
+    approved: new Map<string, Array<string>>(),
+    getLogsCalls: [] as Array<{ fromBlock: bigint; toBlock: bigint }>,
     /** Refuse ranges wider than this, like an RPC with a block limit. */
     maxRange: undefined as bigint | undefined,
     failLogs: false,
@@ -72,10 +81,10 @@ function fakeChain() {
     rateLimited: 0,
     aspStatus: 200,
     /** Every commitment in the pools' state tree, as the ASP publishes it. */
-    stateLeaves: [] as string[],
+    stateLeaves: [] as Array<string>,
     /** Labels the ASP declined, and the labels it was asked about. */
-    declined: [] as string[],
-    labelQueries: [] as string[],
+    declined: [] as Array<string>,
+    labelQueries: [] as Array<string>,
     /** The approval root on chain. Follows the approved labels unless set. */
     aspRoot: undefined as bigint | undefined,
     relayer: {
@@ -85,9 +94,9 @@ function fakeChain() {
       lifetime: 60_000,
       /** Who the relayer's instructions pay. Follows the request unless set. */
       recipient: undefined as Address | undefined,
-      quotes: [] as { recipient?: string; amount: string }[],
-      requests: [] as Record<string, any>[],
-      answer: { success: true, txHash: `0x${"ab".repeat(32)}` } as Record<string, unknown>,
+      quotes: [] as Array<{ recipient?: string; amount: string }>,
+      requests: [] as Array<Record<string, any>>,
+      answer: { success: true, txHash: `0x${"ab".repeat(32)}` } as RelayerAnswer,
       /** HTTP status of the answer to a relay request. */
       status: 200,
       /** Runs when a relay request arrives, e.g. to mine the withdrawal. */
@@ -99,7 +108,9 @@ function fakeChain() {
     getBlockNumber: async () => state.head,
     async getLogs({ fromBlock, toBlock }) {
       state.getLogsCalls.push({ fromBlock, toBlock });
-      if (state.failLogs) throw new Error("node is down");
+      if (state.failLogs) {
+        throw new Error("node is down");
+      }
       if (state.rateLimited > 0) {
         state.rateLimited--;
         throw Object.assign(new Error("HTTP request failed."), { status: 429 });
@@ -117,10 +128,16 @@ function fakeChain() {
           ? [ETH_POOL, 10n ** 15n, 50n, 100n]
           : [USDC_POOL, parseUnits("1", 6), 50n, 100n];
       }
-      if (functionName === "SCOPE") return SCOPES[address];
-      if (functionName === "decimals") return 6;
+      if (functionName === "SCOPE") {
+        return SCOPES.get(address);
+      }
+      if (functionName === "decimals") {
+        return 6;
+      }
       if (functionName === "latestRoot") {
-        if (state.aspRoot !== undefined) return state.aspRoot;
+        if (state.aspRoot !== undefined) {
+          return state.aspRoot;
+        }
         const labels = (state.approved.get("111") ?? []).map(BigInt);
         return labels.length > 0 ? generateMerkleProof(labels, labels[0]!).root : 0n;
       }
@@ -128,15 +145,18 @@ function fakeChain() {
     },
   };
 
-  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+  const json = (body: JsonBodyType, status = 200) => HttpResponse.json(body, { status });
 
-  const fetchAsp: typeof fetch = async (url, init) => {
-    const path = String(url);
-    if (path.includes("/relayer/details")) {
-      return json({ minWithdrawAmount: state.relayer.minimum.toString() });
-    }
-    if (path.endsWith("/relayer/quote")) {
-      const body = JSON.parse(init!.body as string) as { recipient?: Address; amount: string };
+  // The ASP and the relayer, at hosts of this chain's own.
+  const host = `chain-${++chainCount}.test`;
+  const aspUrl = `https://asp.${host}`;
+  const relayerUrl = `https://relayer.${host}`;
+  server.use(
+    http.get(`${relayerUrl}/relayer/details`, () =>
+      json({ minWithdrawAmount: state.relayer.minimum.toString() }),
+    ),
+    http.post(`${relayerUrl}/relayer/quote`, async ({ request }) => {
+      const body = (await request.json()) as { recipient?: Address; amount: string };
       state.relayer.quotes.push(body);
       return json({
         feeBPS: state.relayer.feeBps.toString(),
@@ -144,38 +164,46 @@ function fakeChain() {
           expiration: Date.now() + state.relayer.lifetime,
           withdrawalData: encodeAbiParameters(
             [{ type: "address" }, { type: "address" }, { type: "uint256" }],
-            [state.relayer.recipient ?? body.recipient, FEE_RECEIVER, state.relayer.feeBps]
+            [state.relayer.recipient ?? body.recipient, FEE_RECEIVER, state.relayer.feeBps],
           ),
           signedRelayerCommitment: "0x51",
         },
       });
-    }
-    if (path.endsWith("/relayer/request")) {
-      state.relayer.requests.push(JSON.parse(init!.body as string));
+    }),
+    http.post(`${relayerUrl}/relayer/request`, async ({ request }) => {
+      state.relayer.requests.push((await request.json()) as Record<string, any>);
       state.relayer.onRequest?.();
       return json(state.relayer.answer, state.relayer.status);
-    }
-    if (path.endsWith("/deposits-by-label")) {
-      const labels = (init!.headers as Record<string, string>)["X-Labels"]!.split(",");
+    }),
+    http.get(`${aspUrl}/:chainId/public/deposits-by-label`, ({ request }) => {
+      const labels = (request.headers.get("X-Labels") ?? "").split(",");
       state.labelQueries.push(...labels);
       return json(
         labels.map((label) => ({
           label,
           reviewStatus: state.declined.includes(label) ? "declined" : "pending",
-        }))
+        })),
       );
-    }
-    const scope = (init!.headers as Record<string, string>)["X-Pool-Scope"]!;
-    return json(
-      { aspLeaves: state.approved.get(scope) ?? [], stateTreeLeaves: state.stateLeaves },
-      state.aspStatus
-    );
-  };
+    }),
+    http.get(`${aspUrl}/:chainId/public/mt-leaves`, ({ request }) => {
+      const scope = request.headers.get("X-Pool-Scope") ?? "";
+      return json(
+        { aspLeaves: state.approved.get(scope) ?? [], stateTreeLeaves: state.stateLeaves },
+        state.aspStatus,
+      );
+    }),
+  );
 
   let count = 0;
   /** Mine a deposit: the fee is already taken out of `value`, as the pool reports it. */
-  function deposit(pool: Address, precommitment: bigint, value: bigint, label: bigint, block = state.head) {
-    const transactionHash = `0x${(++count).toString(16).padStart(64, "0")}` as Hash;
+  function deposit(
+    pool: Address,
+    precommitment: bigint,
+    value: bigint,
+    label: bigint,
+    block = state.head,
+  ) {
+    const transactionHash: Hash = `0x${(++count).toString(16).padStart(64, "0")}`;
     // The commitment the pool computes: value, label and precommitment hashed together.
     const commitment = poseidon3([value, label, precommitment]);
     state.stateLeaves.push(commitment.toString());
@@ -196,7 +224,7 @@ function fakeChain() {
     return transactionHash;
   }
 
-  return { state, client, fetchAsp, deposit };
+  return { state, client, aspUrl, relayerUrl, deposit };
 }
 
 function memory(): PrivacyPoolsStorage & { items: Map<string, string> } {
@@ -212,7 +240,7 @@ function memory(): PrivacyPoolsStorage & { items: Map<string, string> } {
 function setup(
   storage = memory(),
   chain = fakeChain(),
-  options: { checkDeclined?: boolean; cache?: PrivacyPoolsCache } = {}
+  options: { checkDeclined?: boolean; cache?: PrivacyPoolsCache } = {},
 ) {
   const engine = createPrivacyPoolsEngine({
     ...options,
@@ -220,8 +248,8 @@ function setup(
       [CHAIN]: {
         rpcUrl: "http://unused.test",
         entrypoint: ENTRYPOINT,
-        aspUrl: "https://asp.test",
-        relayerUrl: "https://relayer.test",
+        aspUrl: chain.aspUrl,
+        relayerUrl: chain.relayerUrl,
         pools: [
           { asset: USDC, deploymentBlock: 100n },
           { asset: PRIVACY_POOLS_NATIVE, deploymentBlock: 100n },
@@ -232,7 +260,6 @@ function setup(
     storage,
     pollInterval: 0,
     client: () => chain.client,
-    fetch: chain.fetchAsp,
     circuitsUrl: "https://circuits.test/",
   });
   return { engine, storage, ...chain };
@@ -256,10 +283,82 @@ function precommitmentOf(data: `0x${string}`) {
 }
 
 const shieldUsdc = (engine: ShieldedEngine, amount = parseUnits("100", 6)) =>
-  engine.prepareShield(
-    { chainId: CHAIN, token: USDC, amount },
-    { sign: async () => "0x" }
+  engine.prepareShield({ chainId: CHAIN, token: USDC, amount }, { sign: async () => "0x" });
+
+const FAKE_PROOF: WithdrawalProof = {
+  proof: {
+    pi_a: ["1", "2"],
+    pi_b: [["3", "4"]],
+    pi_c: ["5", "6"],
+    protocol: "groth16",
+    curve: "bn128",
+  },
+  publicSignals: ["7", "8"],
+};
+
+const EXIT_PROOF: CommitmentProof = {
+  proof: {
+    pi_a: ["1", "2", "1"],
+    pi_b: [
+      ["3", "4"],
+      ["5", "6"],
+      ["1", "0"],
+    ],
+    pi_c: ["7", "8", "1"],
+    protocol: "groth16",
+    curve: "bn128",
+  },
+  publicSignals: ["11", "12", "13", "14"],
+};
+
+type ProveWithdrawal = PrivacyPoolSDK["proveWithdrawal"];
+
+/**
+ * Stand in for the SDK's prover and its 24 MB of circuits. Everything around
+ * the proof is real. Set what the next proof does on the object returned.
+ */
+function fakeProver() {
+  const prover = {
+    /** Circuit downloads, and the error the next one fails with. */
+    loads: 0,
+    loadError: undefined as Error | undefined,
+    /** What each withdrawal proof was asked to prove, and what it does. */
+    withdrawals: [] as Array<Parameters<ProveWithdrawal>>,
+    proveWithdrawal: (async () => FAKE_PROOF) as ProveWithdrawal,
+    /** What each exit proof was asked to prove. */
+    commitments: [] as Array<Parameters<PrivacyPoolSDK["proveCommitment"]>>,
+    /** Whether proofs verify. */
+    verified: true,
+  };
+  // oxlint-disable-next-line landmines/no-test-doubles -- the circuits are 24 MB; the prover is the one thing faked
+  vi.spyOn(Circuits.prototype, "initArtifacts").mockImplementation(async () => {
+    prover.loads++;
+    const error = prover.loadError;
+    prover.loadError = undefined;
+    if (error) {
+      throw error;
+    }
+  });
+  // oxlint-disable-next-line landmines/no-test-doubles -- a real proof needs the 24 MB circuits
+  vi.spyOn(PrivacyPoolSDK.prototype, "proveWithdrawal").mockImplementation((...args) => {
+    prover.withdrawals.push(args);
+    return prover.proveWithdrawal(...args);
+  });
+  // oxlint-disable-next-line landmines/no-test-doubles -- a fake proof can't pass the real verifier
+  vi.spyOn(PrivacyPoolSDK.prototype, "verifyWithdrawal").mockImplementation(
+    async () => prover.verified,
   );
+  // oxlint-disable-next-line landmines/no-test-doubles -- a real proof needs the 24 MB circuits
+  vi.spyOn(PrivacyPoolSDK.prototype, "proveCommitment").mockImplementation(async (...args) => {
+    prover.commitments.push(args);
+    return EXIT_PROOF;
+  });
+  // oxlint-disable-next-line landmines/no-test-doubles -- a fake proof can't pass the real verifier
+  vi.spyOn(PrivacyPoolSDK.prototype, "verifyCommitment").mockImplementation(
+    async () => prover.verified,
+  );
+  return prover;
+}
 
 describe("account", () => {
   it("creates an account and returns a 12-word phrase once", async () => {
@@ -273,7 +372,7 @@ describe("account", () => {
     // What is stored can't be read without the password.
     expect([...storage.items.values()].join()).not.toContain(mnemonic.split(" ")[0]! + " ");
     expect(await decryptPhrase(storage.getItem("0xui.privacy-pools.account")!, "password")).toBe(
-      mnemonic
+      mnemonic,
     );
   });
 
@@ -292,10 +391,10 @@ describe("account", () => {
   it("rejects a phrase that is not one", async () => {
     const { engine } = setup();
     await expect(engine.account.import("one two three", "password")).rejects.toThrow(
-      "12 or 24 words"
+      "12 or 24 words",
     );
     await expect(
-      engine.account.import(PHRASE.replace("junk", "notaword"), "password")
+      engine.account.import(PHRASE.replace("junk", "notaword"), "password"),
     ).rejects.toThrow("not a valid recovery phrase");
     await expect(engine.account.import(PHRASE, "")).rejects.toThrow("Choose a password.");
     expect(engine.account.status()).toBe("none");
@@ -349,13 +448,13 @@ describe("quote", () => {
   it("refuses an amount under the pool's minimum, and a token with no pool", async () => {
     const { engine } = setup();
     await expect(
-      engine.quoteShield({ chainId: CHAIN, token: USDC, amount: 999_999n })
+      engine.quoteShield({ chainId: CHAIN, token: USDC, amount: 999_999n }),
     ).rejects.toThrow("The minimum is 1.");
     await expect(
-      engine.quoteShield({ chainId: CHAIN, token: DEPOSITOR, amount: 1n })
+      engine.quoteShield({ chainId: CHAIN, token: DEPOSITOR, amount: 1n }),
     ).rejects.toThrow("no Privacy Pool");
     await expect(engine.quoteShield({ chainId: 1, token: USDC, amount: 1n })).rejects.toThrow(
-      "not set up for chain 1"
+      "not set up for chain 1",
     );
   });
 });
@@ -397,7 +496,7 @@ describe("shield", () => {
     const { engine } = await unlocked();
     const { transaction } = await engine.prepareShield(
       { chainId: CHAIN, token: PRIVACY_POOLS_NATIVE, amount: 10n ** 18n },
-      { sign: async () => "0x" }
+      { sign: async () => "0x" },
     );
     expect(transaction.value).toBe(10n ** 18n);
     expect(decodeFunctionData({ abi: depositAbi, data: transaction.data! }).args).toHaveLength(1);
@@ -413,7 +512,7 @@ describe("shield", () => {
           asked = true;
           return "0x";
         },
-      }
+      },
     );
     expect(asked).toBe(false);
   });
@@ -443,18 +542,22 @@ describe("shield", () => {
 
   it("stops handing out indexes before the SDK would lose track of them", async () => {
     const { engine } = await unlocked();
-    for (let i = 0; i < 8; i++) await shieldUsdc(engine);
+    for (let i = 0; i < 8; i++) {
+      await shieldUsdc(engine);
+    }
     await expect(shieldUsdc(engine)).rejects.toThrow("Several shields were started");
   });
 
   it("keeps separate indexes per pool", async () => {
     const { engine } = await unlocked();
-    for (let i = 0; i < 8; i++) await shieldUsdc(engine);
+    for (let i = 0; i < 8; i++) {
+      await shieldUsdc(engine);
+    }
     await expect(
       engine.prepareShield(
         { chainId: CHAIN, token: PRIVACY_POOLS_NATIVE, amount: 10n ** 18n },
-        { sign: async () => "0x" }
-      )
+        { sign: async () => "0x" },
+      ),
     ).resolves.toBeDefined();
   });
 
@@ -492,15 +595,15 @@ describe("scan", () => {
     // the unlock scans once more, and reads only what could still change.
     expect(state.getLogsCalls).toEqual([
       { fromBlock: 100n, toBlock: 599n },
-      { fromBlock: 600n, toBlock: 1_000n },
-      { fromBlock: 937n, toBlock: 1_000n },
+      { fromBlock: 600n, toBlock: 1000n },
+      { fromBlock: 937n, toBlock: 1000n },
     ]);
 
     state.getLogsCalls.length = 0;
-    state.head = 1_010n;
+    state.head = 1010n;
     await engine.sync(CHAIN);
     // Blocks past head - 64 could still be reorganised, so they are read again.
-    expect(state.getLogsCalls).toEqual([{ fromBlock: 937n, toBlock: 1_010n }]);
+    expect(state.getLogsCalls).toEqual([{ fromBlock: 937n, toBlock: 1010n }]);
   });
 
   it("halves a range the RPC refuses", async () => {
@@ -510,12 +613,12 @@ describe("scan", () => {
     await context.engine.sync(CHAIN);
     expect(context.engine.getSync(CHAIN).status).toBe("synced");
     const accepted = context.state.getLogsCalls.filter(
-      ({ fromBlock, toBlock }) => toBlock - fromBlock + 1n <= 200n
+      ({ fromBlock, toBlock }) => toBlock - fromBlock + 1n <= 200n,
     );
     // Every block from 100 to 1000 was read once, and the last 64 again by the second scan.
-    expect(accepted.reduce((sum, { fromBlock, toBlock }) => sum + toBlock - fromBlock + 1n, 0n)).toBe(
-      901n + 64n
-    );
+    expect(
+      accepted.reduce((sum, { fromBlock, toBlock }) => sum + toBlock - fromBlock + 1n, 0n),
+    ).toBe(901n + 64n);
   });
 
   it("waits and tries again when the RPC says too many requests", async () => {
@@ -529,7 +632,9 @@ describe("scan", () => {
       await done;
       expect(context.engine.getSync(CHAIN).status).toBe("synced");
       // Refused requests are repeated as they were, not split into more.
-      const sizes = context.state.getLogsCalls.map(({ fromBlock, toBlock }) => toBlock - fromBlock + 1n);
+      const sizes = context.state.getLogsCalls.map(
+        ({ fromBlock, toBlock }) => toBlock - fromBlock + 1n,
+      );
       expect(sizes.filter((size) => size < 64n)).toEqual([]);
     } finally {
       vi.useRealTimers();
@@ -540,7 +645,7 @@ describe("scan", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "Date"] });
     try {
       const context = setup();
-      context.state.rateLimited = 1_000;
+      context.state.rateLimited = 1000;
       await context.engine.account.import(PHRASE, "password");
       const done = context.engine.sync(CHAIN);
       await vi.advanceTimersByTimeAsync(600_000);
@@ -564,9 +669,9 @@ describe("scan", () => {
     const first = setup(storage, chain, { cache });
     await first.engine.account.import(PHRASE, "password");
     const { transaction } = await shieldUsdc(first.engine);
-    chain.deposit(USDC_POOL, precommitmentOf(transaction.data!), parseUnits("5", 6), 3n, 1_001n);
+    chain.deposit(USDC_POOL, precommitmentOf(transaction.data!), parseUnits("5", 6), 3n, 1001n);
     // Far enough on that the deposit's block is final, and so kept.
-    chain.state.head = 1_200n;
+    chain.state.head = 1200n;
     await first.engine.sync(CHAIN);
     expect(amountsOf(first.engine)?.pending).toBe(parseUnits("5", 6));
     expect(items.size).toBe(1);
@@ -575,14 +680,14 @@ describe("scan", () => {
 
     // A new page load: same storage and cache, a fresh engine.
     chain.state.getLogsCalls.length = 0;
-    chain.state.head = 1_210n;
+    chain.state.head = 1210n;
     const second = setup(storage, chain, { cache });
     await second.engine.account.unlock("password");
     await second.engine.sync(CHAIN);
     expect(amountsOf(second.engine)?.pending).toBe(parseUnits("5", 6));
     // Only blocks after the cached ones were asked for. The deposit at 1001 came from the cache.
     expect(chain.state.getLogsCalls.length).toBeGreaterThan(0);
-    expect(chain.state.getLogsCalls.every(({ fromBlock }) => fromBlock >= 1_137n)).toBe(true);
+    expect(chain.state.getLogsCalls.every(({ fromBlock }) => fromBlock >= 1137n)).toBe(true);
   });
 
   it("scans the chain when the cache can't be read", async () => {
@@ -601,7 +706,7 @@ describe("scan", () => {
 
   it("reports progress through both stages and ends synced", async () => {
     const context = setup();
-    const states: ShieldedSync[] = [];
+    const states: Array<ShieldedSync> = [];
     context.engine.subscribe("sync", () => states.push(context.engine.getSync(CHAIN)));
     await context.engine.account.import(PHRASE, "password");
     await context.engine.sync(CHAIN);
@@ -619,7 +724,7 @@ describe("scan", () => {
     const before = engine.getBalances(CHAIN);
 
     state.failLogs = true;
-    state.head = 1_100n;
+    state.head = 1100n;
     await expect(engine.sync(CHAIN)).resolves.toBeUndefined();
     expect(engine.getSync(CHAIN)).toMatchObject({ status: "error", error: "node is down" });
     expect(engine.getBalances(CHAIN)).toBe(before);
@@ -645,7 +750,7 @@ describe("scan", () => {
   it("returns the same balances array until they change", async () => {
     const { engine, state } = await unlocked();
     const before = engine.getBalances(CHAIN);
-    state.head = 1_005n;
+    state.head = 1005n;
     await engine.sync(CHAIN);
     expect(engine.getBalances(CHAIN)).toBe(before);
   });
@@ -653,21 +758,6 @@ describe("scan", () => {
 
 describe("unshield", () => {
   afterEach(() => vi.restoreAllMocks());
-
-  const FAKE_PROOF = {
-    proof: { pi_a: ["1", "2"], pi_b: [["3", "4"]], pi_c: ["5", "6"], protocol: "groth16", curve: "bn128" },
-    publicSignals: ["7", "8"],
-  };
-
-  /** Stand in for the 24 MB of circuits. Everything around the proof is real. */
-  function fakeProver() {
-    const load = vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
-    const prove = vi
-      .spyOn(PrivacyPoolSDK.prototype, "proveWithdrawal")
-      .mockResolvedValue(FAKE_PROOF as never);
-    const verify = vi.spyOn(PrivacyPoolSDK.prototype, "verifyWithdrawal").mockResolvedValue(true);
-    return { load, prove, verify };
-  }
 
   type Context = Awaited<ReturnType<typeof unlocked>>;
 
@@ -689,7 +779,7 @@ describe("unshield", () => {
     recipient: RECIPIENT,
   });
 
-  const prove = (engine: ShieldedEngine, amount: bigint, stages: ProofStage[] = []) =>
+  const prove = (engine: ShieldedEngine, amount: bigint, stages: Array<ProofStage> = []) =>
     engine.prove(draftOf(amount), { onStage: (stage) => stages.push(stage) });
 
   it("quotes the relayer's fee without asking it to sign anything", async () => {
@@ -711,11 +801,11 @@ describe("unshield", () => {
 
     await expect(engine.quote(draftOf(0n))).rejects.toThrow("Enter an amount.");
     await expect(engine.quote(draftOf(parseUnits("200", 6)))).rejects.toThrow(
-      "Not enough spendable balance."
+      "Not enough spendable balance.",
     );
     // 160 is there, but in two deposits.
     await expect(engine.quote(draftOf(parseUnits("120", 6)))).rejects.toThrow(
-      "The most you can unshield at once is 100."
+      "The most you can unshield at once is 100.",
     );
     await expect(engine.quote(draftOf(50n))).rejects.toThrow("The minimum is 0.0001.");
 
@@ -723,12 +813,12 @@ describe("unshield", () => {
     // 58 fits only the 60 deposit, and would strand 2 there. 100 can still pay it.
     await expect(engine.quote(draftOf(parseUnits("58", 6)))).resolves.toBeDefined();
     await expect(engine.quote(draftOf(parseUnits("97", 6)))).rejects.toThrow(
-      "That would leave 3 behind, less than the minimum of 5. Unshield 100 instead."
+      "That would leave 3 behind, less than the minimum of 5. Unshield 100 instead.",
     );
 
     state.relayer.feeBps = 101n;
     await expect(engine.quote(draftOf(parseUnits("60", 6)))).rejects.toThrow(
-      "above what the pool allows"
+      "above what the pool allows",
     );
   });
 
@@ -739,7 +829,7 @@ describe("unshield", () => {
     context.state.head += 1n;
     await context.engine.sync(CHAIN);
     await expect(context.engine.quote(draftOf(parseUnits("10", 6)))).rejects.toThrow(
-      "Not enough spendable balance."
+      "Not enough spendable balance.",
     );
   });
 
@@ -749,30 +839,31 @@ describe("unshield", () => {
     await fund(context, parseUnits("100", 6), 7n);
     await fund(context, parseUnits("60", 6), 8n);
 
-    const stages: ProofStage[] = [];
+    const stages: Array<ProofStage> = [];
     const operation = await prove(context.engine, parseUnits("50", 6), stages);
 
     expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
     expect(operation.draft).toEqual(draftOf(parseUnits("50", 6)));
-    expect(operation.quote).toEqual({ fee: parseUnits("0.05", 6), received: parseUnits("49.95", 6) });
+    expect(operation.quote).toEqual({
+      fee: parseUnits("0.05", 6),
+      received: parseUnits("49.95", 6),
+    });
     expect(operation.expiresAt).toBeGreaterThan(Date.now());
     expect(context.state.relayer.quotes.at(-1)?.recipient).toBe(RECIPIENT);
 
     // The smallest deposit that covers the amount is spent.
-    const [source, input] = prover.prove.mock.calls[0]!;
+    const [source, input] = prover.withdrawals[0]!;
     expect(source).toMatchObject({ label: 8n, value: parseUnits("60", 6) });
     expect(input.withdrawalAmount).toBe(parseUnits("50", 6));
     expect(input.stateTreeDepth).toBe(32n);
-    expect(input.aspMerkleProof.root).toBe(
-      generateMerkleProof([7n, 8n], 8n).root
-    );
+    expect(input.aspMerkleProof.root).toBe(generateMerkleProof([7n, 8n], 8n).root);
     expect(input.stateMerkleProof.siblings).toHaveLength(32);
     expect(input.context).toBeGreaterThan(0n);
-    expect(prover.load).toHaveBeenCalledTimes(1);
+    expect(prover.loads).toBe(1);
 
     // Circuits are loaded once.
     await prove(context.engine, parseUnits("50", 6));
-    expect(prover.load).toHaveBeenCalledTimes(1);
+    expect(prover.loads).toBe(1);
   });
 
   it("stops when the relayer's instructions pay someone else", async () => {
@@ -781,9 +872,9 @@ describe("unshield", () => {
     await fund(context, parseUnits("100", 6), 7n);
     context.state.relayer.recipient = FEE_RECEIVER;
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow(
-      "does not match this unshield"
+      "does not match this unshield",
     );
-    expect(prover.prove).not.toHaveBeenCalled();
+    expect(prover.withdrawals).toEqual([]);
   });
 
   it("stops when the approval list on chain is not the one the ASP serves", async () => {
@@ -792,25 +883,28 @@ describe("unshield", () => {
     await fund(context, parseUnits("100", 6), 7n);
     context.state.aspRoot = 1n;
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow(
-      "The approval list is being updated."
+      "The approval list is being updated.",
     );
     context.state.aspRoot = undefined;
     context.state.stateLeaves = [];
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow(
-      "The ASP's records are behind the chain."
+      "The ASP's records are behind the chain.",
     );
-    expect(prover.prove).not.toHaveBeenCalled();
+    expect(prover.withdrawals).toEqual([]);
   });
 
   it("rejects a proof that does not verify or could not be made", async () => {
     const context = await unlocked();
     const prover = fakeProver();
     await fund(context, parseUnits("100", 6), 7n);
-    prover.verify.mockResolvedValueOnce(false);
+    prover.verified = false;
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow("did not verify");
-    prover.prove.mockRejectedValueOnce(new Error("Proof generation failed"));
+    prover.verified = true;
+    prover.proveWithdrawal = async () => {
+      throw new Error("Proof generation failed");
+    };
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow(
-      "Proof generation failed"
+      "Proof generation failed",
     );
   });
 
@@ -818,17 +912,17 @@ describe("unshield", () => {
     const context = await unlocked();
     const prover = fakeProver();
     await fund(context, parseUnits("100", 6), 7n);
-    prover.load.mockRejectedValueOnce(new Error("offline"));
+    prover.loadError = new Error("offline");
     await expect(prove(context.engine, parseUnits("50", 6))).rejects.toThrow("offline");
     await expect(prove(context.engine, parseUnits("50", 6))).resolves.toBeDefined();
-    expect(prover.load).toHaveBeenCalledTimes(2);
+    expect(prover.loads).toBe(2);
   });
 
   it("aborts with the signal's reason", async () => {
     const context = await unlocked();
     const prover = fakeProver();
     await fund(context, parseUnits("100", 6), 7n);
-    prover.prove.mockReturnValue(new Promise(() => {}));
+    prover.proveWithdrawal = () => new Promise(() => {});
     const controller = new AbortController();
     const running = context.engine.prove(draftOf(parseUnits("50", 6)), {
       onStage: (stage) => stage === "proving" && controller.abort(new Error("cancelled")),
@@ -863,11 +957,11 @@ describe("unshield", () => {
     await engine.sync(CHAIN);
     expect(amountsOf(engine)).toMatchObject({ spendable: 0n, proving: parseUnits("100", 6) });
     await expect(engine.quote(draftOf(parseUnits("10", 6)))).rejects.toThrow(
-      "Not enough spendable balance."
+      "Not enough spendable balance.",
     );
 
     // Mined: 60 stays behind as a new commitment under the same label.
-    const [source, input] = prover.prove.mock.calls[0]!;
+    const [source, input] = prover.withdrawals[0]!;
     const change = getCommitment(parseUnits("60", 6), 7n, input.newNullifier, input.newSecret);
     state.head += 1n;
     state.logs.push({
@@ -889,7 +983,7 @@ describe("unshield", () => {
 
     // The change can be spent next.
     await prove(engine, parseUnits("60", 6));
-    expect(prover.prove.mock.calls[1]![0]).toMatchObject({ hash: change.hash });
+    expect(prover.withdrawals[1]?.[0]).toMatchObject({ hash: change.hash });
   });
 
   it("submits a proof once", async () => {
@@ -915,7 +1009,7 @@ describe("unshield", () => {
     await fund(context, parseUnits("100", 6), 7n);
 
     // The proof's second public signal is the nullifier hash the pool reports as spent.
-    prover.prove.mockImplementation(async (source, input) => {
+    prover.proveWithdrawal = async (source, input) => {
       const spent = poseidon1([(source as { nullifier: bigint }).nullifier]);
       state.relayer.onRequest = () => {
         const change = getCommitment(parseUnits("60", 6), 7n, input.newNullifier, input.newSecret);
@@ -934,8 +1028,8 @@ describe("unshield", () => {
           logIndex: 0,
         });
       };
-      return { ...FAKE_PROOF, publicSignals: ["7", spent.toString()] } as never;
-    });
+      return { ...FAKE_PROOF, publicSignals: ["7", spent.toString()] };
+    };
     state.relayer.status = 504;
     state.relayer.answer = {};
 
@@ -954,11 +1048,16 @@ describe("unshield", () => {
       context.state.relayer.answer = {};
       const operation = await prove(context.engine, parseUnits("40", 6));
 
-      const result = context.engine.submit(operation).catch((error: Error) => error.message);
+      const result = context.engine
+        .submit(operation)
+        .catch((error: unknown) => (error instanceof Error ? error.message : String(error)));
       await vi.advanceTimersByTimeAsync(120_000);
       expect(await result).toContain("It may still arrive");
       // Unknown outcome: not spendable again until a scan settles it or time passes.
-      expect(amountsOf(context.engine)).toMatchObject({ spendable: 0n, proving: parseUnits("100", 6) });
+      expect(amountsOf(context.engine)).toMatchObject({
+        spendable: 0n,
+        proving: parseUnits("100", 6),
+      });
     } finally {
       vi.useRealTimers();
     }
@@ -981,7 +1080,7 @@ describe("unshield", () => {
     const { engine, state } = context;
     fakeProver();
     await fund(context, parseUnits("100", 6), 7n);
-    state.relayer.lifetime = 1_000;
+    state.relayer.lifetime = 1000;
 
     const first = await prove(engine, parseUnits("40", 6));
     const quotes = state.relayer.quotes.length;
@@ -1018,15 +1117,14 @@ describe("unshield", () => {
           [CHAIN]: {
             rpcUrl: "http://unused.test",
             entrypoint: ENTRYPOINT,
-            aspUrl: "https://asp.test",
-            relayerUrl: "https://relayer.test",
+            aspUrl: chain.aspUrl,
+            relayerUrl: chain.relayerUrl,
             pools: [{ asset: USDC, deploymentBlock: 100n }],
           },
         },
         storage: memory(),
         pollInterval: 0,
         client: () => chain.client,
-        fetch: chain.fetchAsp,
         circuitsUrl: process.env.PP_CIRCUITS_URL,
       });
       await engine.account.import(PHRASE, "password");
@@ -1054,7 +1152,8 @@ describe("unshield", () => {
       expect(args[0].pubSignals[2]).toBe(parseUnits("30", 6));
       expect(args[0].pubSignals[3]).toBe(9n);
     },
-    120_000
+    // oxlint-disable-next-line landmines/no-flake-masking -- opt-in run of the real circuits: two real proofs take tens of seconds
+    120_000,
   );
 
   it("says what is missing when unshield is not set up", async () => {
@@ -1064,14 +1163,13 @@ describe("unshield", () => {
         [CHAIN]: {
           rpcUrl: "http://unused.test",
           entrypoint: ENTRYPOINT,
-          aspUrl: "https://asp.test",
+          aspUrl: chain.aspUrl,
           pools: [{ asset: USDC, deploymentBlock: 100n }],
         },
       },
       storage: memory(),
       pollInterval: 0,
       client: () => chain.client,
-      fetch: chain.fetchAsp,
     });
     await expect(engine.quote(draftOf(parseUnits("1", 6)))).rejects.toThrow("it has no relayer");
   });
@@ -1079,20 +1177,6 @@ describe("unshield", () => {
 
 describe("exit", () => {
   afterEach(() => vi.restoreAllMocks());
-
-  const EXIT_PROOF = {
-    proof: { pi_a: ["1", "2", "1"], pi_b: [["3", "4"], ["5", "6"], ["1", "0"]], pi_c: ["7", "8", "1"] },
-    publicSignals: ["11", "12", "13", "14"],
-  };
-
-  function fakeProver() {
-    vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
-    const prove = vi
-      .spyOn(PrivacyPoolSDK.prototype, "proveCommitment")
-      .mockResolvedValue(EXIT_PROOF as never);
-    const verify = vi.spyOn(PrivacyPoolSDK.prototype, "verifyCommitment").mockResolvedValue(true);
-    return { prove, verify };
-  }
 
   type Context = Awaited<ReturnType<typeof unlocked>>;
 
@@ -1112,8 +1196,8 @@ describe("exit", () => {
     await context.engine.account.import(PHRASE, "password");
     // The unlock's scan is running. A deposit lands before the caller asks to sync.
     const { transaction } = await shieldUsdc(context.engine);
-    context.deposit(USDC_POOL, precommitmentOf(transaction.data!), parseUnits("5", 6), 3n, 1_001n);
-    context.state.head = 1_001n;
+    context.deposit(USDC_POOL, precommitmentOf(transaction.data!), parseUnits("5", 6), 3n, 1001n);
+    context.state.head = 1001n;
     await context.engine.sync(CHAIN);
     expect(amountsOf(context.engine)?.pending).toBe(parseUnits("5", 6));
   });
@@ -1126,8 +1210,20 @@ describe("exit", () => {
 
     const exits = context.engine.getExits!(CHAIN)!;
     expect(exits).toEqual([
-      { id: "111:7", token: USDC, amount: parseUnits("100", 6), state: "pending", depositor: DEPOSITOR },
-      { id: "111:8", token: USDC, amount: parseUnits("60", 6), state: "spendable", depositor: DEPOSITOR },
+      {
+        id: "111:7",
+        token: USDC,
+        amount: parseUnits("100", 6),
+        state: "pending",
+        depositor: DEPOSITOR,
+      },
+      {
+        id: "111:8",
+        token: USDC,
+        amount: parseUnits("60", 6),
+        state: "spendable",
+        depositor: DEPOSITOR,
+      },
     ]);
     // Same array until something changes.
     context.state.head += 1n;
@@ -1140,12 +1236,12 @@ describe("exit", () => {
     const prover = fakeProver();
     await depositUsdc(context, parseUnits("100", 6), 7n);
 
-    const stages: ProofStage[] = [];
+    const stages: Array<ProofStage> = [];
     const { transaction } = await context.engine.prepareExit!(CHAIN, "111:7", {
       onStage: (stage) => stages.push(stage),
     });
     expect(stages).toEqual(["loading-circuits", "proving", "verifying"]);
-    expect(prover.prove.mock.calls[0]!.slice(0, 2)).toEqual([parseUnits("100", 6), 7n]);
+    expect(prover.commitments[0]?.slice(0, 2)).toEqual([parseUnits("100", 6), 7n]);
 
     expect(transaction.to).toBe(USDC_POOL);
     expect(transaction.value).toBe(0n);
@@ -1161,13 +1257,13 @@ describe("exit", () => {
       pubSignals: [11n, 12n, 13n, 14n],
     });
 
-    prover.verify.mockResolvedValueOnce(false);
-    await expect(
-      context.engine.prepareExit!(CHAIN, "111:7", { onStage() {} })
-    ).rejects.toThrow("did not verify");
-    await expect(
-      context.engine.prepareExit!(CHAIN, "111:99", { onStage() {} })
-    ).rejects.toThrow("no longer there");
+    prover.verified = false;
+    await expect(context.engine.prepareExit!(CHAIN, "111:7", { onStage() {} })).rejects.toThrow(
+      "did not verify",
+    );
+    await expect(context.engine.prepareExit!(CHAIN, "111:99", { onStage() {} })).rejects.toThrow(
+      "no longer there",
+    );
   });
 
   it("drops the exit once the funds went back", async () => {
@@ -1178,7 +1274,12 @@ describe("exit", () => {
     context.state.logs.push({
       address: USDC_POOL,
       eventName: "Ragequit",
-      args: { _ragequitter: DEPOSITOR, _commitment: commitment, _label: 7n, _value: parseUnits("100", 6) },
+      args: {
+        _ragequitter: DEPOSITOR,
+        _commitment: commitment,
+        _label: 7n,
+        _value: parseUnits("100", 6),
+      },
       blockNumber: context.state.head,
       transactionHash: `0x${"cd".repeat(32)}`,
       logIndex: 0,
@@ -1192,16 +1293,17 @@ describe("exit", () => {
 
   it("does not offer an exit for funds already handed to the relayer", async () => {
     const context = await unlocked();
-    vi.spyOn(Circuits.prototype, "initArtifacts").mockResolvedValue();
-    vi.spyOn(PrivacyPoolSDK.prototype, "proveWithdrawal").mockResolvedValue({
-      proof: { pi_a: [], pi_b: [], pi_c: [] },
-      publicSignals: [],
-    } as never);
-    vi.spyOn(PrivacyPoolSDK.prototype, "verifyWithdrawal").mockResolvedValue(true);
+    fakeProver();
     await depositUsdc(context, parseUnits("100", 6), 7n, true);
     const operation = await context.engine.prove(
-      { kind: "unshield", chainId: CHAIN, token: USDC, amount: parseUnits("40", 6), recipient: RECIPIENT },
-      { onStage() {} }
+      {
+        kind: "unshield",
+        chainId: CHAIN,
+        token: USDC,
+        amount: parseUnits("40", 6),
+        recipient: RECIPIENT,
+      },
+      { onStage() {} },
     );
     await context.engine.submit(operation);
     await context.engine.sync(CHAIN);

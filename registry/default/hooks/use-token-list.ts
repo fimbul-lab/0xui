@@ -2,15 +2,10 @@
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useChainId, useChains } from "wagmi";
-import {
-  selectTokens,
-  tokenListQueryOptions,
-  type TokenFilters,
-  type TokenInfo,
-  type TokenList,
-} from "@/lib/token-list";
+import { selectTokens, tokenListQueryOptions } from "@/lib/token-list";
+import type { TokenFilters, TokenInfo } from "@/lib/token-list";
 
-const NO_TOKENS: readonly TokenInfo[] = [];
+const NO_TOKENS: ReadonlyArray<TokenInfo> = [];
 
 export type UseTokenListOptions = TokenFilters & {
   /** Only tokens on this chain. Defaults to the current chain. Pass null for every chain. */
@@ -18,7 +13,7 @@ export type UseTokenListOptions = TokenFilters & {
   /** Put the chain's native currency (e.g. ETH) first. Lists don't include it. */
   includeNative?: boolean;
   /** Extra tokens, e.g. ones the user imported. They come first and win over list entries. */
-  extraTokens?: readonly TokenInfo[];
+  extraTokens?: ReadonlyArray<TokenInfo>;
   /** IPFS gateway for `ipfs://` list URLs. */
   gateway?: string;
 };
@@ -32,7 +27,7 @@ export type UseTokenListOptions = TokenFilters & {
  *   <TokenSelect tokens={tokens} … />
  */
 export function useTokenList(
-  urls: string | readonly string[],
+  urls: string | ReadonlyArray<string>,
   {
     chainId: chainIdOption,
     includeNative = true,
@@ -40,7 +35,7 @@ export function useTokenList(
     gateway,
     allowlist,
     blocklist,
-  }: UseTokenListOptions = {}
+  }: UseTokenListOptions = {},
 ) {
   const currentChainId = useChainId();
   const chains = useChains();
@@ -51,7 +46,7 @@ export function useTokenList(
     queries: list.map((url) => tokenListQueryOptions(url, { gateway })),
   });
 
-  const lists = queries.map((q) => q.data).filter(Boolean) as TokenList[];
+  const lists = queries.flatMap((q) => q.data ?? []);
   const dataKey = queries.map((q) => q.dataUpdatedAt).join();
 
   const tokens = useMemo(
@@ -65,7 +60,7 @@ export function useTokenList(
       }),
     // `lists` is rebuilt every render; dataKey tracks its contents.
     // Filters are compared by content, so inline arrays don't recompute every render.
-    [dataKey, chainId, chains, includeNative, extraTokens, allowlist?.join(), blocklist?.join()]
+    [dataKey, chainId, chains, includeNative, extraTokens, allowlist?.join(), blocklist?.join()],
   );
 
   return {

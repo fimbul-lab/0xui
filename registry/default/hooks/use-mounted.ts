@@ -12,6 +12,6 @@ export function useMounted() {
   return useSyncExternalStore(
     subscribe,
     () => true,
-    () => false
+    () => false,
   );
 }

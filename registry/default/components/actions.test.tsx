@@ -2,7 +2,8 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
 import { useEffect } from "react";
-import { decodeFunctionData, erc20Abi, parseUnits, type Address, type Hex } from "viem";
+import { decodeFunctionData, erc20Abi, parseUnits } from "viem";
+import type { Address, Hex } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -33,13 +34,15 @@ const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af" as Address;
 // host mounted through that check; otherwise it lands between two tests,
 // with no host, and fails the run.
 beforeAll(async () => {
+  vi.useFakeTimers();
   const { unmount } = render(<Toaster />);
   act(() => {
     toast("Warm-up");
     toast.dismiss();
   });
-  await new Promise((resolve) => setTimeout(resolve, 1_100));
+  await act(() => vi.advanceTimersByTimeAsync(1100));
   unmount();
+  vi.useRealTimers();
 });
 
 // Each test's toasts go before its host does.
@@ -53,7 +56,7 @@ describe("ApproveButton", () => {
     const user = userEvent.setup();
     let allowance = 0n;
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
@@ -66,7 +69,7 @@ describe("ApproveButton", () => {
     });
     renderWithWagmi(
       <ApproveButton token={usdc} spender={router} amount={parseUnits("50", 6)} chainId={1}>
-        <button>Swap</button>
+        <button type="button">Swap</button>
       </ApproveButton>,
       { config },
     );
@@ -80,7 +83,7 @@ describe("ApproveButton", () => {
     await user.click(approve);
 
     expect(
-      await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Swap" }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
 
@@ -90,7 +93,7 @@ describe("ApproveButton", () => {
     });
     renderWithWagmi(
       <ApproveButton token={usdc} spender={router} amount={parseUnits("50", 6)} chainId={1}>
-        <button>Swap</button>
+        <button type="button">Swap</button>
       </ApproveButton>,
       { config },
     );
@@ -107,16 +110,20 @@ describe("ApproveButton", () => {
       symbol: "USDT",
     };
     let allowance = parseUnits("5", 6);
-    const approved: bigint[] = [];
+    const approved: Array<bigint> = [];
     const chain = fakeChainRpc();
-    const send = chain.eth_sendTransaction as (p: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     const config = createTestConfig({
       rpc: {
         ...chain,
         eth_call: erc20CallRpc({ allowance: () => allowance, decimals: 6 }),
         eth_sendTransaction: (params: [{ data: Hex }]) => {
           const { args } = decodeFunctionData({ abi: erc20Abi, data: params[0].data });
-          allowance = args[1] as bigint;
+          const amount = args[1];
+          if (typeof amount !== "bigint") {
+            throw new Error("Expected an approve call.");
+          }
+          allowance = amount;
           approved.push(allowance);
           return send(params);
         },
@@ -124,7 +131,7 @@ describe("ApproveButton", () => {
     });
     renderWithWagmi(
       <ApproveButton token={usdt} spender={router} amount={parseUnits("50", 6)} chainId={1}>
-        <button>Swap</button>
+        <button type="button">Swap</button>
       </ApproveButton>,
       { config },
     );
@@ -132,11 +139,11 @@ describe("ApproveButton", () => {
 
     await user.click(await screen.findByRole("button", { name: "Reset USDT approval" }));
     await user.click(
-      await screen.findByRole("button", { name: "Approve USDT" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Approve USDT" }, { timeout: 5000 }),
     );
 
     expect(
-      await screen.findByRole("button", { name: "Swap" }, { timeout: 5_000 }),
+      await screen.findByRole("button", { name: "Swap" }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(approved).toEqual([0n, parseUnits("50", 6)]);
   });
@@ -144,7 +151,7 @@ describe("ApproveButton", () => {
 
 describe("NetworkGuard", () => {
   it("renders children when no wallet is connected", () => {
-    renderWithWagmi(<NetworkGuard chainId={11155111}>Content</NetworkGuard>);
+    renderWithWagmi(<NetworkGuard chainId={11_155_111}>Content</NetworkGuard>);
     expect(screen.getByText("Content")).toBeInTheDocument();
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
@@ -153,7 +160,7 @@ describe("NetworkGuard", () => {
     const user = userEvent.setup();
     const config = createTestConfig();
     renderWithWagmi(
-      <NetworkGuard chainId={11155111} mode="replace">
+      <NetworkGuard chainId={11_155_111} mode="replace">
         Content
       </NetworkGuard>,
       { config },
@@ -171,7 +178,7 @@ describe("NetworkGuard", () => {
   it("treats a declined switch as cancelled", async () => {
     const user = userEvent.setup();
     const config = createTestConfig({ features: { switchChainError: true } });
-    renderWithWagmi(<NetworkGuard chainId={11155111}>Content</NetworkGuard>, { config });
+    renderWithWagmi(<NetworkGuard chainId={11_155_111}>Content</NetworkGuard>, { config });
     await act(() => connectMock(config));
 
     await user.click(await screen.findByRole("button", { name: "Switch to Sepolia" }));
@@ -260,7 +267,10 @@ function ToastTrigger({ status }: { status: string }) {
   return (
     <>
       <Toaster />
-      <button onClick={() => toastTransaction(fakeTxHash, { description: `Send (${status})` })}>
+      <button
+        type="button"
+        onClick={() => toastTransaction(fakeTxHash, { description: `Send (${status})` })}
+      >
         Track
       </button>
     </>
@@ -283,12 +293,13 @@ describe("useTransactionToast", () => {
     expect(screen.getByText(`Send (${status})`)).toBeInTheDocument();
 
     // Now the transaction lands on chain.
-    (chain.eth_sendTransaction as (p: unknown) => unknown)([
-      { from: testAccounts[0], to: testAccounts[1] },
-    ]);
-    const settled = await screen.findByText(heading, {}, { timeout: 5_000 });
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: testAccounts[1] }]);
+    const settled = await screen.findByText(heading, {}, { timeout: 5000 });
     // The shared toast queue is global, so earlier tests' toasts may still be showing.
-    const toastEl = settled.closest("[data-slot=toast]") as HTMLElement;
+    const toastEl = settled.closest<HTMLElement>("[data-slot=toast]");
+    if (!toastEl) {
+      throw new Error("The heading isn't in a toast.");
+    }
     expect(within(toastEl).getByRole("link", { name: "View" })).toHaveAttribute(
       "href",
       `https://etherscan.io/tx/${fakeTxHash}`,
@@ -333,17 +344,19 @@ describe("agent", () => {
   it("asks the person before NetworkGuard switches network", async () => {
     approve = false;
     const config = createTestConfig();
-    renderWithWagmi(<NetworkGuard chainId={11155111}>Content</NetworkGuard>, { config });
+    renderWithWagmi(<NetworkGuard chainId={11_155_111}>Content</NetworkGuard>, { config });
     await act(() => connectMock(config));
 
     await screen.findByRole("button", { name: "Switch to Sepolia" });
     expect(named("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia");
     const step = { steps: [{ ref: "Switch to Sepolia", action: "press" }] };
-    expect((await agent.act(step)).error?.message).toContain("Asks your wallet to switch to Sepolia");
+    expect((await agent.act(step)).error?.message).toContain(
+      "Asks your wallet to switch to Sepolia",
+    );
     expect(config.state.chainId).toBe(1);
     approve = true;
     expect((await agent.act(step)).ok).toBe(true);
-    await waitFor(() => expect(config.state.chainId).toBe(11155111));
+    await waitFor(() => expect(config.state.chainId).toBe(11_155_111));
   });
 
   it("asks the person before adding a token to the wallet", async () => {
@@ -401,21 +414,33 @@ describe("agent", () => {
     );
     await act(() => connectMock(config));
     await screen.findByRole("button", { name: "Approve USDC" });
-    expect(named("Approve USDC")?.confirm).toBe(
-      `Approve USDC: lets ${router} spend up to 50 USDC`,
-    );
+    expect(named("Approve USDC")?.confirm).toBe(`Approve USDC: lets ${router} spend up to 50 USDC`);
     expect((await agent.act({ steps: [{ ref: "Approve USDC", action: "press" }] })).ok).toBe(false);
   });
 
   it.each([
-    [{ unlimited: true }, usdc, `Approve USDC: lets ${router} spend all of your USDC, with no limit`],
-    [{}, { address: usdc.address, symbol: "USDC" }, `Approve USDC: lets ${router} spend up to 50000000 base units of USDC`],
+    [
+      { unlimited: true },
+      usdc,
+      `Approve USDC: lets ${router} spend all of your USDC, with no limit`,
+    ],
+    [
+      {},
+      { address: usdc.address, symbol: "USDC" },
+      `Approve USDC: lets ${router} spend up to 50000000 base units of USDC`,
+    ],
   ])("states the approval's size in its confirm (%o)", async (props, token, sentence) => {
     const config = createTestConfig({
       rpc: { ...fakeChainRpc(), eth_call: erc20CallRpc({ allowance: 0n }) },
     });
     renderWithWagmi(
-      <ApproveButton token={token} spender={router} amount={parseUnits("50", 6)} chainId={1} {...props}>
+      <ApproveButton
+        token={token}
+        spender={router}
+        amount={parseUnits("50", 6)}
+        chainId={1}
+        {...props}
+      >
         Swap
       </ApproveButton>,
       { config },
@@ -456,13 +481,11 @@ describe("agent", () => {
     expect(entry.buttons).toContain("View");
 
     // Let it settle before the host unmounts.
-    (chain.eth_sendTransaction as (p: unknown) => unknown)([
-      { from: testAccounts[0], to: testAccounts[1] },
-    ]);
-    const settled = await screen.findByText("Agent test send", {}, { timeout: 5_000 });
+    chain.eth_sendTransaction([{ from: testAccounts[0], to: testAccounts[1] }]);
+    const settled = await screen.findByText("Agent test send", {}, { timeout: 5000 });
     await waitFor(
       () => expect(settled.closest("[data-slot=toast]")).toHaveTextContent("Transaction confirmed"),
-      { timeout: 5_000 },
+      { timeout: 5000 },
     );
   });
 });

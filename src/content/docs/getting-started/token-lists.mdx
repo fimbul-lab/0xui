@@ -30,7 +30,9 @@ import { TokenSelect } from "@/components/token-select";
 function Picker() {
   const { tokens, isLoading } = useTokenList(UNISWAP_DEFAULT_LIST);
   const [token, setToken] = useState<TokenInfo>();
-  return <TokenSelect tokens={tokens} isLoading={isLoading} value={token} onValueChange={setToken} />;
+  return (
+    <TokenSelect tokens={tokens} isLoading={isLoading} value={token} onValueChange={setToken} />
+  );
 }
 ```
 
@@ -46,7 +48,7 @@ function Picker() {
 ```tsx
 const { tokens } = useTokenList(
   [UNISWAP_DEFAULT_LIST, "https://tokens.coingecko.com/base/all.json"],
-  { extraTokens: importedTokens }
+  { extraTokens: importedTokens },
 );
 ```
 
@@ -58,8 +60,8 @@ Long lists include tokens you may not want to offer. Pass an **allowlist** (a wh
 
 ```tsx
 const { tokens } = useTokenList(UNISWAP_DEFAULT_LIST, {
-  allowlist: [USDC, USDT, WETH, WBTC],        // only these, on any chain
-  blocklist: ["8453:0x…"],                    // never this one, on Base
+  allowlist: [USDC, USDT, WETH, WBTC], // only these, on any chain
+  blocklist: ["8453:0x…"], // never this one, on Base
 });
 ```
 
@@ -74,11 +76,11 @@ Entries are token addresses, or `chainId:address` to pin a chain. Symbols aren't
 ```ts
 type TokenInfo = {
   chainId: number;
-  address: Address;      // checksummed
+  address: Address; // checksummed
   name: string;
   symbol: string;
   decimals: number;
-  logoURI?: string;      // https://, ipfs:// or ar://
+  logoURI?: string; // https://, ipfs:// or ar://
   tags?: string[];
   extensions?: {
     bridgeInfo?: Record<string, { tokenAddress: Address }>; // Uniswap: the same token on other chains
@@ -102,7 +104,9 @@ Uniswap's list has about 400 tokens on Ethereum alone, so the components are bui
 - **Portfolio** reads every token on the chain and shows 10 rows per page.
 
 <Aside type="tip" title="In production">
-Reading balances for 400 tokens per user over RPC is fine for a prototype but hits public RPC rate limits at scale. We recommend an [index of the chain](/getting-started/indexed-data/): your own Postgres + ClickHouse, or a service like Goldsky. Pass its balances to the `balances` prop.
+  Reading balances for 400 tokens per user over RPC is fine for a prototype but hits public RPC rate
+  limits at scale. We recommend an [index of the chain](/getting-started/indexed-data/): your own
+  Postgres + ClickHouse, or a service like Goldsky. Pass its balances to the `balances` prop.
 </Aside>
 
 ## Without the hook

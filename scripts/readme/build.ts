@@ -17,7 +17,7 @@ const use = "c";
 
 const path = (relative: string) => fileURLToPath(new URL(relative, import.meta.url));
 
-const banners: Record<string, { out: string; make: () => string; times: number[] }> = {
+const banners = {
   a: {
     out: path("./variants/a-hero/banner.svg"),
     make: bannerA,
@@ -33,7 +33,7 @@ const banners: Record<string, { out: string; make: () => string; times: number[]
     make: bannerC,
     times: [0.1, 0.6, 1.1, 1.6, 2.2, 3, 4, 6, 9, 11.6],
   },
-};
+} satisfies Record<string, { out: string; make: () => string; times: Array<number> }>;
 banners[use].out = path("../../.github/banner.svg");
 
 /** Stops every animation at `t` seconds, to look at one frame. */
@@ -50,7 +50,9 @@ const image = (source: string) =>
 const [mode, only] = process.argv.slice(2);
 
 for (const [key, { out, make, times }] of Object.entries(banners)) {
-  if (only && only !== key) continue;
+  if (only && only !== key) {
+    continue;
+  }
   const source = make();
   writeFileSync(out, source);
   console.log(`${key}  ${(source.length / 1024).toFixed(1)} kB  ${out}`);

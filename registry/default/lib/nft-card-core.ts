@@ -1,6 +1,7 @@
 import type { Config } from "@wagmi/core";
 import { hashFn, readContractsQueryOptions } from "@wagmi/core/query";
-import { parseAbi, type Address } from "viem";
+import { parseAbi } from "viem";
+import type { Address } from "viem";
 import { resolveUri } from "@/lib/0xui-utils";
 
 export const nftAbi = parseAbi([
@@ -14,12 +15,40 @@ export type NftMetadata = {
   description?: string;
   image?: string;
   image_url?: string;
-  attributes?: { trait_type?: string; value?: unknown }[];
+  attributes?: Array<{ trait_type?: string; value?: unknown }>;
 };
 
 /** ERC-1155 URIs may contain `{id}`: the token id as 64 lowercase hex characters. */
 export function expandTokenUri(uri: string, tokenId: bigint) {
   return uri.replace("{id}", tokenId.toString(16).padStart(64, "0"));
+}
+
+const optionalString = (value: unknown) => (typeof value === "string" ? value : undefined);
+
+/** Metadata is anyone's JSON: keep only the fields that have the types `NftMetadata` promises. */
+function toNftMetadata(json: unknown): NftMetadata {
+  if (typeof json !== "object" || json === null) {
+    throw new Error("Metadata isn't a JSON object");
+  }
+  const attributes: Array<unknown> | undefined =
+    "attributes" in json && Array.isArray(json.attributes) ? json.attributes : undefined;
+  return {
+    name: "name" in json ? optionalString(json.name) : undefined,
+    description: "description" in json ? optionalString(json.description) : undefined,
+    image: "image" in json ? optionalString(json.image) : undefined,
+    image_url: "image_url" in json ? optionalString(json.image_url) : undefined,
+    attributes: attributes?.flatMap((attribute) =>
+      typeof attribute === "object" && attribute !== null
+        ? [
+            {
+              trait_type:
+                "trait_type" in attribute ? optionalString(attribute.trait_type) : undefined,
+              value: "value" in attribute ? attribute.value : undefined,
+            },
+          ]
+        : [],
+    ),
+  };
 }
 
 /**
@@ -28,8 +57,10 @@ export function expandTokenUri(uri: string, tokenId: bigint) {
  */
 export async function fetchNftMetadata(uri: string, gateway?: string): Promise<NftMetadata> {
   const response = await fetch(resolveUri(uri, gateway));
-  if (!response.ok) throw new Error(`Metadata request failed (${response.status})`);
-  return response.json();
+  if (!response.ok) {
+    throw new Error(`Metadata request failed (${response.status})`);
+  }
+  return toNftMetadata(await response.json());
 }
 
 export type NftToken = {
@@ -61,7 +92,11 @@ export function nftTokenQueryOptions(
     queryKeyHashFn: hashFn,
     select: ([erc721, erc1155, name]: Awaited<ReturnType<typeof options.queryFn>>): NftToken => {
       const raw =
-        erc721?.status === "success" ? erc721.result : erc1155?.status === "success" ? erc1155.result : undefined;
+        erc721?.status === "success"
+          ? erc721.result
+          : erc1155?.status === "success"
+            ? erc1155.result
+            : undefined;
       return {
         uri: raw ? expandTokenUri(raw, tokenId) : undefined,
         collection: name?.status === "success" ? name.result : undefined,
@@ -71,10 +106,17 @@ export function nftTokenQueryOptions(
 }
 
 /** TanStack query options for a token's metadata JSON. Retries once: IPFS gateways rate-limit. */
-export function nftMetadataQueryOptions({ uri, gateway }: { uri: string | undefined; gateway?: string }) {
+export function nftMetadataQueryOptions({
+  uri,
+  gateway,
+}: {
+  uri: string | undefined;
+  gateway?: string;
+}) {
   return {
     queryKey: ["0xui", "nft-metadata", uri, gateway] as const,
-    queryFn: () => fetchNftMetadata(uri!, gateway),
+    queryFn: () =>
+      uri ? fetchNftMetadata(uri, gateway) : Promise.reject(new Error("No token URI to fetch.")),
     enabled: Boolean(uri),
     staleTime: Number.POSITIVE_INFINITY,
     retry: 1,
@@ -98,8 +140,14 @@ export function nftPhase({
   notFound: boolean;
   metadataError: boolean;
 }): NftPhase {
-  if (isLoading) return "loading";
-  if (notFound) return "not-found";
-  if (metadataError) return "metadata-error";
+  if (isLoading) {
+    return "loading";
+  }
+  if (notFound) {
+    return "not-found";
+  }
+  if (metadataError) {
+    return "metadata-error";
+  }
   return "ready";
 }

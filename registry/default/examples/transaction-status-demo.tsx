@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { parseEther, type Hash } from "viem";
+import { parseEther } from "viem";
+import type { Hash } from "viem";
 import { TransactionButton } from "@/components/transaction-button";
 import { TransactionStatus } from "@/components/transaction-status";
 

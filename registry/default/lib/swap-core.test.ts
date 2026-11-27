@@ -1,5 +1,5 @@
 import { parseEther, parseUnits } from "viem";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   formatRate,
   isSameToken,
@@ -8,11 +8,18 @@ import {
   swapConfirmText,
   swapNeedsApproval,
   swapQuoteQueryOptions,
-  type SwapQuote,
 } from "./swap-core";
-import { NATIVE_TOKEN_ADDRESS, type TokenInfo } from "./token-list";
+import type { GetQuote, SwapQuote } from "./swap-core";
+import { NATIVE_TOKEN_ADDRESS } from "./token-list";
+import type { TokenInfo } from "./token-list";
 
-const eth: TokenInfo = { chainId: 1, address: NATIVE_TOKEN_ADDRESS, symbol: "ETH", name: "Ether", decimals: 18 };
+const eth: TokenInfo = {
+  chainId: 1,
+  address: NATIVE_TOKEN_ADDRESS,
+  symbol: "ETH",
+  name: "Ether",
+  decimals: 18,
+};
 const usdc: TokenInfo = {
   chainId: 1,
   address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
@@ -20,28 +27,69 @@ const usdc: TokenInfo = {
   name: "USD Coin",
   decimals: 6,
 };
-const quote: SwapQuote = { buyAmount: parseUnits("6300", 6), transaction: { to: usdc.address }, spender: usdc.address };
+const quote: SwapQuote = {
+  buyAmount: parseUnits("6300", 6),
+  transaction: { to: usdc.address },
+  spender: usdc.address,
+};
 
 describe("swap", () => {
   it("formats the rate", () => {
-    expect(formatRate({ token: eth, amount: parseEther("2") }, { token: usdc, amount: quote.buyAmount }, { locale: "en-US" })).toBe(
-      "1 ETH = 3,150 USDC",
-    );
+    expect(
+      formatRate(
+        { token: eth, amount: parseEther("2") },
+        { token: usdc, amount: quote.buyAmount },
+        { locale: "en-US" },
+      ),
+    ).toBe("1 ETH = 3,150 USDC");
     expect(formatRate({ token: eth, amount: 0n }, { token: usdc, amount: 1n })).toBeUndefined();
   });
 
   it("quotes only a complete swap", async () => {
-    const getQuote = vi.fn(async () => quote);
-    const options = swapQuoteQueryOptions({ getQuote, sellToken: eth, buyToken: usdc, sellAmount: 2n, taker: undefined });
+    const requests: Array<Parameters<GetQuote>[0]> = [];
+    const getQuote: GetQuote = async (request) => {
+      requests.push(request);
+      return quote;
+    };
+    const options = swapQuoteQueryOptions({
+      getQuote,
+      sellToken: eth,
+      buyToken: usdc,
+      sellAmount: 2n,
+      taker: undefined,
+    });
     expect(options.enabled).toBe(true);
     expect(options.queryKey).toContain("2");
     expect(await options.queryFn()).toBe(quote);
-    expect(getQuote).toHaveBeenCalledWith({ sellToken: eth, buyToken: usdc, sellAmount: 2n, taker: undefined });
-    expect(swapQuoteQueryOptions({ getQuote, sellToken: eth, buyToken: usdc, sellAmount: 0n, taker: undefined }).enabled).toBe(false);
+    expect(requests).toEqual([
+      {
+        sellToken: eth,
+        buyToken: usdc,
+        sellAmount: 2n,
+        taker: undefined,
+      },
+    ]);
+    expect(
+      swapQuoteQueryOptions({
+        getQuote,
+        sellToken: eth,
+        buyToken: usdc,
+        sellAmount: 0n,
+        taker: undefined,
+      }).enabled,
+    ).toBe(false);
   });
 
   it("names what's missing, in order", () => {
-    const ready = { sellToken: eth, buyToken: usdc, sellAmount: 1n, insufficient: false, error: null, quoting: false, quote };
+    const ready = {
+      sellToken: eth,
+      buyToken: usdc,
+      sellAmount: 1n,
+      insufficient: false,
+      error: null,
+      quoting: false,
+      quote,
+    };
     expect(swapBlocker({ ...ready, buyToken: undefined })).toBe("Select a token");
     expect(swapBlocker({ ...ready, sellAmount: undefined })).toBe("Enter an amount");
     expect(swapBlocker({ ...ready, insufficient: true })).toBe("Insufficient ETH balance");

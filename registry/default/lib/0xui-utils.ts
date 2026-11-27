@@ -5,8 +5,8 @@ import {
   getAddress,
   isAddress,
   parseUnits,
-  type Chain,
 } from "viem";
+import type { Chain } from "viem";
 
 /**
  * Shorten an address for display: `0x1234…abcd`.
@@ -17,7 +17,9 @@ export function truncateAddress(
   { start = 6, end = 4 }: { start?: number; end?: number } = {},
 ) {
   const value = isAddress(address, { strict: false }) ? getAddress(address) : address;
-  if (value.length <= start + end + 1) return value;
+  if (value.length <= start + end + 1) {
+    return value;
+  }
   return `${value.slice(0, start)}…${value.slice(-end)}`;
 }
 
@@ -35,6 +37,10 @@ export type FormatTokenAmountOptions = {
  * Rounds toward zero, so a balance is never shown larger than it is.
  * Non-zero amounts too small to show render as `<0.0001`.
  */
+/** `formatUnits` output is a decimal string, which `Intl.NumberFormat` formats exactly. */
+const isNumericString = (text: string): text is `${number}` =>
+  text.trim() !== "" && !Number.isNaN(Number(text));
+
 export function formatTokenAmount(
   value: bigint,
   decimals: number,
@@ -45,15 +51,14 @@ export function formatTokenAmount(
     notation: compact ? "compact" : "standard",
     roundingMode: "trunc",
   });
-  const decimal = formatUnits(value, decimals) as Intl.StringNumericLiteral;
-  const formatted = formatter.format(decimal);
+  const decimal = formatUnits(value, decimals);
+  const formatted = isNumericString(decimal) ? formatter.format(decimal) : decimal;
 
   const isZero = /^-?[0.]+$/.test(decimal);
   const roundsToZero = !/[1-9]/.test(formatted);
   if (!isZero && roundsToZero) {
-    const smallest = formatter.format(
-      `${value < 0n ? "-" : ""}${10 ** -maxDecimals}` as Intl.StringNumericLiteral,
-    );
+    // A string, so Intl formats the decimal itself rather than the nearest double.
+    const smallest = formatter.format(`${(value < 0n ? -1 : 1) * 10 ** -maxDecimals}`);
     return value < 0n ? `>${smallest}` : `<${smallest}`;
   }
   return formatted;
@@ -69,8 +74,10 @@ export function formatTokenAmount(
  * truncated. Returns `undefined` for empty or invalid input.
  */
 export function parseAmount(input: string, decimals: number) {
-  let text = input.replace(/[\s$€£¥_']/g, "");
-  if (!text) return undefined;
+  let text = input.replaceAll(/[\s$€£¥_']/g, "");
+  if (!text) {
+    return undefined;
+  }
 
   const lastComma = text.lastIndexOf(",");
   const lastDot = text.lastIndexOf(".");
@@ -83,7 +90,9 @@ export function parseAmount(input: string, decimals: number) {
     text = isGrouping ? text.split(",").join("") : text.replace(",", ".");
   }
 
-  if (!/^\d*\.?\d*$/.test(text) || text === ".") return undefined;
+  if (!/^\d*\.?\d*$/.test(text) || text === ".") {
+    return undefined;
+  }
 
   const [whole = "", fraction = ""] = text.split(".");
   const clamped = fraction.slice(0, decimals);
@@ -101,9 +110,15 @@ export function getExplorerUrl(
   target: ExplorerTarget,
 ) {
   const base = chain?.blockExplorers?.default.url.replace(/\/$/, "");
-  if (!base) return undefined;
-  if (target.address) return `${base}/address/${target.address}`;
-  if (target.tx) return `${base}/tx/${target.tx}`;
+  if (!base) {
+    return undefined;
+  }
+  if (target.address) {
+    return `${base}/address/${target.address}`;
+  }
+  if (target.tx) {
+    return `${base}/tx/${target.tx}`;
+  }
   return `${base}/block/${target.block}`;
 }
 
@@ -111,14 +126,26 @@ export function getExplorerUrl(
  * True when the user dismissed the wallet prompt. Treat this as a cancelled
  * action, not a failure.
  */
+/** A viem error's `shortMessage`, the line meant for people, or the error's own message. */
+export function errorMessage(error: Error): string {
+  return "shortMessage" in error && typeof error.shortMessage === "string"
+    ? error.shortMessage
+    : error.message;
+}
+
 export function isUserRejection(error: unknown) {
-  if (!error) return false;
+  if (!error) {
+    return false;
+  }
   if (error instanceof BaseError) {
     return Boolean(
       error.walk(
         (e) =>
           e instanceof UserRejectedRequestError ||
-          (e as { code?: unknown }).code === UserRejectedRequestError.code,
+          (typeof e === "object" &&
+            e !== null &&
+            "code" in e &&
+            e.code === UserRejectedRequestError.code),
       ),
     );
   }
@@ -140,7 +167,7 @@ export type ErrorCode =
   | "network"
   | "unknown";
 
-const errorNames: [ErrorCode, string[]][] = [
+const errorNames: Array<[ErrorCode, Array<string>]> = [
   ["reverted", ["ContractFunctionRevertedError", "ExecutionRevertedError"]],
   ["insufficient-funds", ["InsufficientFundsError"]],
   [
@@ -162,11 +189,21 @@ const errorNames: [ErrorCode, string[]][] = [
 
 /** The `data-error` for a component in `phase` that failed with `error`. */
 export function errorCode(phase: string, error?: unknown): ErrorCode | undefined {
-  if (phase === "cancelled") return "user-rejected";
-  if (phase === "reverted") return "reverted";
-  if (phase !== "error") return undefined;
-  if (!error) return "unknown";
-  if (isUserRejection(error)) return "user-rejected";
+  if (phase === "cancelled") {
+    return "user-rejected";
+  }
+  if (phase === "reverted") {
+    return "reverted";
+  }
+  if (phase !== "error") {
+    return undefined;
+  }
+  if (!error) {
+    return "unknown";
+  }
+  if (isUserRejection(error)) {
+    return "user-rejected";
+  }
 
   // viem and wagmi errors each chain their causes; walk them by name, since
   // wagmi's errors don't extend viem's BaseError.
@@ -186,7 +223,9 @@ export function errorCode(phase: string, error?: unknown): ErrorCode | undefined
  * approve this first". Leads with the button's label when it's plain text.
  */
 export function agentConfirmText(label: unknown, effect: string) {
-  if (typeof label === "string" && label.trim()) return `${label.trim()}: ${effect}`;
+  if (typeof label === "string" && label.trim()) {
+    return `${label.trim()}: ${effect}`;
+  }
   return effect.charAt(0).toUpperCase() + effect.slice(1);
 }
 
@@ -195,22 +234,30 @@ export function agentConfirmText(label: unknown, effect: string) {
  * into HTTP URLs. Other URIs pass through unchanged.
  */
 export function resolveUri(uri: string, gateway = "https://ipfs.io/ipfs/") {
-  if (uri.startsWith("ipfs://")) return gateway + uri.replace(/^ipfs:\/\/(ipfs\/)?/, "");
-  if (uri.startsWith("ar://")) return `https://arweave.net/${uri.slice(5)}`;
+  if (uri.startsWith("ipfs://")) {
+    return gateway + uri.replace(/^ipfs:\/\/(ipfs\/)?/, "");
+  }
+  if (uri.startsWith("ar://")) {
+    return `https://arweave.net/${uri.slice(5)}`;
+  }
   return uri;
 }
 
 const BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-const BECH32M_CONSTANT = 0x2bc830a3;
-const BECH32_GENERATORS = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+const BECH32M_CONSTANT = 0x2b_c8_30_a3;
+const BECH32_GENERATORS = [
+  0x3b_6a_57_b2, 0x26_50_8e_6d, 0x1e_a1_19_fa, 0x3d_42_33_dd, 0x2a_14_62_b3,
+];
 
-function bech32Polymod(values: readonly number[]) {
+function bech32Polymod(values: ReadonlyArray<number>) {
   let checksum = 1;
   for (const value of values) {
     const top = checksum >>> 25;
-    checksum = ((checksum & 0x1ffffff) << 5) ^ value;
-    for (let i = 0; i < 5; i++) {
-      if ((top >>> i) & 1) checksum ^= BECH32_GENERATORS[i]!;
+    checksum = ((checksum & 0x1_ff_ff_ff) << 5) ^ value;
+    for (const [i, generator] of BECH32_GENERATORS.entries()) {
+      if ((top >>> i) & 1) {
+        checksum ^= generator;
+      }
     }
   }
   return checksum;
@@ -225,7 +272,7 @@ function bech32PrefixWords(prefix: string) {
  * Encode 5-bit words as a bech32m string (BIP-350): prefix, `1`, the words,
  * then a six-character checksum.
  */
-export function encodeBech32m(prefix: string, words: readonly number[]) {
+export function encodeBech32m(prefix: string, words: ReadonlyArray<number>) {
   const polymod =
     bech32Polymod([...bech32PrefixWords(prefix), ...words, 0, 0, 0, 0, 0, 0]) ^ BECH32M_CONSTANT;
   const checksum = Array.from({ length: 6 }, (_, i) => (polymod >>> (5 * (5 - i))) & 31);
@@ -243,12 +290,18 @@ export const SHIELDED_ADDRESS_LENGTH = 127;
  * who holds the keys.
  */
 export function isShieldedAddress(value: string) {
-  if (value.length !== SHIELDED_ADDRESS_LENGTH) return false;
-  if (!value.startsWith(`${SHIELDED_ADDRESS_PREFIX}1`)) return false;
+  if (value.length !== SHIELDED_ADDRESS_LENGTH) {
+    return false;
+  }
+  if (!value.startsWith(`${SHIELDED_ADDRESS_PREFIX}1`)) {
+    return false;
+  }
   const words = Array.from(value.slice(SHIELDED_ADDRESS_PREFIX.length + 1), (char) =>
     BECH32_CHARSET.indexOf(char),
   );
-  if (words.includes(-1)) return false;
+  if (words.includes(-1)) {
+    return false;
+  }
   return (
     bech32Polymod([...bech32PrefixWords(SHIELDED_ADDRESS_PREFIX), ...words]) === BECH32M_CONSTANT
   );

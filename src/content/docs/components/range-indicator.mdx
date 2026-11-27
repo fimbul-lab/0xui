@@ -50,12 +50,12 @@ The status is on `data-status` (`in-range`, `out-of-range` or `closed`) and is w
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `tickLower` / `tickUpper` | `number` | — | The position's range. |
-| `pool` | `{ tick, tickSpacing, decimals0, decimals1 }` | — | Current tick, spacing and decimals. Leave out while loading. |
-| `liquidity` | `bigint` | — | `0n` shows the position as closed. |
-| `token0` / `token1` | `{ symbol: string }` | — | Any `Token` fits. |
-| `invert` | `boolean` | `false` | Quote in token0. |
-| `compact` | `boolean` | `false` | Hide the min, current and max labels. |
-| `locale` | `string` | runtime locale | Number formatting locale. |
+| Prop                      | Type                                          | Default        | Description                                                  |
+| ------------------------- | --------------------------------------------- | -------------- | ------------------------------------------------------------ |
+| `tickLower` / `tickUpper` | `number`                                      | —              | The position's range.                                        |
+| `pool`                    | `{ tick, tickSpacing, decimals0, decimals1 }` | —              | Current tick, spacing and decimals. Leave out while loading. |
+| `liquidity`               | `bigint`                                      | —              | `0n` shows the position as closed.                           |
+| `token0` / `token1`       | `{ symbol: string }`                          | —              | Any `Token` fits.                                            |
+| `invert`                  | `boolean`                                     | `false`        | Quote in token0.                                             |
+| `compact`                 | `boolean`                                     | `false`        | Hide the min, current and max labels.                        |
+| `locale`                  | `string`                                      | runtime locale | Number formatting locale.                                    |

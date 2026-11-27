@@ -49,26 +49,26 @@ Digits roll by place value, so only the places that changed move. Use `tabular-n
 
 ## Where 0xui uses it
 
-| Component | What morphs |
-| --- | --- |
+| Component                                                                                                                                                                                  | What morphs                                                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [Transaction Button](/components/transaction-button/), [Batch Transaction](/components/batch-transaction/), [Sign Message](/components/sign-message/), [Add Token](/components/add-token/) | The button label, across phases. This covers [Approve Button](/components/approve-button/), [Send](/blocks/send/) and [Swap](/blocks/swap/) too. |
-| [Contract Form](/components/contract-form/) | "Read" and "Reading…". |
-| [Chain Selector](/components/chain-selector/) | The current chain's name. |
-| [Block Number](/components/block-number/), [Gas Price](/components/gas-price/) | The live value. |
-| [Balance](/components/balance/), [Token Input](/components/token-input/) | The balance and the fiat value. |
-| [Swap](/blocks/swap/), [Portfolio](/blocks/portfolio/) | The rate, price impact and total value. |
+| [Contract Form](/components/contract-form/)                                                                                                                                                | "Read" and "Reading…".                                                                                                                           |
+| [Chain Selector](/components/chain-selector/)                                                                                                                                              | The current chain's name.                                                                                                                        |
+| [Block Number](/components/block-number/), [Gas Price](/components/gas-price/)                                                                                                             | The live value.                                                                                                                                  |
+| [Balance](/components/balance/), [Token Input](/components/token-input/)                                                                                                                   | The balance and the fiat value.                                                                                                                  |
+| [Swap](/blocks/swap/), [Portfolio](/blocks/portfolio/)                                                                                                                                     | The rate, price impact and total value.                                                                                                          |
 
 [Token Amount](/components/token-amount/) only morphs with `animate`, so long lists don't pay for it.
 
 ## Behavior
 
-| Case | What happens |
-| --- | --- |
-| Text and numbers, alone or mixed like `Approve {symbol}` | Joined into one label and morphed. |
-| Children that hold an element | Rendered as-is, with no animation. |
-| Screen readers | Read the plain text once. The animated characters are hidden from them. |
-| `prefers-reduced-motion` | The text changes without animating. |
-| No Web Animations API, as in jsdom | Plain text in a `span`, so tests can query the label. |
+| Case                                                     | What happens                                                            |
+| -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Text and numbers, alone or mixed like `Approve {symbol}` | Joined into one label and morphed.                                      |
+| Children that hold an element                            | Rendered as-is, with no animation.                                      |
+| Screen readers                                           | Read the plain text once. The animated characters are hidden from them. |
+| `prefers-reduced-motion`                                 | The text changes without animating.                                     |
+| No Web Animations API, as in jsdom                       | Plain text in a `span`, so tests can query the label.                   |
 
 The text never wraps: torph sets `white-space: nowrap`. Use it for short labels and values, not sentences.
 
@@ -78,9 +78,9 @@ torph adds one `<style>` element to the page. Under a strict Content Security Po
 
 Also accepts torph's options, such as `ease`, `scale`, `numbers`, `decimals`, `locale` and `onAnimationComplete`.
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `children` | `ReactNode` | — | Text to show. |
-| `duration` | `number` | `400` | Length of the morph, in ms. |
-| `disabled` | `boolean` | `false` | Change the text without animating. |
-| `className` | `string` | — | Class for the wrapping `span`. |
+| Prop        | Type        | Default | Description                        |
+| ----------- | ----------- | ------- | ---------------------------------- |
+| `children`  | `ReactNode` | —       | Text to show.                      |
+| `duration`  | `number`    | `400`   | Length of the morph, in ms.        |
+| `disabled`  | `boolean`   | `false` | Change the text without animating. |
+| `className` | `string`    | —       | Class for the wrapping `span`.     |

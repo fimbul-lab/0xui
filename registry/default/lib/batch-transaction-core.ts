@@ -7,8 +7,8 @@ import {
   switchChain,
   waitForCallsStatus,
   watchConnection,
-  type Config,
 } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Address, Chain, Hex } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
@@ -59,7 +59,7 @@ export type BatchTransaction = {
   get(): BatchTransactionState;
   subscribe(listener: () => void): () => void;
   /** Send the calls, atomically or one by one. Resolves once they settle or fail. */
-  execute(calls: readonly BatchCall[]): Promise<void>;
+  execute(calls: ReadonlyArray<BatchCall>): Promise<void>;
   /** Ask the wallet to switch to the calls' chain. */
   switchToTarget(): Promise<void>;
   /** Back to idle. */
@@ -67,13 +67,24 @@ export type BatchTransaction = {
 };
 
 /** "Approve USDC, then Swap": the calls in order, by label. */
-export function describeBatchCalls(calls: readonly Pick<BatchCall, "label">[]) {
+export function describeBatchCalls(calls: ReadonlyArray<Pick<BatchCall, "label">>) {
   return calls.map((call, i) => call.label ?? `Step ${i + 1}`).join(", then ");
+}
+
+/** The `atomic.status` an EIP-5792 wallet reports for a chain, if any. */
+function atomicStatus(capabilities: unknown) {
+  if (typeof capabilities !== "object" || capabilities === null || !("atomic" in capabilities)) {
+    return undefined;
+  }
+  const { atomic } = capabilities;
+  return typeof atomic === "object" && atomic !== null && "status" in atomic
+    ? atomic.status
+    : undefined;
 }
 
 /** Whether a wallet's EIP-5792 capabilities for a chain allow atomic batches. */
 export function supportsAtomic(capabilities: unknown) {
-  const status = (capabilities as { atomic?: { status?: string } } | undefined)?.atomic?.status;
+  const status = atomicStatus(capabilities);
   return status === "supported" || status === "ready";
 }
 
@@ -82,10 +93,18 @@ export function batchStepState(
   { phase, step }: Pick<BatchTransactionState, "phase" | "step">,
   index: number,
 ): StepState {
-  if (phase === "success" || index < step) return "done";
-  if (index > step) return "todo";
-  if (phase === "reverted" || phase === "error") return "failed";
-  if (phase === "confirming" || phase === "pending") return "active";
+  if (phase === "success" || index < step) {
+    return "done";
+  }
+  if (index > step) {
+    return "todo";
+  }
+  if (phase === "reverted" || phase === "error") {
+    return "failed";
+  }
+  if (phase === "confirming" || phase === "pending") {
+    return "active";
+  }
   return "todo";
 }
 
@@ -108,16 +127,22 @@ export function createBatchTransaction(
   };
 
   const checkCapabilities = async () => {
-    if (mode !== "auto") return;
+    if (mode !== "auto") {
+      return;
+    }
     const check = ++capabilityCheck;
-    if (!readConnection().isConnected) return store.set({ atomic: false });
+    if (!readConnection().isConnected) {
+      return store.set({ atomic: false });
+    }
     let atomic = false;
     try {
       atomic = supportsAtomic(await getCapabilities(config, { chainId }));
     } catch {
       // Wallets without EIP-5792 throw: send one by one.
     }
-    if (check === capabilityCheck) store.set({ atomic });
+    if (check === capabilityCheck) {
+      store.set({ atomic });
+    }
   };
 
   const store = createStore<BatchTransactionState>(
@@ -168,7 +193,10 @@ export function createBatchTransaction(
           });
           store.set({ phase: "pending" });
           const result = await waitForCallsStatus(config, { id });
-          store.set({ step: calls.length, phase: result.status === "success" ? "success" : "reverted" });
+          store.set({
+            step: calls.length,
+            phase: result.status === "success" ? "success" : "reverted",
+          });
           return;
         }
         const client = getPublicClient(config, { chainId });
@@ -182,12 +210,17 @@ export function createBatchTransaction(
           });
           store.set({ phase: "pending" });
           // viem resolves a reverted receipt; wagmi's action would throw instead.
-          const receipt = await client!.waitForTransactionReceipt({ hash });
-          if (receipt.status === "reverted") return store.set({ phase: "reverted" });
+          if (!client) {
+            throw new Error(`Chain ${chainId} is not in the wagmi config.`);
+          }
+          const receipt = await client.waitForTransactionReceipt({ hash });
+          if (receipt.status === "reverted") {
+            return store.set({ phase: "reverted" });
+          }
         }
         store.set({ step: calls.length, phase: "success" });
-      } catch (e) {
-        fail(e);
+      } catch (error) {
+        fail(error);
       }
     },
     async switchToTarget() {
@@ -195,8 +228,8 @@ export function createBatchTransaction(
       try {
         await switchChain(config, { chainId });
         store.set({ phase: "idle", ...readConnection() });
-      } catch (e) {
-        fail(e);
+      } catch (error) {
+        fail(error);
       }
     },
     reset() {

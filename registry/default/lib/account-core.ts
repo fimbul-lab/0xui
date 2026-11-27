@@ -5,10 +5,8 @@ import {
   switchConnection,
   watchConnection,
   watchConnections,
-  type Config,
-  type Connector,
-  type GetConnectionReturnType,
 } from "@wagmi/core";
+import type { Config, Connector, GetConnectionReturnType } from "@wagmi/core";
 import type { Address, Chain } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { truncateAddress } from "@/lib/0xui-utils";
@@ -26,7 +24,7 @@ export type ConnectedAccountState = {
   chainId: number | undefined;
   status: ConnectionStatus;
   /** The other connected wallets, each with its first account. */
-  otherAccounts: OtherAccount[];
+  otherAccounts: Array<OtherAccount>;
   isDisconnecting: boolean;
   isSwitching: boolean;
 };
@@ -95,12 +93,17 @@ export function createConnectedAccount(config: Config): ConnectedAccount {
 }
 
 /** The ENS name, or the truncated address when there is none. */
-export function accountDisplayName(address: Address | undefined, ensName: string | null | undefined) {
+export function accountDisplayName(
+  address: Address | undefined,
+  ensName: string | null | undefined,
+) {
   return ensName ?? (address ? truncateAddress(address) : undefined);
 }
 
 /** Which state a wallet button is in. "restoring" covers SSR and wagmi reconnecting on page load. */
 export function walletButtonPhase(status: ConnectionStatus, mounted: boolean): WalletButtonPhase {
-  if (!mounted || status === "reconnecting") return "restoring";
+  if (!mounted || status === "reconnecting") {
+    return "restoring";
+  }
   return status === "connected" ? "connected" : "disconnected";
 }

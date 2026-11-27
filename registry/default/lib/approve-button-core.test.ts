@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/query-core";
-import { maxUint256, parseUnits, type Address } from "viem";
+import { maxUint256, parseUnits } from "viem";
+import type { Address } from "viem";
 import { describe, expect, it } from "vitest";
 import { createTestConfig, erc20CallRpc, testAccounts } from "../../../test/wagmi";
 import { allowanceQueryOptions, nextApproval } from "./approve-button-core";
@@ -37,7 +38,10 @@ describe("nextApproval", () => {
   });
 
   it("approves the amount, or the maximum", () => {
-    expect(nextApproval({ ...base, allowance: 0n })).toEqual({ kind: "approve", value: base.amount });
+    expect(nextApproval({ ...base, allowance: 0n })).toEqual({
+      kind: "approve",
+      value: base.amount,
+    });
     expect(nextApproval({ ...base, allowance: 0n, unlimited: true })).toEqual({
       kind: "approve",
       value: maxUint256,

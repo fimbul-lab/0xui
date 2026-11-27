@@ -1,17 +1,9 @@
 // Docs: https://0xui.io/blocks/portfolio.md
-import {
-  Collapsible,
-  CollapsiblePanel,
-  CollapsibleTrigger,
-} from "@ui-sdk/react/collapsible";
-import {
-  Timeline,
-  TimelineDescription,
-  TimelineItem,
-  TimelineTitle,
-} from "@ui-sdk/react/timeline";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
+import { Timeline, TimelineDescription, TimelineItem, TimelineTitle } from "@ui-sdk/react/timeline";
 import { ChevronDownIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { Skeleton, SkeletonBox } from "skullet/react";
 import type { Address } from "viem";
 import { useChainId, useConnection } from "wagmi";
@@ -19,16 +11,15 @@ import { MorphText } from "@/components/morph-text";
 import { Button } from "@/components/primitives/button";
 import { TokenAmount } from "@/components/token-amount";
 import { TokenIcon } from "@/components/token-icon";
-import { useTokenBalances, type Token } from "@/components/token-select";
-import {
-  normalizeBalances,
-  portfolioPhase,
-  summarizePortfolio,
-  type HiddenReason,
-  type PortfolioBalances,
-  type PortfolioFilters,
-  type PortfolioHolding,
-  type PortfolioRow,
+import { useTokenBalances } from "@/components/token-select";
+import type { Token } from "@/components/token-select";
+import { normalizeBalances, portfolioPhase, summarizePortfolio } from "@/lib/portfolio-core";
+import type {
+  HiddenReason,
+  PortfolioBalances,
+  PortfolioFilters,
+  PortfolioHolding,
+  PortfolioRow,
 } from "@/lib/portfolio-core";
 import type { TokenPrices } from "@/lib/token-list";
 import { cn } from "@/lib/utils";
@@ -69,7 +60,7 @@ export function usePortfolio({
   hideUnpriced,
   minValue,
 }: {
-  tokens?: readonly Token[];
+  tokens?: ReadonlyArray<Token>;
   prices?: TokenPrices;
   address?: Address;
   chainId?: number;
@@ -77,7 +68,7 @@ export function usePortfolio({
   /** Balances from your own source (e.g. an indexer), keyed by token address. Skips RPC reads. */
   balances?: PortfolioBalances;
   /** Holdings from your own source, each with its token's metadata. Skips RPC reads and wins over `balances`. */
-  holdings?: readonly PortfolioHolding[];
+  holdings?: ReadonlyArray<PortfolioHolding>;
 } & PortfolioFilters) {
   const currentChainId = useChainId();
   const chainId = chainIdProp ?? currentChainId;
@@ -103,7 +94,18 @@ export function usePortfolio({
         hideUnpriced,
         minValue,
       }),
-    [onChain, chainId, balances, holdings, prices, hideZero, isSpam, showUnlisted, hideUnpriced, minValue],
+    [
+      onChain,
+      chainId,
+      balances,
+      holdings,
+      prices,
+      hideZero,
+      isSpam,
+      showUnlisted,
+      hideUnpriced,
+      minValue,
+    ],
   );
 
   return {
@@ -113,12 +115,12 @@ export function usePortfolio({
   };
 }
 
-const noTokens: readonly Token[] = [];
-const noHoldings: readonly PortfolioHolding[] = [];
+const noTokens: ReadonlyArray<Token> = [];
+const noHoldings: ReadonlyArray<PortfolioHolding> = [];
 
 export type PortfolioProps = PortfolioFilters & {
   /** Tokens to show. With `holdings`, the allowlist: holdings off it are hidden unless `showUnlisted`. */
-  tokens?: readonly Token[];
+  tokens?: ReadonlyArray<Token>;
   /** Prices keyed by `chainId:address`, address or symbol. Tokens without one are hidden by default. */
   prices?: TokenPrices;
   /** Whose holdings. Defaults to the connected account. */
@@ -132,7 +134,7 @@ export type PortfolioProps = PortfolioFilters & {
   /** Balances from your own source, e.g. an indexer. See usePortfolio. */
   balances?: ReadonlyMap<string, bigint> | Record<string, bigint>;
   /** Holdings from your own source, each with its token's metadata. See usePortfolio. */
-  holdings?: readonly PortfolioHolding[];
+  holdings?: ReadonlyArray<PortfolioHolding>;
   /**
    * Your own `balances` or `holdings` are still loading, e.g. `query.isLoading`.
    * Shows the skeleton and skips RPC reads. Set over data you already have
@@ -210,7 +212,11 @@ function Holding({
       className="flex items-center gap-3 rounded-sm py-2 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       {/* Spam logos can be offensive or link to scams: letters only. */}
-      <TokenIcon symbol={token.symbol} src={row.hidden === "spam" ? undefined : token.logoURI} size={32} />
+      <TokenIcon
+        symbol={token.symbol}
+        src={row.hidden === "spam" ? undefined : token.logoURI}
+        size={32}
+      />
       {/* Focused with the arrow keys, a row reads as its title, the token and
           amount, then its description, the value. */}
       <TimelineTitle className="flex min-w-0 flex-1 flex-col">
@@ -224,7 +230,11 @@ function Holding({
         />
       </TimelineTitle>{" "}
       <TimelineDescription className="flex shrink-0 flex-col items-end text-sm tabular-nums">
-        {value === undefined ? <span className="text-muted-foreground">—</span> : money.format(value)}{" "}
+        {value === undefined ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          money.format(value)
+        )}{" "}
         {note && <span className="text-xs text-muted-foreground">{note}</span>}
       </TimelineDescription>
     </TimelineItem>
@@ -311,13 +321,17 @@ export function Portfolio({
         {phase === "ready" && (
           <span className="text-2xl font-semibold tabular-nums">
             <MorphText>{money.format(total)}</MorphText>
-            {unpriced > 0 && <span className="sr-only">, plus {unpriced} tokens without a price</span>}
+            {unpriced > 0 && (
+              <span className="sr-only">, plus {unpriced} tokens without a price</span>
+            )}
           </span>
         )}
       </header>
 
       {phase === "idle" && (
-        <p className="py-6 text-center text-sm text-muted-foreground">Connect a wallet to see its tokens.</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Connect a wallet to see its tokens.
+        </p>
       )}
       {phase === "error" && (
         <p role="alert" className="py-6 text-center text-sm text-destructive">
@@ -325,7 +339,9 @@ export function Portfolio({
         </p>
       )}
       {phase === "empty" && (
-        <p className="py-6 text-center text-sm text-muted-foreground">No tokens from this list in this wallet.</p>
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          No tokens from this list in this wallet.
+        </p>
       )}
 
       {/* One tree for loading and ready: while loading it is measured into a
@@ -334,7 +350,9 @@ export function Portfolio({
         <Skeleton loading={phase === "loading"} label="Loading tokens">
           <div className="flex flex-col gap-3">
             {phase === "ready" && rows.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">Every token in this wallet is hidden.</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Every token in this wallet is hidden.
+              </p>
             )}
             {listRows.length > 0 && (
               // A list with arrow keys between rows, and rows an agent can find by text.
@@ -374,7 +392,7 @@ export function Portfolio({
                         row={row}
                         money={money}
                         locale={locale}
-                        note={notes[row.hidden!]}
+                        note={row.hidden && notes[row.hidden]}
                       />
                     ))}
                   </Timeline>

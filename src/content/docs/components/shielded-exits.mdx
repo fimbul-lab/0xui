@@ -34,13 +34,13 @@ It renders nothing when there is nothing to exit, or when the engine's protocol 
 
 ## What an exit is
 
-| | Unshield | Exit |
-| --- | --- | --- |
-| Needs the protocol's approval | Yes | No |
-| Recipient | Any address | The address that shielded the funds |
-| Who sends | The engine, through a relayer | That address's wallet |
-| Amount | Any part | Everything left of that deposit |
-| Privacy | Kept | Lost |
+|                               | Unshield                      | Exit                                |
+| ----------------------------- | ----------------------------- | ----------------------------------- |
+| Needs the protocol's approval | Yes                           | No                                  |
+| Recipient                     | Any address                   | The address that shielded the funds |
+| Who sends                     | The engine, through a relayer | That address's wallet               |
+| Amount                        | Any part                      | Everything left of that deposit     |
+| Privacy                       | Kept                          | Lost                                |
 
 It exists so that screening can refuse privacy but never hold funds.
 
@@ -64,27 +64,27 @@ That is the engine's choice.
 
 ## States
 
-| Situation | Button |
-| --- | --- |
-| No wallet connected | Connect wallet |
+| Situation                 | Button                                                         |
+| ------------------------- | -------------------------------------------------------------- |
+| No wallet connected       | Connect wallet                                                 |
 | Another address connected | Switch wallet to 0xd8dA…6045 (the user switches in the wallet) |
-| Wallet on another network | Switch to Ethereum |
-| Ready to prove | Prepare exit |
-| Proof running | Preparing exit… |
-| Proof ready | Send exit from wallet |
-| Wallet prompt open | Confirm in wallet… |
-| Proof failed | Try again, with the reason shown |
+| Wallet on another network | Switch to Ethereum                                             |
+| Ready to prove            | Prepare exit                                                   |
+| Proof running             | Preparing exit…                                                |
+| Proof ready               | Send exit from wallet                                          |
+| Wallet prompt open        | Confirm in wallet…                                             |
+| Proof failed              | Try again, with the reason shown                               |
 
 `data-phase` on the root follows the open exit:
 
-| `data-phase` | Meaning |
-| --- | --- |
-| `idle` | No exit is running. |
-| `proving` | The proof is being made. |
-| `ready` | The proof is made. The wallet step waits for a click. |
-| `wallet` | The wallet prompt is open. |
-| `cancelled` | The proof was cancelled, or the prompt dismissed. |
-| `error` | The proof or the send failed. |
+| `data-phase` | Meaning                                               |
+| ------------ | ----------------------------------------------------- |
+| `idle`       | No exit is running.                                   |
+| `proving`    | The proof is being made.                              |
+| `ready`      | The proof is made. The wallet step waits for a click. |
+| `wallet`     | The wallet prompt is open.                            |
+| `cancelled`  | The proof was cancelled, or the prompt dismissed.     |
+| `error`      | The proof or the send failed.                         |
 
 Each row has `data-state` with the funds' balance state.
 
@@ -105,7 +105,11 @@ Give a restricted note a `depositor` and only that address can send its exit.
 ## Build your own
 
 ```tsx
-import { useShieldedExit, useShieldedExits, shieldedExitBlocker } from "@/components/shielded-exits";
+import {
+  useShieldedExit,
+  useShieldedExits,
+  shieldedExitBlocker,
+} from "@/components/shielded-exits";
 
 const exits = useShieldedExits({ chainId }); // [{ id, token, amount, state, depositor }]
 const flow = useShieldedExit({ chainId, onSubmitted });
@@ -121,12 +125,12 @@ flow.leave(); // close it
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `chainId` | `number` | — | Chain to list exits on. Required. |
-| `tokens` | `ShieldedToken[]` | — | Symbol and decimals for the tokens that may show up. Others are shown by address. |
-| `onSubmitted` | `(hash, exit) => void` | — | The wallet sent the exit. |
-| `onConfirmed` | `(hash) => void` | — | The exit was mined. The engine is already scanning. |
-| `title` | `ReactNode` | `"Exit publicly"` | Heading. `null` hides it. |
-| `empty` | `ReactNode` | — | Shown when there is nothing to exit. Without it the component renders nothing. |
-| `className` | `string` | — | |
+| Prop          | Type                   | Default           | Description                                                                       |
+| ------------- | ---------------------- | ----------------- | --------------------------------------------------------------------------------- |
+| `chainId`     | `number`               | —                 | Chain to list exits on. Required.                                                 |
+| `tokens`      | `ShieldedToken[]`      | —                 | Symbol and decimals for the tokens that may show up. Others are shown by address. |
+| `onSubmitted` | `(hash, exit) => void` | —                 | The wallet sent the exit.                                                         |
+| `onConfirmed` | `(hash) => void`       | —                 | The exit was mined. The engine is already scanning.                               |
+| `title`       | `ReactNode`            | `"Exit publicly"` | Heading. `null` hides it.                                                         |
+| `empty`       | `ReactNode`            | —                 | Shown when there is nothing to exit. Without it the component renders nothing.    |
+| `className`   | `string`               | —                 |                                                                                   |

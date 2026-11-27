@@ -16,7 +16,12 @@ export const TypedData = demo(() => (
   <SignMessage
     typedData={{
       domain: { name: "0xui", version: "1", chainId: 1 },
-      types: { Order: [{ name: "amount", type: "uint256" }, { name: "token", type: "string" }] },
+      types: {
+        Order: [
+          { name: "amount", type: "uint256" },
+          { name: "token", type: "string" },
+        ],
+      },
       primaryType: "Order",
       message: { amount: 100n, token: "USDC" },
     }}

@@ -23,8 +23,8 @@ import {
   tickToPrice,
   ticksFromPositions,
   usableTickBounds,
-  type PoolState,
 } from "./concentrated-liquidity";
+import type { PoolState } from "./concentrated-liquidity";
 
 describe("getSqrtRatioAtTick", () => {
   it("matches the contract at the bounds", () => {
@@ -34,7 +34,7 @@ describe("getSqrtRatioAtTick", () => {
   });
 
   it("agrees with the float formula across the range", () => {
-    for (const tick of [-500000, -195770, -60, -1, 1, 60, 12345, 200000, 500000]) {
+    for (const tick of [-500_000, -195_770, -60, -1, 1, 60, 12_345, 200_000, 500_000]) {
       const exact = Number(getSqrtRatioAtTick(tick)) / 2 ** 96;
       const float = Math.sqrt(Math.pow(1.0001, tick));
       expect(Math.abs(exact / float - 1)).toBeLessThan(1e-9);
@@ -57,10 +57,10 @@ describe("ticks and prices", () => {
   });
 
   it("snaps to the spacing inside the usable bounds", () => {
-    expect(nearestUsableTick(-195774, 10)).toBe(-195770);
-    expect(nearestUsableTick(MAX_TICK, 60)).toBe(887220);
-    expect(usableTickBounds(60)).toEqual({ min: -887220, max: 887220 });
-    expect(isFullRange(-887220, 887220, 60)).toBe(true);
+    expect(nearestUsableTick(-195_774, 10)).toBe(-195_770);
+    expect(nearestUsableTick(MAX_TICK, 60)).toBe(887_220);
+    expect(usableTickBounds(60)).toEqual({ min: -887_220, max: 887_220 });
+    expect(isFullRange(-887_220, 887_220, 60)).toBe(true);
   });
 
   it("turns prices into ordered, snapped ticks", () => {
@@ -70,22 +70,29 @@ describe("ticks and prices", () => {
     expect(Math.abs(tickUpper % 10)).toBe(0);
     expect(tickToPrice(tickLower, 18, 6)).toBeCloseTo(2800, -1);
     expect(tickToPrice(tickUpper, 18, 6)).toBeCloseTo(3500, -1);
-    expect(priceRangeToTicks(0, Infinity, pool)).toEqual({ tickLower: -887270, tickUpper: 887270 });
+    expect(priceRangeToTicks(0, Infinity, pool)).toEqual({
+      tickLower: -887_270,
+      tickUpper: 887_270,
+    });
     const same = priceRangeToTicks(3000, 3000, pool);
     expect(same.tickUpper - same.tickLower).toBe(10);
   });
 
   it("builds a range around the price", () => {
-    const { tickLower, tickUpper } = rangeAroundTick(-195775, 10, 10);
-    expect(tickToPrice(tickUpper, 0, 0) / tickToPrice(-195775, 0, 0)).toBeGreaterThanOrEqual(1.1 - 1e-6);
-    expect(tickToPrice(tickLower, 0, 0) / tickToPrice(-195775, 0, 0)).toBeLessThanOrEqual(0.9 + 1e-6);
+    const { tickLower, tickUpper } = rangeAroundTick(-195_775, 10, 10);
+    expect(tickToPrice(tickUpper, 0, 0) / tickToPrice(-195_775, 0, 0)).toBeGreaterThanOrEqual(
+      1.1 - 1e-6,
+    );
+    expect(tickToPrice(tickLower, 0, 0) / tickToPrice(-195_775, 0, 0)).toBeLessThanOrEqual(
+      0.9 + 1e-6,
+    );
     // Inverted, the same ±10% is symmetric in the displayed (1/p) price.
-    const inv = rangeAroundTick(-195775, 10, 10, { invert: true });
+    const inv = rangeAroundTick(-195_775, 10, 10, { invert: true });
     const shown = (t: number) => 1 / tickToPrice(t, 0, 0);
-    expect(shown(inv.tickLower) / shown(-195775)).toBeGreaterThanOrEqual(1.1 - 1e-6);
-    expect(shown(inv.tickLower) / shown(-195775)).toBeLessThan(1.102);
-    expect(shown(inv.tickUpper) / shown(-195775)).toBeLessThanOrEqual(0.9 + 1e-6);
-    expect(shown(inv.tickUpper) / shown(-195775)).toBeGreaterThan(0.898);
+    expect(shown(inv.tickLower) / shown(-195_775)).toBeGreaterThanOrEqual(1.1 - 1e-6);
+    expect(shown(inv.tickLower) / shown(-195_775)).toBeLessThan(1.102);
+    expect(shown(inv.tickUpper) / shown(-195_775)).toBeLessThanOrEqual(0.9 + 1e-6);
+    expect(shown(inv.tickUpper) / shown(-195_775)).toBeGreaterThan(0.898);
     const tight = rangeAroundTick(5, 0.001, 10);
     expect(tight).toEqual({ tickLower: 0, tickUpper: 10 });
   });
@@ -99,8 +106,8 @@ describe("ticks and prices", () => {
 });
 
 describe("deposits", () => {
-  const tickLower = -887220;
-  const tickUpper = 887220;
+  const tickLower = -887_220;
+  const tickUpper = 887_220;
   const sqrtPrice = getSqrtRatioAtTick(0);
 
   it("splits full range liquidity evenly at price 1", () => {
@@ -108,16 +115,28 @@ describe("deposits", () => {
       sqrtPrice,
       getSqrtRatioAtTick(tickLower),
       getSqrtRatioAtTick(tickUpper),
-      10n ** 18n
+      10n ** 18n,
     );
     expect(Number(amount0) / Number(amount1)).toBeCloseTo(1, 6);
   });
 
   it("gives the other side of a two-sided deposit", () => {
-    const amount1 = getDependentAmount({ sqrtPriceX96: sqrtPrice, tickLower, tickUpper, amount: 10n ** 18n, token: "token0" })!;
+    const amount1 = getDependentAmount({
+      sqrtPriceX96: sqrtPrice,
+      tickLower,
+      tickUpper,
+      amount: 10n ** 18n,
+      token: "token0",
+    })!;
     expect(Number(amount1) / 1e18).toBeCloseTo(1, 6);
     // Round trip: the liquidity those amounts buy is the same either way.
-    const l = getLiquidityForAmounts(sqrtPrice, getSqrtRatioAtTick(tickLower), getSqrtRatioAtTick(tickUpper), 10n ** 18n, amount1);
+    const l = getLiquidityForAmounts(
+      sqrtPrice,
+      getSqrtRatioAtTick(tickLower),
+      getSqrtRatioAtTick(tickUpper),
+      10n ** 18n,
+      amount1,
+    );
     expect(l).toBeGreaterThan(0n);
   });
 
@@ -144,7 +163,7 @@ describe("distribution and depth", () => {
       { tickLower: -100, tickUpper: 100, liquidity: L },
       { tickLower: 0, tickUpper: 50, liquidity: L },
     ],
-    5
+    5,
   );
   const pool: PoolState = { tick: 5, liquidity, tickSpacing: 10, decimals0: 18, decimals1: 18 };
 
@@ -163,13 +182,26 @@ describe("distribution and depth", () => {
 
   it("puts token0 above the price and token1 below", () => {
     const bins = getLiquidityBins(pool, ticks, { bins: 12 });
-    for (const bin of bins) {
-      if (bin.tickLower > 5) expect(bin.amount1).toBe(0);
-      if (bin.tickUpper <= 5) expect(bin.amount0).toBe(0);
-    }
+    const above = bins.filter((b) => b.tickLower > 5);
+    const below = bins.filter((b) => b.tickUpper <= 5);
+    expect(above.length).toBeGreaterThan(0);
+    expect(below.length).toBeGreaterThan(0);
+    expect(above.map((b) => b.amount1)).toEqual(above.map(() => 0));
+    expect(below.map((b) => b.amount0)).toEqual(below.map(() => 0));
     const total0 = bins.reduce((s, b) => s + b.amount0, 0);
-    const exact = getAmountsForLiquidity(getSqrtRatioAtTick(5), getSqrtRatioAtTick(-100), getSqrtRatioAtTick(100), L).amount0
-      + getAmountsForLiquidity(getSqrtRatioAtTick(5), getSqrtRatioAtTick(0), getSqrtRatioAtTick(50), L).amount0;
+    const exact =
+      getAmountsForLiquidity(
+        getSqrtRatioAtTick(5),
+        getSqrtRatioAtTick(-100),
+        getSqrtRatioAtTick(100),
+        L,
+      ).amount0 +
+      getAmountsForLiquidity(
+        getSqrtRatioAtTick(5),
+        getSqrtRatioAtTick(0),
+        getSqrtRatioAtTick(50),
+        L,
+      ).amount0;
     expect(total0 / (Number(exact) / 1e18)).toBeCloseTo(1, 4);
   });
 
@@ -179,7 +211,9 @@ describe("distribution and depth", () => {
     const { asks, bids } = getDepthCurve(bins, price);
     expect(asks.at(-1)!.price).toBeGreaterThan(price);
     expect(bids.at(-1)!.price).toBeLessThan(price);
-    for (let i = 1; i < asks.length; i++) expect(asks[i].amount0).toBeGreaterThan(asks[i - 1].amount0);
+    for (let i = 1; i < asks.length; i++) {
+      expect(asks[i]!.amount0).toBeGreaterThan(asks[i - 1]!.amount0);
+    }
 
     const half = getMarketDepth(bins, price, 0.25);
     const all = getMarketDepth(bins, price, 50);

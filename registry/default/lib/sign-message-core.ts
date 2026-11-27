@@ -5,8 +5,8 @@ import {
   verifyMessage,
   verifyTypedData,
   watchConnection,
-  type Config,
 } from "@wagmi/core";
+import type { Config } from "@wagmi/core";
 import type { Address, Hex, SignableMessage, TypedDataDefinition } from "viem";
 import { createStore } from "@/lib/0xui-store";
 import { isUserRejection } from "@/lib/0xui-utils";
@@ -57,7 +57,12 @@ export type MessageSigner = {
 /** Signs messages (EIP-191) and typed data (EIP-712) with the connected wallet. Framework-free. */
 export function createMessageSigner(config: Config): MessageSigner {
   const store = createStore<MessageSignerState>(
-    { phase: "idle", signature: undefined, error: undefined, address: getConnection(config).address },
+    {
+      phase: "idle",
+      signature: undefined,
+      error: undefined,
+      address: getConnection(config).address,
+    },
     (store) => {
       store.set({ address: getConnection(config).address });
       return watchConnection(config, {
@@ -71,7 +76,9 @@ export function createMessageSigner(config: Config): MessageSigner {
     subscribe: store.subscribe,
     async sign(request, { verify = false, onSigned } = {}) {
       const address = getConnection(config).address;
-      if (!address) return undefined;
+      if (!address) {
+        return undefined;
+      }
       store.set({ phase: "signing", signature: undefined, error: undefined });
       try {
         const signature = request.typedData
@@ -89,8 +96,8 @@ export function createMessageSigner(config: Config): MessageSigner {
           : await verifyMessage(config, { address, signature, message: request.message });
         store.set({ phase: valid ? "signed" : "invalid" });
         return signature;
-      } catch (e) {
-        const error = e instanceof Error ? e : new Error(String(e));
+      } catch (error_) {
+        const error = error_ instanceof Error ? error_ : new Error(String(error_));
         store.set({ error, phase: isUserRejection(error) ? "cancelled" : "error" });
         return undefined;
       }

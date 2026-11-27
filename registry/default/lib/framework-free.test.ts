@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 
 // lib/ is the layer a Vue or Svelte port reuses as-is.
 const dir = import.meta.dirname;
-const reactOnly = /from ["'](react|react-dom|wagmi|@tanstack\/react-query|@ui-sdk\/react)(\/[^"']*)?["']/;
+const reactOnly =
+  /from ["'](react|react-dom|wagmi|@tanstack\/react-query|@ui-sdk\/react)(\/[^"']*)?["']/;
 const exempt = new Set(["wagmi-config.ts"]);
 
 describe("lib/", () => {

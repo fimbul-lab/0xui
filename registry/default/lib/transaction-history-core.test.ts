@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  type HistoryEntry,
   clearTransactionHistory,
   entryStatus,
   filterTransactions,
@@ -9,6 +8,7 @@ import {
   transactionHistory,
   updateTransaction,
 } from "./transaction-history-core";
+import type { HistoryEntry } from "./transaction-history-core";
 
 const hash = `0x${"ab".repeat(32)}` as const;
 const me = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" as const;
@@ -21,7 +21,9 @@ describe("transactionHistory", () => {
     const stop = transactionHistory.subscribe(listener);
 
     recordTransaction({ hash, chainId: 1, description: "Send", submittedAt: 1 });
-    expect(transactionHistory.get()).toEqual([{ hash, chainId: 1, description: "Send", submittedAt: 1, status: "pending" }]);
+    expect(transactionHistory.get()).toEqual([
+      { hash, chainId: 1, description: "Send", submittedAt: 1, status: "pending" },
+    ]);
     updateTransaction(hash, { status: "confirmed" });
     expect(transactionHistory.get()[0]!.status).toBe("confirmed");
     expect(JSON.parse(localStorage.getItem("0xui:transactions")!)[0].status).toBe("confirmed");
@@ -34,12 +36,18 @@ describe("transactionHistory", () => {
   });
 
   it("filters by sender, keeping entries without one", () => {
-    const entries: HistoryEntry[] = [
+    const entries: Array<HistoryEntry> = [
       { hash, chainId: 1, from: me, submittedAt: 0, status: "pending" },
-      { hash, chainId: 1, from: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F", submittedAt: 0, status: "pending" },
+      {
+        hash,
+        chainId: 1,
+        from: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+        submittedAt: 0,
+        status: "pending",
+      },
       { hash, chainId: 1, submittedAt: 0, status: "pending" },
     ];
-    expect(filterTransactions(entries, me.toLowerCase() as never)).toHaveLength(2);
+    expect(filterTransactions(entries, `0x${me.slice(2).toLowerCase()}`)).toHaveLength(2);
     expect(filterTransactions(entries, undefined)).toHaveLength(3);
   });
 

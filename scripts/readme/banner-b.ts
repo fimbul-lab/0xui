@@ -17,7 +17,7 @@ type Phase =
   | "error";
 
 // Column by column, the order the union is declared in.
-const members: Phase[] = [
+const members: Array<Phase> = [
   "idle",
   "switching",
   "confirming",
@@ -53,7 +53,7 @@ const pending: Omit<Beat, "from"> = {
   busy: true,
   status: "Transaction submitted. Waiting for confirmation…",
 };
-const beats: Beat[] = [
+const beats: Array<Beat> = [
   { phase: "idle", from: 0, label: "Switch to Base" },
   {
     phase: "switching",
@@ -84,7 +84,7 @@ const clicks = [1.3, 3.7, 10.1, 13.2];
 
 export function bannerB(): string {
   const tl = new Timeline(T, "b");
-  const out: string[] = [];
+  const out: Array<string> = [];
   const until = (i: number) => beats[i + 1]?.from ?? T;
 
   // ── Left: copy ─────────────────────────────────────────────────────────
@@ -171,8 +171,11 @@ export function bannerB(): string {
   const dimStops: Array<[number, string, string?]> = [];
   beats.forEach((beat, i) => {
     const value = `opacity:${beat.busy ? 0.55 : 1}`;
-    if (i > 0) dimStops.push([beat.from + 0.2, value]);
-    else dimStops.push([0, value]);
+    if (i > 0) {
+      dimStops.push([beat.from + 0.2, value]);
+    } else {
+      dimStops.push([0, value]);
+    }
     dimStops.push([until(i), value, EASE]);
   });
   const dim = tl.track(dimStops, { still: "opacity:.55" });
@@ -199,9 +202,13 @@ export function bannerB(): string {
   );
   beats.forEach((beat, i) => {
     // The same label twice in a row stays put instead of morphing.
-    if (i > 0 && beats[i - 1].label === beat.label) return;
+    if (beats[i - 1]?.label === beat.label) {
+      return;
+    }
     let end = i;
-    while (beats[end + 1]?.label === beat.label) end++;
+    while (beats[end + 1]?.label === beat.label) {
+      end++;
+    }
     const cls = tl.show(beat.from + (i ? 0.08 : 0), until(end), {
       dy: 7,
       outDy: -7,
@@ -233,7 +240,9 @@ export function bannerB(): string {
 
   // The line under the button.
   beats.forEach((beat, i) => {
-    if (!beat.status) return;
+    if (!beat.status) {
+      return;
+    }
     const cls = tl.show(beat.from + 0.1, until(i), { dy: 4, in: 0.25, out: 0.12, still: i === 4 });
     out.push(
       `<g class="${cls}">`,
@@ -280,8 +289,11 @@ export function bannerB(): string {
   beats.forEach((beat, i) => {
     const at = cell(beat.phase);
     const value = `transform:translate(${at.x - origin.x}px,${at.y - origin.y}px)`;
-    if (i > 0) markerStops.push([beat.from + 0.32, value]);
-    else markerStops.push([0, value]);
+    if (i > 0) {
+      markerStops.push([beat.from + 0.32, value]);
+    } else {
+      markerStops.push([0, value]);
+    }
     markerStops.push([until(i), value, EASE]);
   });
   const pendingAt = cell("pending");
@@ -305,8 +317,11 @@ export function bannerB(): string {
     const stops: Array<[number, string, string?]> = [];
     beats.forEach((beat, i) => {
       const value = `opacity:${beat.phase === phase ? 1 : 0}`;
-      if (i > 0) stops.push([beat.from + 0.3, value]);
-      else stops.push([0, value]);
+      if (i > 0) {
+        stops.push([beat.from + 0.3, value]);
+      } else {
+        stops.push([0, value]);
+      }
       stops.push([until(i), value, EASE]);
     });
     const lit = tl.track(stops, { still: `opacity:${phase === "pending" ? 1 : 0}` });

@@ -25,7 +25,7 @@ export type SlippageInputProps = {
   value: number;
   onValueChange: (bps: number) => void;
   /** Preset options in basis points. */
-  presets?: number[];
+  presets?: Array<number>;
   label?: string;
   locale?: string;
   className?: string;
@@ -51,12 +51,18 @@ export function SlippageInput({
   const [shown, setShown] = useState(value);
   if (shown !== value) {
     setShown(value);
-    if (isPreset) setText("");
+    if (isPreset) {
+      setText("");
+    }
   }
   const warning = slippageWarning(value);
 
   return (
-    <div data-slot="slippage-input" data-warning={warning} className={cn("flex flex-col gap-1.5 text-sm", className)}>
+    <div
+      data-slot="slippage-input"
+      data-warning={warning}
+      className={cn("flex flex-col gap-1.5 text-sm", className)}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span id={`${id}-label`} className="text-muted-foreground">
           {label}
@@ -88,9 +94,13 @@ export function SlippageInput({
               value={text}
               onValueChange={(raw, details) => {
                 const next = parseSlippageInput(raw);
-                if (next.text === undefined) return details.cancel();
+                if (next.text === undefined) {
+                  return details.cancel();
+                }
                 setText(next.text);
-                if (next.bps !== undefined) onValueChange(next.bps);
+                if (next.bps !== undefined) {
+                  onValueChange(next.bps);
+                }
               }}
               className="w-14 bg-transparent text-right text-xs tabular-nums outline-none"
             />

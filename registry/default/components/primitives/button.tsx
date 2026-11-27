@@ -1,5 +1,6 @@
 import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { withClassName } from "@/lib/class-name";
 

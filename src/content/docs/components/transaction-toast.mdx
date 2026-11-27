@@ -50,13 +50,13 @@ It works with any hash, including ones from your own `writeContract` calls.
 
 ## Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `chainId` | `number` | Chain the transaction is on. Defaults to the current chain. |
-| `description` | `ReactNode` | What the transaction does. Shown in every state. |
-| `titles` | `{ pending?, success?, reverted?, error? }` | Override the headings. |
-| `onConfirmed` | `(receipt) => void` | Called when mined successfully. |
-| `toaster` | `Toaster` | Queue to show it in, from `createToaster()`. Defaults to the shared `toast()` queue. |
+| Option        | Type                                        | Description                                                                          |
+| ------------- | ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `chainId`     | `number`                                    | Chain the transaction is on. Defaults to the current chain.                          |
+| `description` | `ReactNode`                                 | What the transaction does. Shown in every state.                                     |
+| `titles`      | `{ pending?, success?, reverted?, error? }` | Override the headings.                                                               |
+| `onConfirmed` | `(receipt) => void`                         | Called when mined successfully.                                                      |
+| `toaster`     | `Toaster`                                   | Queue to show it in, from `createToaster()`. Defaults to the shared `toast()` queue. |
 
 The pending toast stays until the transaction settles. The confirmed toast stays 6 seconds, and the reverted or error toast 10 seconds. A pending toast closed early comes back with the outcome. Hover or focus the stack (F6) to pause the timers.
 

@@ -1,6 +1,7 @@
 import type { Config } from "@wagmi/core";
 import { readContractQueryOptions } from "@wagmi/core/query";
-import { erc20Abi, maxUint256, type Address } from "viem";
+import { erc20Abi, maxUint256 } from "viem";
+import type { Address } from "viem";
 
 export type AllowanceParameters = {
   /** ERC-20 contract. */
@@ -64,11 +65,15 @@ export function nextApproval({
   unlimited?: boolean;
   resetFirst?: boolean;
 }): ApprovalStep {
-  if (amount === 0n || (allowance !== undefined && allowance >= amount)) return { kind: "none" };
+  if (amount === 0n || (allowance !== undefined && allowance >= amount)) {
+    return { kind: "none" };
+  }
   const reset =
     (resetFirst ?? requiresAllowanceReset(chainId, token)) &&
     allowance !== undefined &&
     allowance > 0n;
-  if (reset) return { kind: "reset", value: 0n };
+  if (reset) {
+    return { kind: "reset", value: 0n };
+  }
   return { kind: "approve", value: unlimited ? maxUint256 : amount };
 }

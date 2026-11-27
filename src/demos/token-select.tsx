@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { TokenSelect, type Token } from "@/components/token-select";
+import { TokenSelect } from "@/components/token-select";
+import type { Token } from "@/components/token-select";
 import { demoPrices } from "./prices";
 import { demoEth, useDemoTokens } from "./tokens";
 import { useTokenList } from "@/hooks/use-token-list";
@@ -34,12 +35,20 @@ export const Allowlisted = demo(function AllowlistDemo() {
   });
   const [token, setToken] = useState<Token>();
   return (
-    <TokenSelect tokens={tokens} isLoading={isLoading} value={token} onValueChange={setToken} chainId={1} />
+    <TokenSelect
+      tokens={tokens}
+      isLoading={isLoading}
+      value={token}
+      onValueChange={setToken}
+      chainId={1}
+    />
   );
 });
 
 /** A list that never arrives, to show the loading state. */
 export const Loading = demo(function LoadingDemo() {
   const [token, setToken] = useState<Token>();
-  return <TokenSelect tokens={[demoEth]} isLoading value={token} onValueChange={setToken} chainId={1} />;
+  return (
+    <TokenSelect tokens={[demoEth]} isLoading value={token} onValueChange={setToken} chainId={1} />
+  );
 });

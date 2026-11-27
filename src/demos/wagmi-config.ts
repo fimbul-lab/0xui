@@ -6,11 +6,11 @@ import {
   multicall3Abi,
   erc20Abi,
   http,
+  isHex,
   keccak256,
   toHex,
-  type Chain,
-  type Hex,
 } from "viem";
+import type { Chain, Hex, TypedDataDefinition } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createConfig, createConnector } from "wagmi";
 import {
@@ -37,13 +37,26 @@ export const demoRevertAddress = "0x000000000000000000000000000000000000dEaD";
 const CONNECTED_FLAG = "0xui:demo-wallet-connected";
 
 /** How long a demo transaction stays pending. */
-const MINE_AFTER_MS = 3_000;
+const MINE_AFTER_MS = 3000;
 
 /**
  * Signs for the demo wallet. It's a throwaway key, not the demo account's,
  * so demo signatures don't verify against the connected address.
  */
 const demoSigner = privateKeyToAccount(keccak256(toHex("0xui demo signer")));
+
+/** The shape of EIP-712 typed data: types, a primary type and a message. */
+const isTypedData = (value: unknown): value is TypedDataDefinition =>
+  typeof value === "object" &&
+  value !== null &&
+  "types" in value &&
+  typeof value.types === "object" &&
+  value.types !== null &&
+  "primaryType" in value &&
+  typeof value.primaryType === "string" &&
+  "message" in value &&
+  typeof value.message === "object" &&
+  value.message !== null;
 
 type DemoTx = {
   hash: Hex;
@@ -56,6 +69,44 @@ type DemoTx = {
 const demoTxs = new Map<Hex, DemoTx>();
 
 const isMined = (tx: DemoTx) => Date.now() - tx.sentAt >= MINE_AFTER_MS;
+
+/** The JSON-RPC param at `index`, checked to be hex. */
+function hexParam(params: unknown, index: number): Hex {
+  const value: unknown = Array.isArray(params) ? params[index] : undefined;
+  if (!isHex(value)) {
+    throw new Error(`Expected hex at params[${index}].`);
+  }
+  return value;
+}
+
+/** A call or transaction object from JSON-RPC params: `to`, and the optional fields as hex. */
+function parseCall(call: unknown) {
+  if (typeof call !== "object" || call === null || !("to" in call) || !isHex(call.to)) {
+    throw new Error("Expected a call with a `to` address.");
+  }
+  return {
+    to: call.to,
+    from: "from" in call && isHex(call.from) ? call.from : undefined,
+    value: "value" in call && isHex(call.value) ? call.value : undefined,
+    data: "data" in call && isHex(call.data) ? call.data : undefined,
+  };
+}
+
+/** The `from` and `calls` of wallet_sendCalls's params. */
+function parseSendCalls(params: unknown) {
+  const request: unknown = Array.isArray(params) ? params[0] : undefined;
+  if (
+    typeof request !== "object" ||
+    request === null ||
+    !("from" in request) ||
+    !isHex(request.from) ||
+    !("calls" in request) ||
+    !Array.isArray(request.calls)
+  ) {
+    throw new Error("wallet_sendCalls needs `from` and `calls`.");
+  }
+  return { from: request.from, calls: request.calls.map(parseCall) };
+}
 
 /** Record a transaction the demo chain will report as mined, and return its hash. */
 export function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?: Hex }) {
@@ -75,7 +126,9 @@ export function sendDemoTransaction(tx: { from: Hex; to: Hex; value?: Hex; data?
 function demoAllowanceResult(token: Hex, data: Hex) {
   try {
     const call = decodeFunctionData({ abi: erc20Abi, data });
-    if (call.functionName !== "allowance") return undefined;
+    if (call.functionName !== "allowance") {
+      return undefined;
+    }
     const allowance = demoAllowance(token, call.args[0], call.args[1]);
     return allowance === undefined
       ? undefined
@@ -89,35 +142,47 @@ function demoAllowanceResult(token: Hex, data: Hex) {
  * Reads are batched through Multicall3. Forward the batch to the real
  * chain, then overwrite allowance results that a demo approve changed.
  */
-async function patchMulticall(data: Hex, forward: () => Promise<unknown>) {
-  const result = (await forward()) as Hex;
-  let calls: readonly { target: Hex; callData: Hex }[];
+async function patchMulticall(data: Hex, forward: () => Promise<Hex>) {
+  const result = await forward();
+  let calls: ReadonlyArray<{ target: Hex; callData: Hex }>;
   try {
     const decoded = decodeFunctionData({ abi: multicall3Abi, data });
-    if (decoded.functionName !== "aggregate3") return result;
+    if (decoded.functionName !== "aggregate3") {
+      return result;
+    }
     calls = decoded.args[0];
   } catch {
     return result;
   }
   const overrides = calls.map((c) => demoAllowanceResult(c.target, c.callData));
-  if (!overrides.some(Boolean)) return result;
-  const results = decodeFunctionResult({ abi: multicall3Abi, functionName: "aggregate3", data: result });
+  if (!overrides.some(Boolean)) {
+    return result;
+  }
+  const results = decodeFunctionResult({
+    abi: multicall3Abi,
+    functionName: "aggregate3",
+    data: result,
+  });
   return encodeFunctionResult({
     abi: multicall3Abi,
     functionName: "aggregate3",
-    result: results.map((r, i) => (overrides[i] ? { success: true, returnData: overrides[i]! } : r)),
+    result: results.map((r, i) => (overrides[i] ? { success: true, returnData: overrides[i] } : r)),
   });
 }
 
 /** Demo call batches (EIP-5792) by id, each a list of demo transaction hashes. */
-const demoBatches = new Map<Hex, Hex[]>();
+const demoBatches = new Map<Hex, Array<Hex>>();
 
 /** Allowance set by a mined demo approve, so approval demos can complete. */
 function demoAllowance(token: Hex, owner: Hex, spender: Hex) {
   let allowance: bigint | undefined;
   for (const tx of demoTxs.values()) {
-    if (!isMined(tx) || tx.to.toLowerCase() !== token.toLowerCase()) continue;
-    if (tx.from.toLowerCase() !== owner.toLowerCase()) continue;
+    if (!isMined(tx) || tx.to.toLowerCase() !== token.toLowerCase()) {
+      continue;
+    }
+    if (tx.from.toLowerCase() !== owner.toLowerCase()) {
+      continue;
+    }
     try {
       const call = decodeFunctionData({ abi: erc20Abi, data: tx.data });
       if (call.functionName === "approve" && call.args[0].toLowerCase() === spender.toLowerCase()) {
@@ -152,13 +217,17 @@ function demoWallet() {
         const result = await wallet.connect(params);
         try {
           localStorage.setItem(CONNECTED_FLAG, "1");
-        } catch {}
+        } catch {
+          // Storage is blocked: the wallet just won't reconnect on the next page.
+        }
         return result;
       },
       async disconnect() {
         try {
           localStorage.removeItem(CONNECTED_FLAG);
-        } catch {}
+        } catch {
+          // Storage is blocked, so there is no flag to clear.
+        }
         return wallet.disconnect();
       },
       async isAuthorized() {
@@ -174,27 +243,31 @@ function demoWallet() {
           ...provider,
           async request(args: { method: string; params?: unknown }) {
             if (args.method === "eth_sendTransaction") {
-              const [tx] = args.params as [{ from: Hex; to: Hex; value?: Hex; data?: Hex }];
-              return sendDemoTransaction(tx);
+              const tx = parseCall(Array.isArray(args.params) ? args.params[0] : undefined);
+              if (!tx.from) {
+                throw new Error("eth_sendTransaction needs a `from` address.");
+              }
+              return sendDemoTransaction({ ...tx, from: tx.from });
             }
             if (args.method === "wallet_getCapabilities") {
               // Atomic batching everywhere, like a smart account would offer.
               return Object.fromEntries(
-                config.chains.map((chain) => [toHex(chain.id), { atomic: { status: "supported" } }])
+                config.chains.map((chain) => [
+                  toHex(chain.id),
+                  { atomic: { status: "supported" } },
+                ]),
               );
             }
             if (args.method === "wallet_sendCalls") {
-              const [{ from, calls }] = args.params as [
-                { from: Hex; calls: { to: Hex; data?: Hex; value?: Hex }[] },
-              ];
-              const hashes = calls.map((call) => sendDemoTransaction({ from, ...call }));
+              const { from, calls } = parseSendCalls(args.params);
+              const hashes = calls.map((call) => sendDemoTransaction({ ...call, from }));
               const id = keccak256(toHex(hashes.join("")));
               demoBatches.set(id, hashes);
               return { id };
             }
             if (args.method === "wallet_getCallsStatus") {
-              const [id] = args.params as [Hex];
-              const txs = (demoBatches.get(id) ?? []).map((hash) => demoTxs.get(hash)!);
+              const id = hexParam(args.params, 0);
+              const txs = (demoBatches.get(id) ?? []).flatMap((hash) => demoTxs.get(hash) ?? []);
               const mined = txs.length > 0 && txs.every(isMined);
               return {
                 version: "2.0.0",
@@ -215,13 +288,21 @@ function demoWallet() {
               };
             }
             if (args.method === "personal_sign") {
-              const [message] = args.params as [Hex];
+              const message = hexParam(args.params, 0);
               return demoSigner.signMessage({ message: { raw: message } });
             }
             if (args.method === "eth_signTypedData_v4") {
-              const [, typedData] = args.params as [Hex, string];
-              return demoSigner.signTypedData(JSON.parse(typedData));
+              const typedData: unknown = Array.isArray(args.params) ? args.params[1] : undefined;
+              if (typeof typedData !== "string") {
+                throw new Error("eth_signTypedData_v4 needs the typed data as JSON.");
+              }
+              const parsed: unknown = JSON.parse(typedData);
+              if (!isTypedData(parsed)) {
+                throw new Error("eth_signTypedData_v4 needs EIP-712 typed data.");
+              }
+              return demoSigner.signTypedData(parsed);
             }
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- viem types request per method; this forwards any method as is
             return provider.request(args as never);
           },
         };
@@ -237,16 +318,21 @@ function demoWallet() {
 function demoTransport(chain: Chain) {
   const rpc = http()({ chain, retryCount: 1 });
   return custom({
-    async request({ method, params }) {
-      const hash = (params as [Hex] | undefined)?.[0];
-      const tx = typeof hash === "string" ? demoTxs.get(hash) : undefined;
+    async request({ method, params }: { method: string; params?: unknown }) {
+      const hash: unknown = Array.isArray(params) ? params[0] : undefined;
+      const tx = isHex(hash) ? demoTxs.get(hash) : undefined;
 
-      if (method === "eth_estimateGas") return "0x5208";
+      if (method === "eth_estimateGas") {
+        return "0x5208";
+      }
       if (method === "eth_call") {
-        const [{ to, data }] = params as [{ to: Hex; data: Hex }];
+        const { to, data = "0x" } = parseCall(Array.isArray(params) ? params[0] : undefined);
         const direct = demoAllowanceResult(to, data);
-        if (direct) return direct;
+        if (direct) {
+          return direct;
+        }
         if (to.toLowerCase() === chain.contracts?.multicall3?.address.toLowerCase()) {
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- viem types request per method; this forwards any method as is
           return patchMulticall(data, () => rpc.request({ method, params } as never));
         }
       }
@@ -271,7 +357,9 @@ function demoTransport(chain: Chain) {
         };
       }
       if (tx && method === "eth_getTransactionReceipt") {
-        if (!isMined(tx)) return null;
+        if (!isMined(tx)) {
+          return null;
+        }
         const blockNumber = await rpc.request({ method: "eth_blockNumber" });
         return {
           transactionHash: tx.hash,
@@ -286,34 +374,25 @@ function demoTransport(chain: Chain) {
           contractAddress: null,
           logs: [],
           logsBloom: `0x${"00".repeat(256)}`,
-          status:
-            tx.to.toLowerCase() === demoRevertAddress.toLowerCase()
-              ? "0x0"
-              : "0x1",
+          status: tx.to.toLowerCase() === demoRevertAddress.toLowerCase() ? "0x0" : "0x1",
           type: "0x2",
         };
       }
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- viem types request per method; this forwards any method as is
       return rpc.request({ method, params } as never);
     },
   });
 }
 
-const chains = [
-  mainnet,
-  sepolia,
-  base,
-  unichain,
-  sonic,
-  berachain,
-  pulsechain,
-  monad,
-] as const;
+const chains = [mainnet, sepolia, base, unichain, sonic, berachain, pulsechain, monad] as const;
 
 export const demoConfig = createConfig({
   chains,
   connectors: [demoWallet(), injected()],
-  transports: Object.fromEntries(
-    chains.map((chain) => [chain.id, demoTransport(chain)])
-  ) as Record<(typeof chains)[number]["id"], ReturnType<typeof demoTransport>>,
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.fromEntries loses the chain id keys
+  transports: Object.fromEntries(chains.map((chain) => [chain.id, demoTransport(chain)])) as Record<
+    (typeof chains)[number]["id"],
+    ReturnType<typeof demoTransport>
+  >,
   ssr: true,
 });

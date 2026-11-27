@@ -7,7 +7,11 @@ export default function FeeTierSelectDemo() {
     <div className="w-full max-w-2xl">
       <FeeTierSelect
         defaultValue={500}
-        tiers={defaultFeeTiers.map((tier, i) => ({ ...tier, share: shares[i], exists: shares[i] !== undefined }))}
+        tiers={defaultFeeTiers.map((tier, i) => ({
+          ...tier,
+          share: shares[i],
+          exists: shares[i] !== undefined,
+        }))}
       />
     </div>
   );

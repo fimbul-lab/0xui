@@ -1,5 +1,6 @@
 import { parseUnits } from "viem";
-import { Swap, type GetQuote } from "@/components/swap";
+import { Swap } from "@/components/swap";
+import type { GetQuote } from "@/components/swap";
 import { isNativeToken } from "@/components/token-select";
 import { ConnectWallet } from "@/components/connect-wallet";
 import { demoPrices } from "./prices";
@@ -11,17 +12,25 @@ const router = "0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af";
 
 /** A fake quote from fixed prices, with a 0.3% fee and a small delay. */
 const getQuote: GetQuote = async ({ sellToken, buyToken, sellAmount }) => {
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((resolve) => {
+    setTimeout(resolve, 600);
+  });
   const sellPrice = demoPrices[sellToken.symbol];
   const buyPrice = demoPrices[buyToken.symbol];
-  if (!sellPrice || !buyPrice) throw new Error(`No demo price for ${sellPrice ? buyToken.symbol : sellToken.symbol}`);
+  if (!sellPrice || !buyPrice) {
+    throw new Error(`No demo price for ${sellPrice ? buyToken.symbol : sellToken.symbol}`);
+  }
   const sellUnits = Number(sellAmount) / 10 ** sellToken.decimals;
   const buyUnits = ((sellUnits * sellPrice) / buyPrice) * 0.997;
   return {
     buyAmount: parseUnits(buyUnits.toFixed(buyToken.decimals), buyToken.decimals),
-    transaction: { to: router, data: "0x3593564c", value: isNativeToken(sellToken) ? sellAmount : 0n },
+    transaction: {
+      to: router,
+      data: "0x3593564c",
+      value: isNativeToken(sellToken) ? sellAmount : 0n,
+    },
     spender: isNativeToken(sellToken) ? undefined : router,
-    priceImpact: Math.min(sellUnits * sellPrice / 1_000_000, 20),
+    priceImpact: Math.min((sellUnits * sellPrice) / 1_000_000, 20),
   };
 };
 

@@ -27,17 +27,19 @@ import { NetworkGuard } from "@/components/network-guard";
 </NetworkGuard>;
 
 // Several chains: the first is offered as the switch target
-<NetworkGuard chainId={[8453, 10]} mode="replace">…</NetworkGuard>
+<NetworkGuard chainId={[8453, 10]} mode="replace">
+  …
+</NetworkGuard>;
 ```
 
 `mode="banner"` (the default) shows the notice above the content. `mode="replace"` hides the content until the network is right.
 
 ## Props
 
-| Prop | Type | Default | Description |
-| --- | --- | --- | --- |
-| `chainId` | `number \| number[]` | — | Supported chains. |
-| `mode` | `"banner" \| "replace"` | `"banner"` | Notice above the content, or instead of it. |
-| `children` | `ReactNode` | — | Guarded content. |
+| Prop       | Type                    | Default    | Description                                 |
+| ---------- | ----------------------- | ---------- | ------------------------------------------- |
+| `chainId`  | `number \| number[]`    | —          | Supported chains.                           |
+| `mode`     | `"banner" \| "replace"` | `"banner"` | Notice above the content, or instead of it. |
+| `children` | `ReactNode`             | —          | Guarded content.                            |
 
 Headless: `useNetworkGuard(chainId)` returns `wrongNetwork`, `target`, `switchToTarget()` and `phase`.

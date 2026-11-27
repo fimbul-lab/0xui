@@ -16,14 +16,14 @@ describe("blockNumberQueryOptions", () => {
 
   it("keeps the cache on the newest block while watched", async () => {
     let block = 100;
-    const config = createTestConfig({ rpc: { eth_blockNumber: () => `0x${(block++).toString(16)}` } });
+    const config = createTestConfig({
+      rpc: { eth_blockNumber: () => `0x${(block++).toString(16)}` },
+    });
     const client = new QueryClient();
     const { queryKey } = blockNumberQueryOptions(config);
     const stop = watchBlockNumberQuery(config, client);
 
-    await expect
-      .poll(() => client.getQueryData<bigint>(queryKey))
-      .toBeGreaterThanOrEqual(101n);
+    await expect.poll(() => client.getQueryData<bigint>(queryKey)).toBeGreaterThanOrEqual(101n);
     stop();
   });
 

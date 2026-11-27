@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createAgent } from "@ui-sdk/react/agent";
-import { useState, type ReactElement } from "react";
+import { useState } from "react";
+import type { ReactElement } from "react";
 import { renderToString } from "react-dom/server";
-import { decodeFunctionData, erc20Abi, maxUint256, parseUnits, toHex, type Address } from "viem";
+import { decodeFunctionData, erc20Abi, maxUint256, parseUnits, toHex } from "viem";
+import type { Address, Hex } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   connectMock,
@@ -13,24 +15,25 @@ import {
   fakeTxHash,
   renderWithWagmi,
   testAccounts,
-  type RpcResponses,
 } from "../../../test/wagmi";
+import type { RpcResponses } from "../../../test/wagmi";
 import {
   MOCK_MNEMONIC,
   MOCK_SHIELD_CONTRACT,
   MOCK_TIMINGS,
   createMockShieldedEngine,
-  type MockShieldedEngine,
 } from "../lib/mock-shielded-engine";
-import { AddressInput, type AddressInputState } from "./address-input";
+import type { MockShieldedEngine } from "../lib/mock-shielded-engine";
+import { AddressInput } from "./address-input";
+import type { AddressInputState } from "./address-input";
 import {
   Shield,
   describeShieldSteps,
   formatFeePercent,
   shieldBlocker,
   shieldSteps,
-  type ShieldProps,
 } from "./shield";
+import type { ShieldProps } from "./shield";
 import { ShieldedAccount, passwordBlocker, phraseBlocker } from "./shielded-account";
 import { ShieldedProvider } from "./shielded-provider";
 import {
@@ -38,7 +41,8 @@ import {
   formatWait,
   shieldedStatusText,
 } from "./shielded-transaction-status";
-import { NATIVE_TOKEN_ADDRESS, type Token } from "./token-select";
+import { NATIVE_TOKEN_ADDRESS } from "./token-select";
+import type { Token } from "./token-select";
 
 type MockOptions = Parameters<typeof createMockShieldedEngine>[0];
 
@@ -79,30 +83,44 @@ const withEngine = (ui: ReactElement, engine: MockShieldedEngine) => (
   <ShieldedProvider engine={engine}>{ui}</ShieldedProvider>
 );
 
-const settle = () => act(() => new Promise<void>((resolve) => setTimeout(resolve)));
+const settle = () =>
+  act(
+    () =>
+      new Promise<void>((resolve) => {
+        setTimeout(resolve);
+      }),
+  );
 
 afterEach(() => vi.useRealTimers());
 
 // One bridge for the file. A person approves only while `approve` is set.
 let approve = false;
-const asked: string[] = [];
+const asked: Array<string> = [];
 const agent = createAgent({
   allow: (step) => {
-    if (step.confirm) asked.push(step.confirm);
+    if (step.confirm) {
+      asked.push(step.confirm);
+    }
     return !step.confirm || approve;
   },
 });
-const onPage = () => agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
+const onPage = () =>
+  agent.snapshot().filter((entry) => !entry.offPage && entry.component !== "more");
 const entry = (label: string) => onPage().find((e) => e.label === label);
-const run = (steps: { ref: string; action: string; args?: unknown[] }[]) => act(() => agent.act({ steps }));
-const expectNamed = (labels: string[]) => {
+const run = (steps: Array<{ ref: string; action: string; args?: Array<unknown> }>) =>
+  act(() => agent.act({ steps }));
+const expectNamed = (labels: Array<string>) => {
   const components = onPage();
-  for (const e of components) expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+  for (const e of components) {
+    expect(e.label, `${e.component} ${e.ref} has no name`).toBeTruthy();
+  }
   const names = components.map((e) => e.label);
-  for (const label of labels) expect(names, `${label} is missing from the snapshot`).toContain(label);
+  for (const label of labels) {
+    expect(names, `${label} is missing from the snapshot`).toContain(label);
+  }
 };
 /** Everything an agent has been shown: the page now, and what its steps returned. */
-const seen = (...results: unknown[]) => JSON.stringify([agent.snapshot(), ...results]);
+const seen = (...results: Array<unknown>) => JSON.stringify([agent.snapshot(), ...results]);
 const agentReset = () => {
   approve = false;
   asked.length = 0;
@@ -190,7 +208,9 @@ describe("ShieldedAccount", () => {
 
     await user.click(phrase);
     await user.paste("  Abandon abandon ");
-    expect(screen.getByRole("button", { name: "Enter all 12 or 24 words (2 so far)" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Enter all 12 or 24 words (2 so far)" }),
+    ).toBeDisabled();
     await user.clear(phrase);
     await user.paste(`  ${MOCK_MNEMONIC.toUpperCase()}  `);
     await user.type(screen.getByLabelText("New password"), "correct horse");
@@ -205,7 +225,7 @@ describe("ShieldedAccount", () => {
   it("shows why an import failed and keeps the form", async () => {
     const user = userEvent.setup();
     const engine = createMockShieldedEngine({ account: "none", speed: Infinity });
-    vi.spyOn(engine.account, "import").mockRejectedValue(new Error("That recovery phrase isn't valid."));
+    engine.simulate.failNextImport("That recovery phrase isn't valid.");
     render(withEngine(<ShieldedAccount />, engine));
 
     await user.click(screen.getByRole("button", { name: "Import a recovery phrase instead" }));
@@ -256,8 +276,8 @@ describe("ShieldedAccount", () => {
         <ShieldedAccount>
           <p>Private area</p>
         </ShieldedAccount>,
-        engine
-      )
+        engine,
+      ),
     );
     expect(screen.queryByText("Private area")).not.toBeInTheDocument();
 
@@ -285,7 +305,8 @@ describe("ShieldedAccount", () => {
       expect(entry("New password")?.value).toBe("[redacted]");
       expect(seen(result)).not.toContain("correct horse");
 
-      const sentence = "Creates a new private account on this device, locked with the password entered here";
+      const sentence =
+        "Creates a new private account on this device, locked with the password entered here";
       expect(entry("Create private account")?.confirm).toBe(sentence);
       result = await run([{ ref: "Create private account", action: "press" }]);
       expect(result.ok).toBe(false);
@@ -298,7 +319,11 @@ describe("ShieldedAccount", () => {
       await waitFor(() => expect(phase()).toBe("backup"));
 
       // The backup step is the person's alone: the agent sees none of it.
-      for (const name of ["Reveal phrase", "Reveal the phrase first", "I saved my recovery phrase somewhere safe"]) {
+      for (const name of [
+        "Reveal phrase",
+        "Reveal the phrase first",
+        "I saved my recovery phrase somewhere safe",
+      ]) {
         expect(entry(name), name).toBeUndefined();
       }
       result = await run([{ ref: "Reveal phrase", action: "press" }]);
@@ -358,7 +383,7 @@ describe("ShieldedAccount", () => {
 
       approve = false;
       expect(entry("Lock private account")?.confirm).toBe(
-        "Locks your private account. Unlocking it again takes its password"
+        "Locks your private account. Unlocking it again takes its password",
       );
       result = await run([{ ref: "Lock private account", action: "press" }]);
       expect(result.ok).toBe(false);
@@ -385,7 +410,14 @@ describe("AddressInput with private addresses", () => {
     onResolve?: (state: AddressInputState) => void;
   }) {
     const [value, setValue] = useState("");
-    return <AddressInput value={value} onValueChange={setValue} onResolve={onResolve} shielded={shielded} />;
+    return (
+      <AddressInput
+        value={value}
+        onValueChange={setValue}
+        onResolve={onResolve}
+        shielded={shielded}
+      />
+    );
   }
 
   const paste = async (text: string) => {
@@ -401,7 +433,7 @@ describe("AddressInput with private addresses", () => {
     await paste(zk);
 
     expect(onResolve).toHaveBeenLastCalledWith(
-      expect.objectContaining({ phase: "valid", shieldedAddress: zk, address: undefined })
+      expect.objectContaining({ phase: "valid", shieldedAddress: zk, address: undefined }),
     );
     expect(container.firstChild).toHaveAttribute("data-phase", "valid");
     expect(screen.getByRole("status")).toHaveTextContent("Private address 0zk1qyqqq…wrfm4m");
@@ -414,7 +446,7 @@ describe("AddressInput with private addresses", () => {
 
     await user.tab();
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Checksum doesn't match. Check the private address for typos."
+      "Checksum doesn't match. Check the private address for typos.",
     );
   });
 
@@ -423,7 +455,9 @@ describe("AddressInput with private addresses", () => {
     const user = await paste(zk.slice(0, 80));
     await user.tab();
     expect(container.firstChild).toHaveAttribute("data-phase", "incomplete");
-    expect(await screen.findByRole("alert")).toHaveTextContent("full 127-character private address");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "full 127-character private address",
+    );
   });
 
   it("turns a private address down where only public ones work", async () => {
@@ -431,9 +465,11 @@ describe("AddressInput with private addresses", () => {
     renderWithWagmi(<Controlled onResolve={onResolve} />);
     const user = await paste(zk);
     await user.tab();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Private (0zk) addresses can't be used here.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Private (0zk) addresses can't be used here.",
+    );
     expect(onResolve).toHaveBeenLastCalledWith(
-      expect.objectContaining({ phase: "invalid", shieldedAddress: undefined })
+      expect.objectContaining({ phase: "invalid", shieldedAddress: undefined }),
     );
   });
 
@@ -443,8 +479,12 @@ describe("AddressInput with private addresses", () => {
     await paste(testAccounts[0]);
     await waitFor(() =>
       expect(onResolve).toHaveBeenLastCalledWith(
-        expect.objectContaining({ phase: "valid", address: testAccounts[0], shieldedAddress: undefined })
-      )
+        expect.objectContaining({
+          phase: "valid",
+          address: testAccounts[0],
+          shieldedAddress: undefined,
+        }),
+      ),
     );
   });
 });
@@ -453,14 +493,12 @@ describe("AddressInput with private addresses", () => {
 function minedRpc(status: "success" | "reverted" = "success"): RpcResponses {
   const chain = fakeChainRpc({ status });
   // Sending is what makes the fake chain know the hash.
-  (chain.eth_sendTransaction as (params: unknown) => unknown)([
-    { from: testAccounts[0], to: MOCK_SHIELD_CONTRACT },
-  ]);
+  chain.eth_sendTransaction([{ from: testAccounts[0], to: MOCK_SHIELD_CONTRACT }]);
   return {
     ...chain,
     eth_getBlockByNumber: {
       ...(chain.eth_getBlockByNumber as object),
-      timestamp: toHex(Math.floor(Date.now() / 1_000)),
+      timestamp: toHex(Math.floor(Date.now() / 1000)),
     },
   };
 }
@@ -473,17 +511,17 @@ describe("ShieldedTransactionStatus", () => {
   // The copy button has a status region of its own; the heading comes first. Scoped to
   // the card, because ui-sdk keeps a page-level announcer (also a status) on <body>.
   const heading = () =>
-    within(document.querySelector<HTMLElement>("[data-slot=shielded-transaction-status]")!).getAllByRole(
-      "status"
-    )[0]!;
+    within(
+      document.querySelector<HTMLElement>("[data-slot=shielded-transaction-status]")!,
+    ).getAllByRole("status")[0]!;
 
   it("formats a wait", () => {
     expect(formatWait(0)).toBeUndefined();
     expect(formatWait(45)).toBe("45 s");
     expect(formatWait(90)).toBe("about 2 min");
     expect(formatWait(600)).toBe("about 10 min");
-    expect(formatWait(3_600)).toBe("about 1 hour");
-    expect(formatWait(7_200)).toBe("about 2 hours");
+    expect(formatWait(3600)).toBe("about 1 hour");
+    expect(formatWait(7200)).toBe("about 2 hours");
   });
 
   it("does not call a mined shield done until the private account has found it", async () => {
@@ -493,12 +531,18 @@ describe("ShieldedTransactionStatus", () => {
     const config = createTestConfig({ rpc: minedRpc() });
     renderWithWagmi(
       withEngine(
-        <ShieldedTransactionStatus hash={fakeTxHash} chainId={1} standby={60} token={tkn} onSpendable={onSpendable}>
+        <ShieldedTransactionStatus
+          hash={fakeTxHash}
+          chainId={1}
+          standby={60}
+          token={tkn}
+          onSpendable={onSpendable}
+        >
           Shield 1 TKN
         </ShieldedTransactionStatus>,
-        engine
+        engine,
       ),
-      { config }
+      { config },
     );
     expect(phase()).toBe("pending");
     expect(heading()).toHaveTextContent("Shield pending");
@@ -531,10 +575,15 @@ describe("ShieldedTransactionStatus", () => {
     const config = createTestConfig({ rpc: minedRpc() });
     renderWithWagmi(
       withEngine(
-        <ShieldedTransactionStatus hash={fakeTxHash} chainId={1} token={tkn} onSpendable={onSpendable} />,
-        engine
+        <ShieldedTransactionStatus
+          hash={fakeTxHash}
+          chainId={1}
+          token={tkn}
+          onSpendable={onSpendable}
+        />,
+        engine,
       ),
-      { config }
+      { config },
     );
     await waitFor(() => expect(phase()).toBe("confirmed"));
 
@@ -545,7 +594,11 @@ describe("ShieldedTransactionStatus", () => {
     expect(heading()).toHaveTextContent("Shielded and spendable");
     expect(steps().at(-1)).toBe("Spendable");
     expect(onSpendable).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ kind: "shield", amount: parseUnits("0.9975", 18), state: "spendable" })
+      expect.objectContaining({
+        kind: "shield",
+        amount: parseUnits("0.9975", 18),
+        state: "spendable",
+      }),
     );
   });
 
@@ -555,11 +608,13 @@ describe("ShieldedTransactionStatus", () => {
     });
     renderWithWagmi(
       withEngine(<ShieldedTransactionStatus hash={fakeTxHash} chainId={1} />, engine),
-      { config: createTestConfig({ rpc: minedRpc() }) }
+      { config: createTestConfig({ rpc: minedRpc() }) },
     );
     expect(phase()).toBe("restricted");
     expect(heading()).toHaveTextContent("Shielded, but restricted");
-    expect(screen.getByRole("alert")).toHaveTextContent("only go back to the address they came from");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "only go back to the address they came from",
+    );
   });
 
   it("says the same in one line", async () => {
@@ -574,11 +629,12 @@ describe("ShieldedTransactionStatus", () => {
         <ShieldedTransactionStatus variant="line" hash={fakeTxHash} chainId={1} token={tkn}>
           Shield 1 TKN
         </ShieldedTransactionStatus>,
-        engine
+        engine,
       ),
-      { config: createTestConfig({ rpc: minedRpc() }) }
+      { config: createTestConfig({ rpc: minedRpc() }) },
     );
-    const line = () => document.querySelector("[data-slot=shielded-transaction-status]")!;
+    const line = () =>
+      document.querySelector<HTMLElement>("[data-slot=shielded-transaction-status]");
     await waitFor(() => expect(line()).toHaveAttribute("data-phase", "confirmed"));
     expect(line()).toHaveTextContent("Shield 1 TKN: updating private balance");
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
@@ -586,7 +642,11 @@ describe("ShieldedTransactionStatus", () => {
     await act(() => engine.simulate.shield({ token: tkn.address, amount, hash: fakeTxHash }));
     await settle();
     expect(line()).toHaveTextContent("Shield 1 TKN: spendable");
-    expect(within(line() as HTMLElement).getByText("0.9975")).toBeInTheDocument();
+    const status = line();
+    if (!status) {
+      throw new Error("The status line isn't an element.");
+    }
+    expect(within(status).getByText("0.9975")).toBeInTheDocument();
   });
 
   it("reports a reverted shield and stops there", async () => {
@@ -594,7 +654,7 @@ describe("ShieldedTransactionStatus", () => {
     const sync = vi.spyOn(engine, "sync");
     renderWithWagmi(
       withEngine(<ShieldedTransactionStatus hash={fakeTxHash} chainId={1} />, engine),
-      { config: createTestConfig({ rpc: minedRpc("reverted") }) }
+      { config: createTestConfig({ rpc: minedRpc("reverted") }) },
     );
     await waitFor(() => expect(phase()).toBe("reverted"));
     expect(screen.getByRole("alert")).toHaveTextContent("Nothing was shielded");
@@ -605,8 +665,15 @@ describe("ShieldedTransactionStatus", () => {
 
 describe("Shield", () => {
   it("names the blocker in the order people meet it", () => {
-    const base = { accountStatus: "unlocked", token: tkn, amount: 1n, insufficient: false } as const;
-    expect(shieldBlocker({ ...base, accountStatus: "none" })).toBe("Create a private account first");
+    const base = {
+      accountStatus: "unlocked",
+      token: tkn,
+      amount: 1n,
+      insufficient: false,
+    } as const;
+    expect(shieldBlocker({ ...base, accountStatus: "none" })).toBe(
+      "Create a private account first",
+    );
     expect(shieldBlocker({ ...base, accountStatus: "locked" })).toBe("Unlock your private account");
     expect(shieldBlocker({ ...base, token: undefined })).toBe("Select a token");
     expect(shieldBlocker({ ...base, token: eth })).toBe("Wrap ETH to shield it");
@@ -648,14 +715,14 @@ describe("Shield", () => {
   it("says how many wallet prompts to expect", () => {
     expect(describeShieldSteps(["batch"])).toBe("One wallet prompt.");
     expect(describeShieldSteps(["sign", "batch"])).toBe(
-      "Two wallet prompts: sign, approve and shield together."
+      "Two wallet prompts: sign, approve and shield together.",
     );
     expect(describeShieldSteps(["sign", "approve", "shield"])).toBe(
-      "Three wallet prompts: sign, approve, shield."
+      "Three wallet prompts: sign, approve, shield.",
     );
   });
 
-  type Sent = { to: Address; data?: string };
+  type Sent = { to: Address; data?: Hex };
 
   /** A wallet holding 10 TKN, with `allowance` for the shield contract. */
   function walletConfig({
@@ -669,12 +736,12 @@ describe("Shield", () => {
     features?: { signMessageError?: boolean };
     onSend?: (tx: Sent) => void;
     /** EIP-5792 capabilities the wallet reports. Without it, it can't batch. */
-    capabilities?: Record<number, unknown>;
+    capabilities?: NonNullable<Parameters<typeof createTestConfig>[0]>["capabilities"];
     /** How sent transactions are mined. */
     status?: "success" | "reverted";
   } = {}) {
     const chain = fakeChainRpc({ status });
-    const send = chain.eth_sendTransaction as (params: unknown) => unknown;
+    const send = chain.eth_sendTransaction;
     return createTestConfig({
       features,
       capabilities,
@@ -694,31 +761,34 @@ describe("Shield", () => {
   const spender = MOCK_SHIELD_CONTRACT.toLowerCase();
   /** Spender (lower case) and amount of an `approve` call. */
   const approveArgs = (tx: Sent) => {
-    const { args } = decodeFunctionData({ abi: erc20Abi, data: tx.data as `0x${string}` });
-    return [String(args![0]).toLowerCase(), args![1]];
+    if (!tx.data) {
+      throw new Error("The transaction has no calldata.");
+    }
+    const { args } = decodeFunctionData({ abi: erc20Abi, data: tx.data });
+    return [String(args[0]).toLowerCase(), args[1]];
   };
 
   const root = () => document.querySelector("[data-slot=shield]")!;
   const phase = () => root().getAttribute("data-phase");
   const input = () => screen.getByRole("textbox", { name: /^Amount to shield in / });
-  const button = (name: string | RegExp, timeout = 5_000) =>
+  const button = (name: string | RegExp, timeout = 5000) =>
     screen.findByRole("button", { name }, { timeout });
   const card = () => document.querySelector("[data-slot=shielded-transaction-status]");
 
   /** Rendered, wallet connected, and 2 TKN typed. */
   async function setup(
     config: ReturnType<typeof walletConfig>,
-    {
-      engine: engineOptions,
-      ...props
-    }: Partial<ShieldProps> & { engine?: MockOptions } = {}
+    { engine: engineOptions, ...props }: Partial<ShieldProps> & { engine?: MockOptions } = {},
   ) {
     const user = userEvent.setup();
     const engine = await unlockedEngine(engineOptions);
     const onSubmitted = vi.fn();
     renderWithWagmi(
-      withEngine(<Shield tokens={[tkn]} chainId={1} onSubmitted={onSubmitted} {...props} />, engine),
-      { config }
+      withEngine(
+        <Shield tokens={[tkn]} chainId={1} onSubmitted={onSubmitted} {...props} />,
+        engine,
+      ),
+      { config },
     );
     await act(() => connectMock(config));
     await user.type(input(), "2");
@@ -746,12 +816,15 @@ describe("Shield", () => {
 
   it("offers to switch when the wallet is on another network", async () => {
     const user = userEvent.setup();
-    const engine = await unlockedEngine({ chains: [11155111] });
-    await engine.sync(11155111);
+    const engine = await unlockedEngine({ chains: [11_155_111] });
+    await engine.sync(11_155_111);
     const config = walletConfig();
     renderWithWagmi(
-      withEngine(<Shield tokens={[{ ...tkn, chainId: 11155111 }]} chainId={11155111} />, engine),
-      { config }
+      withEngine(
+        <Shield tokens={[{ ...tkn, chainId: 11_155_111 }]} chainId={11_155_111} />,
+        engine,
+      ),
+      { config },
     );
     await act(() => connectMock(config));
     await user.type(input(), "2");
@@ -770,18 +843,22 @@ describe("Shield", () => {
     expect(rows.getByText("0.005")).toBeInTheDocument();
     expect(rows.getByText("1.995")).toBeInTheDocument();
     expect(rows.getByText("Private")).toBeInTheDocument();
-    expect(await screen.findByText("Three wallet prompts: sign, approve, shield.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Three wallet prompts: sign, approve, shield."),
+    ).toBeInTheDocument();
     expect(prepare).not.toHaveBeenCalled();
   });
 
   it("takes a plain wallet through sign, approve and shield, one click each", async () => {
     let allowance = 0n;
-    const sent: Sent[] = [];
+    const sent: Array<Sent> = [];
     const config = walletConfig({
       allowance: () => allowance,
       onSend: (tx) => {
         sent.push(tx);
-        if (sent.length === 1) allowance = maxUint256;
+        if (sent.length === 1) {
+          allowance = maxUint256;
+        }
       },
     });
     const { user, engine, onSubmitted } = await setup(config);
@@ -830,7 +907,7 @@ describe("Shield", () => {
   });
 
   it("skips the approval when the allowance already covers the amount", async () => {
-    const sent: Sent[] = [];
+    const sent: Array<Sent> = [];
     const { user, onSubmitted } = await setup(walletConfig({ onSend: (tx) => sent.push(tx) }));
 
     expect(await screen.findByText("Two wallet prompts: sign, shield.")).toBeInTheDocument();
@@ -843,12 +920,16 @@ describe("Shield", () => {
 
   describe("with a wallet that batches", () => {
     it("approves and shields in one prompt: two prompts in all", async () => {
-      const sent: Sent[] = [];
-      const config = walletConfig({ allowance: 0n, capabilities: atomic, onSend: (tx) => sent.push(tx) });
+      const sent: Array<Sent> = [];
+      const config = walletConfig({
+        allowance: 0n,
+        capabilities: atomic,
+        onSend: (tx) => sent.push(tx),
+      });
       const { user, onSubmitted } = await setup(config);
 
       expect(
-        await screen.findByText("Two wallet prompts: sign, approve and shield together.")
+        await screen.findByText("Two wallet prompts: sign, approve and shield together."),
       ).toBeInTheDocument();
 
       await user.click(await button("Shield TKN"));
@@ -857,7 +938,7 @@ describe("Shield", () => {
       expect(sent).toHaveLength(0);
 
       await user.click(both);
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       // One click sent the approval for exactly the amount, then the shield.
       expect(sent.map((tx) => tx.to.toLowerCase())).toEqual([tkn.address.toLowerCase(), spender]);
@@ -871,13 +952,17 @@ describe("Shield", () => {
     });
 
     it("clears a leftover allowance inside the same batch", async () => {
-      const sent: Sent[] = [];
-      const config = walletConfig({ allowance: 5n, capabilities: atomic, onSend: (tx) => sent.push(tx) });
+      const sent: Array<Sent> = [];
+      const config = walletConfig({
+        allowance: 5n,
+        capabilities: atomic,
+        onSend: (tx) => sent.push(tx),
+      });
       const { user, onSubmitted } = await setup(config);
 
       await user.click(await button("Shield TKN"));
       await user.click(await button("Approve and shield TKN"));
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       expect(sent).toHaveLength(3);
       expect(approveArgs(sent[0]!)).toEqual([spender, 0n]);
@@ -892,7 +977,9 @@ describe("Shield", () => {
       });
       const { user } = await setup(config);
 
-      expect(await screen.findByText("Three wallet prompts: sign, approve, shield.")).toBeInTheDocument();
+      expect(
+        await screen.findByText("Three wallet prompts: sign, approve, shield."),
+      ).toBeInTheDocument();
       await user.click(await button("Shield TKN"));
       expect(await button("Approve TKN")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /Approve and shield/ })).not.toBeInTheDocument();
@@ -933,8 +1020,8 @@ describe("Shield", () => {
 
       await user.click(await button("Shield TKN"));
       await user.click(await button("Approve and shield TKN"));
-      expect(await screen.findByRole("alert", {}, { timeout: 5_000 })).toHaveTextContent(
-        "The batch reverted. Nothing was approved or shielded."
+      expect(await screen.findByRole("alert", {}, { timeout: 5000 })).toHaveTextContent(
+        "The batch reverted. Nothing was approved or shielded.",
       );
       expect(phase()).toBe("error");
       expect(onSubmitted).not.toHaveBeenCalled();
@@ -942,15 +1029,21 @@ describe("Shield", () => {
     });
 
     it("opens the wallet from the form when the shield takes a single prompt", async () => {
-      const sent: Sent[] = [];
-      const config = walletConfig({ allowance: 0n, capabilities: atomic, onSend: (tx) => sent.push(tx) });
+      const sent: Array<Sent> = [];
+      const config = walletConfig({
+        allowance: 0n,
+        capabilities: atomic,
+        onSend: (tx) => sent.push(tx),
+      });
       // An engine that needs no signature: the batch is the only prompt.
-      const { user, engine, onSubmitted } = await setup(config, { engine: { shieldSignature: false } });
+      const { user, engine, onSubmitted } = await setup(config, {
+        engine: { shieldSignature: false },
+      });
       const prepare = vi.spyOn(engine, "prepareShield");
 
       expect(await screen.findByText("One wallet prompt.")).toBeInTheDocument();
       await user.click(await button("Shield TKN"));
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       expect(sent).toHaveLength(2);
       expect(prepare).toHaveBeenCalledTimes(1);
@@ -977,7 +1070,7 @@ describe("Shield", () => {
 
   it("shows why the engine couldn't build the shield", async () => {
     const { user, engine } = await setup(walletConfig());
-    vi.spyOn(engine, "prepareShield").mockRejectedValue(new Error("This token can't be shielded."));
+    engine.simulate.failNextShield("This token can't be shielded.");
 
     await user.click(await button("Shield TKN"));
     expect(await screen.findByRole("alert")).toHaveTextContent("This token can't be shielded.");
@@ -990,16 +1083,18 @@ describe("Shield", () => {
 
     await user.click(await button("Shield TKN"));
     await user.click(await button("Approve TKN"));
-    expect(await screen.findByRole("alert", {}, { timeout: 5_000 })).toHaveTextContent(
-      "The approval reverted."
+    expect(await screen.findByRole("alert", {}, { timeout: 5000 })).toHaveTextContent(
+      "The approval reverted.",
     );
     expect(screen.getByRole("button", { name: "Approve TKN" })).toBeEnabled();
     expect(onSubmitted).not.toHaveBeenCalled();
   });
 
   it("shields what was on screen when it started, not what a later quote says", async () => {
-    const sent: Sent[] = [];
-    const { user, engine, onSubmitted } = await setup(walletConfig({ onSend: (tx) => sent.push(tx) }));
+    const sent: Array<Sent> = [];
+    const { user, engine, onSubmitted } = await setup(
+      walletConfig({ onSend: (tx) => sent.push(tx) }),
+    );
     const prepare = vi.spyOn(engine, "prepareShield");
 
     await user.click(await button("Shield TKN"));
@@ -1009,7 +1104,7 @@ describe("Shield", () => {
 
     expect(prepare).toHaveBeenCalledExactlyOnceWith(
       { chainId: 1, token: tkn.address, amount: parseUnits("2", 18) },
-      expect.anything()
+      expect.anything(),
     );
     expect(sent).toHaveLength(1);
   });
@@ -1047,7 +1142,9 @@ describe("Shield", () => {
 
   describe("collapse variant", () => {
     const steps = () =>
-      screen.getAllByRole("listitem").map((item) => [item.getAttribute("data-state"), item.textContent]);
+      screen
+        .getAllByRole("listitem")
+        .map((item) => [item.getAttribute("data-state"), item.textContent]);
 
     it("folds the form into a summary and a step list, then hands over to the status card", async () => {
       const config = walletConfig({ allowance: 0n, capabilities: atomic });
@@ -1062,12 +1159,15 @@ describe("Shield", () => {
       expect(screen.getByRole("button", { name: "Edit shield" })).toBeEnabled();
       expect(steps()).toEqual([
         ["done", "Signed"],
-        ["ready", "Approve and shield TKNOne wallet prompt. Both happen together, or neither does."],
+        [
+          "ready",
+          "Approve and shield TKNOne wallet prompt. Both happen together, or neither does.",
+        ],
       ]);
       expect(screen.getByText("Step 2 of 2")).toBeInTheDocument();
 
       await user.click(screen.getByRole("button", { name: "Approve and shield TKN" }));
-      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5_000 });
+      await waitFor(() => expect(onSubmitted).toHaveBeenCalled(), { timeout: 5000 });
 
       // The status card takes the form's place, with the summary above it.
       expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
@@ -1080,7 +1180,9 @@ describe("Shield", () => {
       expect(input()).toHaveValue("");
       expect(card()).toBeInTheDocument();
 
-      await act(() => engine.simulate.shield({ ...onSubmitted.mock.calls[0]![1], hash: fakeTxHash }));
+      await act(() =>
+        engine.simulate.shield({ ...onSubmitted.mock.calls[0]![1], hash: fakeTxHash }),
+      );
       await settle();
       expect(card()).toHaveAttribute("data-phase", "spendable");
     });
@@ -1102,7 +1204,7 @@ describe("Shield", () => {
     beforeEach(agentReset);
 
     it("fills the amount and reaches the shield, but can't shield without a person", async () => {
-      const sent: Sent[] = [];
+      const sent: Array<Sent> = [];
       const config = walletConfig({ allowance: 0n, onSend: (tx) => sent.push(tx) });
       const engine = await unlockedEngine();
       const prepare = vi.spyOn(engine, "prepareShield");
@@ -1117,7 +1219,7 @@ describe("Shield", () => {
       const sentence =
         "Shields 2 TKN from your wallet into your private balance on Ethereum: " +
         "1.995 TKN arrives after a 0.005 TKN fee. Three wallet prompts: sign, approve, shield.";
-      await waitFor(() => expect(entry("Shield TKN")?.confirm).toBe(sentence), { timeout: 3_000 });
+      await waitFor(() => expect(entry("Shield TKN")?.confirm).toBe(sentence), { timeout: 3000 });
 
       result = await run([{ ref: "Shield TKN", action: "press" }]);
       expect(result.ok).toBe(false);
@@ -1129,9 +1231,11 @@ describe("Shield", () => {
       approve = true;
       result = await run([{ ref: "Shield TKN", action: "press" }]);
       expect(result.ok, result.error?.message).toBe(true);
-      await waitFor(() => expect(entry("Approve TKN")?.confirm).toBe(
-        "Approve TKN in your wallet, to shield 2 TKN. Lets the shield contract move this amount."
-      ));
+      await waitFor(() =>
+        expect(entry("Approve TKN")?.confirm).toBe(
+          "Approve TKN in your wallet, to shield 2 TKN. Lets the shield contract move this amount.",
+        ),
+      );
       expect(prepare).toHaveBeenCalledTimes(1);
 
       approve = false;
@@ -1147,17 +1251,20 @@ describe("Shield", () => {
     });
 
     it("asks a person before switching the wallet's network", async () => {
-      const engine = await unlockedEngine({ chains: [11155111] });
-      await engine.sync(11155111);
+      const engine = await unlockedEngine({ chains: [11_155_111] });
+      await engine.sync(11_155_111);
       const config = walletConfig();
       renderWithWagmi(
-        withEngine(<Shield tokens={[{ ...tkn, chainId: 11155111 }]} chainId={11155111} />, engine),
-        { config }
+        withEngine(
+          <Shield tokens={[{ ...tkn, chainId: 11_155_111 }]} chainId={11_155_111} />,
+          engine,
+        ),
+        { config },
       );
       await act(() => connectMock(config));
       await run([{ ref: "Amount to shield", action: "setValue", args: ["2"] }]);
       await waitFor(() =>
-        expect(entry("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia")
+        expect(entry("Switch to Sepolia")?.confirm).toBe("Asks your wallet to switch to Sepolia"),
       );
       expect((await run([{ ref: "Switch to Sepolia", action: "press" }])).ok).toBe(false);
     });
@@ -1165,14 +1272,21 @@ describe("Shield", () => {
     it("confirms each wallet step in the collapse variant too", async () => {
       const config = walletConfig({ allowance: 0n });
       const engine = await unlockedEngine();
-      renderWithWagmi(withEngine(<Shield tokens={[tkn]} chainId={1} variant="collapse" />, engine), { config });
+      renderWithWagmi(
+        withEngine(<Shield tokens={[tkn]} chainId={1} variant="collapse" />, engine),
+        { config },
+      );
       await act(() => connectMock(config));
       await run([{ ref: "Amount to shield", action: "setValue", args: ["2"] }]);
-      await waitFor(() => expect(entry("Shield TKN")?.confirm).toMatch(/^Shields 2 TKN/), { timeout: 3_000 });
+      await waitFor(() => expect(entry("Shield TKN")?.confirm).toMatch(/^Shields 2 TKN/), {
+        timeout: 3000,
+      });
 
       approve = true;
       expect((await run([{ ref: "Shield TKN", action: "press" }])).ok).toBe(true);
-      await waitFor(() => expect(entry("Approve TKN")?.confirm).toMatch(/^Approve TKN in your wallet/));
+      await waitFor(() =>
+        expect(entry("Approve TKN")?.confirm).toMatch(/^Approve TKN in your wallet/),
+      );
       // Edit goes back to the form, free.
       approve = false;
       expect((await run([{ ref: "Edit shield", action: "press" }])).ok).toBe(true);

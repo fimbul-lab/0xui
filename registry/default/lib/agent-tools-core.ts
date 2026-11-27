@@ -11,10 +11,12 @@ import {
   getTransactionReceipt,
   readContracts,
   switchChain,
-  type Config,
 } from "@wagmi/core";
-import { agentTools, registerTools, type AgentAction, type createAgent } from "@ui-sdk/core/agent";
-import { erc20Abi, formatUnits, isAddress, isHash, type Address } from "viem";
+import type { Config } from "@wagmi/core";
+import { agentTools, registerTools } from "@ui-sdk/core/agent";
+import type { AgentAction, createAgent } from "@ui-sdk/core/agent";
+import { erc20Abi, formatUnits, isAddress, isHash } from "viem";
+import type { Address } from "viem";
 import { normalize } from "viem/ens";
 
 export type AgentTool = {
@@ -28,6 +30,7 @@ export type AgentTool = {
     /** The result holds text other people wrote, like a token's symbol. */
     untrustedContentHint?: boolean;
   };
+  // oxlint-disable-next-line quality/no-unknown-returns, quality/no-unsafe-dictionary-type -- a tool takes and returns the model's JSON
   execute: (input: Record<string, unknown>) => Promise<unknown>;
 };
 
@@ -64,8 +67,12 @@ type ModelContext = {
 export function agentPermissions(confirm: AgentConfirm | false) {
   const approved = new WeakSet<AgentAction>();
   const allow: Allow = (step, { signal }) => {
-    if (!step.confirm) return true;
-    if (!confirm) return false;
+    if (!step.confirm) {
+      return true;
+    }
+    if (!confirm) {
+      return false;
+    }
     const sentence = step.confirm;
     return Promise.resolve()
       .then(() => confirm(sentence, { signal }))
@@ -91,47 +98,60 @@ const CONFIRM_TIMEOUT = 5 * 60_000;
 
 /** Runs `confirm` for a wallet tool, with the bridge's wording when it can't go ahead. */
 async function askPerson(confirm: AgentConfirm | false | undefined, sentence: string, ask: string) {
-  if (!confirm) throw new Error(`Needs a person: "${sentence}". ${ask}`);
+  if (!confirm) {
+    throw new Error(`Needs a person: "${sentence}". ${ask}`);
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CONFIRM_TIMEOUT);
   try {
     const yes = await confirm(sentence, { signal: controller.signal });
-    if (yes !== true) throw new Error(`The person said no to "${sentence}".`);
+    if (yes !== true) {
+      throw new Error(`The person said no to "${sentence}".`);
+    }
   } finally {
     clearTimeout(timer);
   }
 }
 
-const pageTitles: Record<string, string> = {
+const pageTitles = {
   snapshot: "Read the page's controls",
   act: "Use the page's controls",
   query: "Find controls and their choices",
-};
+} satisfies Record<string, string>;
+
+/** One of the page tools this file knows how to bind and title. */
+const isPageTool = (name: string): name is keyof typeof pageTitles => name in pageTitles;
 
 /**
  * ui-sdk's `snapshot`, `act` and `query` as `AgentTool`s bound to `agent`,
  * for your own model loop next to `walletAgentTools`. `act` goes through the
  * bridge's `allow`, so marked steps still wait for the person.
  */
-export function pageAgentTools(agent: Agent): AgentTool[] {
-  return agentTools.map((tool) => {
-    const name = tool.name as "snapshot" | "act" | "query";
+export function pageAgentTools(agent: Agent): Array<AgentTool> {
+  return agentTools.flatMap((tool) => {
+    const name = tool.name;
+    if (!isPageTool(name)) {
+      return [];
+    }
     return {
       name,
-      title: pageTitles[name] ?? name,
+      title: pageTitles[name],
       description: tool.description,
       inputSchema: tool.inputSchema,
       annotations:
         name === "act"
           ? { readOnlyHint: false, consequentialHint: true, untrustedContentHint: true }
           : { readOnlyHint: true, untrustedContentHint: true },
+      // oxlint-disable-next-line quality/no-unknown-returns, typescript/no-unsafe-type-assertion -- each page tool takes its own input; ui-sdk checks it
       execute: async (input) => (agent[name] as (input: unknown) => unknown)(input),
     };
   });
 }
 
 function chainIdOf(config: Config, value: unknown) {
-  if (value === undefined) return getChainId(config);
+  if (value === undefined) {
+    return getChainId(config);
+  }
   const chain = getChains(config).find(
     (c) => c.id === Number(value) || c.name.toLowerCase() === String(value).toLowerCase(),
   );
@@ -144,16 +164,20 @@ function chainIdOf(config: Config, value: unknown) {
 
 function tokenOf(value: unknown): Address {
   const token = String(value ?? "");
-  if (!isAddress(token)) throw new Error(`"${token}" isn't a contract address.`);
+  if (!isAddress(token)) {
+    throw new Error(`"${token}" isn't a contract address.`);
+  }
   return token;
 }
 
 function accountOf(config: Config, value: unknown, what = "address"): Address {
-  const address = (value ?? getConnection(config).address) as string | undefined;
+  const address = value ?? getConnection(config).address;
   if (!address) {
     throw new Error(`No wallet is connected. Pass ${what}, or ask the person to connect.`);
   }
-  if (!isAddress(address)) throw new Error(`"${address}" isn't an address.`);
+  if (typeof address !== "string" || !isAddress(address)) {
+    throw new Error(`"${address}" isn't an address.`);
+  }
   return address;
 }
 
@@ -180,7 +204,7 @@ export type WalletAgentToolsOptions = {
 export function walletAgentTools(
   config: Config,
   { confirm }: WalletAgentToolsOptions = {},
-): AgentTool[] {
+): Array<AgentTool> {
   return [
     {
       name: "get_wallet",
@@ -191,7 +215,9 @@ export function walletAgentTools(
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute() {
         const connection = getConnection(config);
-        if (connection.status !== "connected") return { status: connection.status };
+        if (connection.status !== "connected") {
+          return { status: connection.status };
+        }
         const chain = getChains(config).find((c) => c.id === connection.chainId);
         return {
           status: "connected",
@@ -326,7 +352,9 @@ export function walletAgentTools(
       async execute(input) {
         const token = tokenOf(input.token);
         const spender = String(input.spender ?? "");
-        if (!isAddress(spender)) throw new Error(`"${spender}" isn't an address.`);
+        if (!isAddress(spender)) {
+          throw new Error(`"${spender}" isn't an address.`);
+        }
         const owner = accountOf(config, input.owner, "an owner");
         const chainId = chainIdOf(config, input.chain);
         const [value, decimals, symbol] = await readContracts(config, {
@@ -366,13 +394,17 @@ export function walletAgentTools(
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute(input) {
         const chainId = getChains(config).find((c) => c.id === 1)?.id;
-        if (!chainId) throw new Error("ENS needs Ethereum (chain 1) in this app's wagmi config.");
+        if (!chainId) {
+          throw new Error("ENS needs Ethereum (chain 1) in this app's wagmi config.");
+        }
         if (typeof input.name === "string") {
           const name = normalize(input.name);
           return { name, address: await getEnsAddress(config, { name, chainId }) };
         }
         const address = String(input.address ?? "");
-        if (!isAddress(address)) throw new Error("Pass a name, or an address to look up.");
+        if (!isAddress(address)) {
+          throw new Error("Pass a name, or an address to look up.");
+        }
         return { address, name: await getEnsName(config, { address, chainId }) };
       },
     },
@@ -416,7 +448,9 @@ export function walletAgentTools(
       annotations: { readOnlyHint: true },
       async execute(input) {
         const hash = String(input.hash ?? "");
-        if (!isHash(hash)) throw new Error(`"${hash}" isn't a transaction hash.`);
+        if (!isHash(hash)) {
+          throw new Error(`"${hash}" isn't a transaction hash.`);
+        }
         const chainId = chainIdOf(config, input.chain);
         const receipt = await getTransactionReceipt(config, { hash, chainId }).catch(
           () => undefined,
@@ -474,17 +508,34 @@ export type RegisterAgentToolsOptions = {
  * Registers `tools` with the browser through WebMCP, and with `agent`, ui-sdk's
  * page tools too. Returns the cleanup. Does nothing without WebMCP.
  */
+/** WebMCP's `document.modelContext`, where the browser has it. */
+function modelContextOf(doc: Document): ModelContext | undefined {
+  const context: unknown = "modelContext" in doc ? doc.modelContext : undefined;
+  return isModelContext(context) ? context : undefined;
+}
+
+const isModelContext = (value: unknown): value is ModelContext =>
+  typeof value === "object" &&
+  value !== null &&
+  "registerTool" in value &&
+  typeof value.registerTool === "function";
+
 export function registerAgentTools(
-  tools: AgentTool[],
+  tools: Array<AgentTool>,
   { agent, allow }: RegisterAgentToolsOptions = {},
 ) {
-  if (agent && !allow) throw new Error("registerAgentTools needs an allow with an agent.");
-  const context = (globalThis.document as { modelContext?: ModelContext } | undefined)
-    ?.modelContext;
-  if (!context) return () => {};
+  if (agent && !allow) {
+    throw new Error("registerAgentTools needs an allow with an agent.");
+  }
+  const context = typeof document === "undefined" ? undefined : modelContextOf(document);
+  if (!context) {
+    return () => {};
+  }
   const controller = new AbortController();
   for (const tool of tools) {
-    // Early builds returned synchronously, and a second registration of a name rejects.
+    // Early builds returned synchronously, and a second registration of a name
+    // rejects while the first stays, so there is nothing to undo.
+    // oxlint-disable-next-line landmines/no-silent-catch
     Promise.resolve()
       .then(() => context.registerTool(tool, { signal: controller.signal }))
       .catch(() => {});

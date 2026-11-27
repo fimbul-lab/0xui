@@ -1,4 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useCopy } from "./use-copy";
@@ -20,29 +21,31 @@ describe("useMounted", () => {
 describe("useCopy", () => {
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
   it("copies and resets after the timeout", async () => {
     vi.useFakeTimers();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    // Gives jsdom an in-memory clipboard.
+    userEvent.setup();
     const { result } = renderHook(() => useCopy({ timeout: 1000 }));
 
     await act(async () => {
       expect(await result.current.copy("0xabc")).toBe(true);
     });
-    expect(writeText).toHaveBeenCalledWith("0xabc");
     expect(result.current.copied).toBe(true);
 
-    act(() => vi.advanceTimersByTime(1000));
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
     expect(result.current.copied).toBe(false);
+
+    // jsdom's FileReader, which reading the clipboard uses, needs real timers.
+    vi.useRealTimers();
+    expect(await navigator.clipboard.readText()).toBe("0xabc");
   });
 
-  it("returns false when the clipboard is denied", async () => {
-    vi.stubGlobal("navigator", {
-      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
-    });
+  it("returns false without a clipboard", async () => {
+    expect(navigator.clipboard).toBeUndefined();
     const { result } = renderHook(() => useCopy());
 
     await act(async () => {
